@@ -24,6 +24,7 @@ const OrdersPage = () => {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [showModal, setShowModal] = React.useState(false);
   const [selectedOrder, setSelectedOrder] = React.useState(null);
+  const [statusFilter, setStatusFilter] = React.useState('active'); // 'active', 'completed', or 'all'
 
   // Mock order data
   const orders = [
@@ -34,7 +35,8 @@ const OrdersPage = () => {
       quantity: 10, 
       date: '15/05/2025',
       status: 'Aguardando Produção',
-      statusType: 'production'
+      statusType: 'production',
+      completed: false
     },
     { 
       id: 'PED-002', 
@@ -43,7 +45,8 @@ const OrdersPage = () => {
       quantity: 50, 
       date: '14/05/2025',
       status: 'Em Produção',
-      statusType: 'production'
+      statusType: 'production',
+      completed: false
     },
     { 
       id: 'PED-003', 
@@ -52,7 +55,8 @@ const OrdersPage = () => {
       quantity: 5, 
       date: '13/05/2025',
       status: 'Aguardando Embalagem',
-      statusType: 'packaging'
+      statusType: 'packaging',
+      completed: true
     },
     { 
       id: 'PED-004', 
@@ -61,7 +65,8 @@ const OrdersPage = () => {
       quantity: 100, 
       date: '12/05/2025',
       status: 'Aguardando Venda',
-      statusType: 'sales'
+      statusType: 'sales',
+      completed: true
     },
     { 
       id: 'PED-005', 
@@ -70,7 +75,8 @@ const OrdersPage = () => {
       quantity: 25, 
       date: '11/05/2025',
       status: 'Financeiro Pendente',
-      statusType: 'finance'
+      statusType: 'finance',
+      completed: true
     },
     { 
       id: 'PED-006', 
@@ -79,7 +85,8 @@ const OrdersPage = () => {
       quantity: 15, 
       date: '10/05/2025',
       status: 'Aguardando Rota',
-      statusType: 'route'
+      statusType: 'route',
+      completed: true
     },
     { 
       id: 'PED-007', 
@@ -88,19 +95,30 @@ const OrdersPage = () => {
       quantity: 8, 
       date: '09/05/2025',
       status: 'Aguardando Produção',
-      statusType: 'production'
+      statusType: 'production',
+      completed: false
     },
   ];
 
-  // Filter orders based on search query
+  // Filter orders based on search query and status filter
   const filteredOrders = orders.filter(order => {
+    // Text search filter
     const searchString = searchQuery.toLowerCase();
-    return (
+    const matchesSearch = 
       order.id.toLowerCase().includes(searchString) ||
       order.customer.toLowerCase().includes(searchString) ||
       order.product.toLowerCase().includes(searchString) ||
-      order.status.toLowerCase().includes(searchString)
-    );
+      order.status.toLowerCase().includes(searchString);
+    
+    // Status filter
+    if (statusFilter === 'active' && order.completed) {
+      return false;
+    }
+    if (statusFilter === 'completed' && !order.completed) {
+      return false;
+    }
+
+    return matchesSearch;
   });
 
   const handleOrderClick = (order: any) => {
@@ -139,7 +157,15 @@ const OrdersPage = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem>Todos</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('all')}>
+                Todos
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('active')}>
+                Ativos
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('completed')}>
+                Concluídos
+              </DropdownMenuItem>
               <DropdownMenuItem>Aguardando Produção</DropdownMenuItem>
               <DropdownMenuItem>Em Produção</DropdownMenuItem>
               <DropdownMenuItem>Aguardando Embalagem</DropdownMenuItem>

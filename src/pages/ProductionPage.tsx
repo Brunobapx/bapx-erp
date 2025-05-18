@@ -25,6 +25,7 @@ const ProductionPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('active'); // 'active', 'completed', or 'all'
   const [alerts, setAlerts] = useState([
     {
       id: 'alert-1',
@@ -50,7 +51,8 @@ const ProductionPage = () => {
       startDate: '16/05/2025',
       deadline: '20/05/2025',
       status: 'Em Andamento',
-      progress: 60
+      progress: 60,
+      completed: false
     },
     { 
       id: 'PR-002', 
@@ -60,7 +62,8 @@ const ProductionPage = () => {
       startDate: '15/05/2025',
       deadline: '25/05/2025',
       status: 'Pendente Aprovação',
-      progress: 0
+      progress: 0,
+      completed: false
     },
     { 
       id: 'PR-003', 
@@ -70,7 +73,8 @@ const ProductionPage = () => {
       startDate: '14/05/2025',
       deadline: '19/05/2025',
       status: 'Em Andamento',
-      progress: 80
+      progress: 80,
+      completed: false
     },
     { 
       id: 'PR-004', 
@@ -80,7 +84,8 @@ const ProductionPage = () => {
       startDate: '13/05/2025',
       deadline: '18/05/2025',
       status: 'Concluído',
-      progress: 100
+      progress: 100,
+      completed: true
     },
     { 
       id: 'PR-005', 
@@ -90,19 +95,30 @@ const ProductionPage = () => {
       startDate: '12/05/2025',
       deadline: '22/05/2025',
       status: 'Material Pendente',
-      progress: 20
+      progress: 20,
+      completed: false
     }
   ];
 
-  // Filter items based on search query
+  // Filter items based on search query and status filter
   const filteredItems = productionItems.filter(item => {
+    // Text search filter
     const searchString = searchQuery.toLowerCase();
-    return (
+    const matchesSearch = 
       item.id.toLowerCase().includes(searchString) ||
       item.orderId.toLowerCase().includes(searchString) ||
       item.product.toLowerCase().includes(searchString) ||
-      item.status.toLowerCase().includes(searchString)
-    );
+      item.status.toLowerCase().includes(searchString);
+    
+    // Status filter
+    if (statusFilter === 'active' && item.completed) {
+      return false;
+    }
+    if (statusFilter === 'completed' && !item.completed) {
+      return false;
+    }
+
+    return matchesSearch;
   });
 
   const handleItemClick = (item: any) => {
@@ -147,7 +163,15 @@ const ProductionPage = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem>Todos</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('all')}>
+                Todos
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('active')}>
+                Ativos
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('completed')}>
+                Concluídos
+              </DropdownMenuItem>
               <DropdownMenuItem>Em Andamento</DropdownMenuItem>
               <DropdownMenuItem>Pendente Aprovação</DropdownMenuItem>
               <DropdownMenuItem>Material Pendente</DropdownMenuItem>

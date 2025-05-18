@@ -25,6 +25,7 @@ const PackagingPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('active'); // 'active', 'completed', or 'all'
   const [alerts, setAlerts] = useState([
     {
       id: 'alert-1',
@@ -44,7 +45,8 @@ const PackagingPage = () => {
       producedQuantity: 10,
       date: '18/05/2025',
       status: 'Embalado',
-      quality: 'Aprovado'
+      quality: 'Aprovado',
+      completed: true
     },
     { 
       id: 'EMB-002', 
@@ -54,7 +56,8 @@ const PackagingPage = () => {
       producedQuantity: 5,
       date: '17/05/2025',
       status: 'Embalado',
-      quality: 'Aprovado'
+      quality: 'Aprovado',
+      completed: true
     },
     { 
       id: 'EMB-003', 
@@ -64,7 +67,8 @@ const PackagingPage = () => {
       producedQuantity: 98,
       date: '16/05/2025',
       status: 'Aguardando Confirmação',
-      quality: 'Pendente'
+      quality: 'Pendente',
+      completed: false
     },
     { 
       id: 'EMB-004', 
@@ -74,19 +78,30 @@ const PackagingPage = () => {
       producedQuantity: 0,
       date: '15/05/2025',
       status: 'Em Produção',
-      quality: 'Pendente'
+      quality: 'Pendente',
+      completed: false
     }
   ];
 
-  // Filter items based on search query
+  // Filter items based on search query and status filter
   const filteredItems = packagingItems.filter(item => {
+    // Text search filter
     const searchString = searchQuery.toLowerCase();
-    return (
+    const matchesSearch =
       item.id.toLowerCase().includes(searchString) ||
       item.productionId.toLowerCase().includes(searchString) ||
       item.product.toLowerCase().includes(searchString) ||
-      item.status.toLowerCase().includes(searchString)
-    );
+      item.status.toLowerCase().includes(searchString);
+    
+    // Status filter
+    if (statusFilter === 'active' && item.completed) {
+      return false;
+    }
+    if (statusFilter === 'completed' && !item.completed) {
+      return false;
+    }
+
+    return matchesSearch;
   });
 
   const handleItemClick = (item: any) => {
@@ -131,7 +146,15 @@ const PackagingPage = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem>Todos</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('all')}>
+                Todos
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('active')}>
+                Ativos
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('completed')}>
+                Concluídos
+              </DropdownMenuItem>
               <DropdownMenuItem>Embalado</DropdownMenuItem>
               <DropdownMenuItem>Aguardando Confirmação</DropdownMenuItem>
               <DropdownMenuItem>Em Produção</DropdownMenuItem>
