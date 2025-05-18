@@ -13,6 +13,10 @@ import SalesPage from "./pages/SalesPage";
 import FinancePage from "./pages/FinancePage";
 import RoutesPage from "./pages/RoutesPage";
 import CalendarPage from "./pages/CalendarPage";
+import ClientsPage from "./pages/ClientsPage";
+import ProductsPage from "./pages/ProductsPage";
+import VendorsPage from "./pages/VendorsPage";
+import FiscalEmissionPage from "./pages/FiscalEmissionPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,10 +32,14 @@ const App = () => (
           <div className="flex-1 overflow-auto">
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/clientes" element={<ClientsPage />} />
+              <Route path="/produtos" element={<ProductsPage />} />
+              <Route path="/fornecedores" element={<VendorsPage />} />
               <Route path="/pedidos" element={<OrdersPage />} />
               <Route path="/producao" element={<ProductionPage />} />
               <Route path="/embalagem" element={<PackagingPage />} />
               <Route path="/vendas" element={<SalesPage />} />
+              <Route path="/emissao-fiscal" element={<FiscalEmissionPage />} />
               <Route path="/financeiro" element={<FinancePage />} />
               <Route path="/rotas" element={<RoutesPage />} />
               <Route path="/calendario" element={<CalendarPage />} />

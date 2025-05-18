@@ -9,7 +9,10 @@ import {
   Route, 
   Settings, 
   ChartBar,
-  Calendar
+  Calendar,
+  User,
+  Users,
+  FilePen
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
@@ -44,10 +47,14 @@ export const Sidebar = () => {
   
   const navigationItems = [
     { path: "/", text: "Dashboard", icon: ChartBar },
+    { path: "/clientes", text: "Clientes", icon: User },
+    { path: "/produtos", text: "Produtos", icon: Package },
+    { path: "/fornecedores", text: "Fornecedores", icon: Users },
     { path: "/pedidos", text: "Pedidos", icon: Package },
     { path: "/producao", text: "Produção", icon: Box },
     { path: "/embalagem", text: "Embalagem", icon: Box },
     { path: "/vendas", text: "Vendas", icon: DollarSign },
+    { path: "/emissao-fiscal", text: "Emissão Fiscal", icon: FilePen },
     { path: "/financeiro", text: "Financeiro", icon: DollarSign },
     { path: "/rotas", text: "Roteirização", icon: Truck },
     { path: "/calendario", text: "Calendário", icon: Calendar },
