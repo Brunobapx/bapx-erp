@@ -5,6 +5,9 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Plus, Minus, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface ProductModalProps {
@@ -30,9 +33,14 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
     icms: '18',
     ipi: '5',
     pis: '1.65',
-    cofins: '7.6'
+    cofins: '7.6',
+    isManufactured: false
   });
 
+  const [recipeItems, setRecipeItems] = useState<Array<{id: string, productId: string, quantity: string}>>([]);
+  const [isRecipeOpen, setIsRecipeOpen] = useState(false);
+  const [availableIngredients, setAvailableIngredients] = useState<any[]>([]);
+  
   const isNewProduct = !productData?.id;
   
   useEffect(() => {
@@ -53,11 +61,25 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
         icms: productData.icms || '18',
         ipi: productData.ipi || '5',
         pis: productData.pis || '1.65',
-        cofins: productData.cofins || '7.6'
+        cofins: productData.cofins || '7.6',
+        isManufactured: productData.isManufactured || false
       });
+      
+      if (productData.recipe) {
+        setRecipeItems(productData.recipe);
+      }
     } else {
       resetForm();
     }
+    
+    // Mock data for available ingredients
+    setAvailableIngredients([
+      { id: '1', name: 'Matéria prima A', unit: 'KG', cost: 25.00 },
+      { id: '2', name: 'Componente eletrônico B', unit: 'UN', cost: 8.50 },
+      { id: '3', name: 'Material C', unit: 'M', cost: 12.75 },
+      { id: '4', name: 'Insumo químico D', unit: 'L', cost: 30.20 },
+      { id: '5', name: 'Composto E', unit: 'G', cost: 5.60 },
+    ]);
   }, [productData]);
 
   const resetForm = () => {
@@ -77,8 +99,10 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
       icms: '18',
       ipi: '5',
       pis: '1.65',
-      cofins: '7.6'
+      cofins: '7.6',
+      isManufactured: false
     });
+    setRecipeItems([]);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -88,6 +112,29 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
 
   const handleSelectChange = (name: string, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSwitchChange = (name: string, checked: boolean) => {
+    setFormData(prev => ({ ...prev, [name]: checked }));
+    if (name === 'isManufactured' && checked) {
+      setIsRecipeOpen(true);
+    }
+  };
+
+  const handleRecipeItemChange = (index: number, field: string, value: string) => {
+    const updatedItems = [...recipeItems];
+    updatedItems[index] = { ...updatedItems[index], [field]: value };
+    setRecipeItems(updatedItems);
+  };
+
+  const addRecipeItem = () => {
+    setRecipeItems([...recipeItems, { id: Date.now().toString(), productId: '', quantity: '1' }]);
+  };
+
+  const removeRecipeItem = (index: number) => {
+    const updatedItems = [...recipeItems];
+    updatedItems.splice(index, 1);
+    setRecipeItems(updatedItems);
   };
 
   const handleSubmit = () => {
@@ -113,7 +160,8 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
     { value: 'Eletrônicos', label: 'Eletrônicos' },
     { value: 'Energia', label: 'Energia' },
     { value: 'Médico', label: 'Médico' },
-    { value: 'Embalagens', label: 'Embalagens' }
+    { value: 'Embalagens', label: 'Embalagens' },
+    { value: 'Insumos', label: 'Insumos' }
   ];
 
   const taxTypeOptions = [
@@ -233,6 +281,83 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
               />
             </div>
           </div>
+          
+          {/* Manufacturing Option */}
+          <div className="flex items-center space-x-2 pt-2 border-t">
+            <Switch
+              id="manufacturing"
+              checked={formData.isManufactured}
+              onCheckedChange={(checked) => handleSwitchChange('isManufactured', checked)}
+            />
+            <Label htmlFor="manufacturing" className="font-medium">Produto Fabricado</Label>
+          </div>
+          
+          {/* Recipe Management */}
+          {formData.isManufactured && (
+            <Collapsible open={isRecipeOpen} onOpenChange={setIsRecipeOpen} className="border rounded-md p-2">
+              <CollapsibleTrigger className="flex items-center justify-between w-full p-2 font-medium">
+                Receita de Fabricação
+                {isRecipeOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-2">
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">Adicione os insumos necessários para fabricação deste produto.</p>
+                  
+                  {recipeItems.map((item, index) => (
+                    <div key={item.id} className="grid grid-cols-[1fr,auto,auto] gap-2 items-end">
+                      <div>
+                        <Label>Insumo</Label>
+                        <Select 
+                          value={item.productId}
+                          onValueChange={(value) => handleRecipeItemChange(index, 'productId', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione um insumo..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableIngredients.map(ing => (
+                              <SelectItem key={ing.id} value={ing.id}>
+                                {ing.name} ({ing.unit})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Quantidade</Label>
+                        <Input
+                          type="number"
+                          value={item.quantity}
+                          onChange={(e) => handleRecipeItemChange(index, 'quantity', e.target.value)}
+                          min="0.01"
+                          step="0.01"
+                        />
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeRecipeItem(index)}
+                        className="mb-0.5"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addRecipeItem}
+                    className="mt-2 w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Adicionar Insumo
+                  </Button>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
 
           {/* Fiscal Information */}
           <div className="border-t pt-4 mt-2">

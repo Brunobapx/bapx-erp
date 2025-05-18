@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Box, ChevronDown, Search, FileText, Plus, Barcode } from 'lucide-react';
+import { Box, ChevronDown, Search, FileText, Plus, Barcode, Factory } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -37,7 +37,12 @@ const ProductsPage = () => {
       cost: 3500.00,
       stock: 15,
       unit: 'UN',
-      category: 'Eletrônicos'
+      category: 'Eletrônicos',
+      isManufactured: true,
+      recipe: [
+        { id: '1', productId: '2', quantity: '2' },
+        { id: '2', productId: '4', quantity: '1.5' }
+      ]
     },
     { 
       id: 2, 
@@ -49,7 +54,8 @@ const ProductsPage = () => {
       cost: 900.00,
       stock: 42,
       unit: 'UN',
-      category: 'Energia'
+      category: 'Energia',
+      isManufactured: false
     },
     { 
       id: 3, 
@@ -61,7 +67,12 @@ const ProductsPage = () => {
       cost: 4200.00,
       stock: 8,
       unit: 'UN',
-      category: 'Médico'
+      category: 'Médico',
+      isManufactured: true,
+      recipe: [
+        { id: '1', productId: '1', quantity: '3' },
+        { id: '2', productId: '3', quantity: '2' }
+      ]
     },
     { 
       id: 4, 
@@ -73,7 +84,34 @@ const ProductsPage = () => {
       cost: 50.00,
       stock: 250,
       unit: 'PC',
-      category: 'Embalagens'
+      category: 'Embalagens',
+      isManufactured: false
+    },
+    { 
+      id: 5, 
+      code: 'INS-001', 
+      name: 'Matéria prima A',
+      sku: '5678901234567',
+      ncm: '3901.10.10', 
+      price: 25.00,
+      cost: 15.00,
+      stock: 500,
+      unit: 'KG',
+      category: 'Insumos',
+      isManufactured: false
+    },
+    { 
+      id: 6, 
+      code: 'INS-002', 
+      name: 'Componente eletrônico B',
+      sku: '6789012345678',
+      ncm: '8542.31.90', 
+      price: 8.50,
+      cost: 4.25,
+      stock: 1000,
+      unit: 'UN',
+      category: 'Insumos',
+      isManufactured: false
     },
   ];
 
@@ -109,7 +147,7 @@ const ProductsPage = () => {
           <p className="text-muted-foreground">Cadastro e gerenciamento de produtos.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={() => setShowModal(true)} className="bg-erp-packaging hover:bg-erp-packaging/90">
+          <Button onClick={() => { setSelectedProduct(null); setShowModal(true); }} className="bg-erp-packaging hover:bg-erp-packaging/90">
             <Plus className="mr-2 h-4 w-4" /> Novo Produto
           </Button>
           <Button variant="outline">
@@ -142,6 +180,7 @@ const ProductsPage = () => {
               <DropdownMenuItem>Energia</DropdownMenuItem>
               <DropdownMenuItem>Médico</DropdownMenuItem>
               <DropdownMenuItem>Embalagens</DropdownMenuItem>
+              <DropdownMenuItem>Insumos</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           
@@ -176,6 +215,7 @@ const ProductsPage = () => {
                 <TableHead>Estoque</TableHead>
                 <TableHead>Un.</TableHead>
                 <TableHead>Categoria</TableHead>
+                <TableHead>Fabricado</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -199,6 +239,13 @@ const ProductsPage = () => {
                     <span className="stage-badge badge-packaging">
                       {product.category}
                     </span>
+                  </TableCell>
+                  <TableCell>
+                    {product.isManufactured && (
+                      <div className="flex justify-center">
+                        <Factory className="h-4 w-4 text-blue-600" />
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
