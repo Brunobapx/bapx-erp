@@ -7,6 +7,12 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Sidebar } from "./components/Sidebar/Sidebar";
 import Index from "./pages/Index";
 import OrdersPage from "./pages/OrdersPage";
+import ProductionPage from "./pages/ProductionPage";
+import PackagingPage from "./pages/PackagingPage";
+import SalesPage from "./pages/SalesPage";
+import FinancePage from "./pages/FinancePage";
+import RoutesPage from "./pages/RoutesPage";
+import CalendarPage from "./pages/CalendarPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,11 +29,12 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/pedidos" element={<OrdersPage />} />
-              <Route path="/producao" element={<Index />} />
-              <Route path="/embalagem" element={<Index />} />
-              <Route path="/vendas" element={<Index />} />
-              <Route path="/financeiro" element={<Index />} />
-              <Route path="/rotas" element={<Index />} />
+              <Route path="/producao" element={<ProductionPage />} />
+              <Route path="/embalagem" element={<PackagingPage />} />
+              <Route path="/vendas" element={<SalesPage />} />
+              <Route path="/financeiro" element={<FinancePage />} />
+              <Route path="/rotas" element={<RoutesPage />} />
+              <Route path="/calendario" element={<CalendarPage />} />
               <Route path="/configuracoes" element={<Index />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
