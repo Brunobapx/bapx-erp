@@ -28,7 +28,7 @@ const PackagingPage = () => {
   const [alerts, setAlerts] = useState([
     {
       id: 'alert-1',
-      type: 'packaging',
+      type: 'packaging' as const,
       message: 'Embalagem #EMB-003 aguardando confirmação há 1 dia',
       time: '1 dia'
     }

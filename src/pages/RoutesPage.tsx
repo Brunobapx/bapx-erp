@@ -28,13 +28,13 @@ const RoutesPage = () => {
   const [alerts, setAlerts] = useState([
     {
       id: 'alert-1',
-      type: 'route',
+      type: 'route' as const,
       message: 'Rota #RT-002 com prazo de entrega para hoje',
       time: 'Hoje'
     },
     {
       id: 'alert-2',
-      type: 'route',
+      type: 'route' as const,
       message: 'Rota #RT-001 com confirmação de entrega pendente',
       time: '1 dia'
     }

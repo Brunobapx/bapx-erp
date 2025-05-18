@@ -28,13 +28,13 @@ const ProductionPage = () => {
   const [alerts, setAlerts] = useState([
     {
       id: 'alert-1',
-      type: 'production',
+      type: 'production' as const,
       message: 'Produção #PR-002 aguardando aprovação há 2 dias',
       time: '2 dias'
     },
     {
       id: 'alert-2',
-      type: 'production',
+      type: 'production' as const,
       message: 'Material para Produção #PR-005 está em falta',
       time: '4 horas'
     }

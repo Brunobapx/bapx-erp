@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,7 +27,7 @@ const SalesPage = () => {
   const [alerts, setAlerts] = useState([
     {
       id: 'alert-1',
-      type: 'sales',
+      type: 'sales' as const,
       message: 'Venda #V-002 aguardando confirmação para faturamento',
       time: '3 horas'
     }
