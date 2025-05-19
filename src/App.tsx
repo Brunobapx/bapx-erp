@@ -17,6 +17,7 @@ import ClientsPage from "./pages/ClientsPage";
 import ProductsPage from "./pages/ProductsPage";
 import VendorsPage from "./pages/VendorsPage";
 import FiscalEmissionPage from "./pages/FiscalEmissionPage";
+import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,7 +44,7 @@ const App = () => (
               <Route path="/financeiro" element={<FinancePage />} />
               <Route path="/rotas" element={<RoutesPage />} />
               <Route path="/calendario" element={<CalendarPage />} />
-              <Route path="/configuracoes" element={<Index />} />
+              <Route path="/configuracoes" element={<SettingsPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>
