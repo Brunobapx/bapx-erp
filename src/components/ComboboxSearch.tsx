@@ -1,6 +1,6 @@
 
 import * as React from "react"
-import { Check, ChevronsUpDown } from "lucide-react"
+import { Check, ChevronsUpDown, Search } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -34,6 +34,17 @@ export function ComboboxSearch({
   className,
 }: ComboboxSearchProps) {
   const [open, setOpen] = React.useState(false)
+  const [searchQuery, setSearchQuery] = React.useState("")
+
+  // Filter items based on search query
+  const filteredItems = React.useMemo(() => {
+    if (!searchQuery.trim()) return items
+    const query = searchQuery.toLowerCase()
+    return items.filter(item => 
+      item.label.toLowerCase().includes(query) || 
+      item.value.toLowerCase().includes(query)
+    )
+  }, [items, searchQuery])
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -52,16 +63,25 @@ export function ComboboxSearch({
       </PopoverTrigger>
       <PopoverContent className="w-full p-0" align="start">
         <Command>
-          <CommandInput placeholder={`Buscar ${placeholder.toLowerCase()}...`} />
+          <div className="flex items-center border-b px-3">
+            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+            <CommandInput 
+              placeholder={`Buscar ${placeholder.toLowerCase()}...`} 
+              className="flex h-9 w-full rounded-md bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              value={searchQuery}
+              onValueChange={setSearchQuery}
+            />
+          </div>
           <CommandEmpty>{emptyText}</CommandEmpty>
-          <CommandGroup>
-            {items.map((item) => (
+          <CommandGroup className="max-h-60 overflow-auto">
+            {filteredItems.map((item) => (
               <CommandItem
                 key={item.value}
                 value={item.value}
                 onSelect={() => {
                   onChange(item.value === value ? "" : item.value)
                   setOpen(false)
+                  setSearchQuery("")
                 }}
               >
                 <Check

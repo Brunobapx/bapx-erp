@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ApprovalModal } from '@/components/Modals/ApprovalModal';
-import { Package, ChevronDown, Search } from 'lucide-react';
+import { Package, ChevronDown, Search, Calendar, CreditCard, User } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -36,7 +36,10 @@ const OrdersPage = () => {
       date: '15/05/2025',
       status: 'Aguardando Produção',
       statusType: 'production',
-      completed: false
+      completed: false,
+      deliveryDate: '30/05/2025',
+      paymentMethod: 'Boleto Bancário',
+      seller: 'João Silva'
     },
     { 
       id: 'PED-002', 
@@ -46,7 +49,10 @@ const OrdersPage = () => {
       date: '14/05/2025',
       status: 'Em Produção',
       statusType: 'production',
-      completed: false
+      completed: false,
+      deliveryDate: '28/05/2025',
+      paymentMethod: 'Cartão de Crédito',
+      seller: 'Maria Oliveira'
     },
     { 
       id: 'PED-003', 
@@ -56,7 +62,10 @@ const OrdersPage = () => {
       date: '13/05/2025',
       status: 'Aguardando Embalagem',
       statusType: 'packaging',
-      completed: true
+      completed: true,
+      deliveryDate: '25/05/2025',
+      paymentMethod: 'Transferência Bancária',
+      seller: 'Pedro Santos'
     },
     { 
       id: 'PED-004', 
@@ -66,7 +75,10 @@ const OrdersPage = () => {
       date: '12/05/2025',
       status: 'Aguardando Venda',
       statusType: 'sales',
-      completed: true
+      completed: true,
+      deliveryDate: '22/05/2025',
+      paymentMethod: 'PIX',
+      seller: 'Ana Costa'
     },
     { 
       id: 'PED-005', 
@@ -76,7 +88,10 @@ const OrdersPage = () => {
       date: '11/05/2025',
       status: 'Financeiro Pendente',
       statusType: 'finance',
-      completed: true
+      completed: true,
+      deliveryDate: '20/05/2025',
+      paymentMethod: 'Boleto Bancário',
+      seller: 'João Silva'
     },
     { 
       id: 'PED-006', 
@@ -86,7 +101,10 @@ const OrdersPage = () => {
       date: '10/05/2025',
       status: 'Aguardando Rota',
       statusType: 'route',
-      completed: true
+      completed: true,
+      deliveryDate: '18/05/2025',
+      paymentMethod: 'Dinheiro',
+      seller: 'Maria Oliveira'
     },
     { 
       id: 'PED-007', 
@@ -96,7 +114,10 @@ const OrdersPage = () => {
       date: '09/05/2025',
       status: 'Aguardando Produção',
       statusType: 'production',
-      completed: false
+      completed: false,
+      deliveryDate: '16/05/2025',
+      paymentMethod: 'Cartão de Débito',
+      seller: 'Pedro Santos'
     },
   ];
 
@@ -108,7 +129,8 @@ const OrdersPage = () => {
       order.id.toLowerCase().includes(searchString) ||
       order.customer.toLowerCase().includes(searchString) ||
       order.product.toLowerCase().includes(searchString) ||
-      order.status.toLowerCase().includes(searchString);
+      order.status.toLowerCase().includes(searchString) ||
+      order.seller.toLowerCase().includes(searchString);
     
     // Status filter
     if (statusFilter === 'active' && order.completed) {
@@ -130,8 +152,11 @@ const OrdersPage = () => {
   const clients = [
     { id: 1, name: 'Tech Solutions Ltda', value: '1', label: 'Tech Solutions Ltda' },
     { id: 2, name: 'Green Energy Inc', value: '2', label: 'Green Energy Inc' },
-    { id: 3, name: 'João Silva', value: '3', label: 'João Silva' },
+    { id: 3, name: 'City Hospital', value: '3', label: 'City Hospital' },
     { id: 4, name: 'Global Foods SA', value: '4', label: 'Global Foods SA' },
+    { id: 5, name: 'Modern Office', value: '5', label: 'Modern Office' },
+    { id: 6, name: 'Local Retailer', value: '6', label: 'Local Retailer' },
+    { id: 7, name: 'Education Center', value: '7', label: 'Education Center' },
   ];
   
   // Lista de produtos para o modal
@@ -140,8 +165,9 @@ const OrdersPage = () => {
     { id: 2, name: 'Solar Panel 250W', value: '2', label: 'Solar Panel 250W' },
     { id: 3, name: 'Equipamento Médico M3', value: '3', label: 'Equipamento Médico M3' },
     { id: 4, name: 'Material de Embalagem', value: '4', label: 'Material de Embalagem' },
-    { id: 5, name: 'Matéria prima A', value: '5', label: 'Matéria prima A' },
-    { id: 6, name: 'Componente eletrônico B', value: '6', label: 'Componente eletrônico B' },
+    { id: 5, name: 'Desk Solutions', value: '5', label: 'Desk Solutions' },
+    { id: 6, name: 'Display Units', value: '6', label: 'Display Units' },
+    { id: 7, name: 'Interactive Boards', value: '7', label: 'Interactive Boards' },
   ];
 
   return (
@@ -151,7 +177,7 @@ const OrdersPage = () => {
           <h1 className="text-2xl font-bold">Pedidos</h1>
           <p className="text-muted-foreground">Gerencie todos os pedidos do sistema.</p>
         </div>
-        <Button onClick={() => setShowModal(true)}>
+        <Button onClick={() => { setSelectedOrder(null); setShowModal(true); }}>
           <Package className="mr-2 h-4 w-4" /> Novo Pedido
         </Button>
       </div>
@@ -219,6 +245,16 @@ const OrdersPage = () => {
                 <TableHead>Produto</TableHead>
                 <TableHead className="text-center">Qtd</TableHead>
                 <TableHead>Data</TableHead>
+                <TableHead>
+                  <div className="flex items-center">
+                    <Calendar className="mr-1 h-4 w-4" /> Entrega
+                  </div>
+                </TableHead>
+                <TableHead>
+                  <div className="flex items-center">
+                    <User className="mr-1 h-4 w-4" /> Vendedor
+                  </div>
+                </TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -234,6 +270,8 @@ const OrdersPage = () => {
                   <TableCell>{order.product}</TableCell>
                   <TableCell className="text-center">{order.quantity}</TableCell>
                   <TableCell>{order.date}</TableCell>
+                  <TableCell>{order.deliveryDate}</TableCell>
+                  <TableCell>{order.seller}</TableCell>
                   <TableCell>
                     <span className={`stage-badge badge-${order.statusType}`}>
                       {order.status}
@@ -259,7 +297,10 @@ const OrdersPage = () => {
           id: 'NOVO', 
           product: '', 
           quantity: 1, 
-          customer: ''
+          customer: '',
+          deliveryDate: null,
+          paymentMethod: '',
+          seller: ''
         }}
         clientsData={clients}
         productsData={products}

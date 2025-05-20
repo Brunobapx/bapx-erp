@@ -7,6 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { ComboboxSearch } from "@/components/ComboboxSearch";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { CalendarIcon, CreditCard, User } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 interface ApprovalModalProps {
   isOpen: boolean;
@@ -30,8 +39,29 @@ export const ApprovalModal = ({
     customer: '',
     product: '',
     quantity: '',
-    notes: ''
+    notes: '',
+    deliveryDate: null as Date | null,
+    paymentMethod: '',
+    seller: ''
   });
+  
+  // Dummy payment methods
+  const paymentMethods = [
+    { value: 'boleto', label: 'Boleto Bancário' },
+    { value: 'credit', label: 'Cartão de Crédito' },
+    { value: 'debit', label: 'Cartão de Débito' },
+    { value: 'pix', label: 'PIX' },
+    { value: 'transfer', label: 'Transferência Bancária' },
+    { value: 'cash', label: 'Dinheiro' },
+  ];
+  
+  // Dummy sellers
+  const sellers = [
+    { value: '1', label: 'João Silva' },
+    { value: '2', label: 'Maria Oliveira' },
+    { value: '3', label: 'Pedro Santos' },
+    { value: '4', label: 'Ana Costa' },
+  ];
   
   useEffect(() => {
     if (orderData) {
@@ -40,7 +70,10 @@ export const ApprovalModal = ({
         customer: orderData.customer || '',
         product: orderData.product || '',
         quantity: orderData.quantity?.toString() || '',
-        notes: orderData.notes || ''
+        notes: orderData.notes || '',
+        deliveryDate: orderData.deliveryDate ? new Date(orderData.deliveryDate) : null,
+        paymentMethod: orderData.paymentMethod || '',
+        seller: orderData.seller || ''
       });
     }
   }, [orderData]);
@@ -58,6 +91,20 @@ export const ApprovalModal = ({
   const handleSelectProduct = (value: string) => {
     const product = productsData.find(prod => prod.value === value);
     setFormData(prev => ({ ...prev, product: product ? product.label : '' }));
+  };
+  
+  const handleSelectPaymentMethod = (value: string) => {
+    const paymentMethod = paymentMethods.find(method => method.value === value);
+    setFormData(prev => ({ ...prev, paymentMethod: paymentMethod ? paymentMethod.label : '' }));
+  };
+  
+  const handleSelectSeller = (value: string) => {
+    const seller = sellers.find(s => s.value === value);
+    setFormData(prev => ({ ...prev, seller: seller ? seller.label : '' }));
+  };
+  
+  const handleDateSelect = (date: Date | undefined) => {
+    setFormData(prev => ({ ...prev, deliveryDate: date || null }));
   };
   
   const handleSubmit = () => {
@@ -97,7 +144,7 @@ export const ApprovalModal = ({
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>{isNewOrder ? `Novo ${getStageTitle()}` : `${getStageTitle()} #${orderData?.id}`}</DialogTitle>
         </DialogHeader>
@@ -152,6 +199,58 @@ export const ApprovalModal = ({
               min="1"
               value={formData.quantity}
               onChange={handleChange}
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="deliveryDate">Prazo de Entrega</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={"outline"}
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !formData.deliveryDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {formData.deliveryDate ? format(formData.deliveryDate, "dd/MM/yyyy") : <span>Selecione a data</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={formData.deliveryDate || undefined}
+                  onSelect={handleDateSelect}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                  disabled={(date) => date < new Date()}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="paymentMethod">Forma de Pagamento</Label>
+            <ComboboxSearch
+              items={paymentMethods}
+              placeholder="Selecione a forma de pagamento"
+              emptyText="Nenhuma forma de pagamento encontrada"
+              value={paymentMethods.find(method => method.label === formData.paymentMethod)?.value || ""}
+              onChange={handleSelectPaymentMethod}
+              className="flex items-center"
+            />
+          </div>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="seller">Vendedor</Label>
+            <ComboboxSearch
+              items={sellers}
+              placeholder="Selecione o vendedor"
+              emptyText="Nenhum vendedor encontrado"
+              value={sellers.find(seller => seller.label === formData.seller)?.value || ""}
+              onChange={handleSelectSeller}
+              className="flex items-center"
             />
           </div>
           
