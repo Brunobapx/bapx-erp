@@ -22,14 +22,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (storedUser) {
       setUser(JSON.parse(storedUser));
       setIsAuthenticated(true);
+      // Redirect to dashboard if on login page
+      if (window.location.pathname === "/login") {
+        navigate("/");
+      }
     }
-  }, []);
+  }, [navigate]);
 
   const login = (email: string) => {
     const userData = { email };
     setUser(userData);
     setIsAuthenticated(true);
     localStorage.setItem("user", JSON.stringify(userData));
+    // After successful login, navigate to the dashboard
+    navigate("/");
   };
 
   const logout = () => {

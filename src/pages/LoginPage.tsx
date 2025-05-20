@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from "@/components/ui/label";
 import { Mail, Lock, LogIn } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface User {
   email: string;
@@ -25,6 +26,7 @@ const LoginPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { login } = useAuth();
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,8 +45,8 @@ const LoginPage = () => {
           description: "Bem-vindo ao sistema de ERP.",
         });
         
-        // Store user info in localStorage (simulating session)
-        localStorage.setItem("user", JSON.stringify({ email: user.email }));
+        // Use the login function from auth context
+        login(user.email);
         
         // Redirect to dashboard
         navigate("/");
