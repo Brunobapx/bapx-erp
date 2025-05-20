@@ -126,6 +126,24 @@ const OrdersPage = () => {
     setShowModal(true);
   };
 
+  // Lista de clientes para o modal
+  const clients = [
+    { id: 1, name: 'Tech Solutions Ltda', value: '1', label: 'Tech Solutions Ltda' },
+    { id: 2, name: 'Green Energy Inc', value: '2', label: 'Green Energy Inc' },
+    { id: 3, name: 'João Silva', value: '3', label: 'João Silva' },
+    { id: 4, name: 'Global Foods SA', value: '4', label: 'Global Foods SA' },
+  ];
+  
+  // Lista de produtos para o modal
+  const products = [
+    { id: 1, name: 'Server Hardware X1', value: '1', label: 'Server Hardware X1' },
+    { id: 2, name: 'Solar Panel 250W', value: '2', label: 'Solar Panel 250W' },
+    { id: 3, name: 'Equipamento Médico M3', value: '3', label: 'Equipamento Médico M3' },
+    { id: 4, name: 'Material de Embalagem', value: '4', label: 'Material de Embalagem' },
+    { id: 5, name: 'Matéria prima A', value: '5', label: 'Matéria prima A' },
+    { id: 6, name: 'Componente eletrônico B', value: '6', label: 'Componente eletrônico B' },
+  ];
+
   return (
     <div className="p-4 sm:p-6 space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -243,6 +261,8 @@ const OrdersPage = () => {
           quantity: 1, 
           customer: ''
         }}
+        clientsData={clients}
+        productsData={products}
       />
     </div>
   );
