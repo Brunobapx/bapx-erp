@@ -18,8 +18,8 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 
 // Add the database function type declaration
 declare module '@supabase/supabase-js' {
-  interface SupabaseClient<T> {
-    rpc(
+  interface SupabaseClient<Database> {
+    rpc<T = any>(
       fn: 'get_row_count',
       params: { table_name: string }
     ): Promise<{ data: number | null; error: Error | null }>;
