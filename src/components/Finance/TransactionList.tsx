@@ -38,7 +38,7 @@ const TransactionList: React.FC<TransactionListProps> = ({ onItemClick, pendingO
                   <TableCell className="font-medium">{order.id.substring(0, 8)}</TableCell>
                   <TableCell>{order.client_name}</TableCell>
                   <TableCell>{order.product_name}</TableCell>
-                  <TableCell>R$ {(order.quantity * 100).toFixed(2)}</TableCell>
+                  <TableCell>R$ {(parseFloat(order.quantity) * 100).toFixed(2)}</TableCell>
                   <TableCell>{order.payment_method || 'Não especificado'}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className="bg-amber-100 text-amber-800">

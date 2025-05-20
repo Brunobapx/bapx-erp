@@ -146,11 +146,15 @@ const OrdersPage = () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("Usuário não autenticado");
         
+        // Find client ID and ensure it's a string
+        const clientInfo = clients.find(c => c.name === orderData.customer);
+        const clientId = clientInfo ? String(clientInfo.id) : '1';
+        
         // Create new order
         const { data, error } = await supabase
           .from('orders')
           .insert({
-            client_id: clients.find(c => c.name === orderData.customer)?.id || '1',
+            client_id: clientId,
             client_name: orderData.customer,
             product_id: selectedProduct?.id || '1',
             product_name: orderData.product,

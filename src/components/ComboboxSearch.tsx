@@ -24,7 +24,7 @@ interface ComboboxSearchProps {
   value: string
   onChange: (value: string) => void
   className?: string
-  disabled?: boolean // Add disabled prop
+  disabled?: boolean
 }
 
 export function ComboboxSearch({
@@ -34,7 +34,7 @@ export function ComboboxSearch({
   value,
   onChange,
   className,
-  disabled = false, // Default to false
+  disabled = false,
 }: ComboboxSearchProps) {
   const [open, setOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState("")

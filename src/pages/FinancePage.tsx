@@ -73,7 +73,7 @@ const FinancePage = () => {
 
   const getTimeAgo = (date) => {
     const now = new Date();
-    const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
     
     if (diffInHours < 24) return `${diffInHours} horas`;
     const diffInDays = Math.floor(diffInHours / 24);
