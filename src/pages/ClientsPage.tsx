@@ -19,70 +19,78 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ClientModal } from '@/components/Modals/ClientModal';
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from '@tanstack/react-query';
+import { toast } from "@/hooks/use-toast";
 
 const ClientsPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
+  const [typeFilter, setTypeFilter] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<{field: string, direction: string}>({
+    field: 'name',
+    direction: 'asc'
+  });
 
-  // Mock client data
-  const clients = [
-    { 
-      id: 1, 
-      name: 'Tech Solutions Ltda', 
-      cnpj: '12.345.678/0001-90', 
-      ie: '123456789', 
-      email: 'contato@techsolutions.com',
-      phone: '(11) 3456-7890',
-      address: 'Av. Paulista, 1000, São Paulo - SP',
-      type: 'Jurídica'
-    },
-    { 
-      id: 2, 
-      name: 'Green Energy Inc', 
-      cnpj: '98.765.432/0001-21', 
-      ie: '987654321', 
-      email: 'contato@greenenergy.com',
-      phone: '(11) 9876-5432',
-      address: 'Rua Augusta, 500, São Paulo - SP',
-      type: 'Jurídica'
-    },
-    { 
-      id: 3, 
-      name: 'João Silva', 
-      cpf: '123.456.789-00', 
-      rg: '12.345.678-9', 
-      email: 'joao.silva@email.com',
-      phone: '(11) 91234-5678',
-      address: 'Rua das Flores, 123, São Paulo - SP',
-      type: 'Física'
-    },
-    { 
-      id: 4, 
-      name: 'Global Foods SA', 
-      cnpj: '45.678.901/0001-23', 
-      ie: '456789012', 
-      email: 'contato@globalfoods.com',
-      phone: '(11) 4567-8901',
-      address: 'Av. Rebouças, 1500, São Paulo - SP',
-      type: 'Jurídica'
-    },
-  ];
+  // Fetch clients from Supabase
+  const { data: clients, isLoading, isError, refetch } = useQuery({
+    queryKey: ['clients'],
+    queryFn: async () => {
+      try {
+        let query = supabase.from('clients').select('*');
+        
+        if (sortOrder.field && sortOrder.direction) {
+          query = query.order(sortOrder.field, { ascending: sortOrder.direction === 'asc' });
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) throw error;
+        return data || [];
+      } catch (error: any) {
+        console.error("Erro ao carregar clientes:", error);
+        toast({
+          title: "Erro",
+          description: `Erro ao carregar clientes: ${error.message}`,
+          variant: "destructive"
+        });
+        return [];
+      }
+    }
+  });
 
-  // Filter clients based on search query
-  const filteredClients = clients.filter(client => {
+  // Filter clients based on search query and type filter
+  const filteredClients = clients?.filter(client => {
     const searchString = searchQuery.toLowerCase();
-    return (
+    const matchesSearch = (
       client.name.toLowerCase().includes(searchString) ||
       (client.cnpj && client.cnpj.toLowerCase().includes(searchString)) ||
       (client.cpf && client.cpf.toLowerCase().includes(searchString)) ||
-      client.email.toLowerCase().includes(searchString)
+      (client.email && client.email.toLowerCase().includes(searchString))
     );
-  });
+    
+    const matchesType = typeFilter ? client.type === typeFilter : true;
+    
+    return matchesSearch && matchesType;
+  }) || [];
 
   const handleClientClick = (client: any) => {
     setSelectedClient(client);
     setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setSelectedClient(null);
+    refetch(); // Refresh client list after modal closes
+  };
+
+  const handleSortChange = (field: string) => {
+    setSortOrder(prev => ({
+      field,
+      direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
   };
 
   const getDocumentId = (client: any) => {
@@ -129,9 +137,9 @@ const ClientsPage = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem>Todos</DropdownMenuItem>
-              <DropdownMenuItem>Pessoa Física</DropdownMenuItem>
-              <DropdownMenuItem>Pessoa Jurídica</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTypeFilter(null)}>Todos</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTypeFilter('Física')}>Pessoa Física</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTypeFilter('Jurídica')}>Pessoa Jurídica</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           
@@ -142,10 +150,14 @@ const ClientsPage = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem>Nome (A-Z)</DropdownMenuItem>
-              <DropdownMenuItem>Nome (Z-A)</DropdownMenuItem>
-              <DropdownMenuItem>Mais recentes</DropdownMenuItem>
-              <DropdownMenuItem>Mais antigos</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSortChange('name')}>
+                Nome {sortOrder.field === 'name' ? (sortOrder.direction === 'asc' ? '(A-Z)' : '(Z-A)') : '(A-Z)'}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSortChange('created_at')}>
+                {sortOrder.field === 'created_at' ? 
+                  (sortOrder.direction === 'desc' ? 'Mais recentes' : 'Mais antigos') : 
+                  'Mais recentes'}
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -153,39 +165,45 @@ const ClientsPage = () => {
       
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>CPF/CNPJ</TableHead>
-                <TableHead>RG/IE</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Telefone</TableHead>
-                <TableHead>Tipo</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredClients.map((client) => (
-                <TableRow 
-                  key={client.id}
-                  className="cursor-pointer hover:bg-accent/5"
-                  onClick={() => handleClientClick(client)}
-                >
-                  <TableCell className="font-medium">{client.name}</TableCell>
-                  <TableCell>{getDocumentId(client)}</TableCell>
-                  <TableCell>{getRegisterNumber(client)}</TableCell>
-                  <TableCell>{client.email}</TableCell>
-                  <TableCell>{client.phone}</TableCell>
-                  <TableCell>
-                    <span className={`stage-badge ${client.type === 'Jurídica' ? 'badge-order' : 'badge-production'}`}>
-                      {client.type === 'Jurídica' ? 'PJ' : 'PF'}
-                    </span>
-                  </TableCell>
+          {isLoading ? (
+            <div className="p-8 text-center">Carregando clientes...</div>
+          ) : isError ? (
+            <div className="p-8 text-center text-red-500">Erro ao carregar clientes</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>CPF/CNPJ</TableHead>
+                  <TableHead>RG/IE</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Telefone</TableHead>
+                  <TableHead>Tipo</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          {filteredClients.length === 0 && (
+              </TableHeader>
+              <TableBody>
+                {filteredClients.map((client) => (
+                  <TableRow 
+                    key={client.id}
+                    className="cursor-pointer hover:bg-accent/5"
+                    onClick={() => handleClientClick(client)}
+                  >
+                    <TableCell className="font-medium">{client.name}</TableCell>
+                    <TableCell>{getDocumentId(client)}</TableCell>
+                    <TableCell>{getRegisterNumber(client)}</TableCell>
+                    <TableCell>{client.email}</TableCell>
+                    <TableCell>{client.phone}</TableCell>
+                    <TableCell>
+                      <span className={`stage-badge ${client.type === 'Jurídica' ? 'badge-order' : 'badge-production'}`}>
+                        {client.type === 'Jurídica' ? 'PJ' : 'PF'}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+          {!isLoading && !isError && filteredClients.length === 0 && (
             <div className="p-4 text-center text-muted-foreground">
               Nenhum cliente encontrado.
             </div>
@@ -195,7 +213,7 @@ const ClientsPage = () => {
       
       <ClientModal
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
+        onClose={handleCloseModal}
         clientData={selectedClient || null}
       />
     </div>

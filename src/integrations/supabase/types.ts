@@ -95,6 +95,63 @@ export type Database = {
           },
         ]
       }
+      clients: {
+        Row: {
+          address: string | null
+          city: string | null
+          cnpj: string | null
+          cpf: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          ie: string | null
+          name: string
+          phone: string | null
+          rg: string | null
+          state: string | null
+          type: string
+          updated_at: string | null
+          user_id: string
+          zip: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          cnpj?: string | null
+          cpf?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          ie?: string | null
+          name: string
+          phone?: string | null
+          rg?: string | null
+          state?: string | null
+          type: string
+          updated_at?: string | null
+          user_id: string
+          zip?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          cnpj?: string | null
+          cpf?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          ie?: string | null
+          name?: string
+          phone?: string | null
+          rg?: string | null
+          state?: string | null
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+          zip?: string | null
+        }
+        Relationships: []
+      }
       finance_transactions: {
         Row: {
           account: string | null
@@ -183,6 +240,120 @@ export type Database = {
           quantity?: number
           seller?: string | null
           status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      product_recipes: {
+        Row: {
+          created_at: string | null
+          id: string
+          ingredient_id: string
+          product_id: string
+          quantity: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          ingredient_id: string
+          product_id: string
+          quantity: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          ingredient_id?: string
+          product_id?: string
+          quantity?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_recipes_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_recipes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          category: string | null
+          code: string | null
+          cofins: string | null
+          cost: number | null
+          created_at: string | null
+          description: string | null
+          icms: string | null
+          id: string
+          ipi: string | null
+          is_manufactured: boolean | null
+          name: string
+          ncm: string | null
+          pis: string | null
+          price: number | null
+          sku: string | null
+          stock: number | null
+          tax_type: string | null
+          unit: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          code?: string | null
+          cofins?: string | null
+          cost?: number | null
+          created_at?: string | null
+          description?: string | null
+          icms?: string | null
+          id?: string
+          ipi?: string | null
+          is_manufactured?: boolean | null
+          name: string
+          ncm?: string | null
+          pis?: string | null
+          price?: number | null
+          sku?: string | null
+          stock?: number | null
+          tax_type?: string | null
+          unit?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          code?: string | null
+          cofins?: string | null
+          cost?: number | null
+          created_at?: string | null
+          description?: string | null
+          icms?: string | null
+          id?: string
+          ipi?: string | null
+          is_manufactured?: boolean | null
+          name?: string
+          ncm?: string | null
+          pis?: string | null
+          price?: number | null
+          sku?: string | null
+          stock?: number | null
+          tax_type?: string | null
+          unit?: string | null
           updated_at?: string | null
           user_id?: string
         }

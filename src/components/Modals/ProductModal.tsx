@@ -9,6 +9,8 @@ import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Plus, Minus, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from '@tanstack/react-query';
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -29,19 +31,63 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
     unit: 'UN',
     category: '',
     description: '',
-    taxType: 'Tributado',
+    tax_type: 'Tributado',
     icms: '18',
     ipi: '5',
     pis: '1.65',
     cofins: '7.6',
-    isManufactured: false
+    is_manufactured: false
   });
 
-  const [recipeItems, setRecipeItems] = useState<Array<{id: string, productId: string, quantity: string}>>([]);
+  const [recipeItems, setRecipeItems] = useState<Array<{id: string, ingredient_id: string, quantity: string}>>([]);
   const [isRecipeOpen, setIsRecipeOpen] = useState(false);
-  const [availableIngredients, setAvailableIngredients] = useState<any[]>([]);
   
   const isNewProduct = !productData?.id;
+  
+  // Fetch available ingredients (products that can be used as ingredients)
+  const { data: availableIngredients = [] } = useQuery({
+    queryKey: ['available-ingredients'],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('id, name, unit, cost')
+          .eq('is_manufactured', false);
+          
+        if (error) throw error;
+        return data || [];
+      } catch (error: any) {
+        console.error("Erro ao carregar ingredientes:", error);
+        toast({
+          title: "Erro",
+          description: `Erro ao carregar ingredientes: ${error.message}`,
+          variant: "destructive"
+        });
+        return [];
+      }
+    },
+    enabled: isOpen
+  });
+  
+  // Fetch product recipe if editing an existing product
+  const { data: recipeData } = useQuery({
+    queryKey: ['product-recipe', productData?.id],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase
+          .from('product_recipes')
+          .select('id, ingredient_id, quantity')
+          .eq('product_id', productData.id);
+          
+        if (error) throw error;
+        return data || [];
+      } catch (error) {
+        console.error("Erro ao carregar receita:", error);
+        return [];
+      }
+    },
+    enabled: !!productData?.id && !!productData.is_manufactured && isOpen
+  });
   
   useEffect(() => {
     if (productData) {
@@ -57,30 +103,28 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
         unit: productData.unit || 'UN',
         category: productData.category || '',
         description: productData.description || '',
-        taxType: productData.taxType || 'Tributado',
+        tax_type: productData.tax_type || 'Tributado',
         icms: productData.icms || '18',
         ipi: productData.ipi || '5',
         pis: productData.pis || '1.65',
         cofins: productData.cofins || '7.6',
-        isManufactured: productData.isManufactured || false
+        is_manufactured: productData.is_manufactured || false
       });
-      
-      if (productData.recipe) {
-        setRecipeItems(productData.recipe);
-      }
     } else {
       resetForm();
     }
-    
-    // Mock data for available ingredients
-    setAvailableIngredients([
-      { id: '1', name: 'Matéria prima A', unit: 'KG', cost: 25.00 },
-      { id: '2', name: 'Componente eletrônico B', unit: 'UN', cost: 8.50 },
-      { id: '3', name: 'Material C', unit: 'M', cost: 12.75 },
-      { id: '4', name: 'Insumo químico D', unit: 'L', cost: 30.20 },
-      { id: '5', name: 'Composto E', unit: 'G', cost: 5.60 },
-    ]);
   }, [productData]);
+  
+  // Set recipe items when recipeData changes
+  useEffect(() => {
+    if (recipeData) {
+      setRecipeItems(recipeData.map(item => ({
+        id: item.id,
+        ingredient_id: item.ingredient_id,
+        quantity: item.quantity.toString()
+      })));
+    }
+  }, [recipeData]);
 
   const resetForm = () => {
     setFormData({
@@ -95,12 +139,12 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
       unit: 'UN',
       category: '',
       description: '',
-      taxType: 'Tributado',
+      tax_type: 'Tributado',
       icms: '18',
       ipi: '5',
       pis: '1.65',
       cofins: '7.6',
-      isManufactured: false
+      is_manufactured: false
     });
     setRecipeItems([]);
   };
@@ -116,7 +160,7 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
 
   const handleSwitchChange = (name: string, checked: boolean) => {
     setFormData(prev => ({ ...prev, [name]: checked }));
-    if (name === 'isManufactured' && checked) {
+    if (name === 'is_manufactured' && checked) {
       setIsRecipeOpen(true);
     }
   };
@@ -128,7 +172,7 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
   };
 
   const addRecipeItem = () => {
-    setRecipeItems([...recipeItems, { id: Date.now().toString(), productId: '', quantity: '1' }]);
+    setRecipeItems([...recipeItems, { id: Date.now().toString(), ingredient_id: '', quantity: '1' }]);
   };
 
   const removeRecipeItem = (index: number) => {
@@ -137,14 +181,90 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
     setRecipeItems(updatedItems);
   };
 
-  const handleSubmit = () => {
-    // Here we would submit to backend API
-    // For now just show a toast notification
-    toast({
-      title: isNewProduct ? "Produto adicionado" : "Produto atualizado",
-      description: `${formData.name} foi ${isNewProduct ? 'adicionado' : 'atualizado'} com sucesso.`,
-    });
-    onClose();
+  const handleSubmit = async () => {
+    try {
+      const productPayload = {
+        code: formData.code,
+        name: formData.name,
+        sku: formData.sku,
+        ncm: formData.ncm,
+        price: formData.price ? parseFloat(formData.price) : null,
+        cost: formData.cost ? parseFloat(formData.cost) : null,
+        stock: formData.stock ? parseFloat(formData.stock) : 0,
+        unit: formData.unit,
+        category: formData.category,
+        description: formData.description,
+        tax_type: formData.tax_type,
+        icms: formData.icms,
+        ipi: formData.ipi,
+        pis: formData.pis,
+        cofins: formData.cofins,
+        is_manufactured: formData.is_manufactured
+      };
+      
+      // Insert or update product
+      let productId = formData.id;
+      if (isNewProduct) {
+        const { data, error } = await supabase
+          .from('products')
+          .insert([productPayload])
+          .select();
+          
+        if (error) throw error;
+        productId = data[0].id;
+      } else {
+        const { error } = await supabase
+          .from('products')
+          .update(productPayload)
+          .eq('id', formData.id);
+          
+        if (error) throw error;
+      }
+      
+      // Handle recipe items if product is manufactured
+      if (formData.is_manufactured && productId) {
+        // Delete existing recipe items for the product
+        if (!isNewProduct) {
+          await supabase
+            .from('product_recipes')
+            .delete()
+            .eq('product_id', productId);
+        }
+        
+        // Insert new recipe items
+        const validRecipeItems = recipeItems.filter(item => 
+          item.ingredient_id && parseFloat(item.quantity) > 0
+        );
+        
+        if (validRecipeItems.length > 0) {
+          const { error } = await supabase
+            .from('product_recipes')
+            .insert(
+              validRecipeItems.map(item => ({
+                product_id: productId,
+                ingredient_id: item.ingredient_id,
+                quantity: parseFloat(item.quantity)
+              }))
+            );
+            
+          if (error) throw error;
+        }
+      }
+      
+      toast({
+        title: isNewProduct ? "Produto adicionado" : "Produto atualizado",
+        description: `${formData.name} foi ${isNewProduct ? 'adicionado' : 'atualizado'} com sucesso.`,
+      });
+      
+      onClose();
+    } catch (error: any) {
+      console.error("Erro ao salvar produto:", error);
+      toast({
+        title: "Erro",
+        description: `Erro ao salvar produto: ${error.message}`,
+        variant: "destructive"
+      });
+    }
   };
 
   const unitOptions = [
@@ -256,6 +376,7 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
                 id="price"
                 name="price"
                 type="number"
+                step="0.01"
                 value={formData.price}
                 onChange={handleChange}
               />
@@ -266,6 +387,7 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
                 id="cost"
                 name="cost"
                 type="number"
+                step="0.01"
                 value={formData.cost}
                 onChange={handleChange}
               />
@@ -276,6 +398,7 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
                 id="stock"
                 name="stock"
                 type="number"
+                step="0.01"
                 value={formData.stock}
                 onChange={handleChange}
               />
@@ -286,14 +409,14 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
           <div className="flex items-center space-x-2 pt-2 border-t">
             <Switch
               id="manufacturing"
-              checked={formData.isManufactured}
-              onCheckedChange={(checked) => handleSwitchChange('isManufactured', checked)}
+              checked={formData.is_manufactured}
+              onCheckedChange={(checked) => handleSwitchChange('is_manufactured', checked)}
             />
             <Label htmlFor="manufacturing" className="font-medium">Produto Fabricado</Label>
           </div>
           
           {/* Recipe Management */}
-          {formData.isManufactured && (
+          {formData.is_manufactured && (
             <Collapsible open={isRecipeOpen} onOpenChange={setIsRecipeOpen} className="border rounded-md p-2">
               <CollapsibleTrigger className="flex items-center justify-between w-full p-2 font-medium">
                 Receita de Fabricação
@@ -308,8 +431,8 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
                       <div>
                         <Label>Insumo</Label>
                         <Select 
-                          value={item.productId}
-                          onValueChange={(value) => handleRecipeItemChange(index, 'productId', value)}
+                          value={item.ingredient_id}
+                          onValueChange={(value) => handleRecipeItemChange(index, 'ingredient_id', value)}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione um insumo..." />
@@ -375,10 +498,10 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="taxType">Tipo Tributário</Label>
+                <Label htmlFor="tax_type">Tipo Tributário</Label>
                 <Select 
-                  value={formData.taxType}
-                  onValueChange={(value) => handleSelectChange('taxType', value)}
+                  value={formData.tax_type}
+                  onValueChange={(value) => handleSelectChange('tax_type', value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecionar..." />

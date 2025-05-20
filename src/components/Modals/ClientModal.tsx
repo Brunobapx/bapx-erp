@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from '@tanstack/react-query';
 
 interface ClientModalProps {
   isOpen: boolean;
@@ -81,14 +83,59 @@ export const ClientModal = ({ isOpen, onClose, clientData }: ClientModalProps) =
     setFormData(prev => ({ ...prev, type: value }));
   };
 
-  const handleSubmit = () => {
-    // Here we would submit to backend API
-    // For now just show a toast notification
-    toast({
-      title: isNewClient ? "Cliente adicionado" : "Cliente atualizado",
-      description: `${formData.name} foi ${isNewClient ? 'adicionado' : 'atualizado'} com sucesso.`,
-    });
-    onClose();
+  const handleSubmit = async () => {
+    try {
+      const userData = {
+        name: formData.name,
+        type: formData.type,
+        cnpj: formData.type === 'Jurídica' ? formData.cnpj : null,
+        ie: formData.type === 'Jurídica' ? formData.ie : null,
+        cpf: formData.type === 'Física' ? formData.cpf : null,
+        rg: formData.type === 'Física' ? formData.rg : null,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        zip: formData.zip
+      };
+      
+      if (isNewClient) {
+        const { data, error } = await supabase
+          .from('clients')
+          .insert([userData])
+          .select();
+          
+        if (error) throw error;
+        
+        toast({
+          title: "Cliente adicionado",
+          description: `${formData.name} foi adicionado com sucesso.`,
+        });
+      } else {
+        const { data, error } = await supabase
+          .from('clients')
+          .update(userData)
+          .eq('id', formData.id)
+          .select();
+          
+        if (error) throw error;
+        
+        toast({
+          title: "Cliente atualizado",
+          description: `${formData.name} foi atualizado com sucesso.`,
+        });
+      }
+      
+      onClose();
+    } catch (error: any) {
+      console.error("Erro ao salvar cliente:", error);
+      toast({
+        title: "Erro",
+        description: `Erro ao salvar cliente: ${error.message}`,
+        variant: "destructive"
+      });
+    }
   };
 
   return (
