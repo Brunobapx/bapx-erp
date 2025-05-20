@@ -9,17 +9,6 @@ import { Mail, Lock, LogIn } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
-interface User {
-  email: string;
-  password: string;
-}
-
-// Mock users for demonstration purposes
-const mockUsers: User[] = [
-  { email: "admin@example.com", password: "admin123" },
-  { email: "user@example.com", password: "user123" }
-];
-
 const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,38 +17,31 @@ const LoginPage = () => {
   const { toast } = useToast();
   const { login } = useAuth();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call with timeout
-    setTimeout(() => {
-      const user = mockUsers.find(
-        (user) => user.email === email && user.password === password
-      );
-
-      if (user) {
-        // Successfully authenticated
-        toast({
-          title: "Login bem-sucedido",
-          description: "Bem-vindo ao sistema de ERP.",
-        });
-        
-        // Use the login function from auth context
-        login(user.email);
-        
-        // Redirect to dashboard
-        navigate("/");
-      } else {
-        // Authentication failed
-        toast({
-          title: "Falha no login",
-          description: "E-mail ou senha incorretos. Tente novamente.",
-          variant: "destructive",
-        });
-      }
+    try {
+      // Pass both email and password to the login function
+      await login(email, password);
+      
+      toast({
+        title: "Login bem-sucedido",
+        description: "Bem-vindo ao sistema de ERP.",
+      });
+      
+      // No need to navigate here as it's handled by AuthContext
+    } catch (error: any) {
+      console.error("Login error:", error);
+      
+      toast({
+        title: "Falha no login",
+        description: error.message || "E-mail ou senha incorretos. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
