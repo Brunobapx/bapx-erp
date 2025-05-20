@@ -9,7 +9,84 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      orders: {
+        Row: {
+          client_id: string
+          client_name: string
+          created_at: string | null
+          delivery_deadline: string | null
+          id: string
+          payment_method: string | null
+          product_id: string
+          product_name: string
+          quantity: number
+          seller: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          client_name: string
+          created_at?: string | null
+          delivery_deadline?: string | null
+          id?: string
+          payment_method?: string | null
+          product_id: string
+          product_name: string
+          quantity?: number
+          seller?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          client_name?: string
+          created_at?: string | null
+          delivery_deadline?: string | null
+          id?: string
+          payment_method?: string | null
+          product_id?: string
+          product_name?: string
+          quantity?: number
+          seller?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          role: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          first_name?: string | null
+          id: string
+          last_name?: string | null
+          role?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          role?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
