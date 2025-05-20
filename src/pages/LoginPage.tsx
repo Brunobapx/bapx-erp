@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from "@/components/ui/input";
@@ -63,17 +62,15 @@ const LoginPage = () => {
       }
 
       if (isSignUp && data?.user) {
-        toast({
-          title: "Cadastro realizado",
-          description: "Usuário criado com sucesso.",
+        toast.success("Cadastro realizado", {
+          description: "Usuário criado com sucesso."
         });
         // Switch back to login after successful signup
         setIsSignUp(false);
       } else if (data?.user) {
         // Successfully authenticated
-        toast({
-          title: "Login bem-sucedido",
-          description: "Bem-vindo ao sistema de ERP.",
+        toast.success("Login bem-sucedido", {
+          description: "Bem-vindo ao sistema de ERP."
         });
         
         // Use the login function from auth context
@@ -85,10 +82,8 @@ const LoginPage = () => {
     } catch (error) {
       // Authentication failed
       console.error("Erro de autenticação:", error);
-      toast({
-        title: "Falha na autenticação",
-        description: error instanceof Error ? error.message : "Usuário ou senha incorretos. Tente novamente.",
-        variant: "destructive",
+      toast.error("Falha na autenticação", {
+        description: error instanceof Error ? error.message : "Usuário ou senha incorretos. Tente novamente."
       });
     } finally {
       setIsLoading(false);
@@ -144,9 +139,8 @@ const LoginPage = () => {
 
           if (userProfileError) throw userProfileError;
 
-          toast({
-            title: "Usuários padrão criados",
-            description: "Admin (usuário: admin, senha: admin) e User (usuário: user, senha: user) foram criados com sucesso.",
+          toast.success("Usuários padrão criados", {
+            description: "Admin (usuário: admin, senha: admin) e User (usuário: user, senha: user) foram criados com sucesso."
           });
           
           // Pré-preencher os campos de login com os dados do administrador
@@ -156,10 +150,8 @@ const LoginPage = () => {
       }
     } catch (error) {
       console.error('Erro ao criar usuários padrão:', error);
-      toast({
-        title: "Erro ao criar usuários padrão",
-        description: error instanceof Error ? error.message : "Ocorreu um erro ao criar os usuários padrão",
-        variant: "destructive",
+      toast.error("Erro ao criar usuários padrão", {
+        description: error instanceof Error ? error.message : "Ocorreu um erro ao criar os usuários padrão"
       });
     } finally {
       setIsCreatingUsers(false);
