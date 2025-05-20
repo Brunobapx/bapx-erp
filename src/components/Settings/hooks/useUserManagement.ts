@@ -3,8 +3,9 @@ import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from '../types/UserTypes';
+import { User as SupabaseUser } from "@supabase/supabase-js";
 
-export const useUserManagement = (currentUser: { email: string } | null) => {
+export const useUserManagement = (currentUser: SupabaseUser | null) => {
   const [users, setUsers] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
@@ -104,7 +105,7 @@ export const useUserManagement = (currentUser: { email: string } | null) => {
     if (currentSelectedUser) {
       try {
         // Não permitir excluir o próprio usuário atual
-        if (currentUser && currentSelectedUser.email === currentUser.email) {
+        if (currentUser && currentUser.email && currentSelectedUser.email === currentUser.email) {
           toast.error("Você não pode excluir seu próprio usuário");
           return;
         }
@@ -147,7 +148,7 @@ export const useUserManagement = (currentUser: { email: string } | null) => {
   const handleToggleAdmin = async (user: User) => {
     try {
       // Não permitir remover privilégios de administrador do próprio usuário
-      if (currentUser && user.email === currentUser.email && user.isAdmin) {
+      if (currentUser && currentUser.email && user.email === currentUser.email && user.isAdmin) {
         toast.error("Você não pode remover seus próprios privilégios de administrador");
         return;
       }

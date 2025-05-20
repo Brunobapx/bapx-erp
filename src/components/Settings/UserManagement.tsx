@@ -15,9 +15,10 @@ import { useUserManagement } from './hooks/useUserManagement';
 import UserDialog from './UserDialog';
 import DeleteUserDialog from './DeleteUserDialog';
 import UsersTable from './UsersTable';
+import { User as SupabaseUser } from "@supabase/supabase-js";
 
 interface UserManagementProps {
-  currentUser: { email: string } | null;
+  currentUser: SupabaseUser | null;
 }
 
 const UserManagement = ({ currentUser }: UserManagementProps) => {
