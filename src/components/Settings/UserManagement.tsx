@@ -28,10 +28,35 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Search, Plus, Edit, Trash2, User } from 'lucide-react';
+import { Search, Plus, Edit, Trash2 } from 'lucide-react';
+
+// Define interface for permissions
+interface UserPermissions {
+  pedidos: boolean;
+  producao: boolean;
+  embalagem: boolean;
+  vendas: boolean;
+  financeiro: boolean;
+  rotas: boolean;
+  calendario: boolean;
+  clientes: boolean;
+  produtos: boolean;
+  fornecedores: boolean;
+  emissao_fiscal: boolean;
+  configuracoes: boolean;
+}
+
+// Define interface for user
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  permissions: UserPermissions;
+}
 
 // Mock user data
-const mockUsers = [
+const mockUsers: User[] = [
   { 
     id: 1, 
     name: 'Administrador', 
@@ -111,11 +136,11 @@ const modules = [
 ];
 
 const UserManagement = () => {
-  const [users, setUsers] = useState(mockUsers);
+  const [users, setUsers] = useState<User[]>(mockUsers);
   const [searchQuery, setSearchQuery] = useState('');
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [editMode, setEditMode] = useState(false);
 
   // Filtered users based on search
@@ -126,7 +151,9 @@ const UserManagement = () => {
   );
 
   const handleAddEditUser = () => {
-    if (editMode && currentUser) {
+    if (!currentUser) return;
+    
+    if (editMode) {
       // Update existing user
       setUsers(users.map(user => user.id === currentUser.id ? currentUser : user));
       toast.success(`Usuário ${currentUser.name} atualizado com sucesso`);
@@ -151,26 +178,30 @@ const UserManagement = () => {
   };
 
   const handleOpenNewUserDialog = () => {
+    // Create default permissions object
+    const defaultPermissions = modules.reduce((acc, module) => {
+      acc[module.id as keyof UserPermissions] = false;
+      return acc;
+    }, {} as UserPermissions);
+    
     setCurrentUser({
+      id: 0, // Temporary ID
       name: '',
       email: '',
       role: '',
-      permissions: modules.reduce((acc, module) => {
-        acc[module.id] = false;
-        return acc;
-      }, {} as Record<string, boolean>)
+      permissions: defaultPermissions
     });
     setEditMode(false);
     setIsUserDialogOpen(true);
   };
 
-  const handleOpenEditUserDialog = (user: any) => {
+  const handleOpenEditUserDialog = (user: User) => {
     setCurrentUser({...user});
     setEditMode(true);
     setIsUserDialogOpen(true);
   };
 
-  const handleOpenDeleteDialog = (user: any) => {
+  const handleOpenDeleteDialog = (user: User) => {
     setCurrentUser(user);
     setIsDeleteDialogOpen(true);
   };
@@ -186,7 +217,7 @@ const UserManagement = () => {
         ...currentUser,
         permissions: {
           ...currentUser.permissions,
-          [moduleId]: checked
+          [moduleId as keyof UserPermissions]: checked
         }
       });
     }
@@ -227,30 +258,31 @@ const UserManagement = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.name}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>{user.role}</TableCell>
-                  <TableCell className="text-right flex gap-2 justify-end">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handleOpenEditUserDialog(user)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handleOpenDeleteDialog(user)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filteredUsers.length === 0 && (
+              {filteredUsers.length > 0 ? (
+                filteredUsers.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell className="font-medium">{user.name}</TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>{user.role}</TableCell>
+                    <TableCell className="text-right flex gap-2 justify-end">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleOpenEditUserDialog(user)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleOpenDeleteDialog(user)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center py-4">
                     Nenhum usuário encontrado.
@@ -276,7 +308,7 @@ const UserManagement = () => {
                 <Input 
                   id="name" 
                   value={currentUser?.name || ''} 
-                  onChange={(e) => setCurrentUser({...currentUser, name: e.target.value})}
+                  onChange={(e) => currentUser && setCurrentUser({...currentUser, name: e.target.value})}
                 />
               </div>
               <div className="grid gap-2">
@@ -285,7 +317,7 @@ const UserManagement = () => {
                   id="email" 
                   type="email" 
                   value={currentUser?.email || ''} 
-                  onChange={(e) => setCurrentUser({...currentUser, email: e.target.value})}
+                  onChange={(e) => currentUser && setCurrentUser({...currentUser, email: e.target.value})}
                 />
               </div>
               <div className="grid gap-2">
@@ -293,7 +325,7 @@ const UserManagement = () => {
                 <Input 
                   id="role" 
                   value={currentUser?.role || ''} 
-                  onChange={(e) => setCurrentUser({...currentUser, role: e.target.value})}
+                  onChange={(e) => currentUser && setCurrentUser({...currentUser, role: e.target.value})}
                 />
               </div>
               <div className="space-y-2">
@@ -303,8 +335,8 @@ const UserManagement = () => {
                     <div key={module.id} className="flex items-center space-x-2">
                       <Checkbox 
                         id={`permission-${module.id}`} 
-                        checked={currentUser?.permissions?.[module.id] || false}
-                        onCheckedChange={(checked) => handlePermissionChange(module.id, checked as boolean)}
+                        checked={currentUser?.permissions?.[module.id as keyof UserPermissions] || false}
+                        onCheckedChange={(checked) => handlePermissionChange(module.id, checked === true)}
                       />
                       <Label htmlFor={`permission-${module.id}`}>{module.name}</Label>
                     </div>

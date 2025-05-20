@@ -20,38 +20,48 @@ import FiscalEmissionPage from "./pages/FiscalEmissionPage";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+// Create a new QueryClient instance
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: false,
+    },
+  },
+});
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
+const App = () => {
+  return (
+    <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <div className="flex h-screen overflow-hidden">
-          <Sidebar />
-          <div className="flex-1 overflow-auto">
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/clientes" element={<ClientsPage />} />
-              <Route path="/produtos" element={<ProductsPage />} />
-              <Route path="/fornecedores" element={<VendorsPage />} />
-              <Route path="/pedidos" element={<OrdersPage />} />
-              <Route path="/producao" element={<ProductionPage />} />
-              <Route path="/embalagem" element={<PackagingPage />} />
-              <Route path="/vendas" element={<SalesPage />} />
-              <Route path="/emissao-fiscal" element={<FiscalEmissionPage />} />
-              <Route path="/financeiro" element={<FinancePage />} />
-              <Route path="/rotas" element={<RoutesPage />} />
-              <Route path="/calendario" element={<CalendarPage />} />
-              <Route path="/configuracoes" element={<SettingsPage />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+        <TooltipProvider>
+          <div className="flex h-screen overflow-hidden">
+            <Sidebar />
+            <div className="flex-1 overflow-auto">
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/clientes" element={<ClientsPage />} />
+                <Route path="/produtos" element={<ProductsPage />} />
+                <Route path="/fornecedores" element={<VendorsPage />} />
+                <Route path="/pedidos" element={<OrdersPage />} />
+                <Route path="/producao" element={<ProductionPage />} />
+                <Route path="/embalagem" element={<PackagingPage />} />
+                <Route path="/vendas" element={<SalesPage />} />
+                <Route path="/emissao-fiscal" element={<FiscalEmissionPage />} />
+                <Route path="/financeiro" element={<FinancePage />} />
+                <Route path="/rotas" element={<RoutesPage />} />
+                <Route path="/calendario" element={<CalendarPage />} />
+                <Route path="/configuracoes" element={<SettingsPage />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </div>
           </div>
-        </div>
+          <Toaster />
+          <Sonner />
+        </TooltipProvider>
       </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+    </QueryClientProvider>
+  );
+};
 
 export default App;
