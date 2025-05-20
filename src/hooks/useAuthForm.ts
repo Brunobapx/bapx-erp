@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 export type AuthFormMode = 'login' | 'signup';
 
 export const useAuthForm = () => {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isCreatingUsers, setIsCreatingUsers] = useState(false);
@@ -23,9 +23,6 @@ export const useAuthForm = () => {
     setIsLoading(true);
 
     try {
-      // Transform username to email format for Supabase Auth
-      const email = `${username}@sistema.interno`;
-      
       let authResponse;
       
       if (mode === 'signup') {
@@ -70,7 +67,7 @@ export const useAuthForm = () => {
       // Authentication failed
       console.error("Erro de autenticação:", error);
       toast.error("Falha na autenticação", {
-        description: error instanceof Error ? error.message : "Usuário ou senha incorretos. Tente novamente."
+        description: error instanceof Error ? error.message : "Email ou senha incorretos. Tente novamente."
       });
     } finally {
       setIsLoading(false);
@@ -127,11 +124,11 @@ export const useAuthForm = () => {
           if (userProfileError) throw userProfileError;
 
           toast.success("Usuários padrão criados", {
-            description: "Admin (usuário: admin, senha: admin) e User (usuário: user, senha: user) foram criados com sucesso."
+            description: "Admin (email: admin@sistema.interno, senha: admin) e User (email: user@sistema.interno, senha: user) foram criados com sucesso."
           });
           
           // Pre-fill login fields with admin data
-          setUsername('admin');
+          setEmail('admin@sistema.interno');
           setPassword('admin');
         }
       }
@@ -146,8 +143,8 @@ export const useAuthForm = () => {
   };
 
   return {
-    username,
-    setUsername,
+    email,
+    setEmail,
     password,
     setPassword,
     isLoading,

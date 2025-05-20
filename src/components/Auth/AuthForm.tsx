@@ -4,16 +4,16 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { User, Lock, LogIn, UserPlus } from "lucide-react";
+import { Mail, Lock, LogIn, UserPlus } from "lucide-react";
 import { AuthFormMode } from '@/hooks/useAuthForm';
 
 interface AuthFormProps {
   mode: AuthFormMode;
-  username: string;
+  email: string;
   password: string;
   isLoading: boolean;
   isCreatingUsers: boolean;
-  onUsernameChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onEmailChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onPasswordChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSubmit: (e: React.FormEvent) => void;
   onToggleMode: () => void;
@@ -22,11 +22,11 @@ interface AuthFormProps {
 
 export const AuthForm: React.FC<AuthFormProps> = ({
   mode,
-  username,
+  email,
   password,
   isLoading,
   isCreatingUsers,
-  onUsernameChange,
+  onEmailChange,
   onPasswordChange,
   onSubmit,
   onToggleMode,
@@ -41,21 +41,21 @@ export const AuthForm: React.FC<AuthFormProps> = ({
           {isSignUp ? "Criar Conta" : "Entrar no Sistema"}
         </CardTitle>
         <CardDescription className="text-center">
-          {isSignUp ? "Preencha seus dados para se cadastrar" : "Digite seu usuário e senha para acessar"}
+          {isSignUp ? "Preencha seus dados para se cadastrar" : "Digite seu email e senha para acessar"}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="username">Usuário</Label>
+            <Label htmlFor="email">E-mail</Label>
             <div className="relative">
-              <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                id="username"
-                type="text" 
-                placeholder="seu_usuario"
-                value={username}
-                onChange={onUsernameChange}
+                id="email"
+                type="email" 
+                placeholder="seu_email@exemplo.com"
+                value={email}
+                onChange={onEmailChange}
                 className="pl-10"
                 required
               />

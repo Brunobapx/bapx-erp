@@ -9,8 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 const LoginPage = () => {
   const navigate = useNavigate();
   const { 
-    username, 
-    setUsername,
+    email, 
+    setEmail,
     password, 
     setPassword,
     isLoading,
@@ -44,11 +44,11 @@ const LoginPage = () => {
 
         <AuthForm
           mode={mode}
-          username={username}
+          email={email}
           password={password}
           isLoading={isLoading}
           isCreatingUsers={isCreatingUsers}
-          onUsernameChange={(e) => setUsername(e.target.value)}
+          onEmailChange={(e) => setEmail(e.target.value)}
           onPasswordChange={(e) => setPassword(e.target.value)}
           onSubmit={handleAuthentication}
           onToggleMode={toggleMode}
