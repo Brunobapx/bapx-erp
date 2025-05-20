@@ -5,9 +5,20 @@ import UserManagement from "@/components/Settings/UserManagement";
 import CompanyData from "@/components/Settings/CompanyData";
 import VisualCustomization from "@/components/Settings/VisualCustomization";
 import SystemParameters from "@/components/Settings/SystemParameters";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState('users');
+  const { user } = useAuth();
+
+  React.useEffect(() => {
+    if (user) {
+      // Verificar se o usuário tem permissão para acessar a página de configurações
+      // Exibir toast de boas-vindas ao administrador
+      toast.success("Bem-vindo à área de configurações, administrador!");
+    }
+  }, [user]);
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
@@ -25,7 +36,7 @@ const SettingsPage = () => {
         </TabsList>
         
         <TabsContent value="users" className="mt-2">
-          <UserManagement />
+          <UserManagement currentUser={user} />
         </TabsContent>
         
         <TabsContent value="company" className="mt-2">
