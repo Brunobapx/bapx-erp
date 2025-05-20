@@ -7,6 +7,8 @@ import { useAuth } from "@/contexts/AuthContext";
 const UserControls = () => {
   const { user, logout } = useAuth();
 
+  if (!user) return null;
+
   return (
     <div className="p-4 border-t border-sidebar-border">
       <div className="flex items-center justify-between">
@@ -21,7 +23,7 @@ const UserControls = () => {
         <Button 
           variant="ghost" 
           size="icon" 
-          onClick={logout} 
+          onClick={() => logout()} 
           title="Sair do sistema"
         >
           <LogOut className="h-4 w-4" />
