@@ -1,13 +1,15 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApprovalModal } from '@/components/Modals/ApprovalModal';
 import { DollarSign, Banknote, PiggyBank, FileText, Wallet } from 'lucide-react';
 import StageAlert from '@/components/Alerts/StageAlert';
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
-// Import new finance components
+// Import finance components
 import CashFlowChart from '@/components/Finance/CashFlowChart';
 import TransactionList from '@/components/Finance/TransactionList';
 import BankAccountsList from '@/components/Finance/BankAccountsList';
@@ -17,22 +19,116 @@ import FinancialStatements from '@/components/Finance/FinancialStatements';
 const FinancePage = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [alerts, setAlerts] = useState([
-    {
-      id: 'alert-1',
-      type: 'finance' as const,
-      message: 'Lançamento #F-004 aguardando confirmação de pagamento',
-      time: '2 dias'
-    }
-  ]);
+  const [alerts, setAlerts] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const { toast } = useToast();
 
-  const handleItemClick = (item: any) => {
+  useEffect(() => {
+    fetchFinanceAlerts();
+    fetchPendingOrders();
+  }, []);
+
+  const fetchFinanceAlerts = async () => {
+    try {
+      // Get orders with "Financeiro Pendente" status
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('status', 'Financeiro Pendente')
+        .order('created_at', { ascending: true });
+      
+      if (error) throw error;
+      
+      // Create alerts from orders
+      const newAlerts = data.map((order, index) => ({
+        id: `alert-finance-${index}`,
+        type: 'finance' as const,
+        message: `Lançamento #F-${order.id.substring(0, 5)} aguardando confirmação de pagamento`,
+        time: getTimeAgo(new Date(order.created_at))
+      }));
+      
+      setAlerts(newAlerts);
+      
+    } catch (error) {
+      console.error('Error fetching finance alerts:', error);
+    }
+  };
+
+  const fetchPendingOrders = async () => {
+    try {
+      // Get orders with "Financeiro Pendente" status
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('status', 'Financeiro Pendente');
+      
+      if (error) throw error;
+      
+      setOrders(data || []);
+      
+    } catch (error) {
+      console.error('Error fetching pending orders:', error);
+    }
+  };
+
+  const getTimeAgo = (date) => {
+    const now = new Date();
+    const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
+    
+    if (diffInHours < 24) return `${diffInHours} horas`;
+    const diffInDays = Math.floor(diffInHours / 24);
+    return `${diffInDays} ${diffInDays === 1 ? 'dia' : 'dias'}`;
+  };
+
+  const handleItemClick = (item) => {
     setSelectedItem(item);
     setShowModal(true);
   };
 
-  const handleDismissAlert = (id: string) => {
+  const handleNewTransaction = () => {
+    setSelectedItem(null);
+    setShowModal(true);
+  };
+
+  const handleDismissAlert = (id) => {
     setAlerts(alerts.filter(alert => alert.id !== id));
+  };
+
+  const handleFinanceApproval = async (formData) => {
+    try {
+      // Update order status
+      const { error: orderError } = await supabase
+        .from('orders')
+        .update({ status: 'Aguardando Rota' })
+        .eq('id', formData.id);
+      
+      if (orderError) throw orderError;
+
+      // Update financial transaction
+      const { error: txError } = await supabase
+        .from('finance_transactions')
+        .update({ payment_status: 'completed' })
+        .eq('reference_id', formData.id);
+      
+      if (txError) console.error('Error updating transaction:', txError);
+      
+      toast({
+        title: "Pagamento confirmado",
+        description: `Pedido liberado para roteirização.`,
+      });
+
+      // Refresh data
+      fetchFinanceAlerts();
+      fetchPendingOrders();
+      
+    } catch (error) {
+      console.error('Error approving finance:', error);
+      toast({
+        title: "Erro ao confirmar pagamento",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -43,7 +139,7 @@ const FinancePage = () => {
           <p className="text-muted-foreground">Gerencie todos os aspectos financeiros da empresa.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => setShowModal(true)}>
+          <Button onClick={handleNewTransaction}>
             <DollarSign className="mr-2 h-4 w-4" /> Novo Lançamento
           </Button>
         </div>
@@ -80,11 +176,17 @@ const FinancePage = () => {
             <CashFlowChart />
             <BankAccountsList />
           </div>
-          <TransactionList />
+          <TransactionList 
+            onItemClick={handleItemClick} 
+            pendingOrders={orders}
+          />
         </TabsContent>
         
         <TabsContent value="transactions" className="mt-0">
-          <TransactionList />
+          <TransactionList 
+            onItemClick={handleItemClick} 
+            pendingOrders={orders}
+          />
         </TabsContent>
         
         <TabsContent value="accounts" className="mt-0">
@@ -110,6 +212,7 @@ const FinancePage = () => {
           quantity: 1, 
           customer: ''
         }}
+        onSave={handleFinanceApproval}
       />
     </div>
   );

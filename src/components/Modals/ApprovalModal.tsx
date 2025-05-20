@@ -16,6 +16,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ApprovalModalProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ interface ApprovalModalProps {
   orderData?: any;
   clientsData?: { value: string; label: string }[];
   productsData?: { value: string; label: string }[];
+  onSave?: (formData: any) => void;
 }
 
 export const ApprovalModal = ({ 
@@ -32,7 +34,8 @@ export const ApprovalModal = ({
   stage, 
   orderData,
   clientsData = [],
-  productsData = []
+  productsData = [],
+  onSave
 }: ApprovalModalProps) => {
   const [formData, setFormData] = useState({
     id: '',
@@ -42,7 +45,8 @@ export const ApprovalModal = ({
     notes: '',
     deliveryDate: null as Date | null,
     paymentMethod: '',
-    seller: ''
+    seller: '',
+    status: ''
   });
   
   // Dummy payment methods
@@ -62,18 +66,57 @@ export const ApprovalModal = ({
     { value: '3', label: 'Pedro Santos' },
     { value: '4', label: 'Ana Costa' },
   ];
+
+  // Status options based on stage
+  const getStatusOptions = () => {
+    switch (stage) {
+      case 'order':
+        return [
+          { value: 'aguardando_producao', label: 'Aguardando Produção' },
+          { value: 'aguardando_venda', label: 'Aguardando Venda' },
+        ];
+      case 'production':
+        return [
+          { value: 'em_producao', label: 'Em Produção' },
+          { value: 'aguardando_embalagem', label: 'Aguardando Embalagem' },
+        ];
+      case 'packaging':
+        return [
+          { value: 'embalado', label: 'Embalado' },
+          { value: 'aguardando_venda', label: 'Aguardando Venda' },
+        ];
+      case 'sales':
+        return [
+          { value: 'venda_confirmada', label: 'Venda Confirmada' },
+          { value: 'financeiro_pendente', label: 'Financeiro Pendente' },
+        ];
+      case 'finance':
+        return [
+          { value: 'financeiro_confirmado', label: 'Financeiro Confirmado' },
+          { value: 'aguardando_rota', label: 'Aguardando Rota' },
+        ];
+      case 'route':
+        return [
+          { value: 'rota_definida', label: 'Rota Definida' },
+          { value: 'entregue', label: 'Entregue' },
+        ];
+      default:
+        return [];
+    }
+  };
   
   useEffect(() => {
     if (orderData) {
       setFormData({
         id: orderData.id || '',
-        customer: orderData.customer || '',
-        product: orderData.product || '',
+        customer: orderData.client_name || orderData.customer || '',
+        product: orderData.product_name || orderData.product || '',
         quantity: orderData.quantity?.toString() || '',
         notes: orderData.notes || '',
-        deliveryDate: orderData.deliveryDate ? new Date(orderData.deliveryDate) : null,
-        paymentMethod: orderData.paymentMethod || '',
-        seller: orderData.seller || ''
+        deliveryDate: orderData.delivery_deadline ? new Date(orderData.delivery_deadline) : null,
+        paymentMethod: orderData.payment_method || '',
+        seller: orderData.seller || '',
+        status: orderData.status || ''
       });
     }
   }, [orderData]);
@@ -102,18 +145,152 @@ export const ApprovalModal = ({
     const seller = sellers.find(s => s.value === value);
     setFormData(prev => ({ ...prev, seller: seller ? seller.label : '' }));
   };
+
+  const handleSelectStatus = (value: string) => {
+    const status = getStatusOptions().find(option => option.value === value);
+    setFormData(prev => ({ ...prev, status: status ? status.label : '' }));
+  };
   
   const handleDateSelect = (date: Date | undefined) => {
     setFormData(prev => ({ ...prev, deliveryDate: date || null }));
   };
   
-  const handleSubmit = () => {
-    // Simulação de envio para API
+  const handleSubmit = async () => {
+    try {
+      if (onSave) {
+        await onSave(formData);
+      } else {
+        // Default behavior based on stage
+        switch (stage) {
+          case 'production':
+            await handleProductionUpdate();
+            break;
+          case 'packaging':
+            await handlePackagingUpdate();
+            break;
+          case 'sales':
+            await handleSalesUpdate();
+            break;
+          case 'finance':
+            await handleFinanceUpdate();
+            break;
+          case 'route':
+            await handleRouteUpdate();
+            break;
+          default:
+            // For order stage or any other undefined stage
+            await handleOrderUpdate();
+        }
+      }
+      
+      onClose();
+    } catch (error) {
+      console.error(`Error in ${stage} update:`, error);
+      toast({
+        title: `Erro ao processar ${getStageTitle()}`,
+        description: error instanceof Error ? error.message : `Ocorreu um erro ao processar o ${getStageTitle()}.`,
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const handleOrderUpdate = async () => {
+    // This is handled by the onSave prop from OrdersPage
     toast({
       title: "Pedido salvo com sucesso",
       description: `Pedido ${formData.id} foi processado.`,
     });
-    onClose();
+  };
+
+  const handleProductionUpdate = async () => {
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: 'Aguardando Embalagem' })
+      .eq('id', formData.id);
+    
+    if (error) throw error;
+    
+    toast({
+      title: "Produção concluída",
+      description: `Pedido ${formData.id} enviado para embalagem.`,
+    });
+  };
+
+  const handlePackagingUpdate = async () => {
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: 'Aguardando Venda' })
+      .eq('id', formData.id);
+    
+    if (error) throw error;
+    
+    toast({
+      title: "Embalagem concluída",
+      description: `Pedido ${formData.id} liberado para venda.`,
+    });
+  };
+
+  const handleSalesUpdate = async () => {
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: 'Financeiro Pendente' })
+      .eq('id', formData.id);
+    
+    if (error) throw error;
+    
+    // Create financial transaction
+    const { error: financeError } = await supabase
+      .from('finance_transactions')
+      .insert({
+        transaction_type: 'RECEITA',
+        amount: parseFloat(formData.quantity) * 100, // Example price calculation
+        reference_id: formData.id,
+        description: `Venda do produto ${formData.product} para ${formData.customer}`,
+        payment_status: 'pending'
+      });
+    
+    if (financeError) throw financeError;
+    
+    toast({
+      title: "Venda confirmada",
+      description: `Pedido ${formData.id} enviado para financeiro.`,
+    });
+  };
+
+  const handleFinanceUpdate = async () => {
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: 'Aguardando Rota' })
+      .eq('id', formData.id);
+    
+    if (error) throw error;
+    
+    // Update financial transaction
+    const { error: financeError } = await supabase
+      .from('finance_transactions')
+      .update({ payment_status: 'completed' })
+      .eq('reference_id', formData.id);
+    
+    if (financeError) throw financeError;
+    
+    toast({
+      title: "Financeiro confirmado",
+      description: `Pedido ${formData.id} liberado para roteirização.`,
+    });
+  };
+
+  const handleRouteUpdate = async () => {
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: 'Completed' })
+      .eq('id', formData.id);
+    
+    if (error) throw error;
+    
+    toast({
+      title: "Rota definida",
+      description: `Pedido ${formData.id} finalizado.`,
+    });
   };
   
   const getStageTitle = () => {
@@ -159,6 +336,7 @@ export const ApprovalModal = ({
                 emptyText="Nenhum cliente encontrado"
                 value={clientsData.find(client => client.label === formData.customer)?.value || ""}
                 onChange={handleSelectCustomer}
+                disabled={stage !== 'order' || !isNewOrder}
               />
             ) : (
               <Input
@@ -166,6 +344,7 @@ export const ApprovalModal = ({
                 name="customer"
                 value={formData.customer}
                 onChange={handleChange}
+                disabled={stage !== 'order' || !isNewOrder}
               />
             )}
           </div>
@@ -179,6 +358,7 @@ export const ApprovalModal = ({
                 emptyText="Nenhum produto encontrado"
                 value={productsData.find(product => product.label === formData.product)?.value || ""}
                 onChange={handleSelectProduct}
+                disabled={stage !== 'order' || !isNewOrder}
               />
             ) : (
               <Input
@@ -186,6 +366,7 @@ export const ApprovalModal = ({
                 name="product"
                 value={formData.product}
                 onChange={handleChange}
+                disabled={stage !== 'order' || !isNewOrder}
               />
             )}
           </div>
@@ -199,6 +380,7 @@ export const ApprovalModal = ({
               min="1"
               value={formData.quantity}
               onChange={handleChange}
+              disabled={stage !== 'order' || !isNewOrder}
             />
           </div>
 
@@ -212,6 +394,7 @@ export const ApprovalModal = ({
                     "w-full justify-start text-left font-normal",
                     !formData.deliveryDate && "text-muted-foreground"
                   )}
+                  disabled={stage !== 'order'}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {formData.deliveryDate ? format(formData.deliveryDate, "dd/MM/yyyy") : <span>Selecione a data</span>}
@@ -230,29 +413,49 @@ export const ApprovalModal = ({
             </Popover>
           </div>
           
-          <div className="grid gap-2">
-            <Label htmlFor="paymentMethod">Forma de Pagamento</Label>
-            <ComboboxSearch
-              items={paymentMethods}
-              placeholder="Selecione a forma de pagamento"
-              emptyText="Nenhuma forma de pagamento encontrada"
-              value={paymentMethods.find(method => method.label === formData.paymentMethod)?.value || ""}
-              onChange={handleSelectPaymentMethod}
-              className="flex items-center"
-            />
-          </div>
+          {stage === 'order' && (
+            <>
+              <div className="grid gap-2">
+                <Label htmlFor="paymentMethod">Forma de Pagamento</Label>
+                <ComboboxSearch
+                  items={paymentMethods}
+                  placeholder="Selecione a forma de pagamento"
+                  emptyText="Nenhuma forma de pagamento encontrada"
+                  value={paymentMethods.find(method => method.label === formData.paymentMethod)?.value || ""}
+                  onChange={handleSelectPaymentMethod}
+                  className="flex items-center"
+                  disabled={!isNewOrder}
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="seller">Vendedor</Label>
+                <ComboboxSearch
+                  items={sellers}
+                  placeholder="Selecione o vendedor"
+                  emptyText="Nenhum vendedor encontrado"
+                  value={sellers.find(seller => seller.label === formData.seller)?.value || ""}
+                  onChange={handleSelectSeller}
+                  className="flex items-center"
+                  disabled={!isNewOrder}
+                />
+              </div>
+            </>
+          )}
           
-          <div className="grid gap-2">
-            <Label htmlFor="seller">Vendedor</Label>
-            <ComboboxSearch
-              items={sellers}
-              placeholder="Selecione o vendedor"
-              emptyText="Nenhum vendedor encontrado"
-              value={sellers.find(seller => seller.label === formData.seller)?.value || ""}
-              onChange={handleSelectSeller}
-              className="flex items-center"
-            />
-          </div>
+          {stage !== 'order' && (
+            <div className="grid gap-2">
+              <Label htmlFor="status">Alterar Status</Label>
+              <ComboboxSearch
+                items={getStatusOptions()}
+                placeholder={`Selecione o status para ${getStageTitle()}`}
+                emptyText="Nenhum status disponível"
+                value={getStatusOptions().find(option => option.label === formData.status)?.value || ""}
+                onChange={handleSelectStatus}
+                className="flex items-center"
+              />
+            </div>
+          )}
           
           <div className="grid gap-2">
             <Label htmlFor="notes">Observações</Label>
