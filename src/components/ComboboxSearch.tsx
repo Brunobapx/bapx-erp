@@ -9,6 +9,7 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
+  CommandList,
 } from "@/components/ui/command"
 import {
   Popover,
@@ -38,9 +39,9 @@ export function ComboboxSearch({
 
   // Filter items based on search query
   const filteredItems = React.useMemo(() => {
-    if (!searchQuery.trim()) return items
+    if (!searchQuery.trim()) return items || []
     const query = searchQuery.toLowerCase()
-    return items.filter(item => 
+    return (items || []).filter(item => 
       item.label.toLowerCase().includes(query) || 
       item.value.toLowerCase().includes(query)
     )
@@ -55,8 +56,8 @@ export function ComboboxSearch({
           aria-expanded={open}
           className={cn("w-full justify-between", className)}
         >
-          {value
-            ? items.find((item) => item.value === value)?.label
+          {value && items
+            ? items.find((item) => item.value === value)?.label || placeholder
             : placeholder}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -72,28 +73,30 @@ export function ComboboxSearch({
               onValueChange={setSearchQuery}
             />
           </div>
-          <CommandEmpty>{emptyText}</CommandEmpty>
-          <CommandGroup className="max-h-60 overflow-auto">
-            {filteredItems.map((item) => (
-              <CommandItem
-                key={item.value}
-                value={item.value}
-                onSelect={() => {
-                  onChange(item.value === value ? "" : item.value)
-                  setOpen(false)
-                  setSearchQuery("")
-                }}
-              >
-                <Check
-                  className={cn(
-                    "mr-2 h-4 w-4",
-                    value === item.value ? "opacity-100" : "opacity-0"
-                  )}
-                />
-                {item.label}
-              </CommandItem>
-            ))}
-          </CommandGroup>
+          <CommandList>
+            <CommandEmpty>{emptyText}</CommandEmpty>
+            <CommandGroup className="max-h-60 overflow-auto">
+              {filteredItems.map((item) => (
+                <CommandItem
+                  key={item.value}
+                  value={item.value}
+                  onSelect={() => {
+                    onChange(item.value === value ? "" : item.value)
+                    setOpen(false)
+                    setSearchQuery("")
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      value === item.value ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  {item.label}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
         </Command>
       </PopoverContent>
     </Popover>
