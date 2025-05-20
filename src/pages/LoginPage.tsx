@@ -5,19 +5,18 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Mail, Lock, LogIn, UserPlus } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { User, Lock, LogIn, UserPlus } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
 const LoginPage = () => {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
+  const [isCreatingUsers, setIsCreatingUsers] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const navigate = useNavigate();
-  const { toast } = useToast();
   const { login } = useAuth();
 
   // Check if user is already logged in
@@ -38,6 +37,9 @@ const LoginPage = () => {
     setIsLoading(true);
 
     try {
+      // Transformar username em um formato de email para funcionar com o Supabase Auth
+      const email = `${username}@sistema.interno`;
+      
       let authResponse;
       
       if (isSignUp) {
@@ -63,7 +65,7 @@ const LoginPage = () => {
       if (isSignUp && data?.user) {
         toast({
           title: "Cadastro realizado",
-          description: "Verifique seu e-mail para confirmar o cadastro.",
+          description: "Usuário criado com sucesso.",
         });
         // Switch back to login after successful signup
         setIsSignUp(false);
@@ -85,7 +87,7 @@ const LoginPage = () => {
       console.error("Erro de autenticação:", error);
       toast({
         title: "Falha na autenticação",
-        description: error instanceof Error ? error.message : "E-mail ou senha incorretos. Tente novamente.",
+        description: error instanceof Error ? error.message : "Usuário ou senha incorretos. Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -93,49 +95,74 @@ const LoginPage = () => {
     }
   };
 
-  const createAdminUser = async () => {
-    setIsCreatingAdmin(true);
+  const createDefaultUsers = async () => {
+    setIsCreatingUsers(true);
     try {
-      // Criar o usuário no Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: 'bruno@bapx.com.br',
-        password: '123456'
+      // Criar usuário administrador
+      const adminEmail = "admin@sistema.interno";
+      const { data: adminData, error: adminError } = await supabase.auth.signUp({
+        email: adminEmail,
+        password: "admin"
       });
 
-      if (authError) throw authError;
+      if (adminError) throw adminError;
 
-      // Verificar se o usuário foi criado
-      if (authData.user) {
+      // Verificar se o usuário administrador foi criado
+      if (adminData.user) {
         // Atualizar o perfil do usuário para administrador
-        const { error: profileError } = await supabase
+        const { error: adminProfileError } = await supabase
           .from('profiles')
           .update({ 
             role: 'admin',
-            first_name: 'Bruno',
-            last_name: 'Admin'
+            first_name: 'Admin',
+            last_name: ''
           })
-          .eq('id', authData.user.id);
+          .eq('id', adminData.user.id);
 
-        if (profileError) throw profileError;
+        if (adminProfileError) throw adminProfileError;
 
-        toast({
-          title: "Usuário administrador criado",
-          description: "Bruno foi criado como administrador geral do sistema. Email: bruno@bapx.com.br, Senha: 123456",
+        // Criar usuário comum
+        const userEmail = "user@sistema.interno";
+        const { data: userData, error: userError } = await supabase.auth.signUp({
+          email: userEmail,
+          password: "user"
         });
-        
-        // Pré-preencher os campos de login com os dados do administrador
-        setEmail('bruno@bapx.com.br');
-        setPassword('123456');
+
+        if (userError) throw userError;
+
+        // Verificar se o usuário comum foi criado
+        if (userData.user) {
+          // Atualizar o perfil do usuário para usuário comum
+          const { error: userProfileError } = await supabase
+            .from('profiles')
+            .update({ 
+              role: 'user',
+              first_name: 'User',
+              last_name: ''
+            })
+            .eq('id', userData.user.id);
+
+          if (userProfileError) throw userProfileError;
+
+          toast({
+            title: "Usuários padrão criados",
+            description: "Admin (usuário: admin, senha: admin) e User (usuário: user, senha: user) foram criados com sucesso.",
+          });
+          
+          // Pré-preencher os campos de login com os dados do administrador
+          setUsername('admin');
+          setPassword('admin');
+        }
       }
     } catch (error) {
-      console.error('Erro ao criar usuário administrador:', error);
+      console.error('Erro ao criar usuários padrão:', error);
       toast({
-        title: "Erro ao criar administrador",
-        description: error instanceof Error ? error.message : "Ocorreu um erro ao criar o usuário administrador",
+        title: "Erro ao criar usuários padrão",
+        description: error instanceof Error ? error.message : "Ocorreu um erro ao criar os usuários padrão",
         variant: "destructive",
       });
     } finally {
-      setIsCreatingAdmin(false);
+      setIsCreatingUsers(false);
     }
   };
 
@@ -153,21 +180,21 @@ const LoginPage = () => {
               {isSignUp ? "Criar Conta" : "Entrar no Sistema"}
             </CardTitle>
             <CardDescription className="text-center">
-              {isSignUp ? "Preencha seus dados para se cadastrar" : "Digite seu e-mail e senha para acessar"}
+              {isSignUp ? "Preencha seus dados para se cadastrar" : "Digite seu usuário e senha para acessar"}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleAuthentication} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
+                <Label htmlFor="username">Usuário</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
-                    id="email"
-                    type="email" 
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    id="username"
+                    type="text" 
+                    placeholder="seu_usuario"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                     className="pl-10"
                     required
                   />
@@ -228,18 +255,18 @@ const LoginPage = () => {
                   type="button" 
                   variant="outline" 
                   className="text-xs mt-2" 
-                  onClick={createAdminUser}
-                  disabled={isCreatingAdmin}
+                  onClick={createDefaultUsers}
+                  disabled={isCreatingUsers}
                 >
-                  {isCreatingAdmin ? (
+                  {isCreatingUsers ? (
                     <span className="flex items-center justify-center">
                       <svg className="animate-spin -ml-1 mr-2 h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Criando administrador...
+                      Criando usuários padrão...
                     </span>
-                  ) : "Criar usuário administrador Bruno"}
+                  ) : "Criar usuários padrão (Admin e User)"}
                 </Button>
               </div>
             </form>

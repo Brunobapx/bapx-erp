@@ -30,27 +30,34 @@ export const useUserManagement = (currentUser: SupabaseUser | null) => {
 
       if (profiles) {
         // Transformar os perfis em nosso formato de usuário
-        const mappedUsers: User[] = profiles.map(profile => ({
-          id: profile.id,
-          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Usuário sem nome',
-          email: '',  // Email não está disponível diretamente do profiles
-          role: profile.role || 'user',
-          isAdmin: profile.role === 'admin',
-          permissions: {
-            pedidos: true,
-            producao: true,
-            embalagem: true,
-            vendas: true,
-            financeiro: true,
-            rotas: true,
-            calendario: true,
-            clientes: true,
-            produtos: true,
-            fornecedores: true,
-            emissao_fiscal: true,
-            configuracoes: profile.role === 'admin'
-          }
-        }));
+        const mappedUsers: User[] = profiles.map(profile => {
+          // Extrair o nome de usuário do email
+          const username = profile.id.includes('@') 
+            ? profile.id.split('@')[0] 
+            : (profile.first_name || 'Usuário');
+            
+          return {
+            id: profile.id,
+            name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || username,
+            email: '',
+            role: profile.role || 'user',
+            isAdmin: profile.role === 'admin',
+            permissions: {
+              pedidos: true,
+              producao: true,
+              embalagem: true,
+              vendas: true,
+              financeiro: true,
+              rotas: true,
+              calendario: true,
+              clientes: true,
+              produtos: true,
+              fornecedores: true,
+              emissao_fiscal: true,
+              configuracoes: profile.role === 'admin'
+            }
+          };
+        });
 
         setUsers(mappedUsers);
       }
@@ -65,7 +72,6 @@ export const useUserManagement = (currentUser: SupabaseUser | null) => {
   // Filtered users based on search
   const filteredUsers = users.filter(user => 
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    user.email.toLowerCase().includes(searchQuery.toLowerCase()) || 
     user.role.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
