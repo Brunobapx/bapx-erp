@@ -5,13 +5,11 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { ComboboxSearch } from "@/components/ComboboxSearch";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { CalendarIcon, CreditCard, User } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import {
   Popover,
   PopoverContent,
@@ -36,8 +34,6 @@ export const ApprovalModal = ({
   clientsData = [],
   productsData = []
 }: ApprovalModalProps) => {
-  const { toast } = useToast();
-  const { user } = useAuth();
   const [formData, setFormData] = useState({
     id: '',
     customer: '',
@@ -75,9 +71,7 @@ export const ApprovalModal = ({
         product: orderData.product || '',
         quantity: orderData.quantity?.toString() || '',
         notes: orderData.notes || '',
-        deliveryDate: orderData.deliveryDate ? 
-          (typeof orderData.deliveryDate === 'string' ? 
-            new Date(orderData.deliveryDate) : orderData.deliveryDate) : null,
+        deliveryDate: orderData.deliveryDate ? new Date(orderData.deliveryDate) : null,
         paymentMethod: orderData.paymentMethod || '',
         seller: orderData.seller || ''
       });
@@ -113,92 +107,13 @@ export const ApprovalModal = ({
     setFormData(prev => ({ ...prev, deliveryDate: date || null }));
   };
   
-  const handleSubmit = async () => {
-    try {
-      if (!user?.id) {
-        toast({
-          title: "Erro",
-          description: "Você precisa estar logado para realizar esta ação.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Get client and product IDs from their labels
-      const clientInfo = clientsData.find(client => client.label === formData.customer);
-      const productInfo = productsData.find(product => product.label === formData.product);
-      
-      const clientId = clientInfo?.value || '0';
-      const productId = productInfo?.value || '0';
-      
-      const isNewOrder = formData.id === 'NOVO';
-      
-      // Format deliveryDate for database
-      const deliveryDeadline = formData.deliveryDate ? 
-        formData.deliveryDate.toISOString().split('T')[0] : null;
-
-      if (isNewOrder) {
-        // Insert new order
-        const { data, error } = await supabase
-          .from('orders')
-          .insert({
-            user_id: user.id,
-            client_id: clientId,
-            client_name: formData.customer,
-            product_id: productId,
-            product_name: formData.product,
-            quantity: parseInt(formData.quantity) || 1,
-            delivery_deadline: deliveryDeadline,
-            payment_method: formData.paymentMethod,
-            seller: formData.seller,
-            status: 'Aguardando Produção'
-          })
-          .select();
-
-        if (error) {
-          throw error;
-        }
-
-        toast({
-          title: "Pedido criado com sucesso",
-          description: `O pedido foi registrado no sistema.`,
-        });
-      } else {
-        // Update existing order
-        const { error } = await supabase
-          .from('orders')
-          .update({
-            client_id: clientId,
-            client_name: formData.customer,
-            product_id: productId,
-            product_name: formData.product,
-            quantity: parseInt(formData.quantity) || 1,
-            delivery_deadline: deliveryDeadline,
-            payment_method: formData.paymentMethod,
-            seller: formData.seller,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', formData.id);
-
-        if (error) {
-          throw error;
-        }
-
-        toast({
-          title: "Pedido atualizado com sucesso",
-          description: `O pedido ${formData.id} foi atualizado.`,
-        });
-      }
-      
-      onClose();
-    } catch (error: any) {
-      console.error('Error saving order:', error);
-      toast({
-        title: "Erro ao salvar pedido",
-        description: error.message || "Ocorreu um erro ao processar o pedido.",
-        variant: "destructive",
-      });
-    }
+  const handleSubmit = () => {
+    // Simulação de envio para API
+    toast({
+      title: "Pedido salvo com sucesso",
+      description: `Pedido ${formData.id} foi processado.`,
+    });
+    onClose();
   };
   
   const getStageTitle = () => {

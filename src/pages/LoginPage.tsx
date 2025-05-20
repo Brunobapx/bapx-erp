@@ -5,10 +5,20 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Mail, Lock, LogIn, UserPlus } from "lucide-react";
+import { Mail, Lock, LogIn } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+interface User {
+  email: string;
+  password: string;
+}
+
+// Mock users for demonstration purposes
+const mockUsers: User[] = [
+  { email: "admin@example.com", password: "admin123" },
+  { email: "user@example.com", password: "user123" }
+];
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -16,60 +26,40 @@ const LoginPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { login, signup } = useAuth();
-  const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
+  const { login } = useAuth();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    try {
-      // Pass both email and password to the login function
-      await login(email, password);
-      
-      toast({
-        title: "Login bem-sucedido",
-        description: "Bem-vindo ao sistema de ERP.",
-      });
-      
-      // No need to navigate here as it's handled by AuthContext
-    } catch (error: any) {
-      console.error("Login error:", error);
-      
-      toast({
-        title: "Falha no login",
-        description: error.message || "E-mail ou senha incorretos. Tente novamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    // Simulate API call with timeout
+    setTimeout(() => {
+      const user = mockUsers.find(
+        (user) => user.email === email && user.password === password
+      );
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      await signup(email, password);
-      
-      toast({
-        title: "Cadastro realizado",
-        description: "Sua conta foi criada com sucesso. Seja bem-vindo!",
-      });
-      
-      // Auth context will handle the redirect
-    } catch (error: any) {
-      console.error("Signup error:", error);
-      
-      toast({
-        title: "Falha no cadastro",
-        description: error.message || "Não foi possível criar sua conta. Tente novamente.",
-        variant: "destructive",
-      });
-    } finally {
+      if (user) {
+        // Successfully authenticated
+        toast({
+          title: "Login bem-sucedido",
+          description: "Bem-vindo ao sistema de ERP.",
+        });
+        
+        // Use the login function from auth context
+        login(user.email);
+        
+        // Redirect to dashboard
+        navigate("/");
+      } else {
+        // Authentication failed
+        toast({
+          title: "Falha no login",
+          description: "E-mail ou senha incorretos. Tente novamente.",
+          variant: "destructive",
+        });
+      }
       setIsLoading(false);
-    }
+    }, 1000);
   };
 
   return (
@@ -82,129 +72,67 @@ const LoginPage = () => {
 
         <Card>
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">Acesso ao Sistema</CardTitle>
+            <CardTitle className="text-2xl text-center">Entrar no Sistema</CardTitle>
             <CardDescription className="text-center">
-              Entre ou cadastre-se para acessar
+              Digite seu e-mail e senha para acessar
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="login" value={activeTab} onValueChange={(value) => setActiveTab(value as "login" | "signup")}>
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="login">Entrar</TabsTrigger>
-                <TabsTrigger value="signup">Cadastrar</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="login">
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email-login">E-mail</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="email-login"
-                        type="email" 
-                        placeholder="seu@email.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="pl-10"
-                        required
-                      />
-                    </div>
-                  </div>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">E-mail</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email" 
+                    placeholder="seu@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                </div>
+              </div>
 
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="password-login">Senha</Label>
-                      <a href="#" className="text-sm text-primary hover:underline">
-                        Esqueceu a senha?
-                      </a>
-                    </div>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="password-login"
-                        type="password"
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="pl-10"
-                        required
-                      />
-                    </div>
-                  </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Senha</Label>
+                  <a href="#" className="text-sm text-primary hover:underline">
+                    Esqueceu a senha?
+                  </a>
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                </div>
+              </div>
 
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? (
-                      <span className="flex items-center justify-center">
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Entrando...
-                      </span>
-                    ) : (
-                      <span className="flex items-center justify-center">
-                        <LogIn className="mr-2 h-4 w-4" />
-                        Entrar
-                      </span>
-                    )}
-                  </Button>
-                </form>
-              </TabsContent>
-              
-              <TabsContent value="signup">
-                <form onSubmit={handleSignup} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email-signup">E-mail</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="email-signup"
-                        type="email" 
-                        placeholder="seu@email.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="pl-10"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="password-signup">Senha</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="password-signup"
-                        type="password"
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="pl-10"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? (
-                      <span className="flex items-center justify-center">
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Cadastrando...
-                      </span>
-                    ) : (
-                      <span className="flex items-center justify-center">
-                        <UserPlus className="mr-2 h-4 w-4" />
-                        Cadastrar
-                      </span>
-                    )}
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? (
+                  <span className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Entrando...
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center">
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Entrar
+                  </span>
+                )}
+              </Button>
+            </form>
           </CardContent>
           <CardFooter className="justify-center">
             <p className="text-sm text-muted-foreground">
