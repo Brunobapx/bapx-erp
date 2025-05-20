@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,125 +19,106 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ProductModal } from '@/components/Modals/ProductModal';
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from '@tanstack/react-query';
+import { toast } from "@/hooks/use-toast";
 
 const ProductsPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [categoryFilter, setCategoryFilter] = useState('Todas');
+  const [sortOrder, setSortOrder] = useState('Nome (A-Z)');
 
-  // Mock product data
-  const products = [
-    { 
-      id: 1, 
-      code: 'PRD-001', 
-      name: 'Server Hardware X1',
-      sku: '1234567890123',
-      ncm: '8471.50.10', 
-      price: 5000.00,
-      cost: 3500.00,
-      stock: 15,
-      unit: 'UN',
-      category: 'Eletrônicos',
-      isManufactured: true,
-      recipe: [
-        { id: '1', productId: '2', quantity: '2' },
-        { id: '2', productId: '4', quantity: '1.5' }
-      ]
-    },
-    { 
-      id: 2, 
-      code: 'PRD-002', 
-      name: 'Solar Panel 250W',
-      sku: '2345678901234',
-      ncm: '8541.40.32', 
-      price: 1500.00,
-      cost: 900.00,
-      stock: 42,
-      unit: 'UN',
-      category: 'Energia',
-      isManufactured: false
-    },
-    { 
-      id: 3, 
-      code: 'PRD-003', 
-      name: 'Equipamento Médico M3',
-      sku: '3456789012345',
-      ncm: '9018.19.80', 
-      price: 7000.00,
-      cost: 4200.00,
-      stock: 8,
-      unit: 'UN',
-      category: 'Médico',
-      isManufactured: true,
-      recipe: [
-        { id: '1', productId: '1', quantity: '3' },
-        { id: '2', productId: '3', quantity: '2' }
-      ]
-    },
-    { 
-      id: 4, 
-      code: 'PRD-004', 
-      name: 'Material de Embalagem',
-      sku: '4567890123456',
-      ncm: '4819.10.00', 
-      price: 100.00,
-      cost: 50.00,
-      stock: 250,
-      unit: 'PC',
-      category: 'Embalagens',
-      isManufactured: false
-    },
-    { 
-      id: 5, 
-      code: 'INS-001', 
-      name: 'Matéria prima A',
-      sku: '5678901234567',
-      ncm: '3901.10.10', 
-      price: 25.00,
-      cost: 15.00,
-      stock: 500,
-      unit: 'KG',
-      category: 'Insumos',
-      isManufactured: false
-    },
-    { 
-      id: 6, 
-      code: 'INS-002', 
-      name: 'Componente eletrônico B',
-      sku: '6789012345678',
-      ncm: '8542.31.90', 
-      price: 8.50,
-      cost: 4.25,
-      stock: 1000,
-      unit: 'UN',
-      category: 'Insumos',
-      isManufactured: false
-    },
-  ];
-
-  // Filter products based on search query
-  const filteredProducts = products.filter(product => {
-    const searchString = searchQuery.toLowerCase();
-    return (
-      product.name.toLowerCase().includes(searchString) ||
-      product.code.toLowerCase().includes(searchString) ||
-      product.sku.toLowerCase().includes(searchString) ||
-      product.ncm.toLowerCase().includes(searchString) ||
-      product.category.toLowerCase().includes(searchString)
-    );
+  // Fetch products from Supabase
+  const { 
+    data: products = [], 
+    isLoading, 
+    error,
+    refetch 
+  } = useQuery({
+    queryKey: ['products'],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*');
+          
+        if (error) throw error;
+        return data || [];
+      } catch (error) {
+        console.error("Error fetching products:", error);
+        toast({
+          title: "Erro ao carregar produtos",
+          description: "Não foi possível carregar a lista de produtos.",
+          variant: "destructive"
+        });
+        return [];
+      }
+    }
   });
 
-  const handleProductClick = (product: any) => {
+  // Apply filters and sorting to products
+  const filteredProducts = products
+    .filter(product => {
+      // Apply search filter
+      const searchString = searchQuery.toLowerCase();
+      const matchesSearch = !searchQuery || 
+        (product.name && product.name.toLowerCase().includes(searchString)) ||
+        (product.code && product.code.toLowerCase().includes(searchString)) ||
+        (product.sku && product.sku.toLowerCase().includes(searchString)) ||
+        (product.ncm && product.ncm.toLowerCase().includes(searchString)) ||
+        (product.category && product.category.toLowerCase().includes(searchString));
+      
+      // Apply category filter
+      const matchesCategory = categoryFilter === 'Todas' || product.category === categoryFilter;
+      
+      return matchesSearch && matchesCategory;
+    })
+    .sort((a, b) => {
+      // Apply sorting
+      switch (sortOrder) {
+        case 'Nome (A-Z)':
+          return (a.name || '').localeCompare(b.name || '');
+        case 'Nome (Z-A)':
+          return (b.name || '').localeCompare(a.name || '');
+        case 'Preço (Maior)':
+          return (b.price || 0) - (a.price || 0);
+        case 'Preço (Menor)':
+          return (a.price || 0) - (b.price || 0);
+        case 'Estoque (Maior)':
+          return (b.stock || 0) - (a.stock || 0);
+        case 'Estoque (Menor)':
+          return (a.stock || 0) - (b.stock || 0);
+        default:
+          return 0;
+      }
+    });
+
+  const handleProductClick = (product) => {
     setSelectedProduct(product);
     setShowModal(true);
   };
 
-  const formatCurrency = (value: number) => {
+  const handleModalClose = (refreshNeeded = false) => {
+    setShowModal(false);
+    setSelectedProduct(null);
+    
+    // Refresh products if a product was added or updated
+    if (refreshNeeded) {
+      refetch();
+    }
+  };
+
+  const formatCurrency = (value) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
     }).format(value);
   };
+
+  // Get unique categories for filter dropdown
+  const categories = ['Todas', ...new Set(products.map(p => p.category).filter(Boolean))];
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
@@ -147,7 +128,10 @@ const ProductsPage = () => {
           <p className="text-muted-foreground">Cadastro e gerenciamento de produtos.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={() => { setSelectedProduct(null); setShowModal(true); }} className="bg-erp-packaging hover:bg-erp-packaging/90">
+          <Button 
+            onClick={() => { setSelectedProduct(null); setShowModal(true); }} 
+            className="bg-erp-packaging hover:bg-erp-packaging/90"
+          >
             <Plus className="mr-2 h-4 w-4" /> Novo Produto
           </Button>
           <Button variant="outline">
@@ -171,32 +155,34 @@ const ProductsPage = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
-                Categoria <ChevronDown className="ml-2 h-4 w-4" />
+                {categoryFilter} <ChevronDown className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem>Todas</DropdownMenuItem>
-              <DropdownMenuItem>Eletrônicos</DropdownMenuItem>
-              <DropdownMenuItem>Energia</DropdownMenuItem>
-              <DropdownMenuItem>Médico</DropdownMenuItem>
-              <DropdownMenuItem>Embalagens</DropdownMenuItem>
-              <DropdownMenuItem>Insumos</DropdownMenuItem>
+              {categories.map((category) => (
+                <DropdownMenuItem 
+                  key={category} 
+                  onClick={() => setCategoryFilter(category)}
+                >
+                  {category}
+                </DropdownMenuItem>
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
-                Ordenar <ChevronDown className="ml-2 h-4 w-4" />
+                {sortOrder} <ChevronDown className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem>Nome (A-Z)</DropdownMenuItem>
-              <DropdownMenuItem>Nome (Z-A)</DropdownMenuItem>
-              <DropdownMenuItem>Preço (Maior)</DropdownMenuItem>
-              <DropdownMenuItem>Preço (Menor)</DropdownMenuItem>
-              <DropdownMenuItem>Estoque (Maior)</DropdownMenuItem>
-              <DropdownMenuItem>Estoque (Menor)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortOrder('Nome (A-Z)')}>Nome (A-Z)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortOrder('Nome (Z-A)')}>Nome (Z-A)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortOrder('Preço (Maior)')}>Preço (Maior)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortOrder('Preço (Menor)')}>Preço (Menor)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortOrder('Estoque (Maior)')}>Estoque (Maior)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortOrder('Estoque (Menor)')}>Estoque (Menor)</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -204,65 +190,74 @@ const ProductsPage = () => {
       
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Código</TableHead>
-                <TableHead>Nome</TableHead>
-                <TableHead>NCM</TableHead>
-                <TableHead>Preço</TableHead>
-                <TableHead>Custo</TableHead>
-                <TableHead>Estoque</TableHead>
-                <TableHead>Un.</TableHead>
-                <TableHead>Categoria</TableHead>
-                <TableHead>Fabricado</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredProducts.map((product) => (
-                <TableRow 
-                  key={product.id}
-                  className="cursor-pointer hover:bg-accent/5"
-                  onClick={() => handleProductClick(product)}
-                >
-                  <TableCell className="font-medium flex items-center gap-2">
-                    <Barcode className="h-4 w-4 text-muted-foreground" />
-                    {product.code}
-                  </TableCell>
-                  <TableCell>{product.name}</TableCell>
-                  <TableCell>{product.ncm}</TableCell>
-                  <TableCell>{formatCurrency(product.price)}</TableCell>
-                  <TableCell>{formatCurrency(product.cost)}</TableCell>
-                  <TableCell>{product.stock}</TableCell>
-                  <TableCell>{product.unit}</TableCell>
-                  <TableCell>
-                    <span className="stage-badge badge-packaging">
-                      {product.category}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    {product.isManufactured && (
-                      <div className="flex justify-center">
-                        <Factory className="h-4 w-4 text-blue-600" />
-                      </div>
-                    )}
-                  </TableCell>
+          {isLoading ? (
+            <div className="p-4 text-center">Carregando produtos...</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Código</TableHead>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>NCM</TableHead>
+                  <TableHead>Preço</TableHead>
+                  <TableHead>Custo</TableHead>
+                  <TableHead>Estoque</TableHead>
+                  <TableHead>Un.</TableHead>
+                  <TableHead>Categoria</TableHead>
+                  <TableHead>Fabricado</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          {filteredProducts.length === 0 && (
-            <div className="p-4 text-center text-muted-foreground">
-              Nenhum produto encontrado.
-            </div>
+              </TableHeader>
+              <TableBody>
+                {filteredProducts.length > 0 ? (
+                  filteredProducts.map((product) => (
+                    <TableRow 
+                      key={product.id}
+                      className="cursor-pointer hover:bg-accent/5"
+                      onClick={() => handleProductClick(product)}
+                    >
+                      <TableCell className="font-medium flex items-center gap-2">
+                        <Barcode className="h-4 w-4 text-muted-foreground" />
+                        {product.code}
+                      </TableCell>
+                      <TableCell>{product.name}</TableCell>
+                      <TableCell>{product.ncm}</TableCell>
+                      <TableCell>{product.price ? formatCurrency(product.price) : '-'}</TableCell>
+                      <TableCell>{product.cost ? formatCurrency(product.cost) : '-'}</TableCell>
+                      <TableCell>{product.stock}</TableCell>
+                      <TableCell>{product.unit}</TableCell>
+                      <TableCell>
+                        {product.category && (
+                          <span className="stage-badge badge-packaging">
+                            {product.category}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {product.is_manufactured && (
+                          <div className="flex justify-center">
+                            <Factory className="h-4 w-4 text-blue-600" />
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={9} className="h-24 text-center">
+                      Nenhum produto encontrado.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
       
       <ProductModal
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        productData={selectedProduct || null}
+        onClose={handleModalClose}
+        productData={selectedProduct}
       />
     </div>
   );

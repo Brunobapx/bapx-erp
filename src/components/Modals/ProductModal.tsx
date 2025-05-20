@@ -13,7 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 
 interface ProductModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  onClose: (refreshNeeded?: boolean) => void;
   productData: any | null;
 }
 
@@ -182,6 +182,16 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
 
   const handleSubmit = async () => {
     try {
+      // Check required fields
+      if (!formData.name) {
+        toast({
+          title: "Erro",
+          description: "O nome do produto é obrigatório.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       // Get current user
       const { data: userData } = await supabase.auth.getUser();
       
@@ -267,7 +277,8 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
         description: `${formData.name} foi ${isNewProduct ? 'adicionado' : 'atualizado'} com sucesso.`,
       });
       
-      onClose();
+      // Close modal and signal that a refresh is needed
+      onClose(true);
     } catch (error: any) {
       console.error("Erro ao salvar produto:", error);
       toast({
@@ -303,7 +314,7 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
   ];
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={() => onClose()}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>{isNewProduct ? 'Novo Produto' : 'Editar Produto'}</DialogTitle>
@@ -570,7 +581,7 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
         </div>
         
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onClose()}>Cancelar</Button>
           <Button 
             onClick={handleSubmit}
             className="bg-erp-packaging hover:bg-erp-packaging/90"
