@@ -44,24 +44,60 @@ const DatabaseInfo = () => {
         const tablesInfo: TableInfo[] = [];
         
         for (const tableName of tableNames) {
-          // Busca a contagem de registros na tabela
-          const { count, error: countError } = await supabase
-            .from(tableName)
-            .select('*', { count: 'exact', head: true });
+          // Para orders e profiles, usamos o typecasting para lidar com a tipagem do Supabase
+          if (tableName === 'orders') {
+            const { count, error: countError } = await supabase
+              .from('orders')
+              .select('*', { count: 'exact', head: true });
+              
+            if (countError) {
+              console.error(`Erro ao buscar contagem para ${tableName}:`, countError);
+            }
             
-          if (countError && !countError.message.includes('relation')) {
-            console.error(`Erro ao buscar contagem para ${tableName}:`, countError);
+            tablesInfo.push({
+              name: tableName,
+              count: count || 0,
+              hasRls: true
+            });
+          } 
+          else if (tableName === 'profiles') {
+            const { count, error: countError } = await supabase
+              .from('profiles')
+              .select('*', { count: 'exact', head: true });
+              
+            if (countError) {
+              console.error(`Erro ao buscar contagem para ${tableName}:`, countError);
+            }
+            
+            tablesInfo.push({
+              name: tableName,
+              count: count || 0,
+              hasRls: true
+            });
           }
-          
-          // Determina se a tabela tem RLS ativado
-          // Na prática todas têm, mas isso é apenas uma demonstração
-          const hasRls = true;
-          
-          tablesInfo.push({
-            name: tableName,
-            count: count || 0,
-            hasRls
-          });
+          // Para as outras tabelas recém-criadas, fazemos uma chamada genérica via RPC
+          else {
+            try {
+              // Usar uma consulta SQL genérica via rpc para contar registros em tabelas que podem não estar nas types
+              const { data, error } = await supabase.rpc('get_row_count', { table_name: tableName });
+              
+              if (error) throw error;
+              
+              tablesInfo.push({
+                name: tableName,
+                count: data || 0,
+                hasRls: true
+              });
+            } catch (error) {
+              console.error(`Erro ao buscar contagem para ${tableName}:`, error);
+              // Adiciona a tabela mesmo com erro, apenas mostrando 0 registros
+              tablesInfo.push({
+                name: tableName,
+                count: 0,
+                hasRls: true
+              });
+            }
+          }
         }
         
         setTables(tablesInfo);
@@ -126,7 +162,7 @@ const DatabaseInfo = () => {
                     <Table className="mr-2 h-4 w-4 text-primary" />
                     <span>{getTableDisplayName(table.name)}</span>
                     {table.hasRls && (
-                      <Shield className="ml-2 h-3 w-3 text-green-500" title="Proteção RLS Ativa" />
+                      <Shield className="ml-2 h-3 w-3 text-green-500" aria-label="Proteção RLS Ativa" />
                     )}
                   </div>
                   <div className="text-sm font-medium">

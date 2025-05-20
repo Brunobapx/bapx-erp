@@ -15,3 +15,13 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
   },
 });
+
+// Add the database function type declaration
+declare module '@supabase/supabase-js' {
+  interface SupabaseClient<T> {
+    rpc(
+      fn: 'get_row_count',
+      params: { table_name: string }
+    ): Promise<{ data: number | null; error: Error | null }>;
+  }
+}
