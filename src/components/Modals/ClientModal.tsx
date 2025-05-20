@@ -85,7 +85,13 @@ export const ClientModal = ({ isOpen, onClose, clientData }: ClientModalProps) =
 
   const handleSubmit = async () => {
     try {
-      const userData = {
+      const { data: userData } = await supabase.auth.getUser();
+      
+      if (!userData || !userData.user) {
+        throw new Error("Usuário não autenticado");
+      }
+      
+      const clientData = {
         name: formData.name,
         type: formData.type,
         cnpj: formData.type === 'Jurídica' ? formData.cnpj : null,
@@ -97,13 +103,14 @@ export const ClientModal = ({ isOpen, onClose, clientData }: ClientModalProps) =
         address: formData.address,
         city: formData.city,
         state: formData.state,
-        zip: formData.zip
+        zip: formData.zip,
+        user_id: userData.user.id
       };
       
       if (isNewClient) {
         const { data, error } = await supabase
           .from('clients')
-          .insert([userData])
+          .insert(clientData)
           .select();
           
         if (error) throw error;
@@ -115,7 +122,7 @@ export const ClientModal = ({ isOpen, onClose, clientData }: ClientModalProps) =
       } else {
         const { data, error } = await supabase
           .from('clients')
-          .update(userData)
+          .update(clientData)
           .eq('id', formData.id)
           .select();
           

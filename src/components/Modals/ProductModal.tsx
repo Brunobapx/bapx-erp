@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -183,6 +182,13 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
 
   const handleSubmit = async () => {
     try {
+      // Get current user
+      const { data: userData } = await supabase.auth.getUser();
+      
+      if (!userData || !userData.user) {
+        throw new Error("Usuário não autenticado");
+      }
+      
       const productPayload = {
         code: formData.code,
         name: formData.name,
@@ -199,7 +205,8 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
         ipi: formData.ipi,
         pis: formData.pis,
         cofins: formData.cofins,
-        is_manufactured: formData.is_manufactured
+        is_manufactured: formData.is_manufactured,
+        user_id: userData.user.id
       };
       
       // Insert or update product
@@ -207,7 +214,7 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
       if (isNewProduct) {
         const { data, error } = await supabase
           .from('products')
-          .insert([productPayload])
+          .insert(productPayload)
           .select();
           
         if (error) throw error;
@@ -237,13 +244,17 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
         );
         
         if (validRecipeItems.length > 0) {
+          // Get current user for recipe items
+          const userId = userData.user.id;
+          
           const { error } = await supabase
             .from('product_recipes')
             .insert(
               validRecipeItems.map(item => ({
                 product_id: productId,
                 ingredient_id: item.ingredient_id,
-                quantity: parseFloat(item.quantity)
+                quantity: parseFloat(item.quantity),
+                user_id: userId
               }))
             );
             
