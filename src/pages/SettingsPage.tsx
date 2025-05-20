@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UserManagement from "@/components/Settings/UserManagement";
 import CompanyData from "@/components/Settings/CompanyData";
 import VisualCustomization from "@/components/Settings/VisualCustomization";
-import SystemParameters from "@/components/Settings/SystemParameters";
+import CustomSystemParameters from "@/components/Settings/CustomSystemParameters";
 
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState('users');
@@ -37,7 +37,7 @@ const SettingsPage = () => {
         </TabsContent>
         
         <TabsContent value="parameters" className="mt-2">
-          <SystemParameters />
+          <CustomSystemParameters />
         </TabsContent>
       </Tabs>
     </div>
