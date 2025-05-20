@@ -1,46 +1,73 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Mail, Lock, LogIn } from "lucide-react";
+import { Mail, Lock, LogIn, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-
-interface User {
-  email: string;
-  password: string;
-}
-
-// Mock users for demonstration purposes
-const mockUsers: User[] = [
-  { email: "admin@example.com", password: "admin123" },
-  { email: "user@example.com", password: "user123" }
-];
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { login } = useAuth();
 
-  const handleLogin = (e: React.FormEvent) => {
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        // User is already logged in, redirect to dashboard
+        navigate("/");
+      }
+    };
+    
+    checkSession();
+  }, [navigate]);
+
+  const handleAuthentication = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call with timeout
-    setTimeout(() => {
-      const user = mockUsers.find(
-        (user) => user.email === email && user.password === password
-      );
+    try {
+      let authResponse;
+      
+      if (isSignUp) {
+        // Sign up new user
+        authResponse = await supabase.auth.signUp({
+          email,
+          password,
+        });
+      } else {
+        // Sign in existing user
+        authResponse = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+      }
 
-      if (user) {
+      const { data, error } = authResponse;
+
+      if (error) {
+        throw error;
+      }
+
+      if (isSignUp && data?.user) {
+        toast({
+          title: "Cadastro realizado",
+          description: "Verifique seu e-mail para confirmar o cadastro.",
+        });
+        // Switch back to login after successful signup
+        setIsSignUp(false);
+      } else if (data?.user) {
         // Successfully authenticated
         toast({
           title: "Login bem-sucedido",
@@ -48,20 +75,22 @@ const LoginPage = () => {
         });
         
         // Use the login function from auth context
-        login(user.email);
+        login(data.user.email!);
         
         // Redirect to dashboard
         navigate("/");
-      } else {
-        // Authentication failed
-        toast({
-          title: "Falha no login",
-          description: "E-mail ou senha incorretos. Tente novamente.",
-          variant: "destructive",
-        });
       }
+    } catch (error) {
+      // Authentication failed
+      console.error("Erro de autenticação:", error);
+      toast({
+        title: "Falha na autenticação",
+        description: error instanceof Error ? error.message : "E-mail ou senha incorretos. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const createAdminUser = async () => {
@@ -120,13 +149,15 @@ const LoginPage = () => {
 
         <Card>
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">Entrar no Sistema</CardTitle>
+            <CardTitle className="text-2xl text-center">
+              {isSignUp ? "Criar Conta" : "Entrar no Sistema"}
+            </CardTitle>
             <CardDescription className="text-center">
-              Digite seu e-mail e senha para acessar
+              {isSignUp ? "Preencha seus dados para se cadastrar" : "Digite seu e-mail e senha para acessar"}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={handleAuthentication} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">E-mail</Label>
                 <div className="relative">
@@ -146,9 +177,11 @@ const LoginPage = () => {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Senha</Label>
-                  <a href="#" className="text-sm text-primary hover:underline">
-                    Esqueceu a senha?
-                  </a>
+                  {!isSignUp && (
+                    <a href="#" className="text-sm text-primary hover:underline">
+                      Esqueceu a senha?
+                    </a>
+                  )}
                 </div>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -171,17 +204,26 @@ const LoginPage = () => {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Entrando...
+                    {isSignUp ? "Cadastrando..." : "Entrando..."}
                   </span>
                 ) : (
                   <span className="flex items-center justify-center">
-                    <LogIn className="mr-2 h-4 w-4" />
-                    Entrar
+                    {isSignUp ? <UserPlus className="mr-2 h-4 w-4" /> : <LogIn className="mr-2 h-4 w-4" />}
+                    {isSignUp ? "Cadastrar" : "Entrar"}
                   </span>
                 )}
               </Button>
 
-              <div className="text-center">
+              <div className="text-center space-y-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="text-sm"
+                  onClick={() => setIsSignUp(!isSignUp)}
+                >
+                  {isSignUp ? "Já tem uma conta? Faça login" : "Não tem uma conta? Cadastre-se"}
+                </Button>
+                
                 <Button 
                   type="button" 
                   variant="outline" 
