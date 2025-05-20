@@ -238,6 +238,10 @@ export const ApprovalModal = ({
     
     if (error) throw error;
     
+    // Get the current user ID
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Usuário não autenticado");
+    
     // Create financial transaction
     const { error: financeError } = await supabase
       .from('finance_transactions')
@@ -246,7 +250,8 @@ export const ApprovalModal = ({
         amount: parseFloat(formData.quantity) * 100, // Example price calculation
         reference_id: formData.id,
         description: `Venda do produto ${formData.product} para ${formData.customer}`,
-        payment_status: 'pending'
+        payment_status: 'pending',
+        user_id: user.id // Add the required user_id
       });
     
     if (financeError) throw financeError;
@@ -452,7 +457,6 @@ export const ApprovalModal = ({
                 emptyText="Nenhum status disponível"
                 value={getStatusOptions().find(option => option.label === formData.status)?.value || ""}
                 onChange={handleSelectStatus}
-                className="flex items-center"
               />
             </div>
           )}

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -143,17 +142,24 @@ const OrdersPage = () => {
         const selectedProduct = products.find(p => p.name === orderData.product);
         const hasStock = selectedProduct && selectedProduct.stock >= orderData.quantity;
         
+        // Get current user ID
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Usuário não autenticado");
+        
         // Create new order
         const { data, error } = await supabase
           .from('orders')
           .insert({
+            client_id: clients.find(c => c.name === orderData.customer)?.id || '1',
             client_name: orderData.customer,
+            product_id: selectedProduct?.id || '1',
             product_name: orderData.product,
             quantity: orderData.quantity,
             delivery_deadline: orderData.deliveryDate,
             payment_method: orderData.paymentMethod,
             seller: orderData.seller,
-            status: hasStock ? 'Aguardando Venda' : 'Aguardando Produção'
+            status: hasStock ? 'Aguardando Venda' : 'Aguardando Produção',
+            user_id: user.id
           })
           .select();
 

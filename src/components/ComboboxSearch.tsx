@@ -24,6 +24,7 @@ interface ComboboxSearchProps {
   value: string
   onChange: (value: string) => void
   className?: string
+  disabled?: boolean // Add disabled prop
 }
 
 export function ComboboxSearch({
@@ -33,6 +34,7 @@ export function ComboboxSearch({
   value,
   onChange,
   className,
+  disabled = false, // Default to false
 }: ComboboxSearchProps) {
   const [open, setOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState("")
@@ -48,13 +50,14 @@ export function ComboboxSearch({
   }, [items, searchQuery])
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={disabled ? false : open} onOpenChange={disabled ? undefined : setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           role="combobox"
           aria-expanded={open}
           className={cn("w-full justify-between", className)}
+          disabled={disabled}
         >
           {value && items
             ? items.find((item) => item.value === value)?.label || placeholder
