@@ -49,6 +49,8 @@ export const useOrderFormState = ({ orderData }: UseOrderFormStateProps) => {
 
   // Initialize form with order data if available
   useEffect(() => {
+    console.log("OrderData received:", orderData);
+    
     if (orderData && orderData.id && orderData.id !== 'NOVO') {
       setFormData({
         id: orderData.id?.toString() || '',
@@ -57,8 +59,8 @@ export const useOrderFormState = ({ orderData }: UseOrderFormStateProps) => {
         product_id: orderData.product_id || '',
         product_name: orderData.product_name || '',
         quantity: orderData.quantity || 1,
-        unit_price: undefined, // We'll need to fetch this from products
-        total_price: undefined,
+        unit_price: orderData.unit_price || undefined,
+        total_price: orderData.total_price || undefined,
         delivery_deadline: orderData.delivery_deadline ? new Date(orderData.delivery_deadline) : null,
         payment_method: orderData.payment_method || '',
         payment_term: orderData.payment_term || '',
@@ -66,8 +68,11 @@ export const useOrderFormState = ({ orderData }: UseOrderFormStateProps) => {
         status: orderData.status || 'Novo Pedido',
       });
       
-      // If we have a product_id, look up its price
-      if (orderData.product_id) {
+      // Format the total price
+      updateFormattedTotal(orderData.total_price);
+      
+      // If we have a product_id but not a price, look up its price
+      if (orderData.product_id && !orderData.unit_price) {
         const product = products.find(p => p.id === orderData.product_id);
         if (product?.price) {
           setFormData(prev => ({

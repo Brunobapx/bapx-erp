@@ -5,6 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { OrderForm } from "@/components/Orders/OrderForm";
 import { useOrders } from '@/hooks/useOrders';
+import { toast } from "sonner";
 
 const OrderFormPage = () => {
   const navigate = useNavigate();
@@ -15,7 +16,15 @@ const OrderFormPage = () => {
   const isNewOrder = !id || id === 'new';
   
   // Fetch the order data if editing an existing order
-  const orderData = isNewOrder ? { id: 'NOVO' } : getOrderById(id || '');
+  const orderData = isNewOrder ? null : getOrderById(id || '');
+  
+  // If we're editing an order and it doesn't exist, redirect back to orders page
+  useEffect(() => {
+    if (!isNewOrder && !orderData) {
+      toast.error("Pedido não encontrado");
+      navigate('/pedidos');
+    }
+  }, [isNewOrder, orderData, navigate]);
   
   // Handle navigation back to orders page
   const handleClose = (refresh: boolean = false) => {

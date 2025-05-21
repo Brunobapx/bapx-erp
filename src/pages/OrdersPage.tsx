@@ -20,6 +20,7 @@ const OrdersPage = () => {
   // Check if we need to refresh orders (when returning from form)
   useEffect(() => {
     if (location.state && location.state.refresh) {
+      console.log("Refreshing orders after form submission");
       refreshOrders();
       // Clear the state to avoid unnecessary refreshes
       window.history.replaceState({}, document.title);
@@ -71,6 +72,7 @@ const OrdersPage = () => {
   };
 
   const handleCreateOrder = () => {
+    console.log("Navigating to order creation page");
     navigate('/pedidos/new');
   };
 
