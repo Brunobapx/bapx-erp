@@ -17,8 +17,8 @@ interface OrderFormProps {
 }
 
 export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
-  const { clients } = useClients();
-  const { products } = useProducts();
+  const { clients, loading: loadingClients } = useClients();
+  const { products, loading: loadingProducts } = useProducts();
   
   const {
     formData,
@@ -51,6 +51,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
             open={openClientCombobox}
             setOpen={setOpenClientCombobox}
           />
+          {loadingClients && <p className="text-sm text-muted-foreground">Carregando clientes...</p>}
         </div>
         
         {/* Product Selection */}
@@ -64,6 +65,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
             open={openProductCombobox}
             setOpen={setOpenProductCombobox}
           />
+          {loadingProducts && <p className="text-sm text-muted-foreground">Carregando produtos...</p>}
         </div>
         
         {/* Quantity */}

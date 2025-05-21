@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { Order } from '@/hooks/useOrders';
 import { Client } from '@/hooks/useClients';
 import { Product } from '@/hooks/useProducts';
+import { useClients } from '@/hooks/useClients';
+import { useProducts } from '@/hooks/useProducts';
 
 interface OrderFormState {
   id: string;
@@ -26,6 +28,10 @@ interface UseOrderFormProps {
 }
 
 export const useOrderForm = ({ orderData, onClose }: UseOrderFormProps) => {
+  // Import actual clients and products from hooks
+  const { clients } = useClients();
+  const { products } = useProducts();
+  
   // Form state
   const [formData, setFormData] = useState<OrderFormState>({
     id: '',
@@ -98,13 +104,19 @@ export const useOrderForm = ({ orderData, onClose }: UseOrderFormProps) => {
   };
 
   // Handle client selection
-  const handleClientSelect = (clientId: string) => {
+  const handleClientSelect = (clientId: string, clientName?: string) => {
     const selectedClient = clients.find(client => client.id === clientId);
     if (selectedClient) {
       setFormData(prev => ({
         ...prev,
         client_id: selectedClient.id,
         client_name: selectedClient.name
+      }));
+    } else if (clientName) {
+      setFormData(prev => ({
+        ...prev,
+        client_id: clientId,
+        client_name: clientName
       }));
     }
     setOpenClientCombobox(false);
@@ -208,8 +220,3 @@ export const useOrderForm = ({ orderData, onClose }: UseOrderFormProps) => {
     handleSubmit
   };
 };
-
-// Temporary placeholder for testing
-// In a real implementation, these would be fetched from the API
-const clients: Client[] = [];
-const products: Product[] = [];

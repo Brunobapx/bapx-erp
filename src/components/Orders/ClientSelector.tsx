@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { Check, ChevronsUpDown } from "lucide-react";
+import React, { useState } from 'react';
+import { Check, ChevronsUpDown, Search } from "lucide-react";
 import { 
   Popover, 
   PopoverContent, 
@@ -21,7 +21,7 @@ interface ClientSelectorProps {
   clients: Client[];
   selectedClientId: string;
   selectedClientName: string;
-  onClientSelect: (clientId: string) => void;
+  onClientSelect: (clientId: string, clientName: string) => void;
   open: boolean;
   setOpen: (open: boolean) => void;
 }
@@ -34,6 +34,13 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
   open,
   setOpen
 }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filter clients based on the search query
+  const filteredClients = clients.filter(client => 
+    client.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -49,14 +56,25 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
       </PopoverTrigger>
       <PopoverContent className="w-[400px] p-0">
         <Command>
-          <CommandInput placeholder="Buscar cliente..." />
+          <div className="flex items-center border-b px-3">
+            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+            <CommandInput 
+              placeholder="Buscar cliente..." 
+              onValueChange={setSearchQuery}
+              value={searchQuery}
+              className="h-9 focus:outline-none"
+            />
+          </div>
           <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
-          <CommandGroup>
-            {clients.map((client) => (
+          <CommandGroup className="max-h-[300px] overflow-y-auto">
+            {filteredClients.map((client) => (
               <CommandItem
                 key={client.id}
                 value={client.id}
-                onSelect={() => onClientSelect(client.id)}
+                onSelect={() => {
+                  onClientSelect(client.id, client.name);
+                  setSearchQuery('');
+                }}
               >
                 <Check
                   className={cn(
