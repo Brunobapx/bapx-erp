@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { OrderForm } from "@/components/Orders/OrderForm";
-import { useOrderForm } from '@/hooks/useOrderForm';
 import { Order } from '@/hooks/useOrders';
 
 interface OrderModalProps {
@@ -19,11 +18,8 @@ interface OrderModalProps {
 }
 
 export const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose, orderData }) => {
-  const {
-    handleSubmit,
-    isSubmitting,
-    isNewOrder
-  } = useOrderForm({ orderData, onClose });
+  // Determine if we're creating a new order or editing an existing one
+  const isNewOrder = !orderData?.id || orderData.id === 'NOVO';
 
   return (
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
@@ -32,7 +28,10 @@ export const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose, orderDa
           <DialogTitle>{isNewOrder ? 'Novo Pedido' : 'Editar Pedido'}</DialogTitle>
         </DialogHeader>
         
-        <OrderForm orderData={orderData} onClose={onClose} />
+        <OrderForm 
+          orderData={orderData} 
+          onClose={onClose} 
+        />
         
         <DialogFooter>
           <Button 
@@ -41,13 +40,6 @@ export const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose, orderDa
             onClick={() => onClose()}
           >
             Cancelar
-          </Button>
-          <Button 
-            type="button" 
-            onClick={handleSubmit} 
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Salvando...' : (isNewOrder ? 'Criar Pedido' : 'Salvar Alterações')}
           </Button>
         </DialogFooter>
       </DialogContent>
