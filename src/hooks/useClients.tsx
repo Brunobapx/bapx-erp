@@ -45,6 +45,7 @@ export const useClients = () => {
         }
 
         if (data) {
+          console.log("Clientes carregados:", data.length);
           setClients(data);
         }
       } catch (err: any) {

@@ -41,6 +41,9 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
     client.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  console.log("Clients in selector:", clients.length);
+  console.log("Filtered clients:", filteredClients.length);
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
