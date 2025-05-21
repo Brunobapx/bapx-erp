@@ -51,9 +51,6 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
     }
   }, [searchQuery, clients]);
 
-  console.log("Clients in selector:", clients.length);
-  console.log("Filtered clients:", filteredClients.length);
-
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>

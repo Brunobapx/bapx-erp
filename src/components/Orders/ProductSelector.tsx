@@ -60,9 +60,6 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
     }
   }, [searchQuery, products]);
 
-  console.log("Products in selector:", products.length);
-  console.log("Filtered products:", filteredProducts.length);
-
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>

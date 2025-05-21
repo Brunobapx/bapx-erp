@@ -47,16 +47,23 @@ export const useOrderFormActions = ({
         ...prev,
         [name]: numValue
       }));
+      
+      // Recalculate total when quantity or unit_price changes
+      setTimeout(calculateTotal, 0);
     } else {
       setFormData(prev => ({
         ...prev,
         [name]: value
       }));
     }
+    
+    // Log the change for debugging
+    console.log(`Field ${name} changed to:`, value);
   };
 
   // Handle client selection
   const handleClientSelect = (clientId: string, clientName: string) => {
+    console.log("Client selected:", clientId, clientName);
     setFormData(prev => ({
       ...prev,
       client_id: clientId,
@@ -66,31 +73,32 @@ export const useOrderFormActions = ({
 
   // Handle product selection
   const handleProductSelect = (productId: string, productName: string, productPrice?: number) => {
-    const newFormData = {
-      ...formData,
+    console.log("Product selected:", productId, productName, "Price:", productPrice);
+    
+    // Update form data with the new product info
+    setFormData(prev => ({
+      ...prev,
       product_id: productId,
       product_name: productName,
-      unit_price: productPrice
-    };
-    
-    setFormData(newFormData);
+      unit_price: productPrice || prev.unit_price
+    }));
     
     // Calculate total if we have both quantity and price
-    if (newFormData.quantity && productPrice) {
-      const total = newFormData.quantity * productPrice;
-      setFormData(prev => ({
-        ...prev,
-        product_id: productId,
-        product_name: productName,
-        unit_price: productPrice,
-        total_price: total
-      }));
-      updateFormattedTotal(total);
-    }
+    setTimeout(() => {
+      if (formData.quantity && productPrice) {
+        const total = formData.quantity * productPrice;
+        setFormData(prev => ({
+          ...prev,
+          total_price: total
+        }));
+        updateFormattedTotal(total);
+      }
+    }, 0);
   };
 
   // Handle date selection
   const handleDateSelect = (date: Date | null) => {
+    console.log("Date selected:", date);
     setFormData(prev => ({
       ...prev,
       delivery_deadline: date
@@ -120,6 +128,7 @@ export const useOrderFormActions = ({
     
     try {
       setIsSubmitting(true);
+      console.log("Submitting form with data:", formData);
       
       const orderPayload = {
         client_id: formData.client_id,
@@ -136,8 +145,12 @@ export const useOrderFormActions = ({
         status: formData.status
       };
       
+      console.log("Order payload:", orderPayload);
+      
       if (isNewOrder) {
-        const { error } = await supabase.from('orders').insert([orderPayload]);
+        const { data, error } = await supabase.from('orders').insert([orderPayload]);
+        console.log("Insert response:", { data, error });
+        
         if (error) throw error;
         toast.success("Pedido criado com sucesso");
       } else {
@@ -145,6 +158,9 @@ export const useOrderFormActions = ({
           .from('orders')
           .update(orderPayload)
           .eq('id', formData.id);
+          
+        console.log("Update result:", { error });
+        
         if (error) throw error;
         toast.success("Pedido atualizado com sucesso");
       }

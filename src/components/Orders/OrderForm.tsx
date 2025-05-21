@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useEffect } from 'react';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,13 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
     formattedTotal
   } = useOrderForm({ orderData, onClose });
 
+  // Debug logging
+  useEffect(() => {
+    console.log("Current form data:", formData);
+    console.log("Available clients:", clients.length);
+    console.log("Available products:", products.length);
+  }, [formData, clients, products]);
+
   return (
     <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="space-y-6">
       <div className="grid gap-6">
@@ -85,7 +93,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
               name="quantity"
               type="number"
               min="1"
-              value={formData.quantity}
+              value={formData.quantity || 1}
               onChange={handleChange}
               required
               onBlur={calculateTotal}
@@ -178,7 +186,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
           <Input 
             id="seller"
             name="seller"
-            value={formData.seller}
+            value={formData.seller || ''}
             onChange={handleChange}
             placeholder="Nome do vendedor"
           />
