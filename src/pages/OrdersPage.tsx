@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ApprovalModal } from '@/components/Modals/ApprovalModal';
-import { Package, ChevronDown, Search, Calendar, CreditCard, User } from 'lucide-react';
+import { Package, ChevronDown, Search } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -18,182 +19,111 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 const OrdersPage = () => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showModal, setShowModal] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [statusFilter, setStatusFilter] = useState('active'); // 'active', 'completed', or 'all'
-  const [orders, setOrders] = useState([]);
-  const [products, setProducts] = useState([]);
-  const { toast } = useToast();
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [showModal, setShowModal] = React.useState(false);
+  const [selectedOrder, setSelectedOrder] = React.useState(null);
+  const [statusFilter, setStatusFilter] = React.useState('active'); // 'active', 'completed', or 'all'
 
-  // Fetch orders and products on component mount
-  useEffect(() => {
-    fetchOrders();
-    fetchProducts();
-  }, []);
-
-  const fetchOrders = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*');
-      
-      if (error) throw error;
-      setOrders(data || []);
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-      toast({
-        title: "Erro ao carregar pedidos",
-        description: "Não foi possível carregar os pedidos. Tente novamente.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const fetchProducts = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*');
-      
-      if (error) throw error;
-      setProducts(data || []);
-    } catch (error) {
-      console.error('Error fetching products:', error);
-    }
-  };
+  // Mock order data
+  const orders = [
+    { 
+      id: 'PED-001', 
+      customer: 'Tech Solutions', 
+      product: 'Server Hardware', 
+      quantity: 10, 
+      date: '15/05/2025',
+      status: 'Aguardando Produção',
+      statusType: 'production',
+      completed: false
+    },
+    { 
+      id: 'PED-002', 
+      customer: 'Green Energy Inc', 
+      product: 'Solar Panels', 
+      quantity: 50, 
+      date: '14/05/2025',
+      status: 'Em Produção',
+      statusType: 'production',
+      completed: false
+    },
+    { 
+      id: 'PED-003', 
+      customer: 'City Hospital', 
+      product: 'Medical Equipment', 
+      quantity: 5, 
+      date: '13/05/2025',
+      status: 'Aguardando Embalagem',
+      statusType: 'packaging',
+      completed: true
+    },
+    { 
+      id: 'PED-004', 
+      customer: 'Global Foods', 
+      product: 'Packaging Materials', 
+      quantity: 100, 
+      date: '12/05/2025',
+      status: 'Aguardando Venda',
+      statusType: 'sales',
+      completed: true
+    },
+    { 
+      id: 'PED-005', 
+      customer: 'Modern Office', 
+      product: 'Desk Solutions', 
+      quantity: 25, 
+      date: '11/05/2025',
+      status: 'Financeiro Pendente',
+      statusType: 'finance',
+      completed: true
+    },
+    { 
+      id: 'PED-006', 
+      customer: 'Local Retailer', 
+      product: 'Display Units', 
+      quantity: 15, 
+      date: '10/05/2025',
+      status: 'Aguardando Rota',
+      statusType: 'route',
+      completed: true
+    },
+    { 
+      id: 'PED-007', 
+      customer: 'Education Center', 
+      product: 'Interactive Boards', 
+      quantity: 8, 
+      date: '09/05/2025',
+      status: 'Aguardando Produção',
+      statusType: 'production',
+      completed: false
+    },
+  ];
 
   // Filter orders based on search query and status filter
   const filteredOrders = orders.filter(order => {
     // Text search filter
     const searchString = searchQuery.toLowerCase();
     const matchesSearch = 
-      order.id?.toString().toLowerCase().includes(searchString) ||
-      order.client_name?.toLowerCase().includes(searchString) ||
-      order.product_name?.toLowerCase().includes(searchString) ||
-      order.status?.toLowerCase().includes(searchString) ||
-      order.seller?.toLowerCase().includes(searchString);
+      order.id.toLowerCase().includes(searchString) ||
+      order.customer.toLowerCase().includes(searchString) ||
+      order.product.toLowerCase().includes(searchString) ||
+      order.status.toLowerCase().includes(searchString);
     
     // Status filter
-    if (statusFilter === 'active' && order.status === 'completed') {
+    if (statusFilter === 'active' && order.completed) {
       return false;
     }
-    if (statusFilter === 'completed' && order.status !== 'completed') {
+    if (statusFilter === 'completed' && !order.completed) {
       return false;
     }
 
     return matchesSearch;
   });
 
-  const handleOrderClick = (order) => {
+  const handleOrderClick = (order: any) => {
     setSelectedOrder(order);
     setShowModal(true);
-  };
-
-  // Lista de clientes para o modal
-  const clients = [
-    { id: 1, name: 'Tech Solutions Ltda', value: '1', label: 'Tech Solutions Ltda' },
-    { id: 2, name: 'Green Energy Inc', value: '2', label: 'Green Energy Inc' },
-    { id: 3, name: 'City Hospital', value: '3', label: 'City Hospital' },
-    { id: 4, name: 'Global Foods SA', value: '4', label: 'Global Foods SA' },
-    { id: 5, name: 'Modern Office', value: '5', label: 'Modern Office' },
-    { id: 6, name: 'Local Retailer', value: '6', label: 'Local Retailer' },
-    { id: 7, name: 'Education Center', value: '7', label: 'Education Center' },
-  ];
-  
-  // Lista de produtos para o modal
-  const formattedProducts = products.map(product => ({
-    id: product.id,
-    name: product.name,
-    value: product.id,
-    label: product.name,
-    stock: product.stock
-  }));
-
-  const handleOrderSave = async (orderData) => {
-    try {
-      // If order has an ID, it's an update
-      if (orderData.id && orderData.id !== 'NOVO') {
-        const { error } = await supabase
-          .from('orders')
-          .update({
-            client_name: orderData.customer,
-            product_name: orderData.product,
-            quantity: orderData.quantity,
-            delivery_deadline: orderData.deliveryDate,
-            payment_method: orderData.paymentMethod,
-            seller: orderData.seller,
-            status: orderData.status || 'Aguardando Produção'
-          })
-          .eq('id', orderData.id);
-
-        if (error) throw error;
-        
-        toast({
-          title: "Pedido atualizado",
-          description: `Pedido ${orderData.id} foi atualizado com sucesso.`,
-        });
-      } else {
-        // Check if product is in stock
-        const selectedProduct = products.find(p => p.name === orderData.product);
-        const hasStock = selectedProduct && selectedProduct.stock >= orderData.quantity;
-        
-        // Get current user ID
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("Usuário não autenticado");
-        
-        // Find client ID and ensure it's a string
-        const clientInfo = clients.find(c => c.name === orderData.customer);
-        const clientId = clientInfo ? String(clientInfo.id) : '1';
-        
-        // Create new order
-        const { data, error } = await supabase
-          .from('orders')
-          .insert({
-            client_id: clientId,
-            client_name: orderData.customer,
-            product_id: selectedProduct?.id || '1',
-            product_name: orderData.product,
-            quantity: orderData.quantity,
-            delivery_deadline: orderData.deliveryDate,
-            payment_method: orderData.paymentMethod,
-            seller: orderData.seller,
-            status: hasStock ? 'Aguardando Venda' : 'Aguardando Produção',
-            user_id: user.id
-          })
-          .select();
-
-        if (error) throw error;
-        
-        // Display appropriate message based on stock availability
-        if (!hasStock) {
-          toast({
-            title: "Pedido criado e enviado para produção",
-            description: `Produto não disponível em estoque. Pedido enviado para produção.`,
-          });
-        } else {
-          toast({
-            title: "Pedido criado",
-            description: `Pedido foi criado com sucesso e está disponível para venda.`,
-          });
-        }
-      }
-      
-      // Refresh orders list
-      fetchOrders();
-      setShowModal(false);
-    } catch (error) {
-      console.error('Error saving order:', error);
-      toast({
-        title: "Erro ao salvar pedido",
-        description: error.message || "Ocorreu um erro ao salvar o pedido. Tente novamente.",
-        variant: "destructive",
-      });
-    }
   };
 
   return (
@@ -203,7 +133,7 @@ const OrdersPage = () => {
           <h1 className="text-2xl font-bold">Pedidos</h1>
           <p className="text-muted-foreground">Gerencie todos os pedidos do sistema.</p>
         </div>
-        <Button onClick={() => { setSelectedOrder(null); setShowModal(true); }}>
+        <Button onClick={() => setShowModal(true)}>
           <Package className="mr-2 h-4 w-4" /> Novo Pedido
         </Button>
       </div>
@@ -271,16 +201,6 @@ const OrdersPage = () => {
                 <TableHead>Produto</TableHead>
                 <TableHead className="text-center">Qtd</TableHead>
                 <TableHead>Data</TableHead>
-                <TableHead>
-                  <div className="flex items-center">
-                    <Calendar className="mr-1 h-4 w-4" /> Entrega
-                  </div>
-                </TableHead>
-                <TableHead>
-                  <div className="flex items-center">
-                    <User className="mr-1 h-4 w-4" /> Vendedor
-                  </div>
-                </TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -292,14 +212,12 @@ const OrdersPage = () => {
                   onClick={() => handleOrderClick(order)}
                 >
                   <TableCell className="font-medium">{order.id}</TableCell>
-                  <TableCell>{order.client_name}</TableCell>
-                  <TableCell>{order.product_name}</TableCell>
+                  <TableCell>{order.customer}</TableCell>
+                  <TableCell>{order.product}</TableCell>
                   <TableCell className="text-center">{order.quantity}</TableCell>
-                  <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
-                  <TableCell>{order.delivery_deadline ? new Date(order.delivery_deadline).toLocaleDateString() : '-'}</TableCell>
-                  <TableCell>{order.seller}</TableCell>
+                  <TableCell>{order.date}</TableCell>
                   <TableCell>
-                    <span className={`stage-badge badge-${getStatusType(order.status)}`}>
+                    <span className={`stage-badge badge-${order.statusType}`}>
                       {order.status}
                     </span>
                   </TableCell>
@@ -323,33 +241,11 @@ const OrdersPage = () => {
           id: 'NOVO', 
           product: '', 
           quantity: 1, 
-          customer: '',
-          deliveryDate: null,
-          paymentMethod: '',
-          seller: ''
+          customer: ''
         }}
-        clientsData={clients}
-        productsData={formattedProducts}
-        onSave={handleOrderSave}
       />
     </div>
   );
-};
-
-// Helper function to determine the status type for badge styling
-const getStatusType = (status) => {
-  switch (status) {
-    case 'Aguardando Produção': return 'production';
-    case 'Em Produção': return 'production';
-    case 'Aguardando Embalagem': return 'packaging';
-    case 'Aguardando Venda': return 'sales';
-    case 'Venda Confirmada': return 'sales';
-    case 'Financeiro Pendente': return 'finance';
-    case 'Aguardando Rota': return 'route';
-    case 'Rota Definida': return 'route';
-    case 'Completed': return 'sales';
-    default: return 'order';
-  }
 };
 
 export default OrdersPage;
