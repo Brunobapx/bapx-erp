@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { User, ChevronDown, Search, FileText, Plus } from 'lucide-react';
+import { User, ChevronDown, Search, FileText, Plus, Loader2 } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -19,66 +19,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ClientModal } from '@/components/Modals/ClientModal';
+import { useClients } from '@/hooks/useClients';
 
 const ClientsPage = () => {
-  const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
-
-  // Mock client data
-  const clients = [
-    { 
-      id: 1, 
-      name: 'Tech Solutions Ltda', 
-      cnpj: '12.345.678/0001-90', 
-      ie: '123456789', 
-      email: 'contato@techsolutions.com',
-      phone: '(11) 3456-7890',
-      address: 'Av. Paulista, 1000, São Paulo - SP',
-      type: 'Jurídica'
-    },
-    { 
-      id: 2, 
-      name: 'Green Energy Inc', 
-      cnpj: '98.765.432/0001-21', 
-      ie: '987654321', 
-      email: 'contato@greenenergy.com',
-      phone: '(11) 9876-5432',
-      address: 'Rua Augusta, 500, São Paulo - SP',
-      type: 'Jurídica'
-    },
-    { 
-      id: 3, 
-      name: 'João Silva', 
-      cpf: '123.456.789-00', 
-      rg: '12.345.678-9', 
-      email: 'joao.silva@email.com',
-      phone: '(11) 91234-5678',
-      address: 'Rua das Flores, 123, São Paulo - SP',
-      type: 'Física'
-    },
-    { 
-      id: 4, 
-      name: 'Global Foods SA', 
-      cnpj: '45.678.901/0001-23', 
-      ie: '456789012', 
-      email: 'contato@globalfoods.com',
-      phone: '(11) 4567-8901',
-      address: 'Av. Rebouças, 1500, São Paulo - SP',
-      type: 'Jurídica'
-    },
-  ];
-
-  // Filter clients based on search query
-  const filteredClients = clients.filter(client => {
-    const searchString = searchQuery.toLowerCase();
-    return (
-      client.name.toLowerCase().includes(searchString) ||
-      (client.cnpj && client.cnpj.toLowerCase().includes(searchString)) ||
-      (client.cpf && client.cpf.toLowerCase().includes(searchString)) ||
-      client.email.toLowerCase().includes(searchString)
-    );
-  });
+  const { 
+    clients: filteredClients, 
+    loading, 
+    error, 
+    searchQuery, 
+    setSearchQuery, 
+    refreshClients 
+  } = useClients();
 
   const handleClientClick = (client: any) => {
     setSelectedClient(client);
@@ -91,6 +44,15 @@ const ClientsPage = () => {
 
   const getRegisterNumber = (client: any) => {
     return client.type === 'Jurídica' ? client.ie : client.rg;
+  };
+
+  const handleModalClose = (refresh = false) => {
+    setShowModal(false);
+    setSelectedClient(null);
+    
+    if (refresh) {
+      refreshClients();
+    }
   };
 
   return (
@@ -153,39 +115,49 @@ const ClientsPage = () => {
       
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>CPF/CNPJ</TableHead>
-                <TableHead>RG/IE</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Telefone</TableHead>
-                <TableHead>Tipo</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredClients.map((client) => (
-                <TableRow 
-                  key={client.id}
-                  className="cursor-pointer hover:bg-accent/5"
-                  onClick={() => handleClientClick(client)}
-                >
-                  <TableCell className="font-medium">{client.name}</TableCell>
-                  <TableCell>{getDocumentId(client)}</TableCell>
-                  <TableCell>{getRegisterNumber(client)}</TableCell>
-                  <TableCell>{client.email}</TableCell>
-                  <TableCell>{client.phone}</TableCell>
-                  <TableCell>
-                    <span className={`stage-badge ${client.type === 'Jurídica' ? 'badge-order' : 'badge-production'}`}>
-                      {client.type === 'Jurídica' ? 'PJ' : 'PF'}
-                    </span>
-                  </TableCell>
+          {loading ? (
+            <div className="flex justify-center items-center p-8">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : error ? (
+            <div className="p-4 text-center text-red-500">
+              Erro ao carregar clientes: {error}
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>CPF/CNPJ</TableHead>
+                  <TableHead>RG/IE</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Telefone</TableHead>
+                  <TableHead>Tipo</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          {filteredClients.length === 0 && (
+              </TableHeader>
+              <TableBody>
+                {filteredClients.map((client) => (
+                  <TableRow 
+                    key={client.id}
+                    className="cursor-pointer hover:bg-accent/5"
+                    onClick={() => handleClientClick(client)}
+                  >
+                    <TableCell className="font-medium">{client.name}</TableCell>
+                    <TableCell>{getDocumentId(client)}</TableCell>
+                    <TableCell>{getRegisterNumber(client)}</TableCell>
+                    <TableCell>{client.email}</TableCell>
+                    <TableCell>{client.phone}</TableCell>
+                    <TableCell>
+                      <span className={`stage-badge ${client.type === 'Jurídica' ? 'badge-order' : 'badge-production'}`}>
+                        {client.type === 'Jurídica' ? 'PJ' : 'PF'}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+          {!loading && !error && filteredClients.length === 0 && (
             <div className="p-4 text-center text-muted-foreground">
               Nenhum cliente encontrado.
             </div>
@@ -195,8 +167,8 @@ const ClientsPage = () => {
       
       <ClientModal
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        clientData={selectedClient || null}
+        onClose={handleModalClose}
+        clientData={selectedClient}
       />
     </div>
   );

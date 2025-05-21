@@ -5,12 +5,14 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { Client } from '@/hooks/useClients';
 
 interface ClientModalProps {
   isOpen: boolean;
-  onClose: () => void;
-  clientData: any | null;
+  onClose: (refresh?: boolean) => void;
+  clientData: Client | null;
 }
 
 export const ClientModal = ({ isOpen, onClose, clientData }: ClientModalProps) => {
@@ -29,6 +31,7 @@ export const ClientModal = ({ isOpen, onClose, clientData }: ClientModalProps) =
     state: '',
     zip: ''
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isNewClient = !clientData?.id;
   
@@ -81,18 +84,76 @@ export const ClientModal = ({ isOpen, onClose, clientData }: ClientModalProps) =
     setFormData(prev => ({ ...prev, type: value }));
   };
 
-  const handleSubmit = () => {
-    // Here we would submit to backend API
-    // For now just show a toast notification
-    toast({
-      title: isNewClient ? "Cliente adicionado" : "Cliente atualizado",
-      description: `${formData.name} foi ${isNewClient ? 'adicionado' : 'atualizado'} com sucesso.`,
-    });
-    onClose();
+  const validateForm = () => {
+    if (!formData.name.trim()) {
+      toast.error("Nome/Razão Social é obrigatório");
+      return false;
+    }
+
+    if (formData.type === 'Jurídica' && !formData.cnpj.trim()) {
+      toast.error("CNPJ é obrigatório para Pessoa Jurídica");
+      return false;
+    }
+
+    if (formData.type === 'Física' && !formData.cpf.trim()) {
+      toast.error("CPF é obrigatório para Pessoa Física");
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async () => {
+    if (!validateForm()) return;
+
+    try {
+      setIsSubmitting(true);
+      
+      const clientData = {
+        name: formData.name,
+        type: formData.type,
+        cnpj: formData.type === 'Jurídica' ? formData.cnpj : null,
+        ie: formData.type === 'Jurídica' ? formData.ie : null,
+        cpf: formData.type === 'Física' ? formData.cpf : null,
+        rg: formData.type === 'Física' ? formData.rg : null,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        zip: formData.zip
+      };
+      
+      if (isNewClient) {
+        const { error } = await supabase
+          .from('clients')
+          .insert([clientData]);
+          
+        if (error) throw error;
+        
+        toast.success("Cliente adicionado com sucesso");
+      } else {
+        const { error } = await supabase
+          .from('clients')
+          .update(clientData)
+          .eq('id', formData.id);
+          
+        if (error) throw error;
+        
+        toast.success("Cliente atualizado com sucesso");
+      }
+      
+      onClose(true); // Pass true to refresh the client list
+    } catch (error: any) {
+      console.error("Erro ao salvar cliente:", error);
+      toast.error(`Erro ao ${isNewClient ? 'adicionar' : 'atualizar'} cliente: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={() => onClose()}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>{isNewClient ? 'Novo Cliente' : 'Editar Cliente'}</DialogTitle>
@@ -241,12 +302,13 @@ export const ClientModal = ({ isOpen, onClose, clientData }: ClientModalProps) =
         </div>
         
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onClose()} disabled={isSubmitting}>Cancelar</Button>
           <Button 
             onClick={handleSubmit}
             className="bg-erp-order hover:bg-erp-order/90"
+            disabled={isSubmitting}
           >
-            {isNewClient ? 'Adicionar' : 'Salvar'}
+            {isSubmitting ? 'Salvando...' : isNewClient ? 'Adicionar' : 'Salvar'}
           </Button>
         </DialogFooter>
       </DialogContent>
