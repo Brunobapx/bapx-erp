@@ -14,13 +14,38 @@ export const useOrderFormUI = () => {
     setOpenCalendar(false);
   };
   
+  // Handler to close all other popovers when one is opened
+  const handleOpenClientCombobox = (open: boolean) => {
+    if (open) {
+      setOpenProductCombobox(false);
+      setOpenCalendar(false);
+    }
+    setOpenClientCombobox(open);
+  };
+  
+  const handleOpenProductCombobox = (open: boolean) => {
+    if (open) {
+      setOpenClientCombobox(false);
+      setOpenCalendar(false);
+    }
+    setOpenProductCombobox(open);
+  };
+  
+  const handleOpenCalendar = (open: boolean) => {
+    if (open) {
+      setOpenClientCombobox(false);
+      setOpenProductCombobox(false);
+    }
+    setOpenCalendar(open);
+  };
+  
   return {
     openClientCombobox,
-    setOpenClientCombobox,
+    setOpenClientCombobox: handleOpenClientCombobox,
     openProductCombobox,
-    setOpenProductCombobox,
+    setOpenProductCombobox: handleOpenProductCombobox,
     openCalendar,
-    setOpenCalendar,
+    setOpenCalendar: handleOpenCalendar,
     resetUIStates
   };
 };

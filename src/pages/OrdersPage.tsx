@@ -1,22 +1,31 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
-import { toast } from "sonner";
-import { OrderModal } from '@/components/Modals/OrderModal';
 import { OrdersHeader } from '@/components/Orders/OrdersHeader';
 import { OrdersFilters } from '@/components/Orders/OrdersFilters';
 import { OrdersTable } from '@/components/Orders/OrdersTable';
 import { useOrders } from '@/hooks/useOrders';
+import { useNavigate } from 'react-router-dom';
 
 const OrdersPage = () => {
   // State management
   const [searchQuery, setSearchQuery] = useState('');
-  const [showModal, setShowModal] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState(null);
   const [statusFilter, setStatusFilter] = useState('active'); // 'active', 'completed', or 'all'
+  const navigate = useNavigate();
+  const location = useLocation();
   
   // Custom hook for orders data
   const { orders, loading, deleteOrder, refreshOrders } = useOrders();
+
+  // Check if we need to refresh orders (when returning from form)
+  useEffect(() => {
+    if (location.state && location.state.refresh) {
+      refreshOrders();
+      // Clear the state to avoid unnecessary refreshes
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, refreshOrders]);
 
   // Filter orders based on search query and status filter
   const filteredOrders = orders.filter(order => {
@@ -42,20 +51,17 @@ const OrdersPage = () => {
 
   // Event handlers
   const handleOrderClick = (order) => {
-    setSelectedOrder(order);
-    setShowModal(true);
+    navigate(`/pedidos/${order.id}`);
   };
 
   const handleViewOrder = (e, order) => {
     e.stopPropagation();
-    setSelectedOrder(order);
-    setShowModal(true);
+    navigate(`/pedidos/${order.id}`);
   };
 
   const handleEditOrder = (e, order) => {
     e.stopPropagation();
-    setSelectedOrder(order);
-    setShowModal(true);
+    navigate(`/pedidos/${order.id}`);
   };
 
   const handleDeleteOrder = async (e, order) => {
@@ -66,17 +72,7 @@ const OrdersPage = () => {
   };
 
   const handleCreateOrder = () => {
-    setSelectedOrder({ id: 'NOVO' });
-    setShowModal(true);
-  };
-
-  const handleModalClose = (refresh = false) => {
-    setShowModal(false);
-    setSelectedOrder(null);
-    
-    if (refresh) {
-      refreshOrders();
-    }
+    navigate('/pedidos/new');
   };
 
   return (
@@ -102,12 +98,6 @@ const OrdersPage = () => {
           />
         </CardContent>
       </Card>
-      
-      <OrderModal 
-        isOpen={showModal}
-        onClose={handleModalClose}
-        orderData={selectedOrder}
-      />
     </div>
   );
 };

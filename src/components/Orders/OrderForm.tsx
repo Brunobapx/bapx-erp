@@ -24,8 +24,8 @@ interface OrderFormProps {
 }
 
 export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
-  const { clients, loading: loadingClients } = useClients();
-  const { products, loading: loadingProducts } = useProducts();
+  const { clients } = useClients();
+  const { products } = useProducts();
   
   const {
     formData,
@@ -49,12 +49,10 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
   // Debug logging
   useEffect(() => {
     console.log("Current form data:", formData);
-    console.log("Available clients:", clients.length);
-    console.log("Available products:", products.length);
-  }, [formData, clients, products]);
+  }, [formData]);
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="space-y-6">
+    <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="space-y-6 bg-white p-6 rounded-lg shadow">
       <div className="grid gap-6">
         {/* Client Selection */}
         <div className="grid gap-2">
@@ -67,7 +65,6 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
             open={openClientCombobox}
             setOpen={setOpenClientCombobox}
           />
-          {loadingClients && <p className="text-sm text-muted-foreground">Carregando clientes...</p>}
         </div>
         
         {/* Product Selection */}
@@ -81,7 +78,6 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
             open={openProductCombobox}
             setOpen={setOpenProductCombobox}
           />
-          {loadingProducts && <p className="text-sm text-muted-foreground">Carregando produtos...</p>}
         </div>
         
         <div className="grid sm:grid-cols-2 gap-4">
@@ -118,7 +114,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
         {/* Total Value */}
         <div className="grid gap-1">
           <Label>Valor Total</Label>
-          <div className="text-lg font-medium">{formattedTotal}</div>
+          <div className="text-lg font-medium p-2 border rounded bg-gray-50">{formattedTotal}</div>
         </div>
         
         {/* Delivery Date */}

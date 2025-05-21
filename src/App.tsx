@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Sidebar } from "./components/Sidebar/Sidebar";
 import Index from "./pages/Index";
 import OrdersPage from "./pages/OrdersPage";
+import OrderFormPage from "./pages/OrderFormPage";
 import ProductionPage from "./pages/ProductionPage";
 import PackagingPage from "./pages/PackagingPage";
 import SalesPage from "./pages/SalesPage";
@@ -36,6 +37,7 @@ const App = () => (
               <Route path="/produtos" element={<ProductsPage />} />
               <Route path="/fornecedores" element={<VendorsPage />} />
               <Route path="/pedidos" element={<OrdersPage />} />
+              <Route path="/pedidos/:id" element={<OrderFormPage />} />
               <Route path="/producao" element={<ProductionPage />} />
               <Route path="/embalagem" element={<PackagingPage />} />
               <Route path="/vendas" element={<SalesPage />} />

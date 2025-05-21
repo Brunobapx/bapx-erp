@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -88,12 +87,18 @@ export const useOrders = () => {
     }).format(value);
   };
 
+  // Get an order by ID
+  const getOrderById = (id: string) => {
+    return orders.find(order => order.id === id) || null;
+  };
+
   return {
     orders,
     loading,
     error,
     refreshOrders,
     deleteOrder,
-    formatCurrency
+    formatCurrency,
+    getOrderById
   };
 };
