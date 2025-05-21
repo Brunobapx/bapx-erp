@@ -4,10 +4,8 @@ import {
   Dialog, 
   DialogContent, 
   DialogHeader, 
-  DialogTitle, 
-  DialogFooter
+  DialogTitle
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { OrderForm } from "@/components/Orders/OrderForm";
 import { Order } from '@/hooks/useOrders';
 
@@ -23,7 +21,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose, orderDa
 
   return (
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
-      <DialogContent className="sm:max-w-[550px]">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>{isNewOrder ? 'Novo Pedido' : 'Editar Pedido'}</DialogTitle>
         </DialogHeader>
@@ -32,16 +30,6 @@ export const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose, orderDa
           orderData={orderData} 
           onClose={onClose} 
         />
-        
-        <DialogFooter>
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={() => onClose()}
-          >
-            Cancelar
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

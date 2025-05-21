@@ -10,6 +10,8 @@ export type Order = {
   product_id?: string;
   product_name?: string;
   quantity?: number;
+  unit_price?: number;
+  total_price?: number;
   delivery_deadline?: string | null;
   payment_method?: string;
   payment_term?: string;
@@ -77,11 +79,21 @@ export const useOrders = () => {
     }
   };
 
+  // Format currency for display
+  const formatCurrency = (value?: number) => {
+    if (!value && value !== 0) return 'R$ 0,00';
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
   return {
     orders,
     loading,
     error,
     refreshOrders,
-    deleteOrder
+    deleteOrder,
+    formatCurrency
   };
 };

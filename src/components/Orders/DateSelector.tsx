@@ -10,6 +10,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ptBR } from 'date-fns/locale';
 
 interface DateSelectorProps {
   selectedDate: Date | null;
@@ -50,6 +51,8 @@ export const DateSelector: React.FC<DateSelectorProps> = ({
           selected={selectedDate}
           onSelect={onDateSelect}
           initialFocus
+          locale={ptBR}
+          className={cn("p-3 pointer-events-auto")}
         />
       </PopoverContent>
     </Popover>

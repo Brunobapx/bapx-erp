@@ -3,6 +3,13 @@ import React from 'react';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ClientSelector } from './ClientSelector';
 import { ProductSelector } from './ProductSelector';
 import { DateSelector } from './DateSelector';
@@ -34,12 +41,14 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
     handleDateSelect,
     handleSubmit,
     isSubmitting,
-    isNewOrder
+    isNewOrder,
+    calculateTotal,
+    formattedTotal
   } = useOrderForm({ orderData, onClose });
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-4 py-4">
+    <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="space-y-6">
+      <div className="grid gap-6">
         {/* Client Selection */}
         <div className="grid gap-2">
           <Label htmlFor="client">Cliente *</Label>
@@ -68,18 +77,41 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
           {loadingProducts && <p className="text-sm text-muted-foreground">Carregando produtos...</p>}
         </div>
         
-        {/* Quantity */}
-        <div className="grid gap-2">
-          <Label htmlFor="quantity">Quantidade *</Label>
-          <Input 
-            id="quantity"
-            name="quantity"
-            type="number"
-            min="1"
-            value={formData.quantity}
-            onChange={handleChange}
-            required
-          />
+        <div className="grid sm:grid-cols-2 gap-4">
+          {/* Quantity */}
+          <div className="grid gap-2">
+            <Label htmlFor="quantity">Quantidade *</Label>
+            <Input 
+              id="quantity"
+              name="quantity"
+              type="number"
+              min="1"
+              value={formData.quantity}
+              onChange={handleChange}
+              required
+              onBlur={calculateTotal}
+            />
+          </div>
+          
+          {/* Unit Price */}
+          <div className="grid gap-2">
+            <Label htmlFor="unit_price">Preço Unitário</Label>
+            <Input 
+              id="unit_price"
+              name="unit_price"
+              type="number"
+              step="0.01"
+              value={formData.unit_price || ''}
+              onChange={handleChange}
+              onBlur={calculateTotal}
+            />
+          </div>
+        </div>
+
+        {/* Total Value */}
+        <div className="grid gap-1">
+          <Label>Valor Total</Label>
+          <div className="text-lg font-medium">{formattedTotal}</div>
         </div>
         
         {/* Delivery Date */}
@@ -96,25 +128,49 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
         {/* Payment Method */}
         <div className="grid gap-2">
           <Label htmlFor="payment_method">Forma de Pagamento</Label>
-          <Input 
-            id="payment_method"
+          <Select 
             name="payment_method"
-            value={formData.payment_method}
-            onChange={handleChange}
-            placeholder="Ex: Dinheiro, Cartão, Boleto..."
-          />
+            value={formData.payment_method || ''}
+            onValueChange={(value) => handleChange({
+              target: { name: 'payment_method', value }
+            } as React.ChangeEvent<HTMLInputElement>)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione a forma de pagamento" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+              <SelectItem value="Cartão de Crédito">Cartão de Crédito</SelectItem>
+              <SelectItem value="Cartão de Débito">Cartão de Débito</SelectItem>
+              <SelectItem value="PIX">PIX</SelectItem>
+              <SelectItem value="Boleto">Boleto</SelectItem>
+              <SelectItem value="Transferência">Transferência</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         
         {/* Payment Terms */}
         <div className="grid gap-2">
           <Label htmlFor="payment_term">Prazo de Pagamento</Label>
-          <Input 
-            id="payment_term"
+          <Select 
             name="payment_term"
-            value={formData.payment_term}
-            onChange={handleChange}
-            placeholder="Ex: À vista, 30 dias, 60 dias..."
-          />
+            value={formData.payment_term || ''}
+            onValueChange={(value) => handleChange({
+              target: { name: 'payment_term', value }
+            } as React.ChangeEvent<HTMLInputElement>)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o prazo de pagamento" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="À vista">À vista</SelectItem>
+              <SelectItem value="7 dias">7 dias</SelectItem>
+              <SelectItem value="15 dias">15 dias</SelectItem>
+              <SelectItem value="30 dias">30 dias</SelectItem>
+              <SelectItem value="45 dias">45 dias</SelectItem>
+              <SelectItem value="60 dias">60 dias</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         
         {/* Seller */}
@@ -131,15 +187,21 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
       </div>
 
       {/* Submit button */}
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-4">
         <Button 
           type="button" 
-          onClick={handleSubmit} 
+          variant="outline"
+          onClick={() => onClose()}
+        >
+          Cancelar
+        </Button>
+        <Button 
+          type="submit" 
           disabled={isSubmitting}
         >
           {isSubmitting ? 'Salvando...' : (isNewOrder ? 'Criar Pedido' : 'Salvar Alterações')}
         </Button>
       </div>
-    </div>
+    </form>
   );
 };

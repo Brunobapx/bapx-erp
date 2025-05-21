@@ -78,6 +78,7 @@ export const useClients = () => {
 
   return {
     clients: filteredClients,
+    allClients: clients,
     loading,
     error,
     searchQuery,

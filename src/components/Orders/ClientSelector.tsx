@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Check, ChevronsUpDown, Search } from "lucide-react";
 import { 
   Popover, 
@@ -35,11 +35,21 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
   setOpen
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [filteredClients, setFilteredClients] = useState<Client[]>(clients);
 
-  // Filter clients based on the search query
-  const filteredClients = clients.filter(client => 
-    client.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Update filtered clients when search query or clients change
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setFilteredClients(clients);
+    } else {
+      const filtered = clients.filter(client =>
+        client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (client.cnpj && client.cnpj.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (client.cpf && client.cpf.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+      setFilteredClients(filtered);
+    }
+  }, [searchQuery, clients]);
 
   console.log("Clients in selector:", clients.length);
   console.log("Filtered clients:", filteredClients.length);
@@ -77,6 +87,7 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
                 onSelect={() => {
                   onClientSelect(client.id, client.name);
                   setSearchQuery('');
+                  setOpen(false);
                 }}
               >
                 <Check
@@ -85,7 +96,12 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
                     selectedClientId === client.id ? "opacity-100" : "opacity-0"
                   )}
                 />
-                {client.name}
+                <div className="flex flex-col">
+                  <span className="font-medium">{client.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {client.type === 'Jurídica' ? client.cnpj : client.cpf}
+                  </span>
+                </div>
               </CommandItem>
             ))}
           </CommandGroup>
