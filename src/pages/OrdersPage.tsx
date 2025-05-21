@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ApprovalModal } from '@/components/Modals/ApprovalModal';
 import { Package, ChevronDown, Search, Eye, Edit, Trash2 } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import {
@@ -21,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { OrderModal } from '@/components/Modals/OrderModal';
 
 const OrdersPage = () => {
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -56,10 +56,11 @@ const OrdersPage = () => {
     // Text search filter
     const searchString = searchQuery.toLowerCase();
     const matchesSearch = 
-      order.id?.toLowerCase().includes(searchString) ||
+      order.id?.toString().toLowerCase().includes(searchString) ||
       order.client_name?.toLowerCase().includes(searchString) ||
       order.product_name?.toLowerCase().includes(searchString) ||
-      order.status?.toLowerCase().includes(searchString);
+      order.status?.toLowerCase().includes(searchString) ||
+      order.seller?.toLowerCase().includes(searchString);
     
     // Status filter
     if (statusFilter === 'active' && order.completed) {
@@ -91,7 +92,7 @@ const OrdersPage = () => {
 
   const handleDeleteOrder = async (e, order) => {
     e.stopPropagation();
-    if (confirm(`Tem certeza que deseja excluir o pedido ${order.id}?`)) {
+    if (window.confirm(`Tem certeza que deseja excluir o pedido ${order.id}?`)) {
       try {
         const { error } = await supabase
           .from('orders')
@@ -109,55 +110,17 @@ const OrdersPage = () => {
     }
   };
 
-  const handleApproveOrder = (data) => {
-    // Simula a aprovação do pedido
-    const updatedOrders = orders.map(order => 
-      order.id === data.id 
-        ? { ...order, status: 'Aprovado', statusType: 'order' }
-        : order
-    );
-    setOrders(updatedOrders);
-    return Promise.resolve();
-  };
-
-  const handleNextStage = (data) => {
-    // Simula o envio para a próxima etapa
-    const updatedOrders = orders.map(order => 
-      order.id === data.id 
-        ? { 
-            ...order, 
-            status: data.status, 
-            statusType: data.stage,
-            quantity: data.quantity || order.quantity
-          }
-        : order
-    );
-    setOrders(updatedOrders);
-    return Promise.resolve();
-  };
-
   const handleCreateOrder = () => {
-    const newOrder = {
-      id: `PED-${String(orders.length + 1).padStart(3, '0')}`,
-      client_name: '',
-      product_name: '',
-      quantity: 1,
-      date: new Date().toLocaleDateString('pt-BR'),
-      status: 'Novo Pedido',
-      statusType: 'order',
-      completed: false
-    };
-    
-    setSelectedOrder(newOrder);
+    setSelectedOrder({ id: 'NOVO' });
     setShowModal(true);
   };
 
   const handleModalClose = (refresh = false) => {
     setShowModal(false);
+    setSelectedOrder(null);
     
     if (refresh) {
       fetchOrders();
-      toast.success("Lista de pedidos atualizada");
     }
   };
 
@@ -247,7 +210,8 @@ const OrdersPage = () => {
                 <TableHead>Cliente</TableHead>
                 <TableHead>Produto</TableHead>
                 <TableHead className="text-center">Qtd</TableHead>
-                <TableHead>Data</TableHead>
+                <TableHead>Data Entrega</TableHead>
+                <TableHead>Vendedor</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-center">Ações</TableHead>
               </TableRow>
@@ -263,7 +227,10 @@ const OrdersPage = () => {
                   <TableCell>{order.client_name}</TableCell>
                   <TableCell>{order.product_name}</TableCell>
                   <TableCell className="text-center">{order.quantity}</TableCell>
-                  <TableCell>{order.date}</TableCell>
+                  <TableCell>
+                    {order.delivery_deadline ? new Date(order.delivery_deadline).toLocaleDateString('pt-BR') : '-'}
+                  </TableCell>
+                  <TableCell>{order.seller || '-'}</TableCell>
                   <TableCell>
                     <span className={`stage-badge badge-${order.statusType || 'order'}`}>
                       {order.status}
@@ -314,18 +281,10 @@ const OrdersPage = () => {
         </CardContent>
       </Card>
       
-      <ApprovalModal
+      <OrderModal 
         isOpen={showModal}
         onClose={handleModalClose}
-        stage="order"
-        orderData={selectedOrder || {
-          id: 'NOVO', 
-          product: '', 
-          quantity: 1, 
-          customer: ''
-        }}
-        onApprove={handleApproveOrder}
-        onNextStage={handleNextStage}
+        orderData={selectedOrder}
       />
     </div>
   );
