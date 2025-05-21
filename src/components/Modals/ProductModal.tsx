@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -8,11 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Plus, Minus, ChevronDown, ChevronUp } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ProductModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  onClose: (refresh?: boolean) => void;
   productData: any | null;
 }
 
@@ -29,17 +29,18 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
     unit: 'UN',
     category: '',
     description: '',
-    taxType: 'Tributado',
+    tax_type: 'Tributado',
     icms: '18',
     ipi: '5',
     pis: '1.65',
     cofins: '7.6',
-    isManufactured: false
+    is_manufactured: false
   });
 
   const [recipeItems, setRecipeItems] = useState<Array<{id: string, productId: string, quantity: string}>>([]);
   const [isRecipeOpen, setIsRecipeOpen] = useState(false);
   const [availableIngredients, setAvailableIngredients] = useState<any[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const isNewProduct = !productData?.id;
   
@@ -57,12 +58,12 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
         unit: productData.unit || 'UN',
         category: productData.category || '',
         description: productData.description || '',
-        taxType: productData.taxType || 'Tributado',
+        tax_type: productData.tax_type || 'Tributado',
         icms: productData.icms || '18',
         ipi: productData.ipi || '5',
         pis: productData.pis || '1.65',
         cofins: productData.cofins || '7.6',
-        isManufactured: productData.isManufactured || false
+        is_manufactured: productData.is_manufactured || false
       });
       
       if (productData.recipe) {
@@ -72,15 +73,25 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
       resetForm();
     }
     
-    // Mock data for available ingredients
-    setAvailableIngredients([
-      { id: '1', name: 'Matéria prima A', unit: 'KG', cost: 25.00 },
-      { id: '2', name: 'Componente eletrônico B', unit: 'UN', cost: 8.50 },
-      { id: '3', name: 'Material C', unit: 'M', cost: 12.75 },
-      { id: '4', name: 'Insumo químico D', unit: 'L', cost: 30.20 },
-      { id: '5', name: 'Composto E', unit: 'G', cost: 5.60 },
-    ]);
+    fetchIngredients();
   }, [productData]);
+
+  const fetchIngredients = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name, unit, cost')
+        .eq('is_manufactured', false);
+        
+      if (error) throw error;
+      
+      if (data) {
+        setAvailableIngredients(data);
+      }
+    } catch (err: any) {
+      console.error('Error fetching ingredients:', err);
+    }
+  };
 
   const resetForm = () => {
     setFormData({
@@ -95,12 +106,12 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
       unit: 'UN',
       category: '',
       description: '',
-      taxType: 'Tributado',
+      tax_type: 'Tributado',
       icms: '18',
       ipi: '5',
       pis: '1.65',
       cofins: '7.6',
-      isManufactured: false
+      is_manufactured: false
     });
     setRecipeItems([]);
   };
@@ -116,7 +127,7 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
 
   const handleSwitchChange = (name: string, checked: boolean) => {
     setFormData(prev => ({ ...prev, [name]: checked }));
-    if (name === 'isManufactured' && checked) {
+    if (name === 'is_manufactured' && checked) {
       setIsRecipeOpen(true);
     }
   };
@@ -137,14 +148,101 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
     setRecipeItems(updatedItems);
   };
 
-  const handleSubmit = () => {
-    // Here we would submit to backend API
-    // For now just show a toast notification
-    toast({
-      title: isNewProduct ? "Produto adicionado" : "Produto atualizado",
-      description: `${formData.name} foi ${isNewProduct ? 'adicionado' : 'atualizado'} com sucesso.`,
-    });
-    onClose();
+  const validateForm = () => {
+    if (!formData.name.trim()) {
+      toast.error('Nome do produto é obrigatório');
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async () => {
+    if (!validateForm()) return;
+    
+    try {
+      setIsSubmitting(true);
+      
+      const productPayload = {
+        code: formData.code,
+        name: formData.name,
+        sku: formData.sku,
+        ncm: formData.ncm,
+        price: formData.price ? parseFloat(formData.price) : null,
+        cost: formData.cost ? parseFloat(formData.cost) : null,
+        stock: formData.stock ? parseFloat(formData.stock) : 0,
+        unit: formData.unit,
+        category: formData.category,
+        description: formData.description,
+        tax_type: formData.tax_type,
+        icms: formData.icms,
+        ipi: formData.ipi,
+        pis: formData.pis,
+        cofins: formData.cofins,
+        is_manufactured: formData.is_manufactured
+      };
+      
+      let productId;
+      
+      if (isNewProduct) {
+        // Insert new product
+        const { data, error } = await supabase
+          .from('products')
+          .insert([productPayload])
+          .select();
+          
+        if (error) throw error;
+        if (data && data.length > 0) {
+          productId = data[0].id;
+          toast.success('Produto adicionado com sucesso');
+        }
+      } else {
+        // Update existing product
+        const { error } = await supabase
+          .from('products')
+          .update(productPayload)
+          .eq('id', formData.id);
+          
+        if (error) throw error;
+        productId = formData.id;
+        toast.success('Produto atualizado com sucesso');
+      }
+      
+      // Handle recipe items
+      if (formData.is_manufactured && productId && recipeItems.length > 0) {
+        // First delete existing recipe items
+        if (!isNewProduct) {
+          await supabase
+            .from('product_recipes')
+            .delete()
+            .eq('product_id', productId);
+        }
+        
+        // Then insert new recipe items
+        const recipePayload = recipeItems.map(item => ({
+          product_id: productId,
+          ingredient_id: item.productId,
+          quantity: parseFloat(item.quantity)
+        }));
+        
+        if (recipePayload.length > 0) {
+          const { error } = await supabase
+            .from('product_recipes')
+            .insert(recipePayload);
+            
+          if (error) {
+            console.error('Error saving recipe:', error);
+            toast.error('Erro ao salvar receita do produto');
+          }
+        }
+      }
+      
+      onClose(true);
+    } catch (error: any) {
+      console.error('Error saving product:', error);
+      toast.error(`Erro ao ${isNewProduct ? 'adicionar' : 'atualizar'} produto: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const unitOptions = [
@@ -172,7 +270,7 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
   ];
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={() => onClose()}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>{isNewProduct ? 'Novo Produto' : 'Editar Produto'}</DialogTitle>
@@ -286,14 +384,14 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
           <div className="flex items-center space-x-2 pt-2 border-t">
             <Switch
               id="manufacturing"
-              checked={formData.isManufactured}
-              onCheckedChange={(checked) => handleSwitchChange('isManufactured', checked)}
+              checked={formData.is_manufactured}
+              onCheckedChange={(checked) => handleSwitchChange('is_manufactured', checked)}
             />
             <Label htmlFor="manufacturing" className="font-medium">Produto Fabricado</Label>
           </div>
           
           {/* Recipe Management */}
-          {formData.isManufactured && (
+          {formData.is_manufactured && (
             <Collapsible open={isRecipeOpen} onOpenChange={setIsRecipeOpen} className="border rounded-md p-2">
               <CollapsibleTrigger className="flex items-center justify-between w-full p-2 font-medium">
                 Receita de Fabricação
@@ -375,10 +473,10 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="taxType">Tipo Tributário</Label>
+                <Label htmlFor="tax_type">Tipo Tributário</Label>
                 <Select 
-                  value={formData.taxType}
-                  onValueChange={(value) => handleSelectChange('taxType', value)}
+                  value={formData.tax_type}
+                  onValueChange={(value) => handleSelectChange('tax_type', value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecionar..." />
@@ -436,12 +534,13 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
         </div>
         
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onClose()}>Cancelar</Button>
           <Button 
             onClick={handleSubmit}
+            disabled={isSubmitting}
             className="bg-erp-packaging hover:bg-erp-packaging/90"
           >
-            {isNewProduct ? 'Adicionar' : 'Salvar'}
+            {isSubmitting ? 'Salvando...' : isNewProduct ? 'Adicionar' : 'Salvar'}
           </Button>
         </DialogFooter>
       </DialogContent>
