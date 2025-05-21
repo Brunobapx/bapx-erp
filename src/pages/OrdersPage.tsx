@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ApprovalModal } from '@/components/Modals/ApprovalModal';
 import { Package, ChevronDown, Search } from 'lucide-react';
@@ -19,15 +19,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 const OrdersPage = () => {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [showModal, setShowModal] = React.useState(false);
   const [selectedOrder, setSelectedOrder] = React.useState(null);
   const [statusFilter, setStatusFilter] = React.useState('active'); // 'active', 'completed', or 'all'
-
-  // Mock order data
-  const orders = [
+  const [orders, setOrders] = React.useState([
     { 
       id: 'PED-001', 
       customer: 'Tech Solutions', 
@@ -56,7 +55,7 @@ const OrdersPage = () => {
       date: '13/05/2025',
       status: 'Aguardando Embalagem',
       statusType: 'packaging',
-      completed: true
+      completed: false
     },
     { 
       id: 'PED-004', 
@@ -66,7 +65,7 @@ const OrdersPage = () => {
       date: '12/05/2025',
       status: 'Aguardando Venda',
       statusType: 'sales',
-      completed: true
+      completed: false
     },
     { 
       id: 'PED-005', 
@@ -76,7 +75,7 @@ const OrdersPage = () => {
       date: '11/05/2025',
       status: 'Financeiro Pendente',
       statusType: 'finance',
-      completed: true
+      completed: false
     },
     { 
       id: 'PED-006', 
@@ -86,7 +85,7 @@ const OrdersPage = () => {
       date: '10/05/2025',
       status: 'Aguardando Rota',
       statusType: 'route',
-      completed: true
+      completed: false
     },
     { 
       id: 'PED-007', 
@@ -98,7 +97,7 @@ const OrdersPage = () => {
       statusType: 'production',
       completed: false
     },
-  ];
+  ]);
 
   // Filter orders based on search query and status filter
   const filteredOrders = orders.filter(order => {
@@ -121,9 +120,61 @@ const OrdersPage = () => {
     return matchesSearch;
   });
 
-  const handleOrderClick = (order: any) => {
+  const handleOrderClick = (order) => {
     setSelectedOrder(order);
     setShowModal(true);
+  };
+
+  const handleApproveOrder = (data) => {
+    // Simula a aprovação do pedido
+    const updatedOrders = orders.map(order => 
+      order.id === data.id 
+        ? { ...order, status: 'Aprovado', statusType: 'order' }
+        : order
+    );
+    setOrders(updatedOrders);
+    return Promise.resolve();
+  };
+
+  const handleNextStage = (data) => {
+    // Simula o envio para a próxima etapa
+    const updatedOrders = orders.map(order => 
+      order.id === data.id 
+        ? { 
+            ...order, 
+            status: data.status, 
+            statusType: data.stage,
+            quantity: data.quantity || order.quantity
+          }
+        : order
+    );
+    setOrders(updatedOrders);
+    return Promise.resolve();
+  };
+
+  const handleCreateOrder = () => {
+    const newOrder = {
+      id: `PED-${String(orders.length + 1).padStart(3, '0')}`,
+      customer: '',
+      product: '',
+      quantity: 1,
+      date: new Date().toLocaleDateString('pt-BR'),
+      status: 'Novo Pedido',
+      statusType: 'order',
+      completed: false
+    };
+    
+    setSelectedOrder(newOrder);
+    setShowModal(true);
+  };
+
+  const handleModalClose = (refresh = false) => {
+    setShowModal(false);
+    
+    if (refresh) {
+      // Aqui poderia ter uma lógica para recarregar os dados do servidor
+      toast.success("Lista de pedidos atualizada");
+    }
   };
 
   return (
@@ -133,7 +184,7 @@ const OrdersPage = () => {
           <h1 className="text-2xl font-bold">Pedidos</h1>
           <p className="text-muted-foreground">Gerencie todos os pedidos do sistema.</p>
         </div>
-        <Button onClick={() => setShowModal(true)}>
+        <Button onClick={handleCreateOrder}>
           <Package className="mr-2 h-4 w-4" /> Novo Pedido
         </Button>
       </div>
@@ -166,12 +217,24 @@ const OrdersPage = () => {
               <DropdownMenuItem onClick={() => setStatusFilter('completed')}>
                 Concluídos
               </DropdownMenuItem>
-              <DropdownMenuItem>Aguardando Produção</DropdownMenuItem>
-              <DropdownMenuItem>Em Produção</DropdownMenuItem>
-              <DropdownMenuItem>Aguardando Embalagem</DropdownMenuItem>
-              <DropdownMenuItem>Aguardando Venda</DropdownMenuItem>
-              <DropdownMenuItem>Financeiro Pendente</DropdownMenuItem>
-              <DropdownMenuItem>Aguardando Rota</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchQuery('Aguardando Produção')}>
+                Aguardando Produção
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchQuery('Em Produção')}>
+                Em Produção
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchQuery('Aguardando Embalagem')}>
+                Aguardando Embalagem
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchQuery('Aguardando Venda')}>
+                Aguardando Venda
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchQuery('Financeiro Pendente')}>
+                Financeiro Pendente
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchQuery('Aguardando Rota')}>
+                Aguardando Rota
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           
@@ -235,7 +298,7 @@ const OrdersPage = () => {
       
       <ApprovalModal
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
+        onClose={handleModalClose}
         stage="order"
         orderData={selectedOrder || {
           id: 'NOVO', 
@@ -243,6 +306,8 @@ const OrdersPage = () => {
           quantity: 1, 
           customer: ''
         }}
+        onApprove={handleApproveOrder}
+        onNextStage={handleNextStage}
       />
     </div>
   );

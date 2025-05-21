@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ApprovalModal } from '@/components/Modals/ApprovalModal';
 import { DollarSign, ChevronDown, Search, TrendingUp } from 'lucide-react';
@@ -19,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import StageAlert from '@/components/Alerts/StageAlert';
+import { toast } from "sonner";
 
 const SalesPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,7 +36,7 @@ const SalesPage = () => {
   ]);
 
   // Mock sales data
-  const salesItems = [
+  const [salesItems, setSalesItems] = useState([
     { 
       id: 'V-001', 
       orderId: 'PED-001',
@@ -79,7 +81,7 @@ const SalesPage = () => {
       status: 'Faturada',
       payment: 'Parcelado'
     }
-  ];
+  ]);
 
   // Filter items based on search query
   const filteredItems = salesItems.filter(item => {
@@ -93,12 +95,12 @@ const SalesPage = () => {
     );
   });
 
-  const handleItemClick = (item: any) => {
+  const handleItemClick = (item) => {
     setSelectedItem(item);
     setShowModal(true);
   };
 
-  const handleDismissAlert = (id: string) => {
+  const handleDismissAlert = (id) => {
     setAlerts(alerts.filter(alert => alert.id !== id));
   };
 
@@ -109,6 +111,62 @@ const SalesPage = () => {
     }
     return total;
   }, 0);
+
+  const handleApproveSale = (data) => {
+    const updatedItems = salesItems.map(item => 
+      item.id === data.id 
+        ? { 
+            ...item, 
+            status: 'Confirmada',
+            notes: data.notes
+          }
+        : item
+    );
+    setSalesItems(updatedItems);
+    return Promise.resolve();
+  };
+
+  const handleNextStage = (data) => {
+    const updatedItems = salesItems.map(item => 
+      item.id === data.id 
+        ? { 
+            ...item, 
+            status: 'Enviado para Financeiro',
+            notes: data.notes
+          }
+        : item
+    );
+    setSalesItems(updatedItems);
+    
+    // Aqui poderia ter uma lógica para criar um novo item na tabela de financeiro
+    
+    return Promise.resolve();
+  };
+
+  const handleCreateSale = () => {
+    const newSale = {
+      id: `V-${String(salesItems.length + 1).padStart(3, '0')}`,
+      orderId: '',
+      customer: '',
+      product: '',
+      quantity: 1,
+      value: 0,
+      date: new Date().toLocaleDateString('pt-BR'),
+      status: 'Nova Venda',
+      payment: 'À Vista'
+    };
+    
+    setSelectedItem(newSale);
+    setShowModal(true);
+  };
+
+  const handleModalClose = (refresh = false) => {
+    setShowModal(false);
+    
+    if (refresh) {
+      toast.success("Lista de vendas atualizada");
+    }
+  };
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
@@ -127,7 +185,7 @@ const SalesPage = () => {
               </div>
             </CardContent>
           </Card>
-          <Button onClick={() => setShowModal(true)}>
+          <Button onClick={handleCreateSale}>
             <DollarSign className="mr-2 h-4 w-4" /> Nova Venda
           </Button>
         </div>
@@ -154,10 +212,12 @@ const SalesPage = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem>Todos</DropdownMenuItem>
-              <DropdownMenuItem>Confirmada</DropdownMenuItem>
-              <DropdownMenuItem>Aguardando Confirmação</DropdownMenuItem>
-              <DropdownMenuItem>Faturada</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchQuery('')}>Todos</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchQuery('Confirmada')}>Confirmada</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchQuery('Aguardando Confirmação')}>
+                Aguardando Confirmação
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchQuery('Faturada')}>Faturada</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           
@@ -227,7 +287,7 @@ const SalesPage = () => {
       
       <ApprovalModal
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
+        onClose={handleModalClose}
         stage="sales"
         orderData={selectedItem || {
           id: 'NOVO', 
@@ -235,6 +295,8 @@ const SalesPage = () => {
           quantity: 1, 
           customer: ''
         }}
+        onApprove={handleApproveSale}
+        onNextStage={handleNextStage}
       />
     </div>
   );

@@ -16,9 +16,11 @@ import { toast } from "sonner";
 
 type ApprovalModalProps = {
   isOpen: boolean;
-  onClose: () => void;
+  onClose: (refresh?: boolean) => void;
   stage: 'order' | 'production' | 'packaging' | 'sales' | 'finance' | 'route';
   orderData?: any;
+  onApprove?: (data: any) => void;
+  onNextStage?: (data: any) => void;
 };
 
 export const ApprovalModal = ({ 
@@ -30,10 +32,20 @@ export const ApprovalModal = ({
     product: 'Widget XYZ', 
     quantity: 50, 
     customer: 'Acme Corp' 
-  }
+  },
+  onApprove,
+  onNextStage
 }: ApprovalModalProps) => {
   const [notes, setNotes] = React.useState('');
-  const [quantity, setQuantity] = React.useState(orderData.quantity.toString());
+  const [quantity, setQuantity] = React.useState(orderData.quantity ? orderData.quantity.toString() : '0');
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  React.useEffect(() => {
+    if (isOpen && orderData) {
+      setNotes('');
+      setQuantity(orderData.quantity ? orderData.quantity.toString() : '0');
+    }
+  }, [isOpen, orderData]);
 
   const stageConfig = {
     order: {
@@ -42,6 +54,7 @@ export const ApprovalModal = ({
       primaryAction: 'Aprovar Pedido',
       secondaryAction: 'Enviar para Produção',
       showQuantity: false,
+      nextStage: 'production'
     },
     production: {
       title: 'Aprovar Produção',
@@ -49,6 +62,7 @@ export const ApprovalModal = ({
       primaryAction: 'Aprovar Produção',
       secondaryAction: 'Enviar para Embalagem',
       showQuantity: true,
+      nextStage: 'packaging'
     },
     packaging: {
       title: 'Confirmar Embalagem',
@@ -56,6 +70,7 @@ export const ApprovalModal = ({
       primaryAction: 'Confirmar Embalagem',
       secondaryAction: 'Liberar para Venda',
       showQuantity: true,
+      nextStage: 'sales'
     },
     sales: {
       title: 'Confirmar Venda',
@@ -63,6 +78,7 @@ export const ApprovalModal = ({
       primaryAction: 'Confirmar Venda',
       secondaryAction: 'Enviar para Financeiro',
       showQuantity: false,
+      nextStage: 'finance'
     },
     finance: {
       title: 'Aprovar Financeiro',
@@ -70,6 +86,7 @@ export const ApprovalModal = ({
       primaryAction: 'Aprovar Financeiro',
       secondaryAction: 'Liberar para Entrega',
       showQuantity: false,
+      nextStage: 'route'
     },
     route: {
       title: 'Confirmar Rota de Entrega',
@@ -77,23 +94,65 @@ export const ApprovalModal = ({
       primaryAction: 'Confirmar Rota',
       secondaryAction: 'Finalizar Pedido',
       showQuantity: false,
+      nextStage: 'completed'
     },
   };
 
   const config = stageConfig[stage];
 
-  const handleApprove = () => {
-    toast.success(`${config.title} realizado com sucesso!`);
-    onClose();
+  const handleApprove = async () => {
+    setIsSubmitting(true);
+    try {
+      const data = { 
+        ...orderData, 
+        notes, 
+        quantity: parseInt(quantity),
+        status: `Aprovado ${config.title}`,
+        updatedAt: new Date()
+      };
+      
+      if (onApprove) {
+        await onApprove(data);
+      }
+      
+      toast.success(`${config.title} realizado com sucesso!`);
+      onClose(true);
+    } catch (error) {
+      console.error('Erro ao aprovar:', error);
+      toast.error('Erro ao processar a aprovação.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleSecondaryAction = () => {
-    toast.success(`Pedido enviado para a próxima etapa.`);
-    onClose();
+  const handleSecondaryAction = async () => {
+    setIsSubmitting(true);
+    try {
+      const data = {
+        ...orderData,
+        notes,
+        quantity: parseInt(quantity),
+        status: `Em ${config.nextStage}`,
+        stage: config.nextStage,
+        updatedAt: new Date()
+      };
+      
+      if (onNextStage) {
+        await onNextStage(data);
+      }
+      
+      toast.success(`Pedido enviado para a próxima etapa: ${config.nextStage}`);
+      onClose(true);
+    } catch (error) {
+      console.error('Erro ao enviar para próxima etapa:', error);
+      toast.error('Erro ao processar a solicitação.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={() => onClose()}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>{config.title}</DialogTitle>
@@ -104,17 +163,17 @@ export const ApprovalModal = ({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="order-id">Pedido</Label>
-              <Input id="order-id" value={orderData.id} readOnly />
+              <Input id="order-id" value={orderData.id || ''} readOnly />
             </div>
             <div>
               <Label htmlFor="customer">Cliente</Label>
-              <Input id="customer" value={orderData.customer} readOnly />
+              <Input id="customer" value={orderData.customer || orderData.client_name || ''} readOnly />
             </div>
           </div>
           
           <div>
             <Label htmlFor="product">Produto</Label>
-            <Input id="product" value={orderData.product} readOnly />
+            <Input id="product" value={orderData.product || orderData.product_name || ''} readOnly />
           </div>
           
           {config.showQuantity && (
@@ -141,11 +200,11 @@ export const ApprovalModal = ({
         </div>
         
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button variant="secondary" onClick={handleSecondaryAction}>
+          <Button variant="outline" onClick={() => onClose()} disabled={isSubmitting}>Cancelar</Button>
+          <Button variant="secondary" onClick={handleSecondaryAction} disabled={isSubmitting}>
             {config.secondaryAction}
           </Button>
-          <Button onClick={handleApprove}>{config.primaryAction}</Button>
+          <Button onClick={handleApprove} disabled={isSubmitting}>{config.primaryAction}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

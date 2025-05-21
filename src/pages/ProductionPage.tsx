@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ApprovalModal } from '@/components/Modals/ApprovalModal';
 import { Box, ChevronDown, Search } from 'lucide-react';
@@ -20,12 +20,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import StageAlert from '@/components/Alerts/StageAlert';
+import { toast } from "sonner";
 
 const ProductionPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [statusFilter, setStatusFilter] = useState('active'); // 'active', 'completed', or 'all'
+  const [statusFilter, setStatusFilter] = useState('active');
   const [alerts, setAlerts] = useState([
     {
       id: 'alert-1',
@@ -42,7 +43,7 @@ const ProductionPage = () => {
   ]);
 
   // Mock production data
-  const productionItems = [
+  const [productionItems, setProductionItems] = useState([
     { 
       id: 'PR-001', 
       orderId: 'PED-001',
@@ -98,7 +99,7 @@ const ProductionPage = () => {
       progress: 20,
       completed: false
     }
-  ];
+  ]);
 
   // Filter items based on search query and status filter
   const filteredItems = productionItems.filter(item => {
@@ -121,13 +122,72 @@ const ProductionPage = () => {
     return matchesSearch;
   });
 
-  const handleItemClick = (item: any) => {
+  const handleItemClick = (item) => {
     setSelectedItem(item);
     setShowModal(true);
   };
 
-  const handleDismissAlert = (id: string) => {
+  const handleDismissAlert = (id) => {
     setAlerts(alerts.filter(alert => alert.id !== id));
+  };
+
+  const handleApproveProduction = (data) => {
+    const updatedItems = productionItems.map(item => 
+      item.id === data.id 
+        ? { 
+            ...item, 
+            status: 'Aprovado', 
+            progress: Math.min(item.progress + 20, 100),
+            quantity: data.quantity || item.quantity
+          }
+        : item
+    );
+    setProductionItems(updatedItems);
+    return Promise.resolve();
+  };
+
+  const handleNextStage = (data) => {
+    const updatedItems = productionItems.map(item => 
+      item.id === data.id 
+        ? { 
+            ...item, 
+            status: 'Enviado para Embalagem', 
+            progress: 100,
+            completed: true,
+            quantity: data.quantity || item.quantity
+          }
+        : item
+    );
+    setProductionItems(updatedItems);
+    
+    // Aqui poderia ter uma lógica para criar um novo item na tabela de embalagem
+    
+    return Promise.resolve();
+  };
+
+  const handleCreateProduction = () => {
+    const newProduction = {
+      id: `PR-${String(productionItems.length + 1).padStart(3, '0')}`,
+      orderId: '',
+      product: '',
+      quantity: 1,
+      startDate: new Date().toLocaleDateString('pt-BR'),
+      deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR'),
+      status: 'Nova Produção',
+      progress: 0,
+      completed: false
+    };
+    
+    setSelectedItem(newProduction);
+    setShowModal(true);
+  };
+
+  const handleModalClose = (refresh = false) => {
+    setShowModal(false);
+    
+    if (refresh) {
+      toast.success("Lista de produções atualizada");
+    }
   };
 
   return (
@@ -137,7 +197,7 @@ const ProductionPage = () => {
           <h1 className="text-2xl font-bold">Produção</h1>
           <p className="text-muted-foreground">Gerencie todos os itens em produção.</p>
         </div>
-        <Button onClick={() => setShowModal(true)}>
+        <Button onClick={handleCreateProduction}>
           <Box className="mr-2 h-4 w-4" /> Nova Produção
         </Button>
       </div>
@@ -172,10 +232,10 @@ const ProductionPage = () => {
               <DropdownMenuItem onClick={() => setStatusFilter('completed')}>
                 Concluídos
               </DropdownMenuItem>
-              <DropdownMenuItem>Em Andamento</DropdownMenuItem>
-              <DropdownMenuItem>Pendente Aprovação</DropdownMenuItem>
-              <DropdownMenuItem>Material Pendente</DropdownMenuItem>
-              <DropdownMenuItem>Concluído</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchQuery('Em Andamento')}>Em Andamento</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchQuery('Pendente Aprovação')}>Pendente Aprovação</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchQuery('Material Pendente')}>Material Pendente</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchQuery('Concluído')}>Concluído</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           
@@ -250,7 +310,7 @@ const ProductionPage = () => {
       
       <ApprovalModal
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
+        onClose={handleModalClose}
         stage="production"
         orderData={selectedItem || {
           id: 'NOVO', 
@@ -258,6 +318,8 @@ const ProductionPage = () => {
           quantity: 1, 
           customer: ''
         }}
+        onApprove={handleApproveProduction}
+        onNextStage={handleNextStage}
       />
     </div>
   );

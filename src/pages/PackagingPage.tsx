@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ApprovalModal } from '@/components/Modals/ApprovalModal';
 import { Package, ChevronDown, Search } from 'lucide-react';
@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import StageAlert from '@/components/Alerts/StageAlert';
+import { toast } from "sonner";
 
 const PackagingPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,7 +37,7 @@ const PackagingPage = () => {
   ]);
 
   // Mock packaging data
-  const packagingItems = [
+  const [packagingItems, setPackagingItems] = useState([
     { 
       id: 'EMB-001', 
       productionId: 'PR-001',
@@ -81,7 +82,7 @@ const PackagingPage = () => {
       quality: 'Pendente',
       completed: false
     }
-  ];
+  ]);
 
   // Filter items based on search query and status filter
   const filteredItems = packagingItems.filter(item => {
@@ -104,13 +105,71 @@ const PackagingPage = () => {
     return matchesSearch;
   });
 
-  const handleItemClick = (item: any) => {
+  const handleItemClick = (item) => {
     setSelectedItem(item);
     setShowModal(true);
   };
 
-  const handleDismissAlert = (id: string) => {
+  const handleDismissAlert = (id) => {
     setAlerts(alerts.filter(alert => alert.id !== id));
+  };
+
+  const handleApprovePackaging = (data) => {
+    const updatedItems = packagingItems.map(item => 
+      item.id === data.id 
+        ? { 
+            ...item, 
+            status: 'Embalado', 
+            quality: 'Aprovado',
+            producedQuantity: data.quantity || item.producedQuantity,
+          }
+        : item
+    );
+    setPackagingItems(updatedItems);
+    return Promise.resolve();
+  };
+
+  const handleNextStage = (data) => {
+    const updatedItems = packagingItems.map(item => 
+      item.id === data.id 
+        ? { 
+            ...item, 
+            status: 'Enviado para Vendas', 
+            completed: true,
+            producedQuantity: data.quantity || item.producedQuantity
+          }
+        : item
+    );
+    setPackagingItems(updatedItems);
+    
+    // Aqui poderia ter uma lógica para criar um novo item na tabela de vendas
+    
+    return Promise.resolve();
+  };
+
+  const handleCreatePackaging = () => {
+    const newPackaging = {
+      id: `EMB-${String(packagingItems.length + 1).padStart(3, '0')}`,
+      productionId: '',
+      product: '',
+      quantity: 1,
+      producedQuantity: 0,
+      date: new Date().toLocaleDateString('pt-BR'),
+      status: 'Nova Embalagem',
+      quality: 'Pendente',
+      completed: false
+    };
+    
+    setSelectedItem(newPackaging);
+    setShowModal(true);
+  };
+
+  const handleModalClose = (refresh = false) => {
+    setShowModal(false);
+    
+    if (refresh) {
+      toast.success("Lista de embalagens atualizada");
+    }
   };
 
   return (
@@ -120,7 +179,7 @@ const PackagingPage = () => {
           <h1 className="text-2xl font-bold">Embalagem</h1>
           <p className="text-muted-foreground">Gerencie todos os produtos para embalagem.</p>
         </div>
-        <Button onClick={() => setShowModal(true)}>
+        <Button onClick={handleCreatePackaging}>
           <Package className="mr-2 h-4 w-4" /> Nova Embalagem
         </Button>
       </div>
@@ -155,9 +214,11 @@ const PackagingPage = () => {
               <DropdownMenuItem onClick={() => setStatusFilter('completed')}>
                 Concluídos
               </DropdownMenuItem>
-              <DropdownMenuItem>Embalado</DropdownMenuItem>
-              <DropdownMenuItem>Aguardando Confirmação</DropdownMenuItem>
-              <DropdownMenuItem>Em Produção</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchQuery('Embalado')}>Embalado</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchQuery('Aguardando Confirmação')}>
+                Aguardando Confirmação
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchQuery('Em Produção')}>Em Produção</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           
@@ -228,7 +289,7 @@ const PackagingPage = () => {
       
       <ApprovalModal
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
+        onClose={handleModalClose}
         stage="packaging"
         orderData={selectedItem || {
           id: 'NOVO', 
@@ -236,6 +297,8 @@ const PackagingPage = () => {
           quantity: 1, 
           customer: ''
         }}
+        onApprove={handleApprovePackaging}
+        onNextStage={handleNextStage}
       />
     </div>
   );
