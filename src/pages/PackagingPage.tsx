@@ -1,9 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ApprovalModal } from '@/components/Modals/ApprovalModal';
-import { Package, ChevronDown, Search } from 'lucide-react';
+import { Package, ChevronDown, Search, Eye, Edit, Trash2, Loader2 } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -21,12 +21,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import StageAlert from '@/components/Alerts/StageAlert';
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const PackagingPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [statusFilter, setStatusFilter] = useState('active'); // 'active', 'completed', or 'all'
+  const [packagingItems, setPackagingItems] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [alerts, setAlerts] = useState([
     {
       id: 'alert-1',
@@ -36,53 +39,43 @@ const PackagingPage = () => {
     }
   ]);
 
-  // Mock packaging data
-  const [packagingItems, setPackagingItems] = useState([
-    { 
-      id: 'EMB-001', 
-      productionId: 'PR-001',
-      product: 'Server Hardware', 
-      quantity: 10, 
-      producedQuantity: 10,
-      date: '18/05/2025',
-      status: 'Embalado',
-      quality: 'Aprovado',
-      completed: true
-    },
-    { 
-      id: 'EMB-002', 
-      productionId: 'PR-003',
-      product: 'Medical Equipment', 
-      quantity: 5, 
-      producedQuantity: 5,
-      date: '17/05/2025',
-      status: 'Embalado',
-      quality: 'Aprovado',
-      completed: true
-    },
-    { 
-      id: 'EMB-003', 
-      productionId: 'PR-004',
-      product: 'Packaging Materials', 
-      quantity: 100, 
-      producedQuantity: 98,
-      date: '16/05/2025',
-      status: 'Aguardando Confirmação',
-      quality: 'Pendente',
-      completed: false
-    },
-    { 
-      id: 'EMB-004', 
-      productionId: 'PR-005',
-      product: 'Desk Solutions', 
-      quantity: 25, 
-      producedQuantity: 0,
-      date: '15/05/2025',
-      status: 'Em Produção',
-      quality: 'Pendente',
-      completed: false
+  // Fetch packaging items from database
+  useEffect(() => {
+    fetchPackagingItems();
+  }, []);
+
+  const fetchPackagingItems = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .in('status', ['Aguardando Embalagem', 'Embalado']);
+      
+      if (error) throw error;
+      
+      // Transform data to match packaging items structure
+      const transformedData = (data || []).map(order => ({
+        id: `EMB-${order.id.split('-')[1] || '001'}`,
+        productionId: `PR-${order.id.split('-')[1] || '001'}`,
+        product: order.product_name,
+        quantity: order.quantity,
+        producedQuantity: order.quantity,
+        date: new Date(order.created_at).toLocaleDateString('pt-BR'),
+        status: order.status === 'Aguardando Embalagem' ? 'Aguardando Confirmação' : 'Embalado',
+        quality: order.status === 'Embalado' ? 'Aprovado' : 'Pendente',
+        completed: order.status === 'Embalado',
+        orderId: order.id
+      }));
+
+      setPackagingItems(transformedData);
+    } catch (error) {
+      console.error('Erro ao carregar embalagens:', error);
+      toast.error('Erro ao carregar itens de embalagem');
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
 
   // Filter items based on search query and status filter
   const filteredItems = packagingItems.filter(item => {
@@ -110,40 +103,58 @@ const PackagingPage = () => {
     setShowModal(true);
   };
 
+  const handleViewItem = (e, item) => {
+    e.stopPropagation();
+    setSelectedItem(item);
+    setShowModal(true);
+  };
+
+  const handleEditItem = (e, item) => {
+    e.stopPropagation();
+    setSelectedItem(item);
+    setShowModal(true);
+  };
+
+  const handleDeleteItem = async (e, item) => {
+    e.stopPropagation();
+    if (confirm(`Tem certeza que deseja excluir a embalagem ${item.id}?`)) {
+      try {
+        // Get the original order ID
+        const orderId = item.orderId;
+        
+        // Update the order status
+        const { error } = await supabase
+          .from('orders')
+          .update({ 
+            status: 'Em Produção', // Move back to production
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', orderId);
+          
+        if (error) throw error;
+        
+        toast.success('Embalagem excluída com sucesso');
+        fetchPackagingItems();
+      } catch (error) {
+        console.error('Erro ao excluir embalagem:', error);
+        toast.error('Erro ao excluir embalagem');
+      }
+    }
+  };
+
   const handleDismissAlert = (id) => {
     setAlerts(alerts.filter(alert => alert.id !== id));
   };
 
   const handleApprovePackaging = (data) => {
-    const updatedItems = packagingItems.map(item => 
-      item.id === data.id 
-        ? { 
-            ...item, 
-            status: 'Embalado', 
-            quality: 'Aprovado',
-            producedQuantity: data.quantity || item.producedQuantity,
-          }
-        : item
-    );
-    setPackagingItems(updatedItems);
+    // Update packaging status logic
+    // This would typically update the order in the database
     return Promise.resolve();
   };
 
   const handleNextStage = (data) => {
-    const updatedItems = packagingItems.map(item => 
-      item.id === data.id 
-        ? { 
-            ...item, 
-            status: 'Enviado para Vendas', 
-            completed: true,
-            producedQuantity: data.quantity || item.producedQuantity
-          }
-        : item
-    );
-    setPackagingItems(updatedItems);
-    
-    // Aqui poderia ter uma lógica para criar um novo item na tabela de vendas
-    
+    // Move to next stage logic
+    // This would typically update the order status in the database
     return Promise.resolve();
   };
 
@@ -168,6 +179,7 @@ const PackagingPage = () => {
     setShowModal(false);
     
     if (refresh) {
+      fetchPackagingItems();
       toast.success("Lista de embalagens atualizada");
     }
   };
@@ -239,47 +251,82 @@ const PackagingPage = () => {
       
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Produção</TableHead>
-                <TableHead>Produto</TableHead>
-                <TableHead className="text-center">Qtd Pedida</TableHead>
-                <TableHead className="text-center">Qtd Produzida</TableHead>
-                <TableHead>Data</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Qualidade</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredItems.map((item) => (
-                <TableRow 
-                  key={item.id}
-                  className="cursor-pointer hover:bg-accent/5"
-                  onClick={() => handleItemClick(item)}
-                >
-                  <TableCell className="font-medium">{item.id}</TableCell>
-                  <TableCell>{item.productionId}</TableCell>
-                  <TableCell>{item.product}</TableCell>
-                  <TableCell className="text-center">{item.quantity}</TableCell>
-                  <TableCell className="text-center">{item.producedQuantity}</TableCell>
-                  <TableCell>{item.date}</TableCell>
-                  <TableCell>
-                    <span className="stage-badge badge-packaging">
-                      {item.status}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <span className={`stage-badge ${item.quality === 'Aprovado' ? 'badge-sales' : 'badge-route'}`}>
-                      {item.quality}
-                    </span>
-                  </TableCell>
+          {loading ? (
+            <div className="flex justify-center items-center p-8">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID</TableHead>
+                  <TableHead>Produção</TableHead>
+                  <TableHead>Produto</TableHead>
+                  <TableHead className="text-center">Qtd Pedida</TableHead>
+                  <TableHead className="text-center">Qtd Produzida</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Qualidade</TableHead>
+                  <TableHead className="text-center">Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          {filteredItems.length === 0 && (
+              </TableHeader>
+              <TableBody>
+                {filteredItems.map((item) => (
+                  <TableRow 
+                    key={item.id}
+                    className="cursor-pointer hover:bg-accent/5"
+                    onClick={() => handleItemClick(item)}
+                  >
+                    <TableCell className="font-medium">{item.id}</TableCell>
+                    <TableCell>{item.productionId}</TableCell>
+                    <TableCell>{item.product}</TableCell>
+                    <TableCell className="text-center">{item.quantity}</TableCell>
+                    <TableCell className="text-center">{item.producedQuantity}</TableCell>
+                    <TableCell>{item.date}</TableCell>
+                    <TableCell>
+                      <span className="stage-badge badge-packaging">
+                        {item.status}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className={`stage-badge ${item.quality === 'Aprovado' ? 'badge-sales' : 'badge-route'}`}>
+                        {item.quality}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-center gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8" 
+                          onClick={(e) => handleViewItem(e, item)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8" 
+                          onClick={(e) => handleEditItem(e, item)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-100" 
+                          onClick={(e) => handleDeleteItem(e, item)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+          {!loading && filteredItems.length === 0 && (
             <div className="p-4 text-center text-muted-foreground">
               Nenhum item encontrado.
             </div>

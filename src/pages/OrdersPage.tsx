@@ -1,9 +1,9 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ApprovalModal } from '@/components/Modals/ApprovalModal';
-import { Package, ChevronDown, Search } from 'lucide-react';
+import { Package, ChevronDown, Search, Eye, Edit, Trash2 } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -20,94 +20,46 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const OrdersPage = () => {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [showModal, setShowModal] = React.useState(false);
   const [selectedOrder, setSelectedOrder] = React.useState(null);
   const [statusFilter, setStatusFilter] = React.useState('active'); // 'active', 'completed', or 'all'
-  const [orders, setOrders] = React.useState([
-    { 
-      id: 'PED-001', 
-      customer: 'Tech Solutions', 
-      product: 'Server Hardware', 
-      quantity: 10, 
-      date: '15/05/2025',
-      status: 'Aguardando Produção',
-      statusType: 'production',
-      completed: false
-    },
-    { 
-      id: 'PED-002', 
-      customer: 'Green Energy Inc', 
-      product: 'Solar Panels', 
-      quantity: 50, 
-      date: '14/05/2025',
-      status: 'Em Produção',
-      statusType: 'production',
-      completed: false
-    },
-    { 
-      id: 'PED-003', 
-      customer: 'City Hospital', 
-      product: 'Medical Equipment', 
-      quantity: 5, 
-      date: '13/05/2025',
-      status: 'Aguardando Embalagem',
-      statusType: 'packaging',
-      completed: false
-    },
-    { 
-      id: 'PED-004', 
-      customer: 'Global Foods', 
-      product: 'Packaging Materials', 
-      quantity: 100, 
-      date: '12/05/2025',
-      status: 'Aguardando Venda',
-      statusType: 'sales',
-      completed: false
-    },
-    { 
-      id: 'PED-005', 
-      customer: 'Modern Office', 
-      product: 'Desk Solutions', 
-      quantity: 25, 
-      date: '11/05/2025',
-      status: 'Financeiro Pendente',
-      statusType: 'finance',
-      completed: false
-    },
-    { 
-      id: 'PED-006', 
-      customer: 'Local Retailer', 
-      product: 'Display Units', 
-      quantity: 15, 
-      date: '10/05/2025',
-      status: 'Aguardando Rota',
-      statusType: 'route',
-      completed: false
-    },
-    { 
-      id: 'PED-007', 
-      customer: 'Education Center', 
-      product: 'Interactive Boards', 
-      quantity: 8, 
-      date: '09/05/2025',
-      status: 'Aguardando Produção',
-      statusType: 'production',
-      completed: false
-    },
-  ]);
+  const [orders, setOrders] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+
+  // Fetch orders from database
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.from('orders').select('*');
+      
+      if (error) throw error;
+      
+      setOrders(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar pedidos:', error);
+      toast.error('Erro ao carregar pedidos');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Filter orders based on search query and status filter
   const filteredOrders = orders.filter(order => {
     // Text search filter
     const searchString = searchQuery.toLowerCase();
     const matchesSearch = 
-      order.id.toLowerCase().includes(searchString) ||
-      order.customer.toLowerCase().includes(searchString) ||
-      order.product.toLowerCase().includes(searchString) ||
-      order.status.toLowerCase().includes(searchString);
+      order.id?.toLowerCase().includes(searchString) ||
+      order.client_name?.toLowerCase().includes(searchString) ||
+      order.product_name?.toLowerCase().includes(searchString) ||
+      order.status?.toLowerCase().includes(searchString);
     
     // Status filter
     if (statusFilter === 'active' && order.completed) {
@@ -123,6 +75,38 @@ const OrdersPage = () => {
   const handleOrderClick = (order) => {
     setSelectedOrder(order);
     setShowModal(true);
+  };
+
+  const handleViewOrder = (e, order) => {
+    e.stopPropagation();
+    setSelectedOrder(order);
+    setShowModal(true);
+  };
+
+  const handleEditOrder = (e, order) => {
+    e.stopPropagation();
+    setSelectedOrder(order);
+    setShowModal(true);
+  };
+
+  const handleDeleteOrder = async (e, order) => {
+    e.stopPropagation();
+    if (confirm(`Tem certeza que deseja excluir o pedido ${order.id}?`)) {
+      try {
+        const { error } = await supabase
+          .from('orders')
+          .delete()
+          .eq('id', order.id);
+        
+        if (error) throw error;
+        
+        toast.success('Pedido excluído com sucesso');
+        fetchOrders();
+      } catch (error) {
+        console.error('Erro ao excluir pedido:', error);
+        toast.error('Erro ao excluir pedido');
+      }
+    }
   };
 
   const handleApproveOrder = (data) => {
@@ -155,8 +139,8 @@ const OrdersPage = () => {
   const handleCreateOrder = () => {
     const newOrder = {
       id: `PED-${String(orders.length + 1).padStart(3, '0')}`,
-      customer: '',
-      product: '',
+      client_name: '',
+      product_name: '',
       quantity: 1,
       date: new Date().toLocaleDateString('pt-BR'),
       status: 'Novo Pedido',
@@ -172,7 +156,7 @@ const OrdersPage = () => {
     setShowModal(false);
     
     if (refresh) {
-      // Aqui poderia ter uma lógica para recarregar os dados do servidor
+      fetchOrders();
       toast.success("Lista de pedidos atualizada");
     }
   };
@@ -265,6 +249,7 @@ const OrdersPage = () => {
                 <TableHead className="text-center">Qtd</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="text-center">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -275,22 +260,55 @@ const OrdersPage = () => {
                   onClick={() => handleOrderClick(order)}
                 >
                   <TableCell className="font-medium">{order.id}</TableCell>
-                  <TableCell>{order.customer}</TableCell>
-                  <TableCell>{order.product}</TableCell>
+                  <TableCell>{order.client_name}</TableCell>
+                  <TableCell>{order.product_name}</TableCell>
                   <TableCell className="text-center">{order.quantity}</TableCell>
                   <TableCell>{order.date}</TableCell>
                   <TableCell>
-                    <span className={`stage-badge badge-${order.statusType}`}>
+                    <span className={`stage-badge badge-${order.statusType || 'order'}`}>
                       {order.status}
                     </span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex justify-center gap-2">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8" 
+                        onClick={(e) => handleViewOrder(e, order)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8" 
+                        onClick={(e) => handleEditOrder(e, order)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-100" 
+                        onClick={(e) => handleDeleteOrder(e, order)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-          {filteredOrders.length === 0 && (
+          {filteredOrders.length === 0 && !loading && (
             <div className="p-4 text-center text-muted-foreground">
               Nenhum pedido encontrado.
+            </div>
+          )}
+          {loading && (
+            <div className="p-4 text-center">
+              Carregando pedidos...
             </div>
           )}
         </CardContent>
