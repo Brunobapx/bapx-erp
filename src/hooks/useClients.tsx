@@ -47,11 +47,17 @@ export const useClients = () => {
         if (data) {
           console.log("Clientes carregados:", data.length);
           setClients(data);
+        } else {
+          // Ensure clients is always an array even if data is null
+          setClients([]);
+          console.log("No clients data returned, using empty array");
         }
       } catch (err: any) {
         console.error('Error fetching clients:', err);
         setError(err.message || 'Erro ao carregar clientes');
         toast.error('Erro ao carregar clientes');
+        // Ensure clients is always an array even on error
+        setClients([]);
       } finally {
         setLoading(false);
       }
@@ -61,10 +67,10 @@ export const useClients = () => {
   }, [refreshTrigger]);
 
   // Filter clients based on search query
-  const filteredClients = clients.filter(client => {
+  const filteredClients = (clients || []).filter(client => {
     const searchString = searchQuery.toLowerCase();
     return (
-      client.name.toLowerCase().includes(searchString) ||
+      client.name?.toLowerCase().includes(searchString) ||
       (client.cnpj && client.cnpj.toLowerCase().includes(searchString)) ||
       (client.cpf && client.cpf.toLowerCase().includes(searchString)) ||
       (client.email && client.email.toLowerCase().includes(searchString))
@@ -78,7 +84,7 @@ export const useClients = () => {
 
   return {
     clients: filteredClients,
-    allClients: clients,
+    allClients: clients || [],
     loading,
     error,
     searchQuery,

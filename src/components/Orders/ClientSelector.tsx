@@ -27,7 +27,7 @@ interface ClientSelectorProps {
 }
 
 export const ClientSelector: React.FC<ClientSelectorProps> = ({
-  clients,
+  clients = [],
   selectedClientId,
   selectedClientName,
   onClientSelect,
@@ -35,21 +35,24 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
   setOpen
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredClients, setFilteredClients] = useState<Client[]>(clients);
+  const [filteredClients, setFilteredClients] = useState<Client[]>([]);
+
+  // Initialize with empty array if clients is undefined
+  const safeClients = Array.isArray(clients) ? clients : [];
 
   // Update filtered clients when search query or clients change
   useEffect(() => {
     if (searchQuery.trim() === '') {
-      setFilteredClients(clients);
+      setFilteredClients(safeClients);
     } else {
-      const filtered = clients.filter(client =>
-        client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      const filtered = safeClients.filter(client =>
+        client.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (client.cnpj && client.cnpj.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (client.cpf && client.cpf.toLowerCase().includes(searchQuery.toLowerCase()))
       );
       setFilteredClients(filtered);
     }
-  }, [searchQuery, clients]);
+  }, [searchQuery, safeClients]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

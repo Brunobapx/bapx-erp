@@ -27,7 +27,7 @@ interface ProductSelectorProps {
 }
 
 export const ProductSelector: React.FC<ProductSelectorProps> = ({
-  products,
+  products = [],
   selectedProductId,
   selectedProductName,
   onProductSelect,
@@ -35,7 +35,10 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
   setOpen
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>(products);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  
+  // Initialize with empty array if products is undefined
+  const safeProducts = Array.isArray(products) ? products : [];
   
   // Format currency for display
   const formatCurrency = (value?: number) => {
@@ -49,16 +52,16 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
   // Update filtered products when search query or products change
   useEffect(() => {
     if (searchQuery.trim() === '') {
-      setFilteredProducts(products);
+      setFilteredProducts(safeProducts);
     } else {
-      const filtered = products.filter(product =>
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      const filtered = safeProducts.filter(product =>
+        product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (product.code && product.code.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (product.sku && product.sku.toLowerCase().includes(searchQuery.toLowerCase()))
       );
       setFilteredProducts(filtered);
     }
-  }, [searchQuery, products]);
+  }, [searchQuery, safeProducts]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

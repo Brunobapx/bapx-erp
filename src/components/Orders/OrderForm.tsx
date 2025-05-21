@@ -17,8 +17,8 @@ interface OrderFormProps {
 }
 
 export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
-  const { clients } = useClients();
-  const { products } = useProducts();
+  const { clients = [] } = useClients();
+  const { products = [] } = useProducts();
   
   const {
     formData,
@@ -42,7 +42,9 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
   // Debug logging
   useEffect(() => {
     console.log("Current form data:", formData);
-  }, [formData]);
+    console.log("Available clients:", clients);
+    console.log("Available products:", products);
+  }, [formData, clients, products]);
 
   // Handler for select changes
   const handleSelectChange = (name: string, value: string) => {
