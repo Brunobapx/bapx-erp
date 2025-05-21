@@ -56,20 +56,20 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
       <div className="grid gap-6">
         {/* Client Selection */}
         <OrderClientSection 
-          selectedClientId={formData.client_id}
-          selectedClientName={formData.client_name}
+          selectedClientId={formData.client_id || ''}
+          selectedClientName={formData.client_name || ''}
           onClientSelect={handleClientSelect}
-          clients={clients}
+          clients={clients || []}
           openClientCombobox={openClientCombobox}
           setOpenClientCombobox={setOpenClientCombobox}
         />
         
         {/* Product Selection */}
         <OrderProductSection 
-          selectedProductId={formData.product_id}
-          selectedProductName={formData.product_name}
+          selectedProductId={formData.product_id || ''}
+          selectedProductName={formData.product_name || ''}
           onProductSelect={handleProductSelect}
-          products={products}
+          products={products || []}
           openProductCombobox={openProductCombobox}
           setOpenProductCombobox={setOpenProductCombobox}
         />
