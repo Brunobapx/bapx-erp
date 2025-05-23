@@ -107,23 +107,27 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
           </CommandEmpty>
           <CommandGroup className="max-h-[300px] overflow-y-auto">
             {safeProducts.map((product) => {
-              // Create a safe search value
+              // Ensure we always have a valid, non-empty value for CommandItem
               const searchValue = [
-                product.name || '',
-                product.code || '',
-                product.sku || ''
+                product.name?.trim() || '',
+                product.code?.trim() || '',
+                product.sku?.trim() || ''
               ].filter(Boolean).join(' ').trim();
+
+              // Fallback to product ID if no searchable content is available
+              const itemValue = searchValue || product.id || `product-${Date.now()}`;
 
               console.log("Rendering product:", {
                 id: product.id,
                 name: product.name,
+                itemValue,
                 searchValue
               });
 
               return (
                 <CommandItem
                   key={product.id}
-                  value={searchValue || product.name || product.id}
+                  value={itemValue}
                   onSelect={() => {
                     console.log("Product selected:", product);
                     handleProductSelect(product.id, product.name, product.price);
