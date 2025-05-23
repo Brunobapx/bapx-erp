@@ -74,15 +74,15 @@ const AuthPage = () => {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            emailRedirectTo: undefined // Remove email confirmation
+          }
         });
 
         if (error) throw error;
 
-        if (data.user && !data.session) {
-          toast.success("Cadastro realizado! Verifique seu email para confirmação.");
-        } else {
-          toast.success("Cadastro realizado com sucesso!");
-        }
+        // User is created and logged in immediately
+        toast.success("Cadastro realizado com sucesso!");
       }
     } catch (error: any) {
       console.error('Auth error:', error);
@@ -104,6 +104,9 @@ const AuthPage = () => {
       const { data, error } = await supabase.auth.signUp({
         email: 'master@erp.com',
         password: 'master123',
+        options: {
+          emailRedirectTo: undefined // Remove email confirmation
+        }
       });
 
       if (error) throw error;
