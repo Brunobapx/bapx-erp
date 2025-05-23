@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Check, ChevronsUpDown, Search } from "lucide-react";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { 
   Popover, 
   PopoverContent, 
@@ -72,13 +72,10 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
       </PopoverTrigger>
       <PopoverContent className="w-[400px] p-0">
         <Command>
-          <div className="flex items-center border-b px-3">
-            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-            <CommandInput 
-              placeholder="Digite para buscar produto..." 
-              className="h-9 focus:outline-none border-0"
-            />
-          </div>
+          <CommandInput 
+            placeholder="Digite para buscar produto..." 
+            className="h-9"
+          />
           <CommandEmpty>
             {safeProducts.length === 0 
               ? "Nenhum produto cadastrado. Cadastre um produto primeiro." 
