@@ -103,6 +103,27 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
     searchValue
   });
 
+  // Don't render the Command component if there are no products to avoid cmdk issues
+  if (!open) {
+    return (
+      <Popover open={open} onOpenChange={handleOpenChange}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="justify-between w-full text-left"
+          >
+            <span className="truncate">
+              {selectedProductName || "Buscar produto..."}
+            </span>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+      </Popover>
+    );
+  }
+
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
@@ -119,7 +140,7 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[400px] p-0">
-        <Command shouldFilter={false}>
+        <Command shouldFilter={false} value="" onValueChange={() => {}}>
           <CommandInput 
             placeholder="Digite para buscar produto..." 
             className="h-9"
@@ -138,8 +159,8 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
                 return null;
               }
 
-              // Create a simple, guaranteed unique value
-              const itemValue = `product-${index}-${product.id}`;
+              // Use a simple string value that's guaranteed to be defined
+              const itemValue = `${product.id}-${index}`;
 
               console.log("Rendering product:", {
                 id: product.id,
