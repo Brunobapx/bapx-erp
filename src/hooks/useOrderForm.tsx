@@ -16,7 +16,10 @@ export const useOrderForm = ({ orderData, onClose }: UseOrderFormProps) => {
     setFormData, 
     formattedTotal, 
     updateFormattedTotal, 
-    isNewOrder 
+    isNewOrder,
+    addItem,
+    removeItem,
+    updateItem
   } = useOrderFormState({ orderData });
   
   const {
@@ -30,10 +33,8 @@ export const useOrderForm = ({ orderData, onClose }: UseOrderFormProps) => {
   
   const {
     isSubmitting,
-    calculateTotal,
     handleChange,
     handleClientSelect,
-    handleProductSelect,
     handleDateSelect,
     handleSubmit
   } = useOrderFormActions({
@@ -63,9 +64,12 @@ export const useOrderForm = ({ orderData, onClose }: UseOrderFormProps) => {
     // Form actions
     handleChange,
     handleClientSelect,
-    handleProductSelect,
     handleDateSelect,
     handleSubmit,
-    calculateTotal
+    
+    // Item management
+    addItem,
+    removeItem,
+    updateItem
   };
 };

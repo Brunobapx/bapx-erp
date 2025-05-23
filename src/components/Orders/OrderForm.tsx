@@ -4,11 +4,11 @@ import { useClients } from '@/hooks/useClients';
 import { useOrderForm } from '@/hooks/useOrderForm';
 import { Order } from '@/hooks/useOrders';
 import { OrderClientSection } from './Form/OrderClientSection';
-import { OrderProductSection } from './Form/OrderProductSection';
-import { OrderQuantityPriceSection } from './Form/OrderQuantityPriceSection';
+import { OrderItemsSection } from './Form/OrderItemsSection';
 import { OrderDeliverySection } from './Form/OrderDeliverySection';
 import { OrderPaymentSection } from './Form/OrderPaymentSection';
 import { OrderFormActions } from './Form/OrderFormActions';
+import { Label } from "@/components/ui/label";
 
 interface OrderFormProps {
   orderData: Order | null;
@@ -22,19 +22,18 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
     formData,
     openClientCombobox,
     setOpenClientCombobox,
-    openProductCombobox,
-    setOpenProductCombobox,
     openCalendar,
     setOpenCalendar,
     handleChange,
     handleClientSelect,
-    handleProductSelect,
     handleDateSelect,
     handleSubmit,
     isSubmitting,
     isNewOrder,
-    calculateTotal,
-    formattedTotal
+    formattedTotal,
+    addItem,
+    removeItem,
+    updateItem
   } = useOrderForm({ orderData, onClose });
 
   // Debug logging
@@ -54,6 +53,13 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
       refreshClients();
     }
   }, [clientsError, clientsLoading, clients, refreshClients]);
+
+  // Automatically add first item for new orders
+  useEffect(() => {
+    if (isNewOrder && formData.items.length === 0) {
+      addItem();
+    }
+  }, [isNewOrder, formData.items.length, addItem]);
 
   // Handler for select changes
   const handleSelectChange = (name: string, value: string) => {
@@ -77,23 +83,21 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
           error={clientsError}
         />
         
-        {/* Product Selection */}
-        <OrderProductSection 
-          selectedProductId={formData.product_id || ''}
-          selectedProductName={formData.product_name || ''}
-          onProductSelect={handleProductSelect}
-          openProductCombobox={openProductCombobox}
-          setOpenProductCombobox={setOpenProductCombobox}
+        {/* Items Section */}
+        <OrderItemsSection
+          items={formData.items}
+          onAddItem={addItem}
+          onRemoveItem={removeItem}
+          onUpdateItem={updateItem}
         />
         
-        {/* Quantity and Price */}
-        <OrderQuantityPriceSection 
-          quantity={formData.quantity || 1}
-          unitPrice={formData.unit_price || ''}
-          onChange={handleChange}
-          onBlur={calculateTotal}
-          formattedTotal={formattedTotal}
-        />
+        {/* Total */}
+        <div className="grid gap-1">
+          <Label>Valor Total do Pedido</Label>
+          <div className="text-xl font-bold p-3 border rounded bg-gray-50 text-green-700">
+            {formattedTotal}
+          </div>
+        </div>
         
         {/* Delivery Date */}
         <OrderDeliverySection 

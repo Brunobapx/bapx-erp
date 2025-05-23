@@ -21,17 +21,6 @@ export const useOrderFormActions = ({
 }: UseOrderFormActionsProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const calculateTotal = () => {
-    const quantity = Number(formData.quantity) || 0;
-    const unitPrice = Number(formData.unit_price) || 0;
-    const total = quantity * unitPrice;
-    
-    setFormData(prev => ({ ...prev, total_price: total }));
-    updateFormattedTotal(total);
-    
-    return total;
-  };
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -39,19 +28,6 @@ export const useOrderFormActions = ({
 
   const handleClientSelect = (clientId: string, clientName: string) => {
     setFormData(prev => ({ ...prev, client_id: clientId, client_name: clientName }));
-  };
-
-  const handleProductSelect = (productId: string, productName: string, productPrice?: number) => {
-    setFormData(prev => ({ 
-      ...prev, 
-      product_id: productId, 
-      product_name: productName,
-      unit_price: productPrice || prev.unit_price
-    }));
-    
-    if (productPrice) {
-      setTimeout(() => calculateTotal(), 100);
-    }
   };
 
   const handleDateSelect = (date: Date | null) => {
@@ -64,14 +40,20 @@ export const useOrderFormActions = ({
       return false;
     }
 
-    if (!formData.product_id.trim()) {
-      toast.error("Produto é obrigatório");
+    if (formData.items.length === 0) {
+      toast.error("Adicione pelo menos um item ao pedido");
       return false;
     }
 
-    if (!formData.quantity || formData.quantity <= 0) {
-      toast.error("Quantidade deve ser maior que zero");
-      return false;
+    for (const item of formData.items) {
+      if (!item.product_id.trim()) {
+        toast.error("Todos os itens devem ter um produto selecionado");
+        return false;
+      }
+      if (!item.quantity || item.quantity <= 0) {
+        toast.error("Todos os itens devem ter quantidade maior que zero");
+        return false;
+      }
     }
 
     return true;
@@ -90,8 +72,6 @@ export const useOrderFormActions = ({
         return;
       }
 
-      const totalPrice = calculateTotal();
-      
       if (isNewOrder) {
         // Criar novo pedido
         const orderData = {
@@ -99,7 +79,7 @@ export const useOrderFormActions = ({
           client_id: formData.client_id,
           client_name: formData.client_name,
           seller: formData.seller || null,
-          total_amount: totalPrice,
+          total_amount: formData.total_amount,
           delivery_deadline: formData.delivery_deadline?.toISOString().split('T')[0] || null,
           payment_method: formData.payment_method || null,
           payment_term: formData.payment_term || null,
@@ -115,22 +95,22 @@ export const useOrderFormActions = ({
           
         if (orderError) throw orderError;
         
-        // Criar item do pedido
-        const itemData = {
+        // Criar todos os itens do pedido
+        const itemsData = formData.items.map(item => ({
           user_id: user.id,
           order_id: insertedOrder.id,
-          product_id: formData.product_id,
-          product_name: formData.product_name,
-          quantity: formData.quantity,
-          unit_price: formData.unit_price || 0,
-          total_price: totalPrice
-        };
+          product_id: item.product_id,
+          product_name: item.product_name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_price: item.total_price
+        }));
         
-        const { error: itemError } = await supabase
+        const { error: itemsError } = await supabase
           .from('order_items')
-          .insert([itemData]);
+          .insert(itemsData);
           
-        if (itemError) throw itemError;
+        if (itemsError) throw itemsError;
         
         toast.success("Pedido criado com sucesso");
       } else {
@@ -139,7 +119,7 @@ export const useOrderFormActions = ({
           client_id: formData.client_id,
           client_name: formData.client_name,
           seller: formData.seller || null,
-          total_amount: totalPrice,
+          total_amount: formData.total_amount,
           delivery_deadline: formData.delivery_deadline?.toISOString().split('T')[0] || null,
           payment_method: formData.payment_method || null,
           payment_term: formData.payment_term || null,
@@ -153,6 +133,31 @@ export const useOrderFormActions = ({
           .eq('id', formData.id);
           
         if (orderError) throw orderError;
+        
+        // Deletar itens existentes e recriar
+        const { error: deleteError } = await supabase
+          .from('order_items')
+          .delete()
+          .eq('order_id', formData.id);
+          
+        if (deleteError) throw deleteError;
+        
+        // Recriar todos os itens
+        const itemsData = formData.items.map(item => ({
+          user_id: user.id,
+          order_id: formData.id,
+          product_id: item.product_id,
+          product_name: item.product_name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_price: item.total_price
+        }));
+        
+        const { error: itemsError } = await supabase
+          .from('order_items')
+          .insert(itemsData);
+          
+        if (itemsError) throw itemsError;
         
         toast.success("Pedido atualizado com sucesso");
       }
@@ -168,10 +173,8 @@ export const useOrderFormActions = ({
 
   return {
     isSubmitting,
-    calculateTotal,
     handleChange,
     handleClientSelect,
-    handleProductSelect,
     handleDateSelect,
     handleSubmit
   };
