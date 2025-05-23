@@ -1,7 +1,6 @@
 
 import React, { useEffect } from 'react';
 import { useClients } from '@/hooks/useClients';
-import { useProducts } from '@/hooks/useProducts';
 import { useOrderForm } from '@/hooks/useOrderForm';
 import { Order } from '@/hooks/useOrders';
 import { OrderClientSection } from './Form/OrderClientSection';
@@ -18,7 +17,6 @@ interface OrderFormProps {
 
 export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
   const { clients, loading: clientsLoading, error: clientsError, refreshClients } = useClients();
-  const { products } = useProducts();
   
   const {
     formData,
@@ -45,10 +43,9 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
       formData,
       clientsCount: clients?.length || 0,
       clientsLoading,
-      clientsError,
-      productsCount: products?.length || 0
+      clientsError
     });
-  }, [formData, clients, clientsLoading, clientsError, products]);
+  }, [formData, clients, clientsLoading, clientsError]);
 
   // Auto-refresh clients if there's an error or if no clients are loaded
   useEffect(() => {
@@ -73,11 +70,8 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
           selectedClientId={formData.client_id || ''}
           selectedClientName={formData.client_name || ''}
           onClientSelect={handleClientSelect}
-          clients={clients || []}
           openClientCombobox={openClientCombobox}
           setOpenClientCombobox={setOpenClientCombobox}
-          loading={clientsLoading}
-          error={clientsError}
         />
         
         {/* Product Selection */}
@@ -85,7 +79,6 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
           selectedProductId={formData.product_id || ''}
           selectedProductName={formData.product_name || ''}
           onProductSelect={handleProductSelect}
-          products={products || []}
           openProductCombobox={openProductCombobox}
           setOpenProductCombobox={setOpenProductCombobox}
         />
