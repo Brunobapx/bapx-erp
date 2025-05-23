@@ -31,6 +31,9 @@ export const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose, orderDa
     onClose();
   };
 
+  // Get first order item for display
+  const firstItem = orderData?.order_items?.[0];
+
   return (
     <Dialog open={isOpen} onOpenChange={handleCloseModal}>
       <DialogContent className="sm:max-w-[500px]">
@@ -47,11 +50,11 @@ export const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose, orderDa
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Produto:</p>
-                <p className="font-medium">{orderData.product_name}</p>
+                <p className="font-medium">{firstItem?.product_name || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Quantidade:</p>
-                <p className="font-medium">{orderData.quantity}</p>
+                <p className="font-medium">{firstItem?.quantity || 0}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Status:</p>

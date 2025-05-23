@@ -122,6 +122,16 @@ export const useOrders = () => {
     return orders.find(order => order.id === id) || null;
   };
 
+  // Função auxiliar para verificar se um pedido está completo
+  const isOrderCompleted = (status: OrderStatus) => {
+    return ['delivered', 'cancelled'].includes(status);
+  };
+
+  // Função auxiliar para obter o primeiro item do pedido
+  const getFirstOrderItem = (order: Order) => {
+    return order.order_items?.[0] || null;
+  };
+
   return {
     orders,
     loading,
@@ -129,6 +139,8 @@ export const useOrders = () => {
     refreshOrders,
     deleteOrder,
     formatCurrency,
-    getOrderById
+    getOrderById,
+    isOrderCompleted,
+    getFirstOrderItem
   };
 };

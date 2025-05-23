@@ -15,7 +15,7 @@ const OrdersPage = () => {
   const location = useLocation();
   
   // Custom hook for orders data
-  const { orders, loading, deleteOrder, refreshOrders } = useOrders();
+  const { orders, loading, deleteOrder, refreshOrders, isOrderCompleted, getFirstOrderItem } = useOrders();
 
   // Check if we need to refresh orders (when returning from form)
   useEffect(() => {
@@ -31,18 +31,20 @@ const OrdersPage = () => {
   const filteredOrders = orders.filter(order => {
     // Text search filter
     const searchString = searchQuery.toLowerCase();
+    const firstItem = getFirstOrderItem(order);
     const matchesSearch = 
       order.id?.toString().toLowerCase().includes(searchString) ||
       order.client_name?.toLowerCase().includes(searchString) ||
-      order.product_name?.toLowerCase().includes(searchString) ||
+      firstItem?.product_name?.toLowerCase().includes(searchString) ||
       order.status?.toLowerCase().includes(searchString) ||
       order.seller?.toLowerCase().includes(searchString);
     
     // Status filter
-    if (statusFilter === 'active' && order.completed) {
+    const isCompleted = isOrderCompleted(order.status);
+    if (statusFilter === 'active' && isCompleted) {
       return false;
     }
-    if (statusFilter === 'completed' && !order.completed) {
+    if (statusFilter === 'completed' && !isCompleted) {
       return false;
     }
 
