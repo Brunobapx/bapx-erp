@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Check, ChevronsUpDown } from "lucide-react";
 import { 
   Popover, 
@@ -34,6 +34,8 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
   open,
   setOpen
 }) => {
+  const [searchValue, setSearchValue] = useState("");
+
   // Ensure products is always a valid array with valid items
   const safeProducts = React.useMemo(() => {
     if (!Array.isArray(products)) {
@@ -54,6 +56,22 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
     });
   }, [products]);
 
+  // Filter products based on search
+  const filteredProducts = React.useMemo(() => {
+    if (!searchValue.trim()) {
+      return safeProducts;
+    }
+    
+    const searchString = searchValue.toLowerCase();
+    return safeProducts.filter(product => {
+      return (
+        product.name?.toLowerCase().includes(searchString) ||
+        product.code?.toLowerCase().includes(searchString) ||
+        product.sku?.toLowerCase().includes(searchString)
+      );
+    });
+  }, [safeProducts, searchValue]);
+
   // Format currency for display
   const formatCurrency = (value?: number) => {
     if (!value && value !== 0) return '';
@@ -66,17 +84,23 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
   const handleProductSelect = (productId: string, productName: string, productPrice?: number) => {
     onProductSelect(productId, productName, productPrice);
     setOpen(false);
+    setSearchValue(""); // Clear search when selecting
   };
 
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
+    if (!newOpen) {
+      setSearchValue(""); // Clear search when closing
+    }
   };
 
   console.log("ProductSelector render:", {
     productsCount: safeProducts.length,
+    filteredCount: filteredProducts.length,
     open,
     selectedProductId,
-    selectedProductName
+    selectedProductName,
+    searchValue
   });
 
   return (
@@ -99,8 +123,8 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
           <CommandInput 
             placeholder="Digite para buscar produto..." 
             className="h-9"
-            value=""
-            onValueChange={() => {}}
+            value={searchValue}
+            onValueChange={setSearchValue}
           />
           <CommandEmpty>
             {safeProducts.length === 0 
@@ -108,7 +132,7 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
               : "Nenhum produto encontrado com esse termo."}
           </CommandEmpty>
           <CommandGroup className="max-h-[300px] overflow-y-auto">
-            {safeProducts.map((product, index) => {
+            {filteredProducts.map((product, index) => {
               if (!product || !product.id) {
                 console.log("Skipping invalid product:", product);
                 return null;
