@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -109,6 +108,17 @@ export const ClientModal = ({ isOpen, onClose, clientData }: ClientModalProps) =
     try {
       setIsSubmitting(true);
       
+      // Get the current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        console.error('ClientModal - User not authenticated:', userError);
+        toast.error("Usuário não autenticado. Faça login para continuar.");
+        return;
+      }
+
+      console.log('ClientModal - Current user:', user.id);
+      
       const clientData = {
         name: formData.name,
         type: formData.type,
@@ -121,15 +131,21 @@ export const ClientModal = ({ isOpen, onClose, clientData }: ClientModalProps) =
         address: formData.address,
         city: formData.city,
         state: formData.state,
-        zip: formData.zip
+        zip: formData.zip,
+        user_id: user.id // Ensure user_id is set for RLS compliance
       };
+      
+      console.log('ClientModal - Saving client data:', clientData);
       
       if (isNewClient) {
         const { error } = await supabase
           .from('clients')
           .insert([clientData]);
           
-        if (error) throw error;
+        if (error) {
+          console.error('ClientModal - Insert error:', error);
+          throw error;
+        }
         
         toast.success("Cliente adicionado com sucesso");
       } else {
@@ -138,14 +154,17 @@ export const ClientModal = ({ isOpen, onClose, clientData }: ClientModalProps) =
           .update(clientData)
           .eq('id', formData.id);
           
-        if (error) throw error;
+        if (error) {
+          console.error('ClientModal - Update error:', error);
+          throw error;
+        }
         
         toast.success("Cliente atualizado com sucesso");
       }
       
       onClose(true); // Pass true to refresh the client list
     } catch (error: any) {
-      console.error("Erro ao salvar cliente:", error);
+      console.error("ClientModal - Erro ao salvar cliente:", error);
       toast.error(`Erro ao ${isNewClient ? 'adicionar' : 'atualizar'} cliente: ${error.message}`);
     } finally {
       setIsSubmitting(false);
