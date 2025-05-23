@@ -36,28 +36,50 @@ export const useClients = () => {
         setLoading(true);
         setError(null);
         
-        console.log('useClients - fetching clients from Supabase');
+        console.log('useClients - Iniciando busca de clientes...');
+        
+        // Verificar se o usuário está autenticado
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        if (userError) {
+          console.error('useClients - Erro de autenticação:', userError);
+          throw new Error('Usuário não autenticado');
+        }
+        
+        if (!user) {
+          console.error('useClients - Usuário não encontrado');
+          throw new Error('Usuário não encontrado');
+        }
+        
+        console.log('useClients - Usuário autenticado:', user.id);
 
         const { data, error } = await supabase
           .from('clients')
           .select('*')
+          .eq('user_id', user.id)
           .order('created_at', { ascending: false });
 
         if (error) {
-          console.error('useClients - Supabase error:', error);
+          console.error('useClients - Erro do Supabase:', error);
           throw error;
         }
 
+        console.log('useClients - Dados recebidos do banco:', data);
+        
         // Ensure we always have a valid array
         const clientsData = Array.isArray(data) ? data : [];
-        console.log("useClients - clients loaded:", clientsData.length);
+        console.log('useClients - Total de clientes carregados:', clientsData.length);
+        
+        if (clientsData.length === 0) {
+          console.log('useClients - Nenhum cliente encontrado para este usuário');
+        }
+        
         setClients(clientsData);
         
       } catch (err: any) {
-        console.error('useClients - Error fetching clients:', err);
+        console.error('useClients - Erro ao buscar clientes:', err);
         setError(err.message || 'Erro ao carregar clientes');
         toast.error('Erro ao carregar clientes: ' + (err.message || 'Erro desconhecido'));
-        // Ensure clients is always an array even on error
         setClients([]);
       } finally {
         setLoading(false);
@@ -82,7 +104,7 @@ export const useClients = () => {
 
   // Refresh clients list
   const refreshClients = () => {
-    console.log('useClients - refreshing clients list');
+    console.log('useClients - Atualizando lista de clientes...');
     setRefreshTrigger(prev => prev + 1);
   };
 

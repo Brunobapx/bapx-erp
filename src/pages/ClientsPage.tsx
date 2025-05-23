@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { User, ChevronDown, Search, FileText, Plus, Loader2 } from 'lucide-react';
+import { User, ChevronDown, Search, FileText, Plus, Loader2, AlertCircle } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -26,6 +26,7 @@ const ClientsPage = () => {
   const [selectedClient, setSelectedClient] = useState(null);
   const { 
     clients: filteredClients, 
+    allClients,
     loading, 
     error, 
     searchQuery, 
@@ -33,14 +34,22 @@ const ClientsPage = () => {
     refreshClients 
   } = useClients();
 
+  console.log('ClientsPage - Estado atual:', {
+    loading,
+    error,
+    filteredClientsCount: filteredClients?.length || 0,
+    allClientsCount: allClients?.length || 0,
+    searchQuery
+  });
+
   const handleClientClick = (client: any) => {
-    console.log('ClientsPage - client clicked:', client);
+    console.log('ClientsPage - Cliente clicado:', client);
     setSelectedClient(client);
     setShowModal(true);
   };
 
   const handleNewClient = () => {
-    console.log('ClientsPage - new client button clicked');
+    console.log('ClientsPage - Novo cliente');
     setSelectedClient(null);
     setShowModal(true);
   };
@@ -56,7 +65,7 @@ const ClientsPage = () => {
   };
 
   const handleModalClose = (refresh = false) => {
-    console.log('ClientsPage - modal closed, refresh:', refresh);
+    console.log('ClientsPage - Modal fechado, refresh:', refresh);
     setShowModal(false);
     setSelectedClient(null);
     
@@ -97,6 +106,9 @@ const ClientsPage = () => {
         </div>
         
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={refreshClients}>
+            Atualizar
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
@@ -126,15 +138,33 @@ const ClientsPage = () => {
         </div>
       </div>
       
+      {/* Debug info - remove in production */}
+      <div className="text-xs text-gray-500 p-2 bg-gray-50 rounded">
+        Debug: Loading: {loading ? 'Sim' : 'Não'} | 
+        Erro: {error || 'Nenhum'} | 
+        Total clientes: {allClients?.length || 0} | 
+        Filtrados: {safeFilteredClients.length}
+      </div>
+      
       <Card>
         <CardContent className="p-0">
           {loading ? (
             <div className="flex justify-center items-center p-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <span className="ml-2">Carregando clientes...</span>
             </div>
           ) : error ? (
-            <div className="p-4 text-center text-red-500">
-              Erro ao carregar clientes: {error}
+            <div className="p-8 text-center">
+              <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <p className="text-red-500 font-medium">Erro ao carregar clientes</p>
+              <p className="text-sm text-gray-600 mt-2">{error}</p>
+              <Button 
+                variant="outline" 
+                className="mt-4" 
+                onClick={refreshClients}
+              >
+                Tentar novamente
+              </Button>
             </div>
           ) : (
             <Table>
@@ -158,11 +188,11 @@ const ClientsPage = () => {
                       className="cursor-pointer hover:bg-accent/5"
                       onClick={() => handleClientClick(client)}
                     >
-                      <TableCell className="font-medium">{client.name || ''}</TableCell>
-                      <TableCell>{getDocumentId(client)}</TableCell>
-                      <TableCell>{getRegisterNumber(client)}</TableCell>
-                      <TableCell>{client.email || ''}</TableCell>
-                      <TableCell>{client.phone || ''}</TableCell>
+                      <TableCell className="font-medium">{client.name || 'Nome não informado'}</TableCell>
+                      <TableCell>{getDocumentId(client) || 'Não informado'}</TableCell>
+                      <TableCell>{getRegisterNumber(client) || 'Não informado'}</TableCell>
+                      <TableCell>{client.email || 'Não informado'}</TableCell>
+                      <TableCell>{client.phone || 'Não informado'}</TableCell>
                       <TableCell>
                         <span className={`stage-badge ${client.type === 'Jurídica' ? 'badge-order' : 'badge-production'}`}>
                           {client.type === 'Jurídica' ? 'PJ' : 'PF'}
@@ -175,8 +205,20 @@ const ClientsPage = () => {
             </Table>
           )}
           {!loading && !error && safeFilteredClients.length === 0 && (
-            <div className="p-4 text-center text-muted-foreground">
-              Nenhum cliente encontrado.
+            <div className="p-8 text-center">
+              <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 font-medium">Nenhum cliente encontrado</p>
+              <p className="text-sm text-gray-500 mt-2">
+                {searchQuery ? 'Tente alterar os filtros de busca' : 'Clique em "Novo Cliente" para adicionar o primeiro cliente'}
+              </p>
+              {!searchQuery && (
+                <Button 
+                  onClick={handleNewClient} 
+                  className="mt-4 bg-erp-order hover:bg-erp-order/90"
+                >
+                  <Plus className="mr-2 h-4 w-4" /> Adicionar primeiro cliente
+                </Button>
+              )}
             </div>
           )}
         </CardContent>
