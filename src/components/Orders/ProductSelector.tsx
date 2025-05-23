@@ -27,13 +27,16 @@ interface ProductSelectorProps {
 }
 
 export const ProductSelector: React.FC<ProductSelectorProps> = ({
-  products = [],
+  products,
   selectedProductId,
   selectedProductName,
   onProductSelect,
   open,
   setOpen
 }) => {
+  // Ensure products is always a valid array
+  const safeProducts = Array.isArray(products) ? products : [];
+
   // Format currency for display
   const formatCurrency = (value?: number) => {
     if (!value && value !== 0) return '';
@@ -77,12 +80,12 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
             />
           </div>
           <CommandEmpty>
-            {products.length === 0 
+            {safeProducts.length === 0 
               ? "Nenhum produto cadastrado. Cadastre um produto primeiro." 
               : "Nenhum produto encontrado com esse termo."}
           </CommandEmpty>
           <CommandGroup className="max-h-[300px] overflow-y-auto">
-            {products.map((product) => (
+            {safeProducts.map((product) => (
               <CommandItem
                 key={product.id}
                 value={`${product.name} ${product.code || ''} ${product.sku || ''}`}

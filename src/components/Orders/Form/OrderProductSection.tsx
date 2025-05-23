@@ -21,11 +21,14 @@ export const OrderProductSection: React.FC<OrderProductSectionProps> = ({
 }) => {
   const { products } = useProducts();
 
+  // Ensure products is always a valid array
+  const safeProducts = Array.isArray(products) ? products : [];
+
   return (
     <div className="grid gap-2">
       <Label htmlFor="product">Produto *</Label>
       <ProductSelector 
-        products={products}
+        products={safeProducts}
         selectedProductId={selectedProductId}
         selectedProductName={selectedProductName}
         onProductSelect={onProductSelect}
