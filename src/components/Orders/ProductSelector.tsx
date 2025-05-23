@@ -103,27 +103,6 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
     searchValue
   });
 
-  // Don't render the Command component if there are no products to avoid cmdk issues
-  if (!open) {
-    return (
-      <Popover open={open} onOpenChange={handleOpenChange}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="justify-between w-full text-left"
-          >
-            <span className="truncate">
-              {selectedProductName || "Buscar produto..."}
-            </span>
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-      </Popover>
-    );
-  }
-
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
@@ -139,65 +118,63 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[400px] p-0">
-        <Command shouldFilter={false} value="" onValueChange={() => {}}>
-          <CommandInput 
-            placeholder="Digite para buscar produto..." 
-            className="h-9"
-            value={searchValue}
-            onValueChange={setSearchValue}
-          />
-          <CommandEmpty>
-            {safeProducts.length === 0 
-              ? "Nenhum produto cadastrado. Cadastre um produto primeiro." 
-              : "Nenhum produto encontrado com esse termo."}
-          </CommandEmpty>
-          <CommandGroup className="max-h-[300px] overflow-y-auto">
-            {filteredProducts.map((product, index) => {
-              if (!product || !product.id) {
-                console.log("Skipping invalid product:", product);
-                return null;
-              }
+      {open && (
+        <PopoverContent className="w-[400px] p-0">
+          <Command>
+            <CommandInput 
+              placeholder="Digite para buscar produto..." 
+              className="h-9"
+              value={searchValue}
+              onValueChange={setSearchValue}
+            />
+            <CommandEmpty>
+              {safeProducts.length === 0 
+                ? "Nenhum produto cadastrado. Cadastre um produto primeiro." 
+                : "Nenhum produto encontrado com esse termo."}
+            </CommandEmpty>
+            <CommandGroup className="max-h-[300px] overflow-y-auto">
+              {filteredProducts.map((product, index) => {
+                if (!product || !product.id) {
+                  console.log("Skipping invalid product:", product);
+                  return null;
+                }
 
-              // Use a simple string value that's guaranteed to be defined
-              const itemValue = `${product.id}-${index}`;
+                console.log("Rendering product:", {
+                  id: product.id,
+                  name: product.name,
+                  index
+                });
 
-              console.log("Rendering product:", {
-                id: product.id,
-                name: product.name,
-                itemValue,
-                index
-              });
-
-              return (
-                <CommandItem
-                  key={itemValue}
-                  value={itemValue}
-                  onSelect={() => {
-                    console.log("Product selected:", product);
-                    handleProductSelect(product.id, product.name || '', product.price);
-                  }}
-                  className="cursor-pointer"
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      selectedProductId === product.id ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  <div className="flex flex-col">
-                    <span className="font-medium">{product.name || 'Nome não informado'}</span>
-                    <div className="flex text-xs gap-3 text-muted-foreground">
-                      {product.code && <span>Código: {product.code}</span>}
-                      {product.price && <span>{formatCurrency(product.price)}</span>}
+                return (
+                  <CommandItem
+                    key={`${product.id}-${index}`}
+                    value={product.name || ''}
+                    onSelect={() => {
+                      console.log("Product selected:", product);
+                      handleProductSelect(product.id, product.name || '', product.price);
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        selectedProductId === product.id ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    <div className="flex flex-col">
+                      <span className="font-medium">{product.name || 'Nome não informado'}</span>
+                      <div className="flex text-xs gap-3 text-muted-foreground">
+                        {product.code && <span>Código: {product.code}</span>}
+                        {product.price && <span>{formatCurrency(product.price)}</span>}
+                      </div>
                     </div>
-                  </div>
-                </CommandItem>
-              );
-            })}
-          </CommandGroup>
-        </Command>
-      </PopoverContent>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </Command>
+        </PopoverContent>
+      )}
     </Popover>
   );
 };
