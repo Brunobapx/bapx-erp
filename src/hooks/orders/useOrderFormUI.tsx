@@ -4,37 +4,44 @@ import { useState } from 'react';
 export const useOrderFormUI = () => {
   // UI states for controlling the open/closed state of components
   const [openClientCombobox, setOpenClientCombobox] = useState(false);
-  const [openProductCombobox, setOpenProductCombobox] = useState(false);
+  const [openProductCombobox, setOpenProductCombobox] = useState<Record<string, boolean>>({});
   const [openCalendar, setOpenCalendar] = useState(false);
   
   // Reset all popover states
   const resetUIStates = () => {
     setOpenClientCombobox(false);
-    setOpenProductCombobox(false);
+    setOpenProductCombobox({});
     setOpenCalendar(false);
   };
   
   // Handler to close all other popovers when one is opened
   const handleOpenClientCombobox = (open: boolean) => {
     if (open) {
-      setOpenProductCombobox(false);
+      setOpenProductCombobox({});
       setOpenCalendar(false);
     }
     setOpenClientCombobox(open);
   };
   
-  const handleOpenProductCombobox = (open: boolean) => {
+  const handleOpenProductCombobox = (itemId: string, open: boolean) => {
     if (open) {
       setOpenClientCombobox(false);
       setOpenCalendar(false);
+      // Close other product comboboxes
+      setOpenProductCombobox({ [itemId]: true });
+    } else {
+      setOpenProductCombobox(prev => {
+        const newState = { ...prev };
+        delete newState[itemId];
+        return newState;
+      });
     }
-    setOpenProductCombobox(open);
   };
   
   const handleOpenCalendar = (open: boolean) => {
     if (open) {
       setOpenClientCombobox(false);
-      setOpenProductCombobox(false);
+      setOpenProductCombobox({});
     }
     setOpenCalendar(open);
   };
