@@ -23,10 +23,11 @@ export type Client = {
 };
 
 export const useClients = () => {
-  const [clients, setClients] = useState<Client[]>([]);
+  const [allClients, setAllClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const fetchClients = async () => {
@@ -66,7 +67,7 @@ export const useClients = () => {
         const clientsData = Array.isArray(data) ? data : [];
         console.log('useClients - Total de clientes carregados:', clientsData.length);
         
-        setClients(clientsData);
+        setAllClients(clientsData);
         
       } catch (err: any) {
         console.error('useClients - Erro ao buscar clientes:', err);
@@ -77,7 +78,7 @@ export const useClients = () => {
           toast.error('Erro ao carregar clientes: ' + (err.message || 'Erro desconhecido'));
         }
         
-        setClients([]);
+        setAllClients([]);
       } finally {
         setLoading(false);
       }
@@ -92,17 +93,17 @@ export const useClients = () => {
   };
 
   const getClientById = (clientId: string) => {
-    return clients.find(client => client.id === clientId);
+    return allClients.find(client => client.id === clientId);
   };
 
   // Função para buscar clientes com termo de pesquisa
   const searchClients = (searchTerm: string) => {
     if (!searchTerm || searchTerm.trim() === '') {
-      return clients;
+      return allClients;
     }
     
     const searchString = searchTerm.toLowerCase();
-    return clients.filter(client => {
+    return allClients.filter(client => {
       return (
         (client.name && client.name.toLowerCase().includes(searchString)) ||
         (client.cnpj && client.cnpj.toLowerCase().includes(searchString)) ||
@@ -112,10 +113,16 @@ export const useClients = () => {
     });
   };
 
+  // Filter clients based on search query
+  const filteredClients = searchClients(searchQuery);
+
   return {
-    clients,
+    clients: filteredClients,
+    allClients,
     loading,
     error,
+    searchQuery,
+    setSearchQuery,
     refreshClients,
     getClientById,
     searchClients

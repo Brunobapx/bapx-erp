@@ -27,10 +27,11 @@ export type Product = {
 };
 
 export const useProducts = () => {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -55,12 +56,12 @@ export const useProducts = () => {
         }
 
         console.log("Products loaded:", data?.length || 0);
-        setProducts(data || []);
+        setAllProducts(data || []);
       } catch (err: any) {
         console.error('Error fetching products:', err);
         setError(err.message || 'Erro ao carregar produtos');
         toast.error('Erro ao carregar produtos');
-        setProducts([]);
+        setAllProducts([]);
       } finally {
         setLoading(false);
       }
@@ -76,11 +77,11 @@ export const useProducts = () => {
   // Função para buscar produtos com termo de pesquisa
   const searchProducts = (searchTerm: string) => {
     if (!searchTerm || searchTerm.trim() === '') {
-      return products;
+      return allProducts;
     }
     
     const searchString = searchTerm.toLowerCase();
-    return products.filter(product => {
+    return allProducts.filter(product => {
       return (
         (product.name && product.name.toLowerCase().includes(searchString)) ||
         (product.code && product.code.toLowerCase().includes(searchString)) ||
@@ -91,10 +92,15 @@ export const useProducts = () => {
     });
   };
 
+  // Filter products based on search query
+  const filteredProducts = searchProducts(searchQuery);
+
   return {
-    products,
+    products: filteredProducts,
     loading,
     error,
+    searchQuery,
+    setSearchQuery,
     refreshProducts,
     searchProducts
   };
