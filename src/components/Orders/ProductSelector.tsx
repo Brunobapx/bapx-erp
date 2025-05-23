@@ -34,7 +34,7 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
   open,
   setOpen
 }) => {
-  // Ensure products is always a valid array with valid items
+  // Garantir que products é sempre um array válido
   const safeProducts = React.useMemo(() => {
     if (!Array.isArray(products)) {
       console.log("ProductSelector: products is not an array:", products);
@@ -71,8 +71,8 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
   console.log("ProductSelector render:", {
     productsCount: safeProducts.length,
     open,
-    selectedProductId,
-    selectedProductName
+    selectedProductId: selectedProductId || '',
+    selectedProductName: selectedProductName || ''
   });
 
   return (
@@ -102,22 +102,22 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
               : "Nenhum produto encontrado com esse termo."}
           </CommandEmpty>
           <CommandGroup className="max-h-[300px] overflow-y-auto">
-            {safeProducts.map((product, index) => {
-              if (!product || !product.id) {
+            {safeProducts.map((product) => {
+              // Garantir que product é válido antes de renderizar
+              if (!product || !product.id || !product.name) {
                 console.log("Skipping invalid product:", product);
                 return null;
               }
 
               console.log("Rendering product:", {
                 id: product.id,
-                name: product.name,
-                index
+                name: product.name
               });
 
               return (
                 <CommandItem
                   key={product.id}
-                  value={product.name}
+                  value={`${product.name}-${product.id}`}
                   onSelect={() => {
                     console.log("Product selected:", product);
                     handleProductSelect(product.id, product.name, product.price);

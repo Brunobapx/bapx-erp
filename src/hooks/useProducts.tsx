@@ -56,11 +56,13 @@ export const useProducts = () => {
         }
 
         console.log("Products loaded:", data?.length || 0);
-        setAllProducts(data || []);
+        // Garantir que sempre temos um array válido
+        setAllProducts(Array.isArray(data) ? data : []);
       } catch (err: any) {
         console.error('Error fetching products:', err);
         setError(err.message || 'Erro ao carregar produtos');
         toast.error('Erro ao carregar produtos');
+        // Garantir array vazio em caso de erro
         setAllProducts([]);
       } finally {
         setLoading(false);
@@ -76,12 +78,15 @@ export const useProducts = () => {
 
   // Função para buscar produtos com termo de pesquisa
   const searchProducts = (searchTerm: string) => {
+    // Garantir que allProducts sempre é um array válido
+    const safeProducts = Array.isArray(allProducts) ? allProducts : [];
+    
     if (!searchTerm || searchTerm.trim() === '') {
-      return allProducts;
+      return safeProducts;
     }
     
     const searchString = searchTerm.toLowerCase();
-    return allProducts.filter(product => {
+    return safeProducts.filter(product => {
       return (
         (product.name && product.name.toLowerCase().includes(searchString)) ||
         (product.code && product.code.toLowerCase().includes(searchString)) ||
@@ -92,11 +97,11 @@ export const useProducts = () => {
     });
   };
 
-  // Filter products based on search query
+  // Filter products based on search query - sempre retornar array válido
   const filteredProducts = searchProducts(searchQuery);
 
   return {
-    products: filteredProducts,
+    products: Array.isArray(filteredProducts) ? filteredProducts : [],
     loading,
     error,
     searchQuery,

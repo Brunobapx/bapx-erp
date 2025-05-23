@@ -21,16 +21,24 @@ export const OrderProductSection: React.FC<OrderProductSectionProps> = ({
 }) => {
   const { products } = useProducts();
 
-  // Ensure products is always a valid array
-  const safeProducts = Array.isArray(products) ? products : [];
+  // Garantir que products é sempre um array válido e nunca undefined
+  const safeProducts = React.useMemo(() => {
+    if (!Array.isArray(products)) {
+      console.log("OrderProductSection: products is not an array, defaulting to empty array");
+      return [];
+    }
+    return products;
+  }, [products]);
+
+  console.log("OrderProductSection: safeProducts count:", safeProducts.length);
 
   return (
     <div className="grid gap-2">
       <Label htmlFor="product">Produto *</Label>
       <ProductSelector 
         products={safeProducts}
-        selectedProductId={selectedProductId}
-        selectedProductName={selectedProductName}
+        selectedProductId={selectedProductId || ''}
+        selectedProductName={selectedProductName || ''}
         onProductSelect={onProductSelect}
         open={openProductCombobox}
         setOpen={setOpenProductCombobox}
