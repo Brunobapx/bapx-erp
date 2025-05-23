@@ -95,10 +95,12 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[400px] p-0">
-        <Command shouldFilter={false} filter={() => 1}>
+        <Command shouldFilter={false}>
           <CommandInput 
             placeholder="Digite para buscar produto..." 
             className="h-9"
+            value=""
+            onValueChange={() => {}}
           />
           <CommandEmpty>
             {safeProducts.length === 0 
@@ -107,8 +109,13 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
           </CommandEmpty>
           <CommandGroup className="max-h-[300px] overflow-y-auto">
             {safeProducts.map((product, index) => {
+              if (!product || !product.id) {
+                console.log("Skipping invalid product:", product);
+                return null;
+              }
+
               // Create a simple, guaranteed unique value
-              const itemValue = `${product.id}-${index}`;
+              const itemValue = `product-${index}-${product.id}`;
 
               console.log("Rendering product:", {
                 id: product.id,
@@ -119,11 +126,11 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
 
               return (
                 <CommandItem
-                  key={`${product.id}-${index}`}
+                  key={itemValue}
                   value={itemValue}
                   onSelect={() => {
                     console.log("Product selected:", product);
-                    handleProductSelect(product.id, product.name, product.price);
+                    handleProductSelect(product.id, product.name || '', product.price);
                   }}
                   className="cursor-pointer"
                 >
