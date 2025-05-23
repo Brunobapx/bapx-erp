@@ -14,13 +14,17 @@ interface OrderItemsSectionProps {
   onAddItem: () => void;
   onRemoveItem: (itemId: string) => void;
   onUpdateItem: (itemId: string, updates: Partial<OrderFormItem>) => void;
+  openProductCombobox: Record<string, boolean>;
+  setOpenProductCombobox: (itemId: string, open: boolean) => void;
 }
 
 export const OrderItemsSection: React.FC<OrderItemsSectionProps> = ({
   items,
   onAddItem,
   onRemoveItem,
-  onUpdateItem
+  onUpdateItem,
+  openProductCombobox,
+  setOpenProductCombobox
 }) => {
   const { products } = useProducts();
   const safeProducts = React.useMemo(() => {
@@ -98,8 +102,8 @@ export const OrderItemsSection: React.FC<OrderItemsSectionProps> = ({
                       onProductSelect={(productId, productName, productPrice) => 
                         handleProductSelect(item.id, productId, productName, productPrice)
                       }
-                      open={false}
-                      setOpen={() => {}}
+                      open={openProductCombobox[item.id] || false}
+                      setOpen={(open) => setOpenProductCombobox(item.id, open)}
                     />
                   </TableCell>
                   <TableCell>

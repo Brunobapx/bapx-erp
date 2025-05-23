@@ -22,6 +22,8 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
     formData,
     openClientCombobox,
     setOpenClientCombobox,
+    openProductCombobox,
+    setOpenProductCombobox,
     openCalendar,
     setOpenCalendar,
     handleChange,
@@ -89,6 +91,8 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
           onAddItem={addItem}
           onRemoveItem={removeItem}
           onUpdateItem={updateItem}
+          openProductCombobox={openProductCombobox}
+          setOpenProductCombobox={setOpenProductCombobox}
         />
         
         {/* Total */}
