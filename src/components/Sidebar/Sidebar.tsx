@@ -15,6 +15,7 @@ import {
   FilePen
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
+import { UserSection } from './UserSection';
 
 const SidebarLink = ({ 
   to, 
@@ -62,7 +63,7 @@ export const Sidebar = () => {
   ];
 
   return (
-    <aside className={`bg-background border-r border-border h-screen transition-all duration-300 ${collapsed ? 'w-16' : 'w-64'}`}>
+    <aside className={`bg-background border-r border-border h-screen transition-all duration-300 flex flex-col ${collapsed ? 'w-16' : 'w-64'}`}>
       <div className="p-4 flex items-center justify-between">
         {!collapsed && (
           <h2 className="text-xl font-bold text-primary">
@@ -83,7 +84,7 @@ export const Sidebar = () => {
           }
         </button>
       </div>
-      <div className="p-2">
+      <div className="p-2 flex-1">
         <nav className="space-y-1">
           {navigationItems.map((item) => (
             <SidebarLink
@@ -96,6 +97,7 @@ export const Sidebar = () => {
           ))}
         </nav>
       </div>
+      {!collapsed && <UserSection />}
     </aside>
   );
 };
