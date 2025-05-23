@@ -70,8 +70,11 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
           selectedClientId={formData.client_id || ''}
           selectedClientName={formData.client_name || ''}
           onClientSelect={handleClientSelect}
+          clients={clients}
           openClientCombobox={openClientCombobox}
           setOpenClientCombobox={setOpenClientCombobox}
+          loading={clientsLoading}
+          error={clientsError}
         />
         
         {/* Product Selection */}
