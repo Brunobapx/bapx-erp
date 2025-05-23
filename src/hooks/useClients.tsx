@@ -72,7 +72,12 @@ export const useClients = () => {
       } catch (err: any) {
         console.error('useClients - Erro ao buscar clientes:', err);
         setError(err.message || 'Erro ao carregar clientes');
-        toast.error('Erro ao carregar clientes: ' + (err.message || 'Erro desconhecido'));
+        
+        // Só mostrar toast de erro se não for problema de autenticação
+        if (!err.message?.includes('não autenticado')) {
+          toast.error('Erro ao carregar clientes: ' + (err.message || 'Erro desconhecido'));
+        }
+        
         setClients([]);
       } finally {
         setLoading(false);
@@ -99,6 +104,10 @@ export const useClients = () => {
     setRefreshTrigger(prev => prev + 1);
   };
 
+  const getClientById = (clientId: string) => {
+    return clients.find(client => client.id === clientId);
+  };
+
   return {
     clients: filteredClients,
     allClients: clients,
@@ -106,6 +115,7 @@ export const useClients = () => {
     error,
     searchQuery,
     setSearchQuery,
-    refreshClients
+    refreshClients,
+    getClientById
   };
 };

@@ -17,8 +17,8 @@ interface OrderFormProps {
 }
 
 export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
-  const { clients = [] } = useClients();
-  const { products = [] } = useProducts();
+  const { clients, loading: clientsLoading, error: clientsError, refreshClients } = useClients();
+  const { products } = useProducts();
   
   const {
     formData,
@@ -41,10 +41,22 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
 
   // Debug logging
   useEffect(() => {
-    console.log("Current form data:", formData);
-    console.log("Available clients:", clients);
-    console.log("Available products:", products);
-  }, [formData, clients, products]);
+    console.log("OrderForm - Debug info:", {
+      formData,
+      clientsCount: clients?.length || 0,
+      clientsLoading,
+      clientsError,
+      productsCount: products?.length || 0
+    });
+  }, [formData, clients, clientsLoading, clientsError, products]);
+
+  // Auto-refresh clients if there's an error or if no clients are loaded
+  useEffect(() => {
+    if (clientsError || (!clientsLoading && (!clients || clients.length === 0))) {
+      console.log('OrderForm - Tentando recarregar clientes...');
+      refreshClients();
+    }
+  }, [clientsError, clientsLoading, clients, refreshClients]);
 
   // Handler for select changes
   const handleSelectChange = (name: string, value: string) => {
@@ -64,6 +76,8 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
           clients={clients || []}
           openClientCombobox={openClientCombobox}
           setOpenClientCombobox={setOpenClientCombobox}
+          loading={clientsLoading}
+          error={clientsError}
         />
         
         {/* Product Selection */}
