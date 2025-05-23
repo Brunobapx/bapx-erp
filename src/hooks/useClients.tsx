@@ -26,7 +26,6 @@ export const useClients = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
@@ -55,7 +54,7 @@ export const useClients = () => {
           .from('clients')
           .select('*')
           .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
+          .order('name', { ascending: true });
 
         if (error) {
           console.error('useClients - Erro do Supabase:', error);
@@ -87,18 +86,6 @@ export const useClients = () => {
     fetchClients();
   }, [refreshTrigger]);
 
-  const filteredClients = clients.filter(client => {
-    if (!client || !searchQuery) return true;
-    
-    const searchString = searchQuery.toLowerCase();
-    return (
-      (client.name && client.name.toLowerCase().includes(searchString)) ||
-      (client.cnpj && client.cnpj.toLowerCase().includes(searchString)) ||
-      (client.cpf && client.cpf.toLowerCase().includes(searchString)) ||
-      (client.email && client.email.toLowerCase().includes(searchString))
-    );
-  });
-
   const refreshClients = () => {
     console.log('useClients - Atualizando lista de clientes...');
     setRefreshTrigger(prev => prev + 1);
@@ -108,14 +95,29 @@ export const useClients = () => {
     return clients.find(client => client.id === clientId);
   };
 
+  // Função para buscar clientes com termo de pesquisa
+  const searchClients = (searchTerm: string) => {
+    if (!searchTerm || searchTerm.trim() === '') {
+      return clients;
+    }
+    
+    const searchString = searchTerm.toLowerCase();
+    return clients.filter(client => {
+      return (
+        (client.name && client.name.toLowerCase().includes(searchString)) ||
+        (client.cnpj && client.cnpj.toLowerCase().includes(searchString)) ||
+        (client.cpf && client.cpf.toLowerCase().includes(searchString)) ||
+        (client.email && client.email.toLowerCase().includes(searchString))
+      );
+    });
+  };
+
   return {
-    clients: filteredClients,
-    allClients: clients,
+    clients,
     loading,
     error,
-    searchQuery,
-    setSearchQuery,
     refreshClients,
-    getClientById
+    getClientById,
+    searchClients
   };
 };

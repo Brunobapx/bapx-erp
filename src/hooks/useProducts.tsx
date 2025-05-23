@@ -30,7 +30,6 @@ export const useProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
@@ -49,7 +48,7 @@ export const useProducts = () => {
           .from('products')
           .select('*')
           .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
+          .order('name', { ascending: true });
 
         if (error) {
           throw error;
@@ -70,28 +69,33 @@ export const useProducts = () => {
     fetchProducts();
   }, [refreshTrigger]);
 
-  const filteredProducts = (products || []).filter(product => {
-    const searchString = searchQuery.toLowerCase();
-    return (
-      (product.name && product.name.toLowerCase().includes(searchString)) ||
-      (product.code && product.code.toLowerCase().includes(searchString)) ||
-      (product.sku && product.sku.toLowerCase().includes(searchString)) ||
-      (product.ncm && product.ncm.toLowerCase().includes(searchString)) ||
-      (product.category && product.category.toLowerCase().includes(searchString))
-    );
-  });
-
   const refreshProducts = () => {
     setRefreshTrigger(prev => prev + 1);
   };
 
+  // Função para buscar produtos com termo de pesquisa
+  const searchProducts = (searchTerm: string) => {
+    if (!searchTerm || searchTerm.trim() === '') {
+      return products;
+    }
+    
+    const searchString = searchTerm.toLowerCase();
+    return products.filter(product => {
+      return (
+        (product.name && product.name.toLowerCase().includes(searchString)) ||
+        (product.code && product.code.toLowerCase().includes(searchString)) ||
+        (product.sku && product.sku.toLowerCase().includes(searchString)) ||
+        (product.ncm && product.ncm.toLowerCase().includes(searchString)) ||
+        (product.category && product.category.toLowerCase().includes(searchString))
+      );
+    });
+  };
+
   return {
-    products: filteredProducts,
-    allProducts: products || [],
+    products,
     loading,
     error,
-    searchQuery,
-    setSearchQuery,
-    refreshProducts
+    refreshProducts,
+    searchProducts
   };
 };

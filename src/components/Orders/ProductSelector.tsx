@@ -63,41 +63,59 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
     }
   }, [searchQuery, safeProducts]);
 
+  const handleProductSelect = (productId: string, productName: string, productPrice?: number) => {
+    onProductSelect(productId, productName, productPrice);
+    setSearchQuery('');
+    setOpen(false);
+  };
+
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    if (!newOpen) {
+      setSearchQuery('');
+    }
+  };
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="justify-between w-full"
+          className="justify-between w-full text-left"
         >
-          {selectedProductName || "Selecione um produto"}
+          <span className="truncate">
+            {selectedProductName || "Buscar produto..."}
+          </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[400px] p-0">
-        <Command>
+        <Command shouldFilter={false}>
           <div className="flex items-center border-b px-3">
             <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
             <CommandInput 
-              placeholder="Buscar produto..." 
+              placeholder="Digite para buscar produto..." 
               onValueChange={setSearchQuery}
               value={searchQuery}
-              className="h-9 focus:outline-none"
+              className="h-9 focus:outline-none border-0"
             />
           </div>
-          <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
+          <CommandEmpty>
+            {safeProducts.length === 0 
+              ? "Nenhum produto cadastrado. Cadastre um produto primeiro." 
+              : "Nenhum produto encontrado com esse termo."}
+          </CommandEmpty>
           <CommandGroup className="max-h-[300px] overflow-y-auto">
             {filteredProducts.map((product) => (
               <CommandItem
                 key={product.id}
                 value={product.id}
                 onSelect={() => {
-                  onProductSelect(product.id, product.name, product.price);
-                  setSearchQuery('');
-                  setOpen(false);
+                  handleProductSelect(product.id, product.name, product.price);
                 }}
+                className="cursor-pointer"
               >
                 <Check
                   className={cn(
@@ -108,8 +126,8 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
                 <div className="flex flex-col">
                   <span className="font-medium">{product.name}</span>
                   <div className="flex text-xs gap-3 text-muted-foreground">
-                    <span>{product.code}</span>
-                    <span>{formatCurrency(product.price)}</span>
+                    {product.code && <span>Código: {product.code}</span>}
+                    {product.price && <span>{formatCurrency(product.price)}</span>}
                   </div>
                 </div>
               </CommandItem>
