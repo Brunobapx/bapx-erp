@@ -34,19 +34,29 @@ const ClientsPage = () => {
   } = useClients();
 
   const handleClientClick = (client: any) => {
+    console.log('ClientsPage - client clicked:', client);
     setSelectedClient(client);
     setShowModal(true);
   };
 
+  const handleNewClient = () => {
+    console.log('ClientsPage - new client button clicked');
+    setSelectedClient(null);
+    setShowModal(true);
+  };
+
   const getDocumentId = (client: any) => {
-    return client.type === 'Jurídica' ? client.cnpj : client.cpf;
+    if (!client) return '';
+    return client.type === 'Jurídica' ? (client.cnpj || '') : (client.cpf || '');
   };
 
   const getRegisterNumber = (client: any) => {
-    return client.type === 'Jurídica' ? client.ie : client.rg;
+    if (!client) return '';
+    return client.type === 'Jurídica' ? (client.ie || '') : (client.rg || '');
   };
 
   const handleModalClose = (refresh = false) => {
+    console.log('ClientsPage - modal closed, refresh:', refresh);
     setShowModal(false);
     setSelectedClient(null);
     
@@ -54,6 +64,9 @@ const ClientsPage = () => {
       refreshClients();
     }
   };
+
+  // Ensure filteredClients is always an array
+  const safeFilteredClients = Array.isArray(filteredClients) ? filteredClients : [];
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
@@ -63,7 +76,7 @@ const ClientsPage = () => {
           <p className="text-muted-foreground">Cadastro e gerenciamento de clientes.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={() => setShowModal(true)} className="bg-erp-order hover:bg-erp-order/90">
+          <Button onClick={handleNewClient} className="bg-erp-order hover:bg-erp-order/90">
             <Plus className="mr-2 h-4 w-4" /> Novo Cliente
           </Button>
           <Button variant="outline">
@@ -77,7 +90,7 @@ const ClientsPage = () => {
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar clientes..."
-            value={searchQuery}
+            value={searchQuery || ''}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-8"
           />
@@ -136,28 +149,32 @@ const ClientsPage = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredClients.map((client) => (
-                  <TableRow 
-                    key={client.id}
-                    className="cursor-pointer hover:bg-accent/5"
-                    onClick={() => handleClientClick(client)}
-                  >
-                    <TableCell className="font-medium">{client.name}</TableCell>
-                    <TableCell>{getDocumentId(client)}</TableCell>
-                    <TableCell>{getRegisterNumber(client)}</TableCell>
-                    <TableCell>{client.email}</TableCell>
-                    <TableCell>{client.phone}</TableCell>
-                    <TableCell>
-                      <span className={`stage-badge ${client.type === 'Jurídica' ? 'badge-order' : 'badge-production'}`}>
-                        {client.type === 'Jurídica' ? 'PJ' : 'PF'}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {safeFilteredClients.map((client) => {
+                  if (!client || !client.id) return null;
+                  
+                  return (
+                    <TableRow 
+                      key={client.id}
+                      className="cursor-pointer hover:bg-accent/5"
+                      onClick={() => handleClientClick(client)}
+                    >
+                      <TableCell className="font-medium">{client.name || ''}</TableCell>
+                      <TableCell>{getDocumentId(client)}</TableCell>
+                      <TableCell>{getRegisterNumber(client)}</TableCell>
+                      <TableCell>{client.email || ''}</TableCell>
+                      <TableCell>{client.phone || ''}</TableCell>
+                      <TableCell>
+                        <span className={`stage-badge ${client.type === 'Jurídica' ? 'badge-order' : 'badge-production'}`}>
+                          {client.type === 'Jurídica' ? 'PJ' : 'PF'}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
-          {!loading && !error && filteredClients.length === 0 && (
+          {!loading && !error && safeFilteredClients.length === 0 && (
             <div className="p-4 text-center text-muted-foreground">
               Nenhum cliente encontrado.
             </div>

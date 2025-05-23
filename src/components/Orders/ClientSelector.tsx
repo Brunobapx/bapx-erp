@@ -28,31 +28,45 @@ interface ClientSelectorProps {
 
 export const ClientSelector: React.FC<ClientSelectorProps> = ({
   clients = [],
-  selectedClientId,
-  selectedClientName,
+  selectedClientId = '',
+  selectedClientName = '',
   onClientSelect,
-  open,
+  open = false,
   setOpen
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
 
-  // Initialize with empty array if clients is undefined
+  // Ensure clients is always a valid array
   const safeClients = Array.isArray(clients) ? clients : [];
 
   // Update filtered clients when search query or clients change
   useEffect(() => {
-    if (searchQuery.trim() === '') {
+    console.log('ClientSelector - updating filtered clients', { searchQuery, clientsCount: safeClients.length });
+    
+    if (!searchQuery || searchQuery.trim() === '') {
       setFilteredClients(safeClients);
     } else {
-      const filtered = safeClients.filter(client =>
-        client.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (client.cnpj && client.cnpj.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (client.cpf && client.cpf.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
+      const filtered = safeClients.filter(client => {
+        if (!client) return false;
+        
+        const searchString = searchQuery.toLowerCase();
+        return (
+          (client.name && client.name.toLowerCase().includes(searchString)) ||
+          (client.cnpj && client.cnpj.toLowerCase().includes(searchString)) ||
+          (client.cpf && client.cpf.toLowerCase().includes(searchString))
+        );
+      });
       setFilteredClients(filtered);
     }
   }, [searchQuery, safeClients]);
+
+  const handleClientSelect = (clientId: string, clientName: string) => {
+    console.log('ClientSelector - selecting client', { clientId, clientName });
+    onClientSelect(clientId, clientName);
+    setSearchQuery('');
+    setOpen(false);
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -80,30 +94,30 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
           </div>
           <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
           <CommandGroup className="max-h-[300px] overflow-y-auto">
-            {filteredClients.map((client) => (
-              <CommandItem
-                key={client.id}
-                value={client.id}
-                onSelect={() => {
-                  onClientSelect(client.id, client.name);
-                  setSearchQuery('');
-                  setOpen(false);
-                }}
-              >
-                <Check
-                  className={cn(
-                    "mr-2 h-4 w-4",
-                    selectedClientId === client.id ? "opacity-100" : "opacity-0"
-                  )}
-                />
-                <div className="flex flex-col">
-                  <span className="font-medium">{client.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {client.type === 'Jurídica' ? client.cnpj : client.cpf}
-                  </span>
-                </div>
-              </CommandItem>
-            ))}
+            {filteredClients.map((client) => {
+              if (!client || !client.id) return null;
+              
+              return (
+                <CommandItem
+                  key={client.id}
+                  value={client.id}
+                  onSelect={() => handleClientSelect(client.id, client.name || '')}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      selectedClientId === client.id ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  <div className="flex flex-col">
+                    <span className="font-medium">{client.name || 'Nome não informado'}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {client.type === 'Jurídica' ? (client.cnpj || '') : (client.cpf || '')}
+                    </span>
+                  </div>
+                </CommandItem>
+              );
+            })}
           </CommandGroup>
         </Command>
       </PopoverContent>

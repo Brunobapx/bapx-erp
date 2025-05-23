@@ -35,27 +35,28 @@ export const useClients = () => {
       try {
         setLoading(true);
         setError(null);
+        
+        console.log('useClients - fetching clients from Supabase');
 
         const { data, error } = await supabase
           .from('clients')
-          .select('*');
+          .select('*')
+          .order('created_at', { ascending: false });
 
         if (error) {
+          console.error('useClients - Supabase error:', error);
           throw error;
         }
 
-        if (data) {
-          console.log("Clientes carregados:", data.length);
-          setClients(data);
-        } else {
-          // Ensure clients is always an array even if data is null
-          setClients([]);
-          console.log("No clients data returned, using empty array");
-        }
+        // Ensure we always have a valid array
+        const clientsData = Array.isArray(data) ? data : [];
+        console.log("useClients - clients loaded:", clientsData.length);
+        setClients(clientsData);
+        
       } catch (err: any) {
-        console.error('Error fetching clients:', err);
+        console.error('useClients - Error fetching clients:', err);
         setError(err.message || 'Erro ao carregar clientes');
-        toast.error('Erro ao carregar clientes');
+        toast.error('Erro ao carregar clientes: ' + (err.message || 'Erro desconhecido'));
         // Ensure clients is always an array even on error
         setClients([]);
       } finally {
@@ -67,10 +68,12 @@ export const useClients = () => {
   }, [refreshTrigger]);
 
   // Filter clients based on search query
-  const filteredClients = (clients || []).filter(client => {
+  const filteredClients = clients.filter(client => {
+    if (!client || !searchQuery) return true;
+    
     const searchString = searchQuery.toLowerCase();
     return (
-      client.name?.toLowerCase().includes(searchString) ||
+      (client.name && client.name.toLowerCase().includes(searchString)) ||
       (client.cnpj && client.cnpj.toLowerCase().includes(searchString)) ||
       (client.cpf && client.cpf.toLowerCase().includes(searchString)) ||
       (client.email && client.email.toLowerCase().includes(searchString))
@@ -79,12 +82,13 @@ export const useClients = () => {
 
   // Refresh clients list
   const refreshClients = () => {
+    console.log('useClients - refreshing clients list');
     setRefreshTrigger(prev => prev + 1);
   };
 
   return {
     clients: filteredClients,
-    allClients: clients || [],
+    allClients: clients,
     loading,
     error,
     searchQuery,
