@@ -95,7 +95,7 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[400px] p-0">
-        <Command>
+        <Command shouldFilter={false} filter={() => 1}>
           <CommandInput 
             placeholder="Digite para buscar produto..." 
             className="h-9"
@@ -106,27 +106,20 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
               : "Nenhum produto encontrado com esse termo."}
           </CommandEmpty>
           <CommandGroup className="max-h-[300px] overflow-y-auto">
-            {safeProducts.map((product) => {
-              // Ensure we always have a valid, non-empty value for CommandItem
-              const searchValue = [
-                product.name?.trim() || '',
-                product.code?.trim() || '',
-                product.sku?.trim() || ''
-              ].filter(Boolean).join(' ').trim();
-
-              // Fallback to product ID if no searchable content is available
-              const itemValue = searchValue || product.id || `product-${Date.now()}`;
+            {safeProducts.map((product, index) => {
+              // Create a simple, guaranteed unique value
+              const itemValue = `${product.id}-${index}`;
 
               console.log("Rendering product:", {
                 id: product.id,
                 name: product.name,
                 itemValue,
-                searchValue
+                index
               });
 
               return (
                 <CommandItem
-                  key={product.id}
+                  key={`${product.id}-${index}`}
                   value={itemValue}
                   onSelect={() => {
                     console.log("Product selected:", product);
