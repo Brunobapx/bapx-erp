@@ -78,9 +78,17 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
 
   const fetchIngredients = async () => {
     try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        console.error('User not authenticated');
+        return;
+      }
+
       const { data, error } = await supabase
         .from('products')
         .select('id, name, unit, cost')
+        .eq('user_id', user.id)
         .eq('is_manufactured', false);
         
       if (error) throw error;
@@ -162,7 +170,16 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
     try {
       setIsSubmitting(true);
       
+      // Get current authenticated user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        toast.error('Usuário não autenticado');
+        return;
+      }
+
       const productPayload = {
+        user_id: user.id, // Incluir user_id explicitamente
         code: formData.code,
         name: formData.name,
         sku: formData.sku,
@@ -219,6 +236,7 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
         
         // Then insert new recipe items
         const recipePayload = recipeItems.map(item => ({
+          user_id: user.id, // Incluir user_id nas receitas também
           product_id: productId,
           ingredient_id: item.productId,
           quantity: parseFloat(item.quantity)
