@@ -5,6 +5,7 @@ import { useProducts } from '@/hooks/useProducts';
 
 export interface OrderFormState {
   id: string;
+  order_number: string;
   client_id: string;
   client_name: string;
   product_id: string;
@@ -17,6 +18,7 @@ export interface OrderFormState {
   payment_term: string;
   seller: string;
   status: string;
+  notes: string;
 }
 
 interface UseOrderFormStateProps {
@@ -27,6 +29,7 @@ export const useOrderFormState = ({ orderData }: UseOrderFormStateProps) => {
   const { products } = useProducts();
   const [formData, setFormData] = useState<OrderFormState>({
     id: '',
+    order_number: '',
     client_id: '',
     client_name: '',
     product_id: '',
@@ -38,60 +41,49 @@ export const useOrderFormState = ({ orderData }: UseOrderFormStateProps) => {
     payment_method: '',
     payment_term: '',
     seller: '',
-    status: 'Novo Pedido',
+    status: 'pending',
+    notes: '',
   });
   
-  // UI state
   const [formattedTotal, setFormattedTotal] = useState('R$ 0,00');
   
-  // Determine if this is a new order
   const isNewOrder = !orderData?.id || orderData.id === 'NOVO';
 
-  // Initialize form with order data if available
   useEffect(() => {
     console.log("OrderData received:", orderData);
     
     if (orderData && orderData.id && orderData.id !== 'NOVO') {
+      // Para pedidos existentes, usar o primeiro item do pedido
+      const firstItem = orderData.order_items?.[0];
+      
       setFormData({
         id: orderData.id?.toString() || '',
+        order_number: orderData.order_number || '',
         client_id: orderData.client_id || '',
         client_name: orderData.client_name || '',
-        product_id: orderData.product_id || '',
-        product_name: orderData.product_name || '',
-        quantity: orderData.quantity || 1,
-        unit_price: orderData.unit_price || undefined,
-        total_price: orderData.total_price || undefined,
+        product_id: firstItem?.product_id || '',
+        product_name: firstItem?.product_name || '',
+        quantity: firstItem?.quantity || 1,
+        unit_price: firstItem?.unit_price || undefined,
+        total_price: orderData.total_amount || undefined,
         delivery_deadline: orderData.delivery_deadline ? new Date(orderData.delivery_deadline) : null,
         payment_method: orderData.payment_method || '',
         payment_term: orderData.payment_term || '',
         seller: orderData.seller || '',
-        status: orderData.status || 'Novo Pedido',
+        status: orderData.status || 'pending',
+        notes: orderData.notes || '',
       });
       
-      // Format the total price
-      updateFormattedTotal(orderData.total_price);
-      
-      // If we have a product_id but not a price, look up its price
-      if (orderData.product_id && !orderData.unit_price) {
-        const product = products.find(p => p.id === orderData.product_id);
-        if (product?.price) {
-          setFormData(prev => ({
-            ...prev,
-            unit_price: product.price,
-            total_price: product.price * (orderData.quantity || 1)
-          }));
-          updateFormattedTotal(product.price * (orderData.quantity || 1));
-        }
-      }
+      updateFormattedTotal(orderData.total_amount);
     } else {
       resetForm();
     }
   }, [orderData, products]);
 
-  // Reset form to initial values
   const resetForm = () => {
     setFormData({
       id: '',
+      order_number: '',
       client_id: '',
       client_name: '',
       product_id: '',
@@ -103,12 +95,12 @@ export const useOrderFormState = ({ orderData }: UseOrderFormStateProps) => {
       payment_method: '',
       payment_term: '',
       seller: '',
-      status: 'Novo Pedido',
+      status: 'pending',
+      notes: '',
     });
     setFormattedTotal('R$ 0,00');
   };
 
-  // Format currency for display
   const formatCurrency = (value?: number) => {
     if (!value && value !== 0) return 'R$ 0,00';
     return new Intl.NumberFormat('pt-BR', {
@@ -117,7 +109,6 @@ export const useOrderFormState = ({ orderData }: UseOrderFormStateProps) => {
     }).format(value);
   };
   
-  // Update the formatted total display
   const updateFormattedTotal = (total?: number) => {
     setFormattedTotal(formatCurrency(total));
   };

@@ -6,7 +6,7 @@ import { OrderFormState } from './useOrderFormState';
 
 interface UseOrderFormActionsProps {
   formData: OrderFormState;
-  setFormData: React.Dispatch<React.SetStateAction<OrderFormState>>;
+  setFormData: (data: OrderFormState | ((prev: OrderFormState) => OrderFormState)) => void;
   updateFormattedTotal: (total?: number) => void;
   isNewOrder: boolean;
   onClose: (refresh?: boolean) => void;
@@ -20,152 +20,144 @@ export const useOrderFormActions = ({
   onClose
 }: UseOrderFormActionsProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Calculate total based on quantity and unit price
+
   const calculateTotal = () => {
-    if (formData.quantity && formData.unit_price) {
-      const total = formData.quantity * formData.unit_price;
-      setFormData(prev => ({
-        ...prev,
-        total_price: total
-      }));
-      updateFormattedTotal(total);
-    }
+    const quantity = Number(formData.quantity) || 0;
+    const unitPrice = Number(formData.unit_price) || 0;
+    const total = quantity * unitPrice;
+    
+    setFormData(prev => ({ ...prev, total_price: total }));
+    updateFormattedTotal(total);
+    
+    return total;
   };
 
-  // Handle input changes
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    
-    // Handle numeric inputs
-    if (name === 'quantity' || name === 'unit_price') {
-      const numValue = name === 'quantity' 
-        ? parseInt(value, 10) || 0
-        : parseFloat(value) || 0;
-        
-      setFormData(prev => ({
-        ...prev,
-        [name]: numValue
-      }));
-      
-      // Recalculate total when quantity or unit_price changes
-      setTimeout(calculateTotal, 0);
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
-    
-    // Log the change for debugging
-    console.log(`Field ${name} changed to:`, value);
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Handle client selection
   const handleClientSelect = (clientId: string, clientName: string) => {
-    console.log("Client selected:", clientId, clientName);
-    setFormData(prev => ({
-      ...prev,
-      client_id: clientId,
-      client_name: clientName
-    }));
+    setFormData(prev => ({ ...prev, client_id: clientId, client_name: clientName }));
   };
 
-  // Handle product selection
   const handleProductSelect = (productId: string, productName: string, productPrice?: number) => {
-    console.log("Product selected:", productId, productName, "Price:", productPrice);
-    
-    // Update form data with the new product info
-    setFormData(prev => ({
-      ...prev,
-      product_id: productId,
+    setFormData(prev => ({ 
+      ...prev, 
+      product_id: productId, 
       product_name: productName,
       unit_price: productPrice || prev.unit_price
     }));
     
-    // Calculate total if we have both quantity and price
-    setTimeout(() => {
-      if (formData.quantity && productPrice) {
-        const total = formData.quantity * productPrice;
-        setFormData(prev => ({
-          ...prev,
-          total_price: total
-        }));
-        updateFormattedTotal(total);
-      }
-    }, 0);
+    if (productPrice) {
+      setTimeout(() => calculateTotal(), 100);
+    }
   };
 
-  // Handle date selection
   const handleDateSelect = (date: Date | null) => {
-    console.log("Date selected:", date);
-    setFormData(prev => ({
-      ...prev,
-      delivery_deadline: date
-    }));
+    setFormData(prev => ({ ...prev, delivery_deadline: date }));
   };
 
-  // Form validation
   const validateForm = () => {
-    if (!formData.client_name) {
+    if (!formData.client_id.trim()) {
       toast.error("Cliente é obrigatório");
       return false;
     }
-    if (!formData.product_name) {
+
+    if (!formData.product_id.trim()) {
       toast.error("Produto é obrigatório");
       return false;
     }
-    if (formData.quantity <= 0) {
+
+    if (!formData.quantity || formData.quantity <= 0) {
       toast.error("Quantidade deve ser maior que zero");
       return false;
     }
+
     return true;
   };
 
-  // Handle form submission
   const handleSubmit = async () => {
     if (!validateForm()) return;
-    
+
     try {
       setIsSubmitting(true);
-      console.log("Submitting form with data:", formData);
       
-      const orderPayload = {
-        client_id: formData.client_id,
-        client_name: formData.client_name,
-        product_id: formData.product_id,
-        product_name: formData.product_name,
-        quantity: formData.quantity,
-        unit_price: formData.unit_price,
-        total_price: formData.total_price,
-        delivery_deadline: formData.delivery_deadline,
-        payment_method: formData.payment_method,
-        payment_term: formData.payment_term,
-        seller: formData.seller,
-        status: formData.status
-      };
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
       
-      console.log("Order payload:", orderPayload);
+      if (userError || !user) {
+        toast.error("Usuário não autenticado. Faça login para continuar.");
+        return;
+      }
+
+      const totalPrice = calculateTotal();
       
       if (isNewOrder) {
-        const { data, error } = await supabase.from('orders').insert([orderPayload]);
-        console.log("Insert response:", { data, error });
+        // Criar novo pedido
+        const orderData = {
+          user_id: user.id,
+          client_id: formData.client_id,
+          client_name: formData.client_name,
+          seller: formData.seller || null,
+          total_amount: totalPrice,
+          delivery_deadline: formData.delivery_deadline?.toISOString().split('T')[0] || null,
+          payment_method: formData.payment_method || null,
+          payment_term: formData.payment_term || null,
+          notes: formData.notes || null,
+          status: 'pending'
+        };
         
-        if (error) throw error;
+        const { data: insertedOrder, error: orderError } = await supabase
+          .from('orders')
+          .insert([orderData])
+          .select()
+          .single();
+          
+        if (orderError) throw orderError;
+        
+        // Criar item do pedido
+        const itemData = {
+          user_id: user.id,
+          order_id: insertedOrder.id,
+          product_id: formData.product_id,
+          product_name: formData.product_name,
+          quantity: formData.quantity,
+          unit_price: formData.unit_price || 0,
+          total_price: totalPrice
+        };
+        
+        const { error: itemError } = await supabase
+          .from('order_items')
+          .insert([itemData]);
+          
+        if (itemError) throw itemError;
+        
         toast.success("Pedido criado com sucesso");
       } else {
-        const { error } = await supabase
+        // Atualizar pedido existente
+        const orderData = {
+          client_id: formData.client_id,
+          client_name: formData.client_name,
+          seller: formData.seller || null,
+          total_amount: totalPrice,
+          delivery_deadline: formData.delivery_deadline?.toISOString().split('T')[0] || null,
+          payment_method: formData.payment_method || null,
+          payment_term: formData.payment_term || null,
+          notes: formData.notes || null,
+          updated_at: new Date().toISOString()
+        };
+        
+        const { error: orderError } = await supabase
           .from('orders')
-          .update(orderPayload)
+          .update(orderData)
           .eq('id', formData.id);
           
-        console.log("Update result:", { error });
+        if (orderError) throw orderError;
         
-        if (error) throw error;
         toast.success("Pedido atualizado com sucesso");
       }
       
-      onClose(true); // Pass true to refresh the orders list
+      onClose(true);
     } catch (error: any) {
       console.error("Erro ao salvar pedido:", error);
       toast.error(`Erro ao ${isNewOrder ? 'criar' : 'atualizar'} pedido: ${error.message}`);

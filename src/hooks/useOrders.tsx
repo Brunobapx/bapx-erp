@@ -1,23 +1,45 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
+export type OrderStatus = 
+  | 'pending'
+  | 'in_production'
+  | 'in_packaging'
+  | 'packaged'
+  | 'released_for_sale'
+  | 'sale_confirmed'
+  | 'in_delivery'
+  | 'delivered'
+  | 'cancelled';
+
 export type Order = {
-  id: string | number;
-  client_id?: string;
-  client_name?: string;
-  product_id?: string;
-  product_name?: string;
-  quantity?: number;
-  unit_price?: number;
-  total_price?: number;
-  delivery_deadline?: string | null;
+  id: string;
+  order_number: string;
+  client_id: string;
+  client_name: string;
+  seller?: string;
+  status: OrderStatus;
+  total_amount: number;
+  delivery_deadline?: string;
   payment_method?: string;
   payment_term?: string;
-  seller?: string;
-  status?: string;
-  statusType?: string;
-  completed?: boolean;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+  user_id?: string;
+  order_items?: OrderItem[];
+};
+
+export type OrderItem = {
+  id: string;
+  order_id: string;
+  product_id: string;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
   created_at?: string;
   updated_at?: string;
   user_id?: string;
@@ -29,14 +51,26 @@ export const useOrders = () => {
   const [error, setError] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Fetch orders from Supabase
   useEffect(() => {
     const fetchOrders = async () => {
       try {
         setLoading(true);
         setError(null);
         
-        const { data, error } = await supabase.from('orders').select('*');
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        if (userError || !user) {
+          throw new Error('Usuário não autenticado');
+        }
+
+        const { data, error } = await supabase
+          .from('orders')
+          .select(`
+            *,
+            order_items (*)
+          `)
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
         
         if (error) throw error;
         
@@ -53,13 +87,11 @@ export const useOrders = () => {
     fetchOrders();
   }, [refreshTrigger]);
 
-  // Refresh orders list
   const refreshOrders = () => {
     setRefreshTrigger(prev => prev + 1);
   };
 
-  // Delete an order
-  const deleteOrder = async (id: string | number) => {
+  const deleteOrder = async (id: string) => {
     try {
       const { error } = await supabase
         .from('orders')
@@ -78,7 +110,6 @@ export const useOrders = () => {
     }
   };
 
-  // Format currency for display
   const formatCurrency = (value?: number) => {
     if (!value && value !== 0) return 'R$ 0,00';
     return new Intl.NumberFormat('pt-BR', {
@@ -87,7 +118,6 @@ export const useOrders = () => {
     }).format(value);
   };
 
-  // Get an order by ID
   const getOrderById = (id: string) => {
     return orders.find(order => order.id === id) || null;
   };

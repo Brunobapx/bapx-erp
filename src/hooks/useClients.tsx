@@ -29,7 +29,6 @@ export const useClients = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Fetch clients from Supabase
   useEffect(() => {
     const fetchClients = async () => {
       try {
@@ -38,7 +37,6 @@ export const useClients = () => {
         
         console.log('useClients - Iniciando busca de clientes...');
         
-        // Verificar se o usuário está autenticado
         const { data: { user }, error: userError } = await supabase.auth.getUser();
         
         if (userError) {
@@ -66,13 +64,8 @@ export const useClients = () => {
 
         console.log('useClients - Dados recebidos do banco:', data);
         
-        // Ensure we always have a valid array
         const clientsData = Array.isArray(data) ? data : [];
         console.log('useClients - Total de clientes carregados:', clientsData.length);
-        
-        if (clientsData.length === 0) {
-          console.log('useClients - Nenhum cliente encontrado para este usuário');
-        }
         
         setClients(clientsData);
         
@@ -89,7 +82,6 @@ export const useClients = () => {
     fetchClients();
   }, [refreshTrigger]);
 
-  // Filter clients based on search query
   const filteredClients = clients.filter(client => {
     if (!client || !searchQuery) return true;
     
@@ -102,7 +94,6 @@ export const useClients = () => {
     );
   });
 
-  // Refresh clients list
   const refreshClients = () => {
     console.log('useClients - Atualizando lista de clientes...');
     setRefreshTrigger(prev => prev + 1);

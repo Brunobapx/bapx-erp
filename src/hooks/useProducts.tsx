@@ -5,22 +5,22 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type Product = {
   id: string;
-  code: string;
+  code?: string;
   name: string;
+  description?: string;
   sku?: string;
   ncm?: string;
+  unit?: string;
+  category?: string;
   price?: number;
   cost?: number;
   stock?: number;
-  unit?: string;
-  category?: string;
-  description?: string;
+  is_manufactured?: boolean;
   tax_type?: string;
   icms?: string;
   ipi?: string;
   pis?: string;
   cofins?: string;
-  is_manufactured?: boolean;
   created_at?: string;
   updated_at?: string;
   user_id?: string;
@@ -33,34 +33,34 @@ export const useProducts = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Fetch products from Supabase
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
         setError(null);
 
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        if (userError || !user) {
+          throw new Error('Usuário não autenticado');
+        }
+
         const { data, error } = await supabase
           .from('products')
-          .select('*');
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
 
         if (error) {
           throw error;
         }
 
-        if (data) {
-          console.log("Products loaded:", data.length);
-          setProducts(data);
-        } else {
-          // Ensure products is always an array even if data is null
-          setProducts([]);
-          console.log("No products data returned, using empty array");
-        }
+        console.log("Products loaded:", data?.length || 0);
+        setProducts(data || []);
       } catch (err: any) {
         console.error('Error fetching products:', err);
         setError(err.message || 'Erro ao carregar produtos');
         toast.error('Erro ao carregar produtos');
-        // Ensure products is always an array even on error
         setProducts([]);
       } finally {
         setLoading(false);
@@ -70,7 +70,6 @@ export const useProducts = () => {
     fetchProducts();
   }, [refreshTrigger]);
 
-  // Filter products based on search query
   const filteredProducts = (products || []).filter(product => {
     const searchString = searchQuery.toLowerCase();
     return (
@@ -82,7 +81,6 @@ export const useProducts = () => {
     );
   });
 
-  // Refresh products list
   const refreshProducts = () => {
     setRefreshTrigger(prev => prev + 1);
   };
