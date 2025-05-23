@@ -34,8 +34,25 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
   open,
   setOpen
 }) => {
-  // Ensure products is always a valid array
-  const safeProducts = Array.isArray(products) ? products : [];
+  // Ensure products is always a valid array with valid items
+  const safeProducts = React.useMemo(() => {
+    if (!Array.isArray(products)) {
+      console.log("ProductSelector: products is not an array:", products);
+      return [];
+    }
+    
+    return products.filter(product => {
+      if (!product || typeof product !== 'object') {
+        console.log("ProductSelector: Invalid product object:", product);
+        return false;
+      }
+      if (!product.id || !product.name) {
+        console.log("ProductSelector: Product missing required fields:", product);
+        return false;
+      }
+      return true;
+    });
+  }, [products]);
 
   // Format currency for display
   const formatCurrency = (value?: number) => {
@@ -54,6 +71,13 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
   };
+
+  console.log("ProductSelector render:", {
+    productsCount: safeProducts.length,
+    open,
+    selectedProductId,
+    selectedProductName
+  });
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
@@ -82,30 +106,46 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
               : "Nenhum produto encontrado com esse termo."}
           </CommandEmpty>
           <CommandGroup className="max-h-[300px] overflow-y-auto">
-            {safeProducts.map((product) => (
-              <CommandItem
-                key={product.id}
-                value={`${product.name} ${product.code || ''} ${product.sku || ''}`}
-                onSelect={() => {
-                  handleProductSelect(product.id, product.name, product.price);
-                }}
-                className="cursor-pointer"
-              >
-                <Check
-                  className={cn(
-                    "mr-2 h-4 w-4",
-                    selectedProductId === product.id ? "opacity-100" : "opacity-0"
-                  )}
-                />
-                <div className="flex flex-col">
-                  <span className="font-medium">{product.name}</span>
-                  <div className="flex text-xs gap-3 text-muted-foreground">
-                    {product.code && <span>Código: {product.code}</span>}
-                    {product.price && <span>{formatCurrency(product.price)}</span>}
+            {safeProducts.map((product) => {
+              // Create a safe search value
+              const searchValue = [
+                product.name || '',
+                product.code || '',
+                product.sku || ''
+              ].filter(Boolean).join(' ').trim();
+
+              console.log("Rendering product:", {
+                id: product.id,
+                name: product.name,
+                searchValue
+              });
+
+              return (
+                <CommandItem
+                  key={product.id}
+                  value={searchValue || product.name || product.id}
+                  onSelect={() => {
+                    console.log("Product selected:", product);
+                    handleProductSelect(product.id, product.name, product.price);
+                  }}
+                  className="cursor-pointer"
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      selectedProductId === product.id ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  <div className="flex flex-col">
+                    <span className="font-medium">{product.name || 'Nome não informado'}</span>
+                    <div className="flex text-xs gap-3 text-muted-foreground">
+                      {product.code && <span>Código: {product.code}</span>}
+                      {product.price && <span>{formatCurrency(product.price)}</span>}
+                    </div>
                   </div>
-                </div>
-              </CommandItem>
-            ))}
+                </CommandItem>
+              );
+            })}
           </CommandGroup>
         </Command>
       </PopoverContent>
