@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Check, ChevronsUpDown } from "lucide-react";
 import { 
   Popover, 
@@ -34,8 +34,6 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
   open,
   setOpen
 }) => {
-  const [searchValue, setSearchValue] = useState("");
-
   // Ensure products is always a valid array with valid items
   const safeProducts = React.useMemo(() => {
     if (!Array.isArray(products)) {
@@ -56,22 +54,6 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
     });
   }, [products]);
 
-  // Filter products based on search
-  const filteredProducts = React.useMemo(() => {
-    if (!searchValue.trim()) {
-      return safeProducts;
-    }
-    
-    const searchString = searchValue.toLowerCase();
-    return safeProducts.filter(product => {
-      return (
-        product.name?.toLowerCase().includes(searchString) ||
-        product.code?.toLowerCase().includes(searchString) ||
-        product.sku?.toLowerCase().includes(searchString)
-      );
-    });
-  }, [safeProducts, searchValue]);
-
   // Format currency for display
   const formatCurrency = (value?: number) => {
     if (!value && value !== 0) return '';
@@ -84,27 +66,17 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
   const handleProductSelect = (productId: string, productName: string, productPrice?: number) => {
     onProductSelect(productId, productName, productPrice);
     setOpen(false);
-    setSearchValue(""); // Clear search when selecting
-  };
-
-  const handleOpenChange = (newOpen: boolean) => {
-    setOpen(newOpen);
-    if (!newOpen) {
-      setSearchValue(""); // Clear search when closing
-    }
   };
 
   console.log("ProductSelector render:", {
     productsCount: safeProducts.length,
-    filteredCount: filteredProducts.length,
     open,
     selectedProductId,
-    selectedProductName,
-    searchValue
+    selectedProductName
   });
 
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -118,63 +90,59 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      {open && (
-        <PopoverContent className="w-[400px] p-0">
-          <Command>
-            <CommandInput 
-              placeholder="Digite para buscar produto..." 
-              className="h-9"
-              value={searchValue}
-              onValueChange={setSearchValue}
-            />
-            <CommandEmpty>
-              {safeProducts.length === 0 
-                ? "Nenhum produto cadastrado. Cadastre um produto primeiro." 
-                : "Nenhum produto encontrado com esse termo."}
-            </CommandEmpty>
-            <CommandGroup className="max-h-[300px] overflow-y-auto">
-              {filteredProducts.map((product, index) => {
-                if (!product || !product.id) {
-                  console.log("Skipping invalid product:", product);
-                  return null;
-                }
+      <PopoverContent className="w-[400px] p-0">
+        <Command>
+          <CommandInput 
+            placeholder="Digite para buscar produto..." 
+            className="h-9"
+          />
+          <CommandEmpty>
+            {safeProducts.length === 0 
+              ? "Nenhum produto cadastrado. Cadastre um produto primeiro." 
+              : "Nenhum produto encontrado com esse termo."}
+          </CommandEmpty>
+          <CommandGroup className="max-h-[300px] overflow-y-auto">
+            {safeProducts.map((product, index) => {
+              if (!product || !product.id) {
+                console.log("Skipping invalid product:", product);
+                return null;
+              }
 
-                console.log("Rendering product:", {
-                  id: product.id,
-                  name: product.name,
-                  index
-                });
+              console.log("Rendering product:", {
+                id: product.id,
+                name: product.name,
+                index
+              });
 
-                return (
-                  <CommandItem
-                    key={`${product.id}-${index}`}
-                    value={product.name || ''}
-                    onSelect={() => {
-                      console.log("Product selected:", product);
-                      handleProductSelect(product.id, product.name || '', product.price);
-                    }}
-                    className="cursor-pointer"
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        selectedProductId === product.id ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    <div className="flex flex-col">
-                      <span className="font-medium">{product.name || 'Nome não informado'}</span>
-                      <div className="flex text-xs gap-3 text-muted-foreground">
-                        {product.code && <span>Código: {product.code}</span>}
-                        {product.price && <span>{formatCurrency(product.price)}</span>}
-                      </div>
+              return (
+                <CommandItem
+                  key={product.id}
+                  value={product.name}
+                  onSelect={() => {
+                    console.log("Product selected:", product);
+                    handleProductSelect(product.id, product.name, product.price);
+                  }}
+                  className="cursor-pointer"
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      selectedProductId === product.id ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  <div className="flex flex-col">
+                    <span className="font-medium">{product.name}</span>
+                    <div className="flex text-xs gap-3 text-muted-foreground">
+                      {product.code && <span>Código: {product.code}</span>}
+                      {product.price && <span>{formatCurrency(product.price)}</span>}
                     </div>
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-          </Command>
-        </PopoverContent>
-      )}
+                  </div>
+                </CommandItem>
+              );
+            })}
+          </CommandGroup>
+        </Command>
+      </PopoverContent>
     </Popover>
   );
 };
