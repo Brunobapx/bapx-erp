@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { OrdersHeader } from '@/components/Orders/OrdersHeader';
 import { OrdersFilters } from '@/components/Orders/OrdersFilters';
 import { OrdersTable } from '@/components/Orders/OrdersTable';
-import { useOrders } from '@/hooks/useOrders';
+import { useOrders, Order } from '@/hooks/useOrders';
 import { OrderDetailsModal } from '@/components/Orders/OrderDetailsModal';
 
 const OrdersPage = () => {
