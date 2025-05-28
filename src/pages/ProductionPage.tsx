@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import StageAlert from '@/components/Alerts/StageAlert';
 import { useProduction } from '@/hooks/useProduction';
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const ProductionPage = () => {
@@ -69,35 +68,9 @@ const ProductionPage = () => {
   const handleSendToPackaging = async (e, item) => {
     e.stopPropagation();
     if (window.confirm(`Tem certeza que deseja enviar a produção ${item.production_number} para embalagem?`)) {
-      try {
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
-        if (userError || !user) {
-          throw new Error('Usuário não autenticado');
-        }
-
-        // Create packaging entry
-        const { error } = await supabase
-          .from('packaging')
-          .insert({
-            user_id: user.id,
-            production_id: item.id,
-            product_id: item.product_id,
-            product_name: item.product_name,
-            quantity_to_package: item.quantity_produced,
-            status: 'pending'
-          });
-        
-        if (error) throw error;
-        
-        // Update production status to completed/approved
-        await updateProductionStatus(item.id, 'approved', item.quantity_produced);
-        
-        toast.success('Produção enviada para embalagem com sucesso');
-      } catch (error) {
-        console.error('Erro ao enviar para embalagem:', error);
-        toast.error('Erro ao enviar para embalagem');
-      }
+      // Apenas aprovar a produção com a quantidade produzida
+      // O hook já cuida de criar o registro de embalagem
+      await updateProductionStatus(item.id, 'approved', item.quantity_produced);
     }
   };
 
@@ -136,7 +109,7 @@ const ProductionPage = () => {
 
   const handleApproveProduction = async (data) => {
     if (selectedItem) {
-      const success = await updateProductionStatus(selectedItem.id, 'approved', data.quantityProduced);
+      const success = await updateProductionStatus(selectedItem.id, 'approved', data.quantity);
       if (success) {
         setShowModal(false);
       }
@@ -147,7 +120,7 @@ const ProductionPage = () => {
 
   const handleNextStage = async (data) => {
     if (selectedItem) {
-      const success = await updateProductionStatus(selectedItem.id, 'in_progress', data.quantityProduced);
+      const success = await updateProductionStatus(selectedItem.id, 'in_progress', data.quantity);
       if (success) {
         setShowModal(false);
       }

@@ -94,6 +94,41 @@ export const useProduction = () => {
         updateData.approved_at = new Date().toISOString();
         const { data: { user } } = await supabase.auth.getUser();
         updateData.approved_by = user?.email || 'Sistema';
+        
+        // Se tem quantidade produzida, criar registro de embalagem
+        if (quantityProduced && quantityProduced > 0) {
+          // Buscar dados da produção atual
+          const { data: productionData, error: fetchError } = await supabase
+            .from('production')
+            .select('*')
+            .eq('id', id)
+            .single();
+          
+          if (fetchError) {
+            console.error('Erro ao buscar dados da produção:', fetchError);
+          } else {
+            // Criar registro de embalagem com a quantidade produzida
+            const { error: packagingError } = await supabase
+              .from('packaging')
+              .insert({
+                user_id: user?.id,
+                production_id: id,
+                product_id: productionData.product_id,
+                product_name: productionData.product_name,
+                quantity_to_package: quantityProduced, // Usar a quantidade produzida aprovada
+                quantity_packaged: 0,
+                status: 'pending'
+              });
+            
+            if (packagingError) {
+              console.error('Erro ao criar embalagem:', packagingError);
+              toast.error('Erro ao criar registro de embalagem');
+            } else {
+              console.log('Embalagem criada com sucesso com quantidade:', quantityProduced);
+              toast.success('Produção aprovada e enviada para embalagem');
+            }
+          }
+        }
       }
 
       const { error } = await supabase
@@ -103,7 +138,9 @@ export const useProduction = () => {
       
       if (error) throw error;
       
-      toast.success('Status de produção atualizado com sucesso');
+      if (status !== 'approved') {
+        toast.success('Status de produção atualizado com sucesso');
+      }
       refreshProductions();
       return true;
     } catch (error: any) {
