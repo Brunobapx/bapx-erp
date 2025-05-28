@@ -43,9 +43,15 @@ export const ApprovalModal = ({
   React.useEffect(() => {
     if (isOpen && orderData) {
       setNotes('');
-      setQuantity(orderData.quantity ? orderData.quantity.toString() : '0');
+      // Para embalagem, usar quantity_packaged se disponível, senão quantity_to_package
+      if (stage === 'packaging') {
+        const initialQuantity = orderData.quantity_packaged || orderData.quantity_to_package || orderData.quantity || 0;
+        setQuantity(initialQuantity.toString());
+      } else {
+        setQuantity(orderData.quantity ? orderData.quantity.toString() : '0');
+      }
     }
-  }, [isOpen, orderData]);
+  }, [isOpen, orderData, stage]);
 
   const stageConfig = {
     order: {
@@ -66,10 +72,11 @@ export const ApprovalModal = ({
     },
     packaging: {
       title: 'Confirmar Embalagem',
-      description: 'Confirme a quantidade produzida e embalada.',
+      description: 'Confirme a quantidade embalada.',
       primaryAction: 'Confirmar Embalagem',
       secondaryAction: 'Liberar para Venda',
       showQuantity: true,
+      quantityLabel: 'Quantidade Embalada',
       nextStage: 'sales'
     },
     sales: {
@@ -106,7 +113,8 @@ export const ApprovalModal = ({
       const data = { 
         ...orderData, 
         notes, 
-        quantity: parseInt(quantity),
+        quantityPackaged: parseInt(quantity),
+        qualityCheck: true,
         status: `Aprovado ${config.title}`,
         updatedAt: new Date()
       };
@@ -131,7 +139,7 @@ export const ApprovalModal = ({
       const data = {
         ...orderData,
         notes,
-        quantity: parseInt(quantity),
+        quantityPackaged: parseInt(quantity),
         status: `Em ${config.nextStage}`,
         stage: config.nextStage,
         updatedAt: new Date()
@@ -173,7 +181,7 @@ export const ApprovalModal = ({
               <Label htmlFor="customer">Cliente</Label>
               <Input 
                 id="customer" 
-                value={orderData.client_name || orderData.customer || orderData.client_name || ''} 
+                value={orderData.client_name || orderData.customer || ''} 
                 readOnly 
               />
             </div>
@@ -186,7 +194,7 @@ export const ApprovalModal = ({
           
           {config.showQuantity && (
             <div>
-              <Label htmlFor="quantity">Quantidade</Label>
+              <Label htmlFor="quantity">{config.quantityLabel || 'Quantidade'}</Label>
               <Input 
                 id="quantity" 
                 value={quantity}

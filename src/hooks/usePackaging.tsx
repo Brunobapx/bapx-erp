@@ -106,7 +106,7 @@ export const usePackaging = () => {
         updated_at: new Date().toISOString()
       };
       
-      if (quantityPackaged) {
+      if (quantityPackaged !== undefined) {
         updateData.quantity_packaged = quantityPackaged;
       }
       
@@ -170,7 +170,9 @@ export const usePackaging = () => {
         }
         
         if (!existingSale) {
-          // Criar nova venda
+          // Criar nova venda com a quantidade embalada
+          const finalQuantity = quantityPackaged || packagingData.quantity_packaged || packagingData.quantity_to_package;
+          
           const { error: saleError } = await supabase
             .from('sales')
             .insert({
@@ -186,8 +188,8 @@ export const usePackaging = () => {
             console.error('Erro ao criar venda:', saleError);
             toast.error('Erro ao criar venda');
           } else {
-            console.log('Venda criada com sucesso');
-            toast.success('Embalagem aprovada e venda criada');
+            console.log(`Venda criada com sucesso - Quantidade embalada: ${finalQuantity}`);
+            toast.success(`Embalagem aprovada e venda criada (${finalQuantity} unidades)`);
           }
         } else {
           toast.success('Embalagem aprovada');
