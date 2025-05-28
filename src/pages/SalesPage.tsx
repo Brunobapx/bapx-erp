@@ -1,10 +1,10 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ApprovalModal } from '@/components/Modals/ApprovalModal';
 import { InvoiceModal } from '@/components/Modals/InvoiceModal';
-import { DollarSign, ChevronDown, Search, TrendingUp, FileText } from 'lucide-react';
+import { DeliverySlipModal } from '@/components/Modals/DeliverySlipModal';
+import { DollarSign, ChevronDown, Search, TrendingUp, FileText, Truck } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -28,6 +28,7 @@ const SalesPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [showDeliverySlipModal, setShowDeliverySlipModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [alerts, setAlerts] = useState([
     {
@@ -59,6 +60,11 @@ const SalesPage = () => {
   const handleInvoiceClick = (item) => {
     setSelectedItem(item);
     setShowInvoiceModal(true);
+  };
+
+  const handleDeliverySlipClick = (item) => {
+    setSelectedItem(item);
+    setShowDeliverySlipModal(true);
   };
 
   const handleDismissAlert = (id) => {
@@ -106,6 +112,10 @@ const SalesPage = () => {
     if (refresh) {
       toast.success("Nota fiscal emitida com sucesso");
     }
+  };
+
+  const handleDeliverySlipModalClose = () => {
+    setShowDeliverySlipModal(false);
   };
 
   const getStatusBadgeClass = (status: string) => {
@@ -255,19 +265,34 @@ const SalesPage = () => {
                     </span>
                   </TableCell>
                   <TableCell>
-                    {item.status === 'confirmed' && (
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleInvoiceClick(item);
-                        }}
-                      >
-                        <FileText className="mr-1 h-3 w-3" />
-                        Emitir NF
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {item.status === 'confirmed' && (
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleInvoiceClick(item);
+                          }}
+                        >
+                          <FileText className="mr-1 h-3 w-3" />
+                          NF
+                        </Button>
+                      )}
+                      {(item.status === 'confirmed' || item.status === 'invoiced') && (
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeliverySlipClick(item);
+                          }}
+                        >
+                          <Truck className="mr-1 h-3 w-3" />
+                          Romaneio
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -300,6 +325,12 @@ const SalesPage = () => {
         onClose={handleInvoiceModalClose}
         saleData={selectedItem}
         onEmitInvoice={handleEmitInvoice}
+      />
+
+      <DeliverySlipModal
+        isOpen={showDeliverySlipModal}
+        onClose={handleDeliverySlipModalClose}
+        saleData={selectedItem}
       />
     </div>
   );
