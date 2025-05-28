@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Printer, Download } from 'lucide-react';
 import { toast } from "sonner";
+import { useClients } from '@/hooks/useClients';
 
 type DeliverySlipModalProps = {
   isOpen: boolean;
@@ -30,14 +31,29 @@ export const DeliverySlipModal = ({
   const [observations, setObservations] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGenerated, setIsGenerated] = useState(false);
+  const { getClientById } = useClients();
 
   React.useEffect(() => {
     if (isOpen && saleData) {
-      setDeliveryAddress('');
+      // Buscar dados do cliente e preencher endereço automaticamente
+      const client = getClientById(saleData.client_id);
+      let clientAddress = '';
+      
+      if (client) {
+        const addressParts = [];
+        if (client.address) addressParts.push(client.address);
+        if (client.city) addressParts.push(client.city);
+        if (client.state) addressParts.push(client.state);
+        if (client.zip) addressParts.push(`CEP: ${client.zip}`);
+        
+        clientAddress = addressParts.join('\n');
+      }
+      
+      setDeliveryAddress(clientAddress);
       setObservations('');
       setIsGenerated(false);
     }
-  }, [isOpen, saleData]);
+  }, [isOpen, saleData, getClientById]);
 
   const generateDeliverySlip = () => {
     if (!deliveryAddress.trim()) {
