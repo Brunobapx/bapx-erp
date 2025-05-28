@@ -85,7 +85,7 @@ export const useProduction = () => {
       
       if (status === 'completed' || status === 'approved') {
         updateData.completion_date = new Date().toISOString().split('T')[0];
-        if (quantityProduced) {
+        if (quantityProduced !== undefined) {
           updateData.quantity_produced = quantityProduced;
         }
       }
@@ -95,9 +95,17 @@ export const useProduction = () => {
         const { data: { user } } = await supabase.auth.getUser();
         updateData.approved_by = user?.email || 'Sistema';
         
-        // Se tem quantidade produzida, criar registro de embalagem
+        // Primeiro, atualizar a produção com a quantidade produzida
+        const { error: updateError } = await supabase
+          .from('production')
+          .update(updateData)
+          .eq('id', id);
+        
+        if (updateError) throw updateError;
+        
+        // Agora criar o registro de embalagem com a quantidade aprovada
         if (quantityProduced && quantityProduced > 0) {
-          // Buscar dados da produção atual
+          // Buscar dados da produção atualizada
           const { data: productionData, error: fetchError } = await supabase
             .from('production')
             .select('*')
@@ -106,8 +114,40 @@ export const useProduction = () => {
           
           if (fetchError) {
             console.error('Erro ao buscar dados da produção:', fetchError);
+            throw fetchError;
+          }
+          
+          // Verificar se já existe um registro de embalagem para esta produção
+          const { data: existingPackaging, error: checkError } = await supabase
+            .from('packaging')
+            .select('id')
+            .eq('production_id', id)
+            .maybeSingle();
+          
+          if (checkError) {
+            console.error('Erro ao verificar embalagem existente:', checkError);
+          }
+          
+          if (existingPackaging) {
+            // Atualizar o registro existente
+            const { error: packagingUpdateError } = await supabase
+              .from('packaging')
+              .update({
+                quantity_to_package: quantityProduced,
+                status: 'pending',
+                updated_at: new Date().toISOString()
+              })
+              .eq('production_id', id);
+            
+            if (packagingUpdateError) {
+              console.error('Erro ao atualizar embalagem:', packagingUpdateError);
+              toast.error('Erro ao atualizar registro de embalagem');
+            } else {
+              console.log('Embalagem atualizada com sucesso com quantidade:', quantityProduced);
+              toast.success('Produção aprovada e quantidade atualizada na embalagem');
+            }
           } else {
-            // Criar registro de embalagem com a quantidade produzida
+            // Criar novo registro de embalagem
             const { error: packagingError } = await supabase
               .from('packaging')
               .insert({
@@ -115,7 +155,7 @@ export const useProduction = () => {
                 production_id: id,
                 product_id: productionData.product_id,
                 product_name: productionData.product_name,
-                quantity_to_package: quantityProduced, // Usar a quantidade produzida aprovada
+                quantity_to_package: quantityProduced,
                 quantity_packaged: 0,
                 status: 'pending'
               });
@@ -129,8 +169,12 @@ export const useProduction = () => {
             }
           }
         }
+        
+        refreshProductions();
+        return true;
       }
 
+      // Para outros status, apenas atualizar a produção normalmente
       const { error } = await supabase
         .from('production')
         .update(updateData)
@@ -138,9 +182,7 @@ export const useProduction = () => {
       
       if (error) throw error;
       
-      if (status !== 'approved') {
-        toast.success('Status de produção atualizado com sucesso');
-      }
+      toast.success('Status de produção atualizado com sucesso');
       refreshProductions();
       return true;
     } catch (error: any) {
