@@ -133,7 +133,7 @@ export const usePackaging = () => {
         
         if (updateError) throw updateError;
         
-        // Buscar dados da embalagem e produção
+        // Buscar dados completos da embalagem e produção
         const { data: packagingData, error: packagingError } = await supabase
           .from('packaging')
           .select(`
@@ -142,7 +142,11 @@ export const usePackaging = () => {
               order_item_id,
               order_items!inner(
                 order_id,
+                quantity,
+                unit_price,
+                total_price,
                 orders!inner(
+                  id,
                   order_number,
                   client_id,
                   client_name,
@@ -157,6 +161,7 @@ export const usePackaging = () => {
         if (packagingError) throw packagingError;
         
         const orderData = packagingData.production.order_items.orders;
+        const finalQuantity = quantityPackaged || packagingData.quantity_packaged || packagingData.quantity_to_package;
         
         // Verificar se já existe uma venda para este pedido
         const { data: existingSale, error: saleCheckError } = await supabase
@@ -170,13 +175,15 @@ export const usePackaging = () => {
         }
         
         if (!existingSale) {
-          // Criar nova venda com a quantidade embalada
-          const finalQuantity = quantityPackaged || packagingData.quantity_packaged || packagingData.quantity_to_package;
+          // Gerar número da venda
+          const saleNumber = `VDA-${Date.now().toString().slice(-6)}`;
           
+          // Criar nova venda com a quantidade embalada
           const { error: saleError } = await supabase
             .from('sales')
             .insert({
               user_id: user?.id,
+              sale_number: saleNumber,
               order_id: orderData.id,
               client_id: orderData.client_id,
               client_name: orderData.client_name,
@@ -188,8 +195,8 @@ export const usePackaging = () => {
             console.error('Erro ao criar venda:', saleError);
             toast.error('Erro ao criar venda');
           } else {
-            console.log(`Venda criada com sucesso - Quantidade embalada: ${finalQuantity}`);
-            toast.success(`Embalagem aprovada e venda criada (${finalQuantity} unidades)`);
+            console.log(`Venda ${saleNumber} criada com sucesso - Quantidade embalada: ${finalQuantity}`);
+            toast.success(`Embalagem aprovada! Venda ${saleNumber} criada com ${finalQuantity} unidades`);
           }
         } else {
           toast.success('Embalagem aprovada');

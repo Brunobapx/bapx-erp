@@ -75,8 +75,8 @@ export const ApprovalModal = ({
     packaging: {
       title: 'Confirmar Embalagem',
       description: 'Confirme a quantidade embalada.',
-      primaryAction: 'Confirmar Embalagem',
-      secondaryAction: 'Liberar para Venda',
+      primaryAction: 'Aprovar Embalagem',
+      secondaryAction: 'Criar Venda',
       showQuantity: true,
       quantityLabel: 'Quantidade Embalada',
       nextStage: 'sales'
@@ -118,9 +118,9 @@ export const ApprovalModal = ({
       const data = { 
         ...orderData, 
         notes, 
-        quantityPackaged: parseInt(quantity),
+        quantityPackaged: parseInt(quantity) || 0,
         qualityCheck: true,
-        status: `Aprovado ${config.title}`,
+        status: 'approved',
         updatedAt: new Date()
       };
       
@@ -144,7 +144,7 @@ export const ApprovalModal = ({
       const data = {
         ...orderData,
         notes,
-        quantityPackaged: parseInt(quantity),
+        quantityPackaged: parseInt(quantity) || 0,
         status: `Em ${config.nextStage}`,
         stage: config.nextStage,
         updatedAt: new Date()
@@ -154,7 +154,7 @@ export const ApprovalModal = ({
         await onNextStage(data);
       }
       
-      toast.success(`Pedido enviado para a próxima etapa: ${config.nextStage}`);
+      toast.success(`Enviado para a próxima etapa: ${config.nextStage}`);
       onClose(true);
     } catch (error) {
       console.error('Erro ao enviar para próxima etapa:', error);
@@ -205,6 +205,7 @@ export const ApprovalModal = ({
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
                 type="number"
+                min="0"
               />
             </div>
           )}
@@ -221,11 +222,12 @@ export const ApprovalModal = ({
         </div>
         
         <DialogFooter>
-          <Button variant="outline" onClick={() => onClose()} disabled={isSubmitting}>Cancelar</Button>
-          <Button variant="secondary" onClick={handleSecondaryAction} disabled={isSubmitting}>
-            {config.secondaryAction}
+          <Button variant="outline" onClick={() => onClose()} disabled={isSubmitting}>
+            Cancelar
           </Button>
-          <Button onClick={handleApprove} disabled={isSubmitting}>{config.primaryAction}</Button>
+          <Button onClick={handleApprove} disabled={isSubmitting}>
+            {config.primaryAction}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
