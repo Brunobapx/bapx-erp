@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,6 +5,7 @@ import { OrdersHeader } from '@/components/Orders/OrdersHeader';
 import { OrdersFilters } from '@/components/Orders/OrdersFilters';
 import { OrdersTable } from '@/components/Orders/OrdersTable';
 import { useOrders } from '@/hooks/useOrders';
+import { OrderDetailsModal } from '@/components/Orders/OrderDetailsModal';
 
 const OrdersPage = () => {
   // State management
@@ -13,6 +13,8 @@ const OrdersPage = () => {
   const [statusFilter, setStatusFilter] = useState('active'); // 'active', 'completed', or 'all'
   const navigate = useNavigate();
   const location = useLocation();
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [showOrderModal, setShowOrderModal] = useState(false);
   
   // Custom hook for orders data
   const { orders, loading, deleteOrder, sendToProduction, refreshOrders, isOrderCompleted, getFirstOrderItem, translateStatus } = useOrders();
@@ -53,16 +55,17 @@ const OrdersPage = () => {
 
   // Event handlers
   const handleOrderClick = (order) => {
-    navigate(`/pedidos/${order.id}`);
+    setSelectedOrder(order);
+    setShowOrderModal(true);
   };
 
   const handleViewOrder = (e, order) => {
     e.stopPropagation();
-    navigate(`/pedidos/${order.id}`);
+    setSelectedOrder(order);
+    setShowOrderModal(true);
   };
 
-  const handleEditOrder = (e, order) => {
-    e.stopPropagation();
+  const handleEditOrder = (order) => {
     navigate(`/pedidos/${order.id}`);
   };
 
@@ -85,6 +88,11 @@ const OrdersPage = () => {
     navigate('/pedidos/new');
   };
 
+  const handleCloseModal = () => {
+    setShowOrderModal(false);
+    setSelectedOrder(null);
+  };
+
   return (
     <div className="p-4 sm:p-6 space-y-6">
       <OrdersHeader onCreateOrder={handleCreateOrder} />
@@ -102,7 +110,10 @@ const OrdersPage = () => {
             orders={filteredOrders}
             loading={loading}
             onViewOrder={handleViewOrder}
-            onEditOrder={handleEditOrder}
+            onEditOrder={(e, order) => {
+              e.stopPropagation();
+              handleEditOrder(order);
+            }}
             onDeleteOrder={handleDeleteOrder}
             onSendToProduction={handleSendToProduction}
             onOrderClick={handleOrderClick}
@@ -110,6 +121,14 @@ const OrdersPage = () => {
           />
         </CardContent>
       </Card>
+
+      <OrderDetailsModal
+        isOpen={showOrderModal}
+        onClose={handleCloseModal}
+        order={selectedOrder}
+        onEdit={handleEditOrder}
+        translateStatus={translateStatus}
+      />
     </div>
   );
 };
