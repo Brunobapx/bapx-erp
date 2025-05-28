@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -150,18 +149,13 @@ export const UserManagement = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants = {
-      pending: 'warning',
-      accepted: 'success',
-      expired: 'destructive'
-    };
-    
-    return (
-      <Badge variant={variants[status as keyof typeof variants] || 'secondary'}>
-        {status === 'pending' ? 'Pendente' : 
-         status === 'accepted' ? 'Aceito' : 'Expirado'}
-      </Badge>
-    );
+    if (status === 'pending') {
+      return <Badge variant="outline">Pendente</Badge>;
+    } else if (status === 'accepted') {
+      return <Badge variant="default">Aceito</Badge>;
+    } else {
+      return <Badge variant="destructive">Expirado</Badge>;
+    }
   };
 
   return (
@@ -273,7 +267,7 @@ export const UserManagement = () => {
                 <TableCell className="capitalize">{user.role}</TableCell>
                 <TableCell>{user.department || '-'}</TableCell>
                 <TableCell>
-                  <Badge variant={user.is_active ? 'success' : 'secondary'}>
+                  <Badge variant={user.is_active ? 'default' : 'secondary'}>
                     {user.is_active ? 'Ativo' : 'Inativo'}
                   </Badge>
                 </TableCell>
