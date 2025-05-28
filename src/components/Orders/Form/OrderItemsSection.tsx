@@ -43,11 +43,15 @@ export const OrderItemsSection: React.FC<OrderItemsSectionProps> = ({
   };
 
   const handleQuantityChange = (itemId: string, quantity: number) => {
-    onUpdateItem(itemId, { quantity });
+    if (quantity > 0) {
+      onUpdateItem(itemId, { quantity });
+    }
   };
 
   const handlePriceChange = (itemId: string, unit_price: number) => {
-    onUpdateItem(itemId, { unit_price });
+    if (unit_price >= 0) {
+      onUpdateItem(itemId, { unit_price });
+    }
   };
 
   const formatCurrency = (value: number) => {
@@ -56,6 +60,8 @@ export const OrderItemsSection: React.FC<OrderItemsSectionProps> = ({
       currency: 'BRL'
     }).format(value);
   };
+
+  const canRemoveItem = items.length > 1;
 
   return (
     <div className="space-y-4">
@@ -120,6 +126,7 @@ export const OrderItemsSection: React.FC<OrderItemsSectionProps> = ({
                     <Input
                       type="number"
                       step="0.01"
+                      min="0"
                       value={item.unit_price}
                       onChange={(e) => handlePriceChange(item.id, Number(e.target.value))}
                       className="w-full"
@@ -131,7 +138,7 @@ export const OrderItemsSection: React.FC<OrderItemsSectionProps> = ({
                     </div>
                   </TableCell>
                   <TableCell>
-                    {items.length > 1 && (
+                    {canRemoveItem && (
                       <Button
                         type="button"
                         variant="ghost"

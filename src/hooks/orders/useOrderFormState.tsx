@@ -53,7 +53,7 @@ export const useOrderFormState = ({ orderData }: UseOrderFormStateProps) => {
   const isNewOrder = !orderData?.id || orderData.id === 'NOVO';
 
   useEffect(() => {
-    console.log("OrderData received:", orderData);
+    console.log("OrderFormState - OrderData received:", orderData);
     
     if (orderData && orderData.id && orderData.id !== 'NOVO') {
       // Para pedidos existentes, carregar todos os itens
@@ -65,6 +65,8 @@ export const useOrderFormState = ({ orderData }: UseOrderFormStateProps) => {
         unit_price: item.unit_price,
         total_price: item.total_price,
       })) || [];
+      
+      console.log("OrderFormState - Loading existing order with items:", items);
       
       setFormData({
         id: orderData.id?.toString() || '',
@@ -83,6 +85,7 @@ export const useOrderFormState = ({ orderData }: UseOrderFormStateProps) => {
       
       updateFormattedTotal(orderData.total_amount);
     } else {
+      console.log("OrderFormState - Resetting form for new order");
       resetForm();
     }
   }, [orderData, products]);
@@ -122,8 +125,9 @@ export const useOrderFormState = ({ orderData }: UseOrderFormStateProps) => {
   };
 
   const addItem = () => {
+    console.log("OrderFormState - Adding new item");
     const newItem: OrderFormItem = {
-      id: `temp-${Date.now()}`,
+      id: `temp-${Date.now()}-${Math.random()}`,
       product_id: '',
       product_name: '',
       quantity: 1,
@@ -131,13 +135,20 @@ export const useOrderFormState = ({ orderData }: UseOrderFormStateProps) => {
       total_price: 0,
     };
     
-    setFormData(prev => ({
-      ...prev,
-      items: [...prev.items, newItem]
-    }));
+    setFormData(prev => {
+      const newItems = [...prev.items, newItem];
+      const newTotal = calculateTotalAmount(newItems);
+      updateFormattedTotal(newTotal);
+      return {
+        ...prev,
+        items: newItems,
+        total_amount: newTotal
+      };
+    });
   };
 
   const removeItem = (itemId: string) => {
+    console.log("OrderFormState - Removing item:", itemId);
     setFormData(prev => {
       const newItems = prev.items.filter(item => item.id !== itemId);
       const newTotal = calculateTotalAmount(newItems);
@@ -151,6 +162,7 @@ export const useOrderFormState = ({ orderData }: UseOrderFormStateProps) => {
   };
 
   const updateItem = (itemId: string, updates: Partial<OrderFormItem>) => {
+    console.log("OrderFormState - Updating item:", itemId, updates);
     setFormData(prev => {
       const newItems = prev.items.map(item => {
         if (item.id === itemId) {
