@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +27,8 @@ export type Packaging = {
   created_at?: string;
   updated_at?: string;
   user_id?: string;
+  order_number?: string;
+  client_name?: string;
 };
 
 export const usePackaging = () => {
@@ -50,13 +51,32 @@ export const usePackaging = () => {
 
         const { data, error } = await supabase
           .from('packaging')
-          .select('*')
+          .select(`
+            *,
+            production!inner(
+              order_item_id,
+              order_items!inner(
+                order_id,
+                orders!inner(
+                  order_number,
+                  client_name
+                )
+              )
+            )
+          `)
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
         
         if (error) throw error;
         
-        setPackagings(data || []);
+        // Mapear os dados para incluir order_number e client_name
+        const packagingsWithOrderInfo = (data || []).map(pack => ({
+          ...pack,
+          order_number: pack.production?.order_items?.orders?.order_number || '',
+          client_name: pack.production?.order_items?.orders?.client_name || ''
+        }));
+        
+        setPackagings(packagingsWithOrderInfo);
       } catch (error: any) {
         console.error('Erro ao carregar embalagem:', error);
         setError(error.message || 'Erro ao carregar embalagem');

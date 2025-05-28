@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,6 +26,8 @@ export type Production = {
   created_at?: string;
   updated_at?: string;
   user_id?: string;
+  order_number?: string;
+  client_name?: string;
 };
 
 export const useProduction = () => {
@@ -49,13 +50,29 @@ export const useProduction = () => {
 
         const { data, error } = await supabase
           .from('production')
-          .select('*')
+          .select(`
+            *,
+            order_items!inner(
+              order_id,
+              orders!inner(
+                order_number,
+                client_name
+              )
+            )
+          `)
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
         
         if (error) throw error;
         
-        setProductions(data || []);
+        // Mapear os dados para incluir order_number e client_name
+        const productionsWithOrderInfo = (data || []).map(prod => ({
+          ...prod,
+          order_number: prod.order_items?.orders?.order_number || '',
+          client_name: prod.order_items?.orders?.client_name || ''
+        }));
+        
+        setProductions(productionsWithOrderInfo);
       } catch (error: any) {
         console.error('Erro ao carregar produção:', error);
         setError(error.message || 'Erro ao carregar produção');

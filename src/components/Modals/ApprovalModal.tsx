@@ -162,12 +162,20 @@ export const ApprovalModal = ({
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="order-id">Pedido</Label>
-              <Input id="order-id" value={orderData.id || ''} readOnly />
+              <Label htmlFor="order-number">Pedido</Label>
+              <Input 
+                id="order-number" 
+                value={orderData.order_number || orderData.id || ''} 
+                readOnly 
+              />
             </div>
             <div>
               <Label htmlFor="customer">Cliente</Label>
-              <Input id="customer" value={orderData.customer || orderData.client_name || ''} readOnly />
+              <Input 
+                id="customer" 
+                value={orderData.client_name || orderData.customer || orderData.client_name || ''} 
+                readOnly 
+              />
             </div>
           </div>
           
