@@ -20,16 +20,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import StageAlert from '@/components/Alerts/StageAlert';
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { useProduction } from '@/hooks/useProduction';
 
 const ProductionPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [statusFilter, setStatusFilter] = useState('active');
-  const [productionItems, setProductionItems] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [alerts, setAlerts] = useState([
     {
       id: 'alert-1',
@@ -45,59 +42,23 @@ const ProductionPage = () => {
     }
   ]);
 
-  // Fetch production items from database
-  useEffect(() => {
-    fetchProductionItems();
-  }, []);
-
-  const fetchProductionItems = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('status', 'Em Produção');
-      
-      if (error) throw error;
-      
-      // Transform data to match production items structure
-      const transformedData = (data || []).map(order => ({
-        id: `PR-${order.id.split('-')[1] || '001'}`,
-        orderId: order.id,
-        product: order.product_name,
-        quantity: order.quantity,
-        startDate: new Date(order.created_at).toLocaleDateString('pt-BR'),
-        deadline: order.delivery_deadline ? new Date(order.delivery_deadline).toLocaleDateString('pt-BR') : 
-                 new Date(new Date(order.created_at).getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR'),
-        status: order.status,
-        progress: Math.floor(Math.random() * 100), // Mock progress
-        completed: order.status === 'Concluído'
-      }));
-
-      setProductionItems(transformedData);
-    } catch (error) {
-      console.error('Erro ao carregar produção:', error);
-      toast.error('Erro ao carregar itens de produção');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { productions, loading, updateProductionStatus, refreshProductions } = useProduction();
 
   // Filter items based on search query and status filter
-  const filteredItems = productionItems.filter(item => {
+  const filteredItems = productions.filter(item => {
     // Text search filter
     const searchString = searchQuery.toLowerCase();
     const matchesSearch = 
-      item.id?.toLowerCase().includes(searchString) ||
-      item.orderId?.toLowerCase().includes(searchString) ||
-      item.product?.toLowerCase().includes(searchString) ||
+      item.production_number?.toLowerCase().includes(searchString) ||
+      item.product_name?.toLowerCase().includes(searchString) ||
       item.status?.toLowerCase().includes(searchString);
     
     // Status filter
-    if (statusFilter === 'active' && item.completed) {
+    const isCompleted = ['completed', 'approved'].includes(item.status);
+    if (statusFilter === 'active' && isCompleted) {
       return false;
     }
-    if (statusFilter === 'completed' && !item.completed) {
+    if (statusFilter === 'completed' && !isCompleted) {
       return false;
     }
 
@@ -123,28 +84,9 @@ const ProductionPage = () => {
 
   const handleDeleteItem = async (e, item) => {
     e.stopPropagation();
-    if (confirm(`Tem certeza que deseja excluir a produção ${item.id}?`)) {
-      try {
-        // Get the original order ID
-        const orderId = item.orderId;
-        
-        // Update the order status
-        const { error } = await supabase
-          .from('orders')
-          .update({ 
-            status: 'Cancelado',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', orderId);
-          
-        if (error) throw error;
-        
-        toast.success('Produção excluída com sucesso');
-        fetchProductionItems();
-      } catch (error) {
-        console.error('Erro ao excluir produção:', error);
-        toast.error('Erro ao excluir produção');
-      }
+    if (confirm(`Tem certeza que deseja excluir a produção ${item.production_number}?`)) {
+      // Implementar exclusão de produção se necessário
+      refreshProductions();
     }
   };
 
@@ -152,29 +94,37 @@ const ProductionPage = () => {
     setAlerts(alerts.filter(alert => alert.id !== id));
   };
 
-  const handleApproveProduction = (data) => {
-    // Update production status logic
-    // This would typically update the order in the database
+  const handleApproveProduction = async (data) => {
+    if (selectedItem) {
+      const success = await updateProductionStatus(selectedItem.id, 'approved', data.quantityProduced);
+      if (success) {
+        setShowModal(false);
+      }
+      return Promise.resolve();
+    }
     return Promise.resolve();
   };
 
-  const handleNextStage = (data) => {
-    // Move to next stage logic
-    // This would typically update the order status in the database
+  const handleNextStage = async (data) => {
+    if (selectedItem) {
+      const success = await updateProductionStatus(selectedItem.id, 'in_progress', data.quantityProduced);
+      if (success) {
+        setShowModal(false);
+      }
+      return Promise.resolve();
+    }
     return Promise.resolve();
   };
 
   const handleCreateProduction = () => {
     const newProduction = {
-      id: `PR-${String(productionItems.length + 1).padStart(3, '0')}`,
-      orderId: '',
-      product: '',
-      quantity: 1,
-      startDate: new Date().toLocaleDateString('pt-BR'),
-      deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR'),
-      status: 'Nova Produção',
-      progress: 0,
-      completed: false
+      id: 'new',
+      production_number: 'NOVO',
+      product_name: '',
+      quantity_requested: 1,
+      quantity_produced: 0,
+      status: 'pending' as const,
+      start_date: new Date().toISOString().split('T')[0],
     };
     
     setSelectedItem(newProduction);
@@ -185,9 +135,24 @@ const ProductionPage = () => {
     setShowModal(false);
     
     if (refresh) {
-      fetchProductionItems();
-      toast.success("Lista de produções atualizada");
+      refreshProductions();
     }
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('pt-BR');
+  };
+
+  const getStatusBadgeClass = (status: string) => {
+    const statusMap: { [key: string]: string } = {
+      'pending': 'bg-yellow-100 text-yellow-800',
+      'in_progress': 'bg-blue-100 text-blue-800',
+      'completed': 'bg-green-100 text-green-800',
+      'approved': 'bg-emerald-100 text-emerald-800',
+      'rejected': 'bg-red-100 text-red-800'
+    };
+    return statusMap[status] || 'bg-gray-100 text-gray-800';
   };
 
   return (
@@ -232,10 +197,6 @@ const ProductionPage = () => {
               <DropdownMenuItem onClick={() => setStatusFilter('completed')}>
                 Concluídos
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSearchQuery('Em Andamento')}>Em Andamento</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSearchQuery('Pendente Aprovação')}>Pendente Aprovação</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSearchQuery('Material Pendente')}>Material Pendente</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSearchQuery('Concluído')}>Concluído</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           
@@ -249,7 +210,6 @@ const ProductionPage = () => {
               <DropdownMenuItem>Mais recentes</DropdownMenuItem>
               <DropdownMenuItem>Mais antigos</DropdownMenuItem>
               <DropdownMenuItem>Prazo (próximo)</DropdownMenuItem>
-              <DropdownMenuItem>Progresso (menor)</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -265,14 +225,13 @@ const ProductionPage = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Pedido</TableHead>
+                  <TableHead>Produção</TableHead>
                   <TableHead>Produto</TableHead>
-                  <TableHead className="text-center">Qtd</TableHead>
+                  <TableHead className="text-center">Qtd Solicitada</TableHead>
+                  <TableHead className="text-center">Qtd Produzida</TableHead>
                   <TableHead>Início</TableHead>
-                  <TableHead>Prazo</TableHead>
+                  <TableHead>Conclusão</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Progresso</TableHead>
                   <TableHead className="text-center">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -283,24 +242,16 @@ const ProductionPage = () => {
                     className="cursor-pointer hover:bg-accent/5"
                     onClick={() => handleItemClick(item)}
                   >
-                    <TableCell className="font-medium">{item.id}</TableCell>
-                    <TableCell>{item.orderId}</TableCell>
-                    <TableCell>{item.product}</TableCell>
-                    <TableCell className="text-center">{item.quantity}</TableCell>
-                    <TableCell>{item.startDate}</TableCell>
-                    <TableCell>{item.deadline}</TableCell>
+                    <TableCell className="font-medium">{item.production_number}</TableCell>
+                    <TableCell>{item.product_name}</TableCell>
+                    <TableCell className="text-center">{item.quantity_requested}</TableCell>
+                    <TableCell className="text-center">{item.quantity_produced || 0}</TableCell>
+                    <TableCell>{formatDate(item.start_date)}</TableCell>
+                    <TableCell>{formatDate(item.completion_date)}</TableCell>
                     <TableCell>
-                      <span className="stage-badge badge-production">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(item.status)}`}>
                         {item.status}
                       </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="w-full bg-gray-200 rounded-full h-2.5">
-                        <div 
-                          className="bg-primary h-2.5 rounded-full" 
-                          style={{ width: `${item.progress}%` }}
-                        ></div>
-                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-center gap-2">
@@ -337,7 +288,7 @@ const ProductionPage = () => {
           )}
           {!loading && filteredItems.length === 0 && (
             <div className="p-4 text-center text-muted-foreground">
-              Nenhum item encontrado.
+              Nenhuma produção encontrada.
             </div>
           )}
         </CardContent>
@@ -349,8 +300,8 @@ const ProductionPage = () => {
         stage="production"
         orderData={selectedItem || {
           id: 'NOVO', 
-          product: '', 
-          quantity: 1, 
+          product_name: '', 
+          quantity_requested: 1, 
           customer: ''
         }}
         onApprove={handleApproveProduction}

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,7 +14,7 @@ const OrdersPage = () => {
   const location = useLocation();
   
   // Custom hook for orders data
-  const { orders, loading, deleteOrder, refreshOrders, isOrderCompleted, getFirstOrderItem } = useOrders();
+  const { orders, loading, deleteOrder, sendToProduction, refreshOrders, isOrderCompleted, getFirstOrderItem } = useOrders();
 
   // Check if we need to refresh orders (when returning from form)
   useEffect(() => {
@@ -73,6 +72,13 @@ const OrdersPage = () => {
     }
   };
 
+  const handleSendToProduction = async (e, order) => {
+    e.stopPropagation();
+    if (window.confirm(`Tem certeza que deseja enviar o pedido ${order.order_number} para produção?`)) {
+      await sendToProduction(order.id);
+    }
+  };
+
   const handleCreateOrder = () => {
     console.log("Navigating to order creation page");
     navigate('/pedidos/new');
@@ -97,6 +103,7 @@ const OrdersPage = () => {
             onViewOrder={handleViewOrder}
             onEditOrder={handleEditOrder}
             onDeleteOrder={handleDeleteOrder}
+            onSendToProduction={handleSendToProduction}
             onOrderClick={handleOrderClick}
           />
         </CardContent>

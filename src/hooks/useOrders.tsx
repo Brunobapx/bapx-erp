@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -110,6 +109,64 @@ export const useOrders = () => {
     }
   };
 
+  const sendToProduction = async (orderId: string) => {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      // Get order with items
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (*)
+        `)
+        .eq('id', orderId)
+        .single();
+      
+      if (orderError) throw orderError;
+      if (!order) throw new Error('Pedido não encontrado');
+
+      // Create production entries for each order item
+      const productionEntries = order.order_items.map((item: OrderItem) => ({
+        user_id: user.id,
+        order_item_id: item.id,
+        product_id: item.product_id,
+        product_name: item.product_name,
+        quantity_requested: item.quantity,
+        status: 'pending'
+      }));
+
+      const { error: productionError } = await supabase
+        .from('production')
+        .insert(productionEntries);
+      
+      if (productionError) throw productionError;
+
+      // Update order status
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({ 
+          status: 'in_production',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
+      
+      if (updateError) throw updateError;
+      
+      toast.success('Pedido enviado para produção com sucesso');
+      refreshOrders();
+      return true;
+    } catch (error: any) {
+      console.error('Erro ao enviar para produção:', error);
+      toast.error('Erro ao enviar para produção');
+      return false;
+    }
+  };
+
   const formatCurrency = (value?: number) => {
     if (!value && value !== 0) return 'R$ 0,00';
     return new Intl.NumberFormat('pt-BR', {
@@ -138,6 +195,7 @@ export const useOrders = () => {
     error,
     refreshOrders,
     deleteOrder,
+    sendToProduction,
     formatCurrency,
     getOrderById,
     isOrderCompleted,

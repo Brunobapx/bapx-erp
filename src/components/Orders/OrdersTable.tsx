@@ -9,7 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Eye, Edit, Trash2 } from 'lucide-react';
+import { Eye, Edit, Trash2, Factory } from 'lucide-react';
 import { Order } from '@/hooks/useOrders';
 
 interface OrdersTableProps {
@@ -19,6 +19,7 @@ interface OrdersTableProps {
   onEditOrder: (e: React.MouseEvent, order: Order) => void;
   onDeleteOrder: (e: React.MouseEvent, order: Order) => void;
   onOrderClick: (order: Order) => void;
+  onSendToProduction?: (e: React.MouseEvent, order: Order) => void;
 }
 
 export const OrdersTable: React.FC<OrdersTableProps> = ({
@@ -27,7 +28,8 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
   onViewOrder,
   onEditOrder,
   onDeleteOrder,
-  onOrderClick
+  onOrderClick,
+  onSendToProduction
 }) => {
   const getFirstOrderItem = (order: Order) => {
     return order.order_items?.[0] || null;
@@ -46,6 +48,10 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
       'cancelled': 'cancelled'
     };
     return statusMap[status] || 'order';
+  };
+
+  const canSendToProduction = (order: Order) => {
+    return order.status === 'pending';
   };
 
   return (
@@ -85,12 +91,13 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                 </span>
               </TableCell>
               <TableCell>
-                <div className="flex justify-center gap-2">
+                <div className="flex justify-center gap-1">
                   <Button 
                     variant="ghost" 
                     size="icon" 
                     className="h-8 w-8" 
                     onClick={(e) => onViewOrder(e, order)}
+                    title="Visualizar"
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
@@ -99,14 +106,27 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                     size="icon" 
                     className="h-8 w-8" 
                     onClick={(e) => onEditOrder(e, order)}
+                    title="Editar"
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
+                  {canSendToProduction(order) && onSendToProduction && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-100" 
+                      onClick={(e) => onSendToProduction(e, order)}
+                      title="Enviar para Produção"
+                    >
+                      <Factory className="h-4 w-4" />
+                    </Button>
+                  )}
                   <Button 
                     variant="ghost" 
                     size="icon" 
                     className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-100" 
                     onClick={(e) => onDeleteOrder(e, order)}
+                    title="Excluir"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
