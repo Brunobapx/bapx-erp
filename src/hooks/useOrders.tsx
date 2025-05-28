@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -167,6 +168,22 @@ export const useOrders = () => {
     }
   };
 
+  // Função para traduzir status para português
+  const translateStatus = (status: OrderStatus): string => {
+    const statusTranslations: Record<OrderStatus, string> = {
+      'pending': 'Pendente',
+      'in_production': 'Em Produção',
+      'in_packaging': 'Em Embalagem',
+      'packaged': 'Embalado',
+      'released_for_sale': 'Liberado para Venda',
+      'sale_confirmed': 'Venda Confirmada',
+      'in_delivery': 'Em Entrega',
+      'delivered': 'Entregue',
+      'cancelled': 'Cancelado'
+    };
+    return statusTranslations[status] || status;
+  };
+
   const formatCurrency = (value?: number) => {
     if (!value && value !== 0) return 'R$ 0,00';
     return new Intl.NumberFormat('pt-BR', {
@@ -199,6 +216,7 @@ export const useOrders = () => {
     formatCurrency,
     getOrderById,
     isOrderCompleted,
-    getFirstOrderItem
+    getFirstOrderItem,
+    translateStatus
   };
 };

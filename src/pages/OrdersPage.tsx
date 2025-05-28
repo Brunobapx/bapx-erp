@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,7 +15,7 @@ const OrdersPage = () => {
   const location = useLocation();
   
   // Custom hook for orders data
-  const { orders, loading, deleteOrder, sendToProduction, refreshOrders, isOrderCompleted, getFirstOrderItem } = useOrders();
+  const { orders, loading, deleteOrder, sendToProduction, refreshOrders, isOrderCompleted, getFirstOrderItem, translateStatus } = useOrders();
 
   // Check if we need to refresh orders (when returning from form)
   useEffect(() => {
@@ -35,7 +36,7 @@ const OrdersPage = () => {
       order.id?.toString().toLowerCase().includes(searchString) ||
       order.client_name?.toLowerCase().includes(searchString) ||
       firstItem?.product_name?.toLowerCase().includes(searchString) ||
-      order.status?.toLowerCase().includes(searchString) ||
+      translateStatus(order.status)?.toLowerCase().includes(searchString) ||
       order.seller?.toLowerCase().includes(searchString);
     
     // Status filter
@@ -67,7 +68,7 @@ const OrdersPage = () => {
 
   const handleDeleteOrder = async (e, order) => {
     e.stopPropagation();
-    if (window.confirm(`Tem certeza que deseja excluir o pedido ${order.id}?`)) {
+    if (window.confirm(`Tem certeza que deseja excluir o pedido ${order.order_number}?`)) {
       await deleteOrder(order.id);
     }
   };
@@ -105,6 +106,7 @@ const OrdersPage = () => {
             onDeleteOrder={handleDeleteOrder}
             onSendToProduction={handleSendToProduction}
             onOrderClick={handleOrderClick}
+            translateStatus={translateStatus}
           />
         </CardContent>
       </Card>

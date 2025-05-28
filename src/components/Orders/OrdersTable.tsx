@@ -20,6 +20,7 @@ interface OrdersTableProps {
   onDeleteOrder: (e: React.MouseEvent, order: Order) => void;
   onOrderClick: (order: Order) => void;
   onSendToProduction?: (e: React.MouseEvent, order: Order) => void;
+  translateStatus: (status: string) => string;
 }
 
 export const OrdersTable: React.FC<OrdersTableProps> = ({
@@ -29,7 +30,8 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
   onEditOrder,
   onDeleteOrder,
   onOrderClick,
-  onSendToProduction
+  onSendToProduction,
+  translateStatus
 }) => {
   const getFirstOrderItem = (order: Order) => {
     return order.order_items?.[0] || null;
@@ -87,7 +89,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
               <TableCell>{order.seller || '-'}</TableCell>
               <TableCell>
                 <span className={`stage-badge badge-${getStatusType(order.status)}`}>
-                  {order.status}
+                  {translateStatus(order.status)}
                 </span>
               </TableCell>
               <TableCell>
