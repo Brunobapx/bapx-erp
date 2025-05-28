@@ -60,6 +60,7 @@ export const ApprovalModal = ({
       primaryAction: 'Aprovar Pedido',
       secondaryAction: 'Enviar para Produção',
       showQuantity: false,
+      quantityLabel: 'Quantidade',
       nextStage: 'production'
     },
     production: {
@@ -68,6 +69,7 @@ export const ApprovalModal = ({
       primaryAction: 'Aprovar Produção',
       secondaryAction: 'Enviar para Embalagem',
       showQuantity: true,
+      quantityLabel: 'Quantidade',
       nextStage: 'packaging'
     },
     packaging: {
@@ -85,6 +87,7 @@ export const ApprovalModal = ({
       primaryAction: 'Confirmar Venda',
       secondaryAction: 'Enviar para Financeiro',
       showQuantity: false,
+      quantityLabel: 'Quantidade',
       nextStage: 'finance'
     },
     finance: {
@@ -93,6 +96,7 @@ export const ApprovalModal = ({
       primaryAction: 'Aprovar Financeiro',
       secondaryAction: 'Liberar para Entrega',
       showQuantity: false,
+      quantityLabel: 'Quantidade',
       nextStage: 'route'
     },
     route: {
@@ -101,6 +105,7 @@ export const ApprovalModal = ({
       primaryAction: 'Confirmar Rota',
       secondaryAction: 'Finalizar Pedido',
       showQuantity: false,
+      quantityLabel: 'Quantidade',
       nextStage: 'completed'
     },
   };
@@ -194,7 +199,7 @@ export const ApprovalModal = ({
           
           {config.showQuantity && (
             <div>
-              <Label htmlFor="quantity">{config.quantityLabel || 'Quantidade'}</Label>
+              <Label htmlFor="quantity">{config.quantityLabel}</Label>
               <Input 
                 id="quantity" 
                 value={quantity}
