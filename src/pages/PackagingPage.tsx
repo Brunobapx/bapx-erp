@@ -20,16 +20,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import StageAlert from '@/components/Alerts/StageAlert';
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { usePackaging } from '@/hooks/usePackaging';
 
 const PackagingPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [statusFilter, setStatusFilter] = useState('active'); // 'active', 'completed', or 'all'
-  const [packagingItems, setPackagingItems] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState('active');
   const [alerts, setAlerts] = useState([
     {
       id: 'alert-1',
@@ -39,59 +36,23 @@ const PackagingPage = () => {
     }
   ]);
 
-  // Fetch packaging items from database
-  useEffect(() => {
-    fetchPackagingItems();
-  }, []);
-
-  const fetchPackagingItems = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*')
-        .in('status', ['Aguardando Embalagem', 'Embalado']);
-      
-      if (error) throw error;
-      
-      // Transform data to match packaging items structure
-      const transformedData = (data || []).map(order => ({
-        id: `EMB-${order.id.split('-')[1] || '001'}`,
-        productionId: `PR-${order.id.split('-')[1] || '001'}`,
-        product: order.product_name,
-        quantity: order.quantity,
-        producedQuantity: order.quantity,
-        date: new Date(order.created_at).toLocaleDateString('pt-BR'),
-        status: order.status === 'Aguardando Embalagem' ? 'Aguardando Confirmação' : 'Embalado',
-        quality: order.status === 'Embalado' ? 'Aprovado' : 'Pendente',
-        completed: order.status === 'Embalado',
-        orderId: order.id
-      }));
-
-      setPackagingItems(transformedData);
-    } catch (error) {
-      console.error('Erro ao carregar embalagens:', error);
-      toast.error('Erro ao carregar itens de embalagem');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { packagings, loading, updatePackagingStatus, refreshPackagings } = usePackaging();
 
   // Filter items based on search query and status filter
-  const filteredItems = packagingItems.filter(item => {
+  const filteredItems = packagings.filter(item => {
     // Text search filter
     const searchString = searchQuery.toLowerCase();
     const matchesSearch =
-      item.id.toLowerCase().includes(searchString) ||
-      item.productionId.toLowerCase().includes(searchString) ||
-      item.product.toLowerCase().includes(searchString) ||
-      item.status.toLowerCase().includes(searchString);
+      item.packaging_number?.toLowerCase().includes(searchString) ||
+      item.product_name?.toLowerCase().includes(searchString) ||
+      item.status?.toLowerCase().includes(searchString);
     
     // Status filter
-    if (statusFilter === 'active' && item.completed) {
+    const isCompleted = ['completed', 'approved'].includes(item.status);
+    if (statusFilter === 'active' && isCompleted) {
       return false;
     }
-    if (statusFilter === 'completed' && !item.completed) {
+    if (statusFilter === 'completed' && !isCompleted) {
       return false;
     }
 
@@ -117,28 +78,9 @@ const PackagingPage = () => {
 
   const handleDeleteItem = async (e, item) => {
     e.stopPropagation();
-    if (confirm(`Tem certeza que deseja excluir a embalagem ${item.id}?`)) {
-      try {
-        // Get the original order ID
-        const orderId = item.orderId;
-        
-        // Update the order status
-        const { error } = await supabase
-          .from('orders')
-          .update({ 
-            status: 'Em Produção', // Move back to production
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', orderId);
-          
-        if (error) throw error;
-        
-        toast.success('Embalagem excluída com sucesso');
-        fetchPackagingItems();
-      } catch (error) {
-        console.error('Erro ao excluir embalagem:', error);
-        toast.error('Erro ao excluir embalagem');
-      }
+    if (confirm(`Tem certeza que deseja excluir a embalagem ${item.packaging_number}?`)) {
+      // Implementar exclusão se necessário
+      refreshPackagings();
     }
   };
 
@@ -146,29 +88,37 @@ const PackagingPage = () => {
     setAlerts(alerts.filter(alert => alert.id !== id));
   };
 
-  const handleApprovePackaging = (data) => {
-    // Update packaging status logic
-    // This would typically update the order in the database
+  const handleApprovePackaging = async (data) => {
+    if (selectedItem) {
+      const success = await updatePackagingStatus(selectedItem.id, 'approved', data.quantityPackaged, data.qualityCheck);
+      if (success) {
+        setShowModal(false);
+      }
+      return Promise.resolve();
+    }
     return Promise.resolve();
   };
 
-  const handleNextStage = (data) => {
-    // Move to next stage logic
-    // This would typically update the order status in the database
+  const handleNextStage = async (data) => {
+    if (selectedItem) {
+      const success = await updatePackagingStatus(selectedItem.id, 'in_progress', data.quantityPackaged);
+      if (success) {
+        setShowModal(false);
+      }
+      return Promise.resolve();
+    }
     return Promise.resolve();
   };
 
   const handleCreatePackaging = () => {
     const newPackaging = {
-      id: `EMB-${String(packagingItems.length + 1).padStart(3, '0')}`,
-      productionId: '',
-      product: '',
-      quantity: 1,
-      producedQuantity: 0,
-      date: new Date().toLocaleDateString('pt-BR'),
-      status: 'Nova Embalagem',
-      quality: 'Pendente',
-      completed: false
+      id: 'new',
+      packaging_number: 'NOVO',
+      product_name: '',
+      quantity_to_package: 1,
+      quantity_packaged: 0,
+      status: 'pending' as const,
+      quality_check: false
     };
     
     setSelectedItem(newPackaging);
@@ -179,9 +129,24 @@ const PackagingPage = () => {
     setShowModal(false);
     
     if (refresh) {
-      fetchPackagingItems();
-      toast.success("Lista de embalagens atualizada");
+      refreshPackagings();
     }
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('pt-BR');
+  };
+
+  const getStatusBadgeClass = (status: string) => {
+    const statusMap: { [key: string]: string } = {
+      'pending': 'bg-yellow-100 text-yellow-800',
+      'in_progress': 'bg-blue-100 text-blue-800',
+      'completed': 'bg-green-100 text-green-800',
+      'approved': 'bg-emerald-100 text-emerald-800',
+      'rejected': 'bg-red-100 text-red-800'
+    };
+    return statusMap[status] || 'bg-gray-100 text-gray-800';
   };
 
   return (
@@ -226,11 +191,6 @@ const PackagingPage = () => {
               <DropdownMenuItem onClick={() => setStatusFilter('completed')}>
                 Concluídos
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSearchQuery('Embalado')}>Embalado</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSearchQuery('Aguardando Confirmação')}>
-                Aguardando Confirmação
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSearchQuery('Em Produção')}>Em Produção</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           
@@ -259,14 +219,14 @@ const PackagingPage = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Produção</TableHead>
+                  <TableHead>Embalagem</TableHead>
                   <TableHead>Produto</TableHead>
-                  <TableHead className="text-center">Qtd Pedida</TableHead>
-                  <TableHead className="text-center">Qtd Produzida</TableHead>
-                  <TableHead>Data</TableHead>
+                  <TableHead className="text-center">Qtd para Embalar</TableHead>
+                  <TableHead className="text-center">Qtd Embalada</TableHead>
+                  <TableHead>Embalado Por</TableHead>
+                  <TableHead>Data Embalagem</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Qualidade</TableHead>
+                  <TableHead className="text-center">Qualidade</TableHead>
                   <TableHead className="text-center">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -277,29 +237,32 @@ const PackagingPage = () => {
                     className="cursor-pointer hover:bg-accent/5"
                     onClick={() => handleItemClick(item)}
                   >
-                    <TableCell className="font-medium">{item.id}</TableCell>
-                    <TableCell>{item.productionId}</TableCell>
-                    <TableCell>{item.product}</TableCell>
-                    <TableCell className="text-center">{item.quantity}</TableCell>
-                    <TableCell className="text-center">{item.producedQuantity}</TableCell>
-                    <TableCell>{item.date}</TableCell>
+                    <TableCell className="font-medium">{item.packaging_number}</TableCell>
+                    <TableCell>{item.product_name}</TableCell>
+                    <TableCell className="text-center">{item.quantity_to_package}</TableCell>
+                    <TableCell className="text-center">{item.quantity_packaged || 0}</TableCell>
+                    <TableCell>{item.packaged_by || '-'}</TableCell>
+                    <TableCell>{formatDate(item.packaged_at)}</TableCell>
                     <TableCell>
-                      <span className="stage-badge badge-packaging">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(item.status)}`}>
                         {item.status}
                       </span>
                     </TableCell>
-                    <TableCell>
-                      <span className={`stage-badge ${item.quality === 'Aprovado' ? 'badge-sales' : 'badge-route'}`}>
-                        {item.quality}
+                    <TableCell className="text-center">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        item.quality_check ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {item.quality_check ? 'Aprovado' : 'Pendente'}
                       </span>
                     </TableCell>
                     <TableCell>
-                      <div className="flex justify-center gap-2">
+                      <div className="flex justify-center gap-1">
                         <Button 
                           variant="ghost" 
                           size="icon" 
                           className="h-8 w-8" 
                           onClick={(e) => handleViewItem(e, item)}
+                          title="Visualizar"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -308,6 +271,7 @@ const PackagingPage = () => {
                           size="icon" 
                           className="h-8 w-8" 
                           onClick={(e) => handleEditItem(e, item)}
+                          title="Editar"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -316,6 +280,7 @@ const PackagingPage = () => {
                           size="icon" 
                           className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-100" 
                           onClick={(e) => handleDeleteItem(e, item)}
+                          title="Excluir"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -328,7 +293,7 @@ const PackagingPage = () => {
           )}
           {!loading && filteredItems.length === 0 && (
             <div className="p-4 text-center text-muted-foreground">
-              Nenhum item encontrado.
+              Nenhuma embalagem encontrada.
             </div>
           )}
         </CardContent>
@@ -340,8 +305,8 @@ const PackagingPage = () => {
         stage="packaging"
         orderData={selectedItem || {
           id: 'NOVO', 
-          product: '', 
-          quantity: 1, 
+          product_name: '', 
+          quantity_to_package: 1, 
           customer: ''
         }}
         onApprove={handleApprovePackaging}

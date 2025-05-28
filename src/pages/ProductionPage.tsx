@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ApprovalModal } from '@/components/Modals/ApprovalModal';
-import { Box, ChevronDown, Search, Eye, Edit, Trash2, Loader2 } from 'lucide-react';
+import { Box, ChevronDown, Search, Eye, Edit, Trash2, Loader2, Package } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -21,6 +20,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import StageAlert from '@/components/Alerts/StageAlert';
 import { useProduction } from '@/hooks/useProduction';
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const ProductionPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,6 +65,45 @@ const ProductionPage = () => {
 
     return matchesSearch;
   });
+
+  const handleSendToPackaging = async (e, item) => {
+    e.stopPropagation();
+    if (window.confirm(`Tem certeza que deseja enviar a produção ${item.production_number} para embalagem?`)) {
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        if (userError || !user) {
+          throw new Error('Usuário não autenticado');
+        }
+
+        // Create packaging entry
+        const { error } = await supabase
+          .from('packaging')
+          .insert({
+            user_id: user.id,
+            production_id: item.id,
+            product_id: item.product_id,
+            product_name: item.product_name,
+            quantity_to_package: item.quantity_produced,
+            status: 'pending'
+          });
+        
+        if (error) throw error;
+        
+        // Update production status to completed/approved
+        await updateProductionStatus(item.id, 'approved', item.quantity_produced);
+        
+        toast.success('Produção enviada para embalagem com sucesso');
+      } catch (error) {
+        console.error('Erro ao enviar para embalagem:', error);
+        toast.error('Erro ao enviar para embalagem');
+      }
+    }
+  };
+
+  const canSendToPackaging = (item) => {
+    return item.status === 'completed' && item.quantity_produced > 0;
+  };
 
   const handleItemClick = (item) => {
     setSelectedItem(item);
@@ -254,12 +294,13 @@ const ProductionPage = () => {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <div className="flex justify-center gap-2">
+                      <div className="flex justify-center gap-1">
                         <Button 
                           variant="ghost" 
                           size="icon" 
                           className="h-8 w-8" 
                           onClick={(e) => handleViewItem(e, item)}
+                          title="Visualizar"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -268,14 +309,27 @@ const ProductionPage = () => {
                           size="icon" 
                           className="h-8 w-8" 
                           onClick={(e) => handleEditItem(e, item)}
+                          title="Editar"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
+                        {canSendToPackaging(item) && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-100" 
+                            onClick={(e) => handleSendToPackaging(e, item)}
+                            title="Enviar para Embalagem"
+                          >
+                            <Package className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button 
                           variant="ghost" 
                           size="icon" 
                           className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-100" 
                           onClick={(e) => handleDeleteItem(e, item)}
+                          title="Excluir"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
