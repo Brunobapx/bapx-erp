@@ -3,7 +3,8 @@ import React, { useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ApprovalModal } from '@/components/Modals/ApprovalModal';
-import { DollarSign, ChevronDown, Search, TrendingUp } from 'lucide-react';
+import { InvoiceModal } from '@/components/Modals/InvoiceModal';
+import { DollarSign, ChevronDown, Search, TrendingUp, FileText } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -21,77 +22,32 @@ import {
 } from "@/components/ui/dropdown-menu";
 import StageAlert from '@/components/Alerts/StageAlert';
 import { toast } from "sonner";
+import { useSales } from '@/hooks/useSales';
 
 const SalesPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [alerts, setAlerts] = useState([
     {
       id: 'alert-1',
       type: 'sales' as const,
-      message: 'Venda #V-002 aguardando confirmação para faturamento',
+      message: 'Venda aguardando confirmação para faturamento',
       time: '3 horas'
     }
   ]);
 
-  // Mock sales data
-  const [salesItems, setSalesItems] = useState([
-    { 
-      id: 'V-001', 
-      orderId: 'PED-001',
-      customer: 'Tech Solutions',
-      product: 'Server Hardware', 
-      quantity: 10, 
-      value: 50000,
-      date: '19/05/2025',
-      status: 'Confirmada',
-      payment: 'À Vista'
-    },
-    { 
-      id: 'V-002', 
-      orderId: 'PED-002',
-      customer: 'Green Energy Inc',
-      product: 'Solar Panels', 
-      quantity: 50, 
-      value: 75000,
-      date: '18/05/2025',
-      status: 'Aguardando Confirmação',
-      payment: 'Parcelado'
-    },
-    { 
-      id: 'V-003', 
-      orderId: 'PED-003',
-      customer: 'City Hospital',
-      product: 'Medical Equipment', 
-      quantity: 5, 
-      value: 35000,
-      date: '17/05/2025',
-      status: 'Confirmada',
-      payment: 'À Vista'
-    },
-    { 
-      id: 'V-004', 
-      orderId: 'PED-004',
-      customer: 'Global Foods',
-      product: 'Packaging Materials', 
-      quantity: 98, 
-      value: 9800,
-      date: '16/05/2025',
-      status: 'Faturada',
-      payment: 'Parcelado'
-    }
-  ]);
+  const { sales, loading, error, updateSaleStatus } = useSales();
 
   // Filter items based on search query
-  const filteredItems = salesItems.filter(item => {
+  const filteredItems = sales.filter(item => {
     const searchString = searchQuery.toLowerCase();
     return (
-      item.id.toLowerCase().includes(searchString) ||
-      item.orderId.toLowerCase().includes(searchString) ||
-      item.customer.toLowerCase().includes(searchString) ||
-      item.product.toLowerCase().includes(searchString) ||
-      item.status.toLowerCase().includes(searchString)
+      item.sale_number?.toLowerCase().includes(searchString) ||
+      item.order_number?.toLowerCase().includes(searchString) ||
+      item.client_name?.toLowerCase().includes(searchString) ||
+      item.status?.toLowerCase().includes(searchString)
     );
   });
 
@@ -100,64 +56,40 @@ const SalesPage = () => {
     setShowModal(true);
   };
 
+  const handleInvoiceClick = (item) => {
+    setSelectedItem(item);
+    setShowInvoiceModal(true);
+  };
+
   const handleDismissAlert = (id) => {
     setAlerts(alerts.filter(alert => alert.id !== id));
   };
 
   // Calculate total sales
-  const totalSales = salesItems.reduce((total, item) => {
-    if (item.status === 'Confirmada' || item.status === 'Faturada') {
-      return total + item.value;
+  const totalSales = sales.reduce((total, item) => {
+    if (item.status === 'confirmed' || item.status === 'invoiced' || item.status === 'delivered') {
+      return total + item.total_amount;
     }
     return total;
   }, 0);
 
-  const handleApproveSale = (data) => {
-    const updatedItems = salesItems.map(item => 
-      item.id === data.id 
-        ? { 
-            ...item, 
-            status: 'Confirmada',
-            notes: data.notes
-          }
-        : item
-    );
-    setSalesItems(updatedItems);
+  const handleApproveSale = async (data) => {
+    await updateSaleStatus(data.id, 'confirmed');
     return Promise.resolve();
   };
 
-  const handleNextStage = (data) => {
-    const updatedItems = salesItems.map(item => 
-      item.id === data.id 
-        ? { 
-            ...item, 
-            status: 'Enviado para Financeiro',
-            notes: data.notes
-          }
-        : item
-    );
-    setSalesItems(updatedItems);
-    
-    // Aqui poderia ter uma lógica para criar um novo item na tabela de financeiro
-    
+  const handleNextStage = async (data) => {
+    await updateSaleStatus(data.id, 'invoiced');
+    return Promise.resolve();
+  };
+
+  const handleEmitInvoice = async (data) => {
+    await updateSaleStatus(data.id, 'invoiced', data.invoice_number);
     return Promise.resolve();
   };
 
   const handleCreateSale = () => {
-    const newSale = {
-      id: `V-${String(salesItems.length + 1).padStart(3, '0')}`,
-      orderId: '',
-      customer: '',
-      product: '',
-      quantity: 1,
-      value: 0,
-      date: new Date().toLocaleDateString('pt-BR'),
-      status: 'Nova Venda',
-      payment: 'À Vista'
-    };
-    
-    setSelectedItem(newSale);
-    setShowModal(true);
+    toast.info("Para criar uma venda, primeiro complete o processo de embalagem");
   };
 
   const handleModalClose = (refresh = false) => {
@@ -167,6 +99,60 @@ const SalesPage = () => {
       toast.success("Lista de vendas atualizada");
     }
   };
+
+  const handleInvoiceModalClose = (refresh = false) => {
+    setShowInvoiceModal(false);
+    
+    if (refresh) {
+      toast.success("Nota fiscal emitida com sucesso");
+    }
+  };
+
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'badge-production';
+      case 'confirmed':
+        return 'badge-sales';
+      case 'invoiced':
+        return 'badge-packaging';
+      case 'delivered':
+        return 'badge-route';
+      default:
+        return 'badge-production';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'Pendente';
+      case 'confirmed':
+        return 'Confirmada';
+      case 'invoiced':
+        return 'Faturada';
+      case 'delivered':
+        return 'Entregue';
+      default:
+        return status;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-4 sm:p-6 space-y-6">
+        <div className="text-center">Carregando vendas...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 sm:p-6 space-y-6">
+        <div className="text-center text-red-500">Erro: {error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
@@ -214,8 +200,8 @@ const SalesPage = () => {
             <DropdownMenuContent>
               <DropdownMenuItem onClick={() => setSearchQuery('')}>Todos</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setSearchQuery('Confirmada')}>Confirmada</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSearchQuery('Aguardando Confirmação')}>
-                Aguardando Confirmação
+              <DropdownMenuItem onClick={() => setSearchQuery('Pendente')}>
+                Pendente
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setSearchQuery('Faturada')}>Faturada</DropdownMenuItem>
             </DropdownMenuContent>
@@ -242,15 +228,13 @@ const SalesPage = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID</TableHead>
+                <TableHead>Venda</TableHead>
                 <TableHead>Pedido</TableHead>
                 <TableHead>Cliente</TableHead>
-                <TableHead>Produto</TableHead>
-                <TableHead className="text-center">Qtd</TableHead>
                 <TableHead className="text-right">Valor (R$)</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Pagamento</TableHead>
+                <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -260,19 +244,31 @@ const SalesPage = () => {
                   className="cursor-pointer hover:bg-accent/5"
                   onClick={() => handleItemClick(item)}
                 >
-                  <TableCell className="font-medium">{item.id}</TableCell>
-                  <TableCell>{item.orderId}</TableCell>
-                  <TableCell>{item.customer}</TableCell>
-                  <TableCell>{item.product}</TableCell>
-                  <TableCell className="text-center">{item.quantity}</TableCell>
-                  <TableCell className="text-right">{item.value.toLocaleString('pt-BR')}</TableCell>
-                  <TableCell>{item.date}</TableCell>
+                  <TableCell className="font-medium">{item.sale_number}</TableCell>
+                  <TableCell>{item.order_number}</TableCell>
+                  <TableCell>{item.client_name}</TableCell>
+                  <TableCell className="text-right">{item.total_amount.toLocaleString('pt-BR')}</TableCell>
+                  <TableCell>{new Date(item.created_at || '').toLocaleDateString('pt-BR')}</TableCell>
                   <TableCell>
-                    <span className="stage-badge badge-sales">
-                      {item.status}
+                    <span className={`stage-badge ${getStatusBadgeClass(item.status)}`}>
+                      {getStatusLabel(item.status)}
                     </span>
                   </TableCell>
-                  <TableCell>{item.payment}</TableCell>
+                  <TableCell>
+                    {item.status === 'confirmed' && (
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleInvoiceClick(item);
+                        }}
+                      >
+                        <FileText className="mr-1 h-3 w-3" />
+                        Emitir NF
+                      </Button>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -297,6 +293,13 @@ const SalesPage = () => {
         }}
         onApprove={handleApproveSale}
         onNextStage={handleNextStage}
+      />
+      
+      <InvoiceModal
+        isOpen={showInvoiceModal}
+        onClose={handleInvoiceModalClose}
+        saleData={selectedItem}
+        onEmitInvoice={handleEmitInvoice}
       />
     </div>
   );

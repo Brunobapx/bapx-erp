@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -123,6 +124,77 @@ export const usePackaging = () => {
         updateData.approved_at = new Date().toISOString();
         const { data: { user } } = await supabase.auth.getUser();
         updateData.approved_by = user?.email || 'Sistema';
+        
+        // Primeiro, atualizar a embalagem
+        const { error: updateError } = await supabase
+          .from('packaging')
+          .update(updateData)
+          .eq('id', id);
+        
+        if (updateError) throw updateError;
+        
+        // Buscar dados da embalagem e produção
+        const { data: packagingData, error: packagingError } = await supabase
+          .from('packaging')
+          .select(`
+            *,
+            production!inner(
+              order_item_id,
+              order_items!inner(
+                order_id,
+                orders!inner(
+                  order_number,
+                  client_id,
+                  client_name,
+                  total_amount
+                )
+              )
+            )
+          `)
+          .eq('id', id)
+          .single();
+        
+        if (packagingError) throw packagingError;
+        
+        const orderData = packagingData.production.order_items.orders;
+        
+        // Verificar se já existe uma venda para este pedido
+        const { data: existingSale, error: saleCheckError } = await supabase
+          .from('sales')
+          .select('id')
+          .eq('order_id', orderData.id)
+          .maybeSingle();
+        
+        if (saleCheckError) {
+          console.error('Erro ao verificar venda existente:', saleCheckError);
+        }
+        
+        if (!existingSale) {
+          // Criar nova venda
+          const { error: saleError } = await supabase
+            .from('sales')
+            .insert({
+              user_id: user?.id,
+              order_id: orderData.id,
+              client_id: orderData.client_id,
+              client_name: orderData.client_name,
+              total_amount: orderData.total_amount,
+              status: 'pending'
+            });
+          
+          if (saleError) {
+            console.error('Erro ao criar venda:', saleError);
+            toast.error('Erro ao criar venda');
+          } else {
+            console.log('Venda criada com sucesso');
+            toast.success('Embalagem aprovada e venda criada');
+          }
+        } else {
+          toast.success('Embalagem aprovada');
+        }
+        
+        refreshPackagings();
+        return true;
       }
 
       const { error } = await supabase
