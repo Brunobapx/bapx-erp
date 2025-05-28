@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Printer, Download } from 'lucide-react';
 import { toast } from "sonner";
 import { useClients } from '@/hooks/useClients';
+import { supabase } from "@/integrations/supabase/client";
 
 type DeliverySlipModalProps = {
   isOpen: boolean;
@@ -31,6 +32,7 @@ export const DeliverySlipModal = ({
   const [observations, setObservations] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGenerated, setIsGenerated] = useState(false);
+  const [orderItems, setOrderItems] = useState([]);
   const { getClientById } = useClients();
 
   React.useEffect(() => {
@@ -52,8 +54,28 @@ export const DeliverySlipModal = ({
       setDeliveryAddress(clientAddress);
       setObservations('');
       setIsGenerated(false);
+      
+      // Buscar itens do pedido
+      fetchOrderItems();
     }
   }, [isOpen, saleData, getClientById]);
+
+  const fetchOrderItems = async () => {
+    if (!saleData?.order_id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('order_items')
+        .select('*')
+        .eq('order_id', saleData.order_id);
+      
+      if (error) throw error;
+      setOrderItems(data || []);
+    } catch (error) {
+      console.error('Erro ao buscar itens do pedido:', error);
+      toast.error('Erro ao carregar itens do pedido');
+    }
+  };
 
   const generateDeliverySlip = () => {
     if (!deliveryAddress.trim()) {
@@ -76,6 +98,16 @@ export const DeliverySlipModal = ({
       toast.error('Gere o romaneio primeiro');
       return;
     }
+
+    // Criar tabela de itens para o PDF
+    const itemsTable = orderItems.map(item => `
+      <tr>
+        <td style="border: 1px solid #ddd; padding: 8px;">${item.product_name}</td>
+        <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.quantity}</td>
+        <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">R$ ${item.unit_price.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+        <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">R$ ${item.total_price.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+      </tr>
+    `).join('');
 
     // Criar conteúdo HTML para o PDF
     const printContent = `
@@ -122,6 +154,21 @@ export const DeliverySlipModal = ({
             }
             .info-row strong {
               min-width: 120px;
+            }
+            .items-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 15px 0;
+            }
+            .items-table th {
+              background: #f0f0f0;
+              border: 1px solid #ddd;
+              padding: 10px;
+              text-align: left;
+            }
+            .items-table td {
+              border: 1px solid #ddd;
+              padding: 8px;
             }
             .signature { 
               margin-top: 60px; 
@@ -180,6 +227,23 @@ export const DeliverySlipModal = ({
           </div>
 
           <div class="info-section">
+            <h3>Itens do Pedido</h3>
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th>Produto</th>
+                  <th style="text-align: center;">Quantidade</th>
+                  <th style="text-align: right;">Valor Unit.</th>
+                  <th style="text-align: right;">Valor Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemsTable}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="info-section">
             <h3>Endereço de Entrega</h3>
             <div class="delivery-address">
               ${deliveryAddress.replace(/\n/g, '<br>')}
@@ -229,7 +293,7 @@ export const DeliverySlipModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Gerar Romaneio de Entrega</DialogTitle>
           <DialogDescription>
@@ -277,6 +341,26 @@ export const DeliverySlipModal = ({
               readOnly 
               className="bg-gray-50"
             />
+          </div>
+
+          {/* Seção de Itens do Pedido */}
+          <div>
+            <Label>Itens do Pedido</Label>
+            <div className="border rounded-md p-3 bg-gray-50 max-h-32 overflow-y-auto">
+              {orderItems.length > 0 ? (
+                <div className="space-y-2">
+                  {orderItems.map((item, index) => (
+                    <div key={index} className="flex justify-between text-sm border-b pb-1">
+                      <span className="font-medium">{item.product_name}</span>
+                      <span>Qtd: {item.quantity}</span>
+                      <span>R$ {item.total_price.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">Carregando itens...</p>
+              )}
+            </div>
           </div>
           
           <div>
