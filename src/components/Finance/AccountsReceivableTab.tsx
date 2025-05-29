@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,9 +11,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { NewReceivableModal } from './NewReceivableModal';
 
 export const AccountsReceivableTab = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [showNewReceivableModal, setShowNewReceivableModal] = useState(false);
 
   // Mock data for accounts receivable
   const accountsReceivable = [
@@ -77,7 +78,7 @@ export const AccountsReceivableTab = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold">Contas a Receber</h2>
-        <Button>
+        <Button onClick={() => setShowNewReceivableModal(true)}>
           <Plus className="mr-2 h-4 w-4" /> Nova Cobrança
         </Button>
       </div>
@@ -180,6 +181,11 @@ export const AccountsReceivableTab = () => {
           </Table>
         </CardContent>
       </Card>
+
+      <NewReceivableModal
+        isOpen={showNewReceivableModal}
+        onClose={() => setShowNewReceivableModal(false)}
+      />
     </div>
   );
 };

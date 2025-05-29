@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,9 +11,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { NewPayableModal } from './NewPayableModal';
 
 export const AccountsPayableTab = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [showNewPayableModal, setShowNewPayableModal] = useState(false);
 
   // Mock data for accounts payable
   const accountsPayable = [
@@ -77,7 +78,7 @@ export const AccountsPayableTab = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold">Contas a Pagar</h2>
-        <Button>
+        <Button onClick={() => setShowNewPayableModal(true)}>
           <Plus className="mr-2 h-4 w-4" /> Nova Conta
         </Button>
       </div>
@@ -178,6 +179,11 @@ export const AccountsPayableTab = () => {
           </Table>
         </CardContent>
       </Card>
+
+      <NewPayableModal
+        isOpen={showNewPayableModal}
+        onClose={() => setShowNewPayableModal(false)}
+      />
     </div>
   );
 };
