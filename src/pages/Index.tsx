@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { StatusCards } from '@/components/Dashboard/StatusCards';
 import { ProcessFunnel } from '@/components/Dashboard/ProcessFunnel';
@@ -6,20 +5,24 @@ import StageAlert from '@/components/Alerts/StageAlert';
 import { ApprovalModal } from '@/components/Modals/ApprovalModal';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertTriangle, Clock, Package } from 'lucide-react';
+import { Clock } from 'lucide-react';
+import { useDashboardStats } from '@/hooks/useDashboardStats';
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Index = () => {
+  const { recentOrders, loading } = useDashboardStats();
+  
   const [alerts, setAlerts] = React.useState([
     {
       id: '1',
       type: 'production' as const,
-      message: 'Pedido PED-005 está parado na produção há 2 dias.',
+      message: 'Verificar pedidos parados na produção há mais de 2 dias.',
       time: '2 dias atrás'
     },
     {
       id: '2',
       type: 'route' as const,
-      message: 'Pedido PED-012 aguardando definição de rota.',
+      message: 'Revisar pedidos aguardando definição de rota.',
       time: '5 horas atrás'
     }
   ]);
@@ -36,14 +39,39 @@ const Index = () => {
     setShowApprovalModal(true);
   };
 
-  // Mock data for recent orders
-  const recentOrders = [
-    { id: 'PED-024', customer: 'Tech Solutions', product: 'Server Hardware', status: 'order', time: '3h atrás' },
-    { id: 'PED-023', customer: 'Green Energy Inc', product: 'Solar Panels', status: 'production', time: '5h atrás' },
-    { id: 'PED-022', customer: 'City Hospital', product: 'Medical Equipment', status: 'packaging', time: '8h atrás' },
-    { id: 'PED-021', customer: 'Global Foods', product: 'Packaging Materials', status: 'sales', time: '1d atrás' },
-    { id: 'PED-020', customer: 'Modern Office', product: 'Desk Solutions', status: 'finance', time: '1d atrás' },
-  ];
+  const translateStatus = (status: string): string => {
+    const statusTranslations: Record<string, string> = {
+      'pending': 'Pendente',
+      'in_production': 'Em Produção',
+      'in_packaging': 'Em Embalagem',
+      'packaged': 'Embalado',
+      'released_for_sale': 'Liberado para Venda',
+      'sale_confirmed': 'Venda Confirmada',
+      'in_delivery': 'Em Entrega',
+      'delivered': 'Entregue',
+      'cancelled': 'Cancelado'
+    };
+    return statusTranslations[status] || status;
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return 'Agora';
+    if (diffInHours < 24) return `${diffInHours}h atrás`;
+    
+    const diffInDays = Math.floor(diffInHours / 24);
+    return `${diffInDays}d atrás`;
+  };
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
@@ -66,33 +94,56 @@ const Index = () => {
             <CardTitle>Pedidos Recentes</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {recentOrders.map((order) => (
-                <div 
-                  key={order.id}
-                  className="p-3 border rounded-md hover:bg-accent/5 cursor-pointer transition-colors"
-                  onClick={() => openModal(order.status as any)}
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="flex items-center gap-1">
-                        <span className="font-medium">{order.id}</span>
-                        <span className={`stage-badge badge-${order.status}`}>
-                          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                        </span>
+            {loading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <div key={index} className="p-3 border rounded-md">
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-4 w-16" />
+                          <Skeleton className="h-5 w-20" />
+                        </div>
+                        <Skeleton className="h-3 w-32" />
                       </div>
-                      <div className="text-sm text-muted-foreground mt-1">
-                        {order.customer} - {order.product}
-                      </div>
-                    </div>
-                    <div className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {order.time}
+                      <Skeleton className="h-3 w-12" />
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : recentOrders.length > 0 ? (
+              <div className="space-y-3">
+                {recentOrders.map((order) => (
+                  <div 
+                    key={order.id}
+                    className="p-3 border rounded-md hover:bg-accent/5 cursor-pointer transition-colors"
+                    onClick={() => openModal('order')}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{order.order_number}</span>
+                          <span className={`stage-badge badge-${order.status}`}>
+                            {translateStatus(order.status)}
+                          </span>
+                        </div>
+                        <div className="text-sm text-muted-foreground mt-1">
+                          {order.client_name} - {formatCurrency(order.total_amount)}
+                        </div>
+                      </div>
+                      <div className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {formatTimeAgo(order.created_at)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center p-4 text-muted-foreground">
+                Nenhum pedido recente encontrado
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

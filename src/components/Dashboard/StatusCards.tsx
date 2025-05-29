@@ -3,6 +3,8 @@ import React from 'react';
 import { Package, Box, Truck, DollarSign, Route, ChartBar } from 'lucide-react';
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useDashboardStats } from '@/hooks/useDashboardStats';
+import { Skeleton } from "@/components/ui/skeleton";
 
 type StatusCardProps = {
   title: string;
@@ -38,7 +40,7 @@ const StatusCard = ({ title, count, icon, type, pendingCount }: StatusCardProps)
           <div>
             <p className="text-sm text-muted-foreground">{title}</p>
             <CardTitle className="text-2xl font-bold mt-1">{count}</CardTitle>
-            {pendingCount !== undefined && (
+            {pendingCount !== undefined && pendingCount > 0 && (
               <p className="text-xs text-erp-alert mt-1">
                 {pendingCount} pendentes
               </p>
@@ -54,49 +56,80 @@ const StatusCard = ({ title, count, icon, type, pendingCount }: StatusCardProps)
 };
 
 export const StatusCards = () => {
+  const { stats, loading, error } = useDashboardStats();
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <Card key={index} className="border-l-4">
+            <CardContent className="p-4">
+              <div className="flex justify-between items-start">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-8 w-12" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+                <Skeleton className="h-10 w-10 rounded-full" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center p-4 text-red-500">
+        Erro ao carregar estatísticas: {error}
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
       <StatusCard
         title="Pedidos"
-        count={24}
+        count={stats.orders}
         icon={<Package className="h-5 w-5" />}
         type="order"
-        pendingCount={5}
+        pendingCount={stats.pendingOrders}
       />
       <StatusCard
         title="Produção"
-        count={18}
+        count={stats.production}
         icon={<Box className="h-5 w-5" />}
         type="production"
-        pendingCount={3}
+        pendingCount={stats.pendingProduction}
       />
       <StatusCard
         title="Embalagem"
-        count={15}
+        count={stats.packaging}
         icon={<Box className="h-5 w-5" />}
         type="packaging"
-        pendingCount={2}
+        pendingCount={stats.pendingPackaging}
       />
       <StatusCard
         title="Vendas"
-        count={20}
+        count={stats.sales}
         icon={<DollarSign className="h-5 w-5" />}
         type="sales"
-        pendingCount={0}
+        pendingCount={stats.pendingSales}
       />
       <StatusCard
         title="Financeiro"
-        count={16}
+        count={stats.finance}
         icon={<DollarSign className="h-5 w-5" />}
         type="finance"
-        pendingCount={1}
+        pendingCount={stats.pendingFinance}
       />
       <StatusCard
         title="Rotas"
-        count={12}
+        count={stats.routes}
         icon={<Truck className="h-5 w-5" />}
         type="route"
-        pendingCount={4}
+        pendingCount={stats.pendingRoutes}
       />
     </div>
   );
