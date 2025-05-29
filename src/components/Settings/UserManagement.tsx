@@ -124,6 +124,30 @@ export const UserManagement = () => {
     }
   };
 
+  const deleteInvitation = async (invitationId: string) => {
+    try {
+      const { error } = await supabase
+        .from('user_invitations')
+        .delete()
+        .eq('id', invitationId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Convite removido com sucesso!",
+      });
+
+      loadInvitations();
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao remover convite",
+        variant: "destructive",
+      });
+    }
+  };
+
   const updateUserStatus = async (userId: string, isActive: boolean) => {
     try {
       const { error } = await supabase
@@ -143,6 +167,30 @@ export const UserManagement = () => {
       toast({
         title: "Erro",
         description: error.message || "Erro ao atualizar usuário",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const updateUserRole = async (userId: string, newRole: string) => {
+    try {
+      const { error } = await supabase
+        .from('user_roles')
+        .update({ role: newRole })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Função do usuário atualizada com sucesso!",
+      });
+
+      loadUsers();
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao atualizar função",
         variant: "destructive",
       });
     }
@@ -233,7 +281,11 @@ export const UserManagement = () => {
                   {new Date(invitation.expires_at).toLocaleDateString('pt-BR')}
                 </TableCell>
                 <TableCell>
-                  <Button variant="ghost" size="sm">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => deleteInvitation(invitation.id)}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </TableCell>

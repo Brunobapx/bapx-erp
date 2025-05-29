@@ -16,6 +16,7 @@ const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState('profile');
 
   const isMaster = userRole === 'master';
+  const isAdmin = userRole === 'admin' || userRole === 'master';
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -30,19 +31,19 @@ const SettingsPage = () => {
             <User className="h-4 w-4" />
             Perfil
           </TabsTrigger>
-          <TabsTrigger value="users" disabled={!isMaster} className="flex items-center gap-2">
+          <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             Usuários
           </TabsTrigger>
-          <TabsTrigger value="company" disabled={!isMaster} className="flex items-center gap-2">
+          <TabsTrigger value="company" className="flex items-center gap-2">
             <Building className="h-4 w-4" />
             Empresa
           </TabsTrigger>
-          <TabsTrigger value="system" disabled={!isMaster} className="flex items-center gap-2">
+          <TabsTrigger value="system" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
             Sistema
           </TabsTrigger>
-          <TabsTrigger value="security" disabled={!isMaster} className="flex items-center gap-2">
+          <TabsTrigger value="security" className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
             Segurança
           </TabsTrigger>
@@ -60,10 +61,10 @@ const SettingsPage = () => {
         </TabsContent>
 
         <TabsContent value="users">
-          {!isMaster ? (
+          {!isAdmin ? (
             <Alert>
               <AlertDescription>
-                Você não tem permissão para acessar esta seção.
+                Você não tem permissão para acessar esta seção. Acesso restrito a administradores.
               </AlertDescription>
             </Alert>
           ) : (
@@ -79,10 +80,10 @@ const SettingsPage = () => {
         </TabsContent>
 
         <TabsContent value="company">
-          {!isMaster ? (
+          {!isAdmin ? (
             <Alert>
               <AlertDescription>
-                Você não tem permissão para acessar esta seção.
+                Você não tem permissão para acessar esta seção. Acesso restrito a administradores.
               </AlertDescription>
             </Alert>
           ) : (
@@ -101,7 +102,7 @@ const SettingsPage = () => {
           {!isMaster ? (
             <Alert>
               <AlertDescription>
-                Você não tem permissão para acessar esta seção.
+                Você não tem permissão para acessar esta seção. Acesso restrito a usuários master.
               </AlertDescription>
             </Alert>
           ) : (
@@ -120,7 +121,7 @@ const SettingsPage = () => {
           {!isMaster ? (
             <Alert>
               <AlertDescription>
-                Você não tem permissão para acessar esta seção.
+                Você não tem permissão para acessar esta seção. Acesso restrito a usuários master.
               </AlertDescription>
             </Alert>
           ) : (
