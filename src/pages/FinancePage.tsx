@@ -1,9 +1,11 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ApprovalModal } from '@/components/Modals/ApprovalModal';
 import { DollarSign, ChevronDown, Search, ArrowDown, ArrowUp, TrendingUp } from 'lucide-react';
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -19,6 +21,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import StageAlert from '@/components/Alerts/StageAlert';
+import { CashFlowTab } from '@/components/Finance/CashFlowTab';
+import { AccountsPayableTab } from '@/components/Finance/AccountsPayableTab';
+import { AccountsReceivableTab } from '@/components/Finance/AccountsReceivableTab';
+import { DRETab } from '@/components/Finance/DRETab';
+import { ReportsTab } from '@/components/Finance/ReportsTab';
 
 const FinancePage = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -129,7 +136,7 @@ const FinancePage = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Financeiro</h1>
-          <p className="text-muted-foreground">Gerencie todos os lançamentos financeiros.</p>
+          <p className="text-muted-foreground">Gerencie todos os aspectos financeiros da empresa.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Card className="bg-sales/10">
@@ -169,112 +176,147 @@ const FinancePage = () => {
       
       <StageAlert alerts={alerts} onDismiss={handleDismissAlert} />
       
-      <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
-        <div className="relative w-full sm:max-w-xs">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar lançamentos..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8"
-          />
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                Tipo <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem>Todos</DropdownMenuItem>
-              <DropdownMenuItem>Receitas</DropdownMenuItem>
-              <DropdownMenuItem>Despesas</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                Status <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem>Todos</DropdownMenuItem>
-              <DropdownMenuItem>Pago</DropdownMenuItem>
-              <DropdownMenuItem>Pendente</DropdownMenuItem>
-              <DropdownMenuItem>Aguardando Confirmação</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                Ordenar <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem>Vencimento próximo</DropdownMenuItem>
-              <DropdownMenuItem>Vencimento distante</DropdownMenuItem>
-              <DropdownMenuItem>Maior valor</DropdownMenuItem>
-              <DropdownMenuItem>Menor valor</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-      
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>ID Venda</TableHead>
-                <TableHead>Cliente/Fornecedor</TableHead>
-                <TableHead>Descrição</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead className="text-right">Valor (R$)</TableHead>
-                <TableHead>Vencimento</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Pagamento</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredItems.map((item) => (
-                <TableRow 
-                  key={item.id}
-                  className="cursor-pointer hover:bg-accent/5"
-                  onClick={() => handleItemClick(item)}
-                >
-                  <TableCell className="font-medium">{item.id}</TableCell>
-                  <TableCell>{item.saleId}</TableCell>
-                  <TableCell>{item.customer}</TableCell>
-                  <TableCell>{item.description}</TableCell>
-                  <TableCell>
-                    <span className={`stage-badge ${item.type === 'receita' ? 'badge-sales' : 'badge-route'}`}>
-                      {item.type === 'receita' ? 'Receita' : 'Despesa'}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right">{item.value.toLocaleString('pt-BR')}</TableCell>
-                  <TableCell>{item.dueDate}</TableCell>
-                  <TableCell>
-                    <span className="stage-badge badge-finance">
-                      {item.status}
-                    </span>
-                  </TableCell>
-                  <TableCell>{item.paymentDate}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          {filteredItems.length === 0 && (
-            <div className="p-4 text-center text-muted-foreground">
-              Nenhum item encontrado.
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+          <TabsTrigger value="cash-flow">Fluxo de Caixa</TabsTrigger>
+          <TabsTrigger value="accounts-payable">Contas a Pagar</TabsTrigger>
+          <TabsTrigger value="accounts-receivable">Contas a Receber</TabsTrigger>
+          <TabsTrigger value="dre">DRE</TabsTrigger>
+          <TabsTrigger value="reports">Relatórios</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="mt-6">
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
+              <div className="relative w-full sm:max-w-xs">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar lançamentos..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      Tipo <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem>Todos</DropdownMenuItem>
+                    <DropdownMenuItem>Receitas</DropdownMenuItem>
+                    <DropdownMenuItem>Despesas</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      Status <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem>Todos</DropdownMenuItem>
+                    <DropdownMenuItem>Pago</DropdownMenuItem>
+                    <DropdownMenuItem>Pendente</DropdownMenuItem>
+                    <DropdownMenuItem>Aguardando Confirmação</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      Ordenar <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem>Vencimento próximo</DropdownMenuItem>
+                    <DropdownMenuItem>Vencimento distante</DropdownMenuItem>
+                    <DropdownMenuItem>Maior valor</DropdownMenuItem>
+                    <DropdownMenuItem>Menor valor</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>ID Venda</TableHead>
+                      <TableHead>Cliente/Fornecedor</TableHead>
+                      <TableHead>Descrição</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead className="text-right">Valor (R$)</TableHead>
+                      <TableHead>Vencimento</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Pagamento</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredItems.map((item) => (
+                      <TableRow 
+                        key={item.id}
+                        className="cursor-pointer hover:bg-accent/5"
+                        onClick={() => handleItemClick(item)}
+                      >
+                        <TableCell className="font-medium">{item.id}</TableCell>
+                        <TableCell>{item.saleId}</TableCell>
+                        <TableCell>{item.customer}</TableCell>
+                        <TableCell>{item.description}</TableCell>
+                        <TableCell>
+                          <span className={`stage-badge ${item.type === 'receita' ? 'badge-sales' : 'badge-route'}`}>
+                            {item.type === 'receita' ? 'Receita' : 'Despesa'}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">{item.value.toLocaleString('pt-BR')}</TableCell>
+                        <TableCell>{item.dueDate}</TableCell>
+                        <TableCell>
+                          <span className="stage-badge badge-finance">
+                            {item.status}
+                          </span>
+                        </TableCell>
+                        <TableCell>{item.paymentDate}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                {filteredItems.length === 0 && (
+                  <div className="p-4 text-center text-muted-foreground">
+                    Nenhum item encontrado.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="cash-flow">
+          <CashFlowTab />
+        </TabsContent>
+
+        <TabsContent value="accounts-payable">
+          <AccountsPayableTab />
+        </TabsContent>
+
+        <TabsContent value="accounts-receivable">
+          <AccountsReceivableTab />
+        </TabsContent>
+
+        <TabsContent value="dre">
+          <DRETab />
+        </TabsContent>
+
+        <TabsContent value="reports">
+          <ReportsTab />
+        </TabsContent>
+      </Tabs>
       
       <ApprovalModal
         isOpen={showModal}
