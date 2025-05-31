@@ -67,8 +67,9 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
         is_manufactured: productData.is_manufactured || false
       });
       
-      if (productData.recipe) {
-        setRecipeItems(productData.recipe);
+      // Carregar receita existente se for produto fabricado
+      if (productData.is_manufactured && productData.id) {
+        fetchProductRecipe(productData.id);
       }
     } else {
       resetForm();
@@ -77,6 +78,28 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
     fetchIngredients();
     fetchCategories();
   }, [productData]);
+
+  const fetchProductRecipe = async (productId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('product_recipes')
+        .select('*')
+        .eq('product_id', productId);
+
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        const recipeData = data.map(item => ({
+          id: item.id,
+          productId: item.ingredient_id,
+          quantity: item.quantity.toString()
+        }));
+        setRecipeItems(recipeData);
+      }
+    } catch (err: any) {
+      console.error('Error fetching recipe:', err);
+    }
+  };
 
   const fetchCategories = async () => {
     try {
@@ -197,7 +220,6 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
     try {
       setIsSubmitting(true);
       
-      // Get current authenticated user
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (userError || !user) {
@@ -206,7 +228,7 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
       }
 
       const productPayload = {
-        user_id: user.id, // Incluir user_id explicitamente
+        user_id: user.id,
         code: formData.code,
         name: formData.name,
         sku: formData.sku,
@@ -228,7 +250,6 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
       let productId;
       
       if (isNewProduct) {
-        // Insert new product
         const { data, error } = await supabase
           .from('products')
           .insert([productPayload])
@@ -240,7 +261,6 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
           toast.success('Produto adicionado com sucesso');
         }
       } else {
-        // Update existing product
         const { error } = await supabase
           .from('products')
           .update(productPayload)
@@ -251,32 +271,42 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
         toast.success('Produto atualizado com sucesso');
       }
       
-      // Handle recipe items
-      if (formData.is_manufactured && productId && recipeItems.length > 0) {
-        // First delete existing recipe items
-        if (!isNewProduct) {
-          await supabase
-            .from('product_recipes')
-            .delete()
-            .eq('product_id', productId);
+      // Gerenciar receitas para produtos fabricados
+      if (formData.is_manufactured && productId) {
+        // Primeiro deletar receitas existentes
+        const { error: deleteError } = await supabase
+          .from('product_recipes')
+          .delete()
+          .eq('product_id', productId);
+          
+        if (deleteError) {
+          console.error('Error deleting existing recipes:', deleteError);
         }
         
-        // Then insert new recipe items
-        const recipePayload = recipeItems.map(item => ({
-          user_id: user.id, // Incluir user_id nas receitas também
-          product_id: productId,
-          ingredient_id: item.productId,
-          quantity: parseFloat(item.quantity)
-        }));
-        
-        if (recipePayload.length > 0) {
-          const { error } = await supabase
-            .from('product_recipes')
-            .insert(recipePayload);
+        // Inserir novas receitas se houver ingredientes
+        if (recipeItems.length > 0) {
+          const validRecipeItems = recipeItems.filter(item => 
+            item.productId && item.quantity && parseFloat(item.quantity) > 0
+          );
+          
+          if (validRecipeItems.length > 0) {
+            const recipePayload = validRecipeItems.map(item => ({
+              user_id: user.id,
+              product_id: productId,
+              ingredient_id: item.productId,
+              quantity: parseFloat(item.quantity)
+            }));
             
-          if (error) {
-            console.error('Error saving recipe:', error);
-            toast.error('Erro ao salvar receita do produto');
+            const { error: insertError } = await supabase
+              .from('product_recipes')
+              .insert(recipePayload);
+              
+            if (insertError) {
+              console.error('Error saving recipe:', insertError);
+              toast.error('Erro ao salvar receita do produto');
+            } else {
+              console.log('Receita salva com sucesso');
+            }
           }
         }
       }
