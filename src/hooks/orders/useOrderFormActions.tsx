@@ -6,12 +6,35 @@ import { OrderFormState, OrderFormItem } from './useOrderFormState';
 
 interface UseOrderFormActionsProps {
   formData: OrderFormState;
+  setFormData: React.Dispatch<React.SetStateAction<OrderFormState>>;
+  updateFormattedTotal: (total?: number) => void;
+  isNewOrder: boolean;
+  onClose: (refresh?: boolean) => void;
   items: OrderFormItem[];
-  orderData?: any;
 }
 
-export const useOrderFormActions = (formData: OrderFormState, items: OrderFormItem[], orderData?: any) => {
+export const useOrderFormActions = ({
+  formData,
+  setFormData,
+  updateFormattedTotal,
+  isNewOrder,
+  onClose,
+  items
+}: UseOrderFormActionsProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleClientSelect = (clientId: string, clientName: string) => {
+    setFormData(prev => ({ ...prev, client_id: clientId, client_name: clientName }));
+  };
+
+  const handleDateSelect = (date: Date | null) => {
+    setFormData(prev => ({ ...prev, delivery_deadline: date }));
+  };
 
   const validateForm = () => {
     if (!formData.client_id.trim()) {
@@ -50,8 +73,6 @@ export const useOrderFormActions = (formData: OrderFormState, items: OrderFormIt
         toast.error("Usuário não autenticado. Faça login para continuar.");
         return null;
       }
-
-      const isNewOrder = !orderData?.id || orderData.id === 'NOVO';
 
       if (isNewOrder) {
         // Criar novo pedido
@@ -146,7 +167,7 @@ export const useOrderFormActions = (formData: OrderFormState, items: OrderFormIt
       }
     } catch (error: any) {
       console.error("Erro ao salvar pedido:", error);
-      toast.error(`Erro ao ${!orderData?.id ? 'criar' : 'atualizar'} pedido: ${error.message}`);
+      toast.error(`Erro ao ${isNewOrder ? 'criar' : 'atualizar'} pedido: ${error.message}`);
       return null;
     } finally {
       setIsSubmitting(false);
@@ -155,6 +176,9 @@ export const useOrderFormActions = (formData: OrderFormState, items: OrderFormIt
 
   return {
     isSubmitting,
+    handleChange,
+    handleClientSelect,
+    handleDateSelect,
     handleSubmit,
     validateForm
   };

@@ -19,8 +19,13 @@ export const useOrderForm = ({ orderData, onClose }: UseOrderFormProps) => {
     isNewOrder,
     addItem,
     removeItem,
-    updateItem
-  } = useOrderFormState({ orderData });
+    updateItem,
+    items,
+    totalAmount,
+    updateFormData,
+    initializeFormData,
+    calculateTotalAmount
+  } = useOrderFormState(orderData);
   
   const {
     openClientCombobox,
@@ -36,13 +41,15 @@ export const useOrderForm = ({ orderData, onClose }: UseOrderFormProps) => {
     handleChange,
     handleClientSelect,
     handleDateSelect,
-    handleSubmit
+    handleSubmit,
+    validateForm
   } = useOrderFormActions({
     formData,
     setFormData,
     updateFormattedTotal,
     isNewOrder,
-    onClose
+    onClose,
+    items
   });
 
   // Return all the necessary values and functions
@@ -52,6 +59,8 @@ export const useOrderForm = ({ orderData, onClose }: UseOrderFormProps) => {
     isNewOrder,
     isSubmitting,
     formattedTotal,
+    items,
+    totalAmount,
     
     // UI state
     openClientCombobox,
@@ -66,10 +75,14 @@ export const useOrderForm = ({ orderData, onClose }: UseOrderFormProps) => {
     handleClientSelect,
     handleDateSelect,
     handleSubmit,
+    validateForm,
     
     // Item management
     addItem,
     removeItem,
-    updateItem
+    updateItem,
+    updateFormData,
+    initializeFormData,
+    calculateTotalAmount
   };
 };
