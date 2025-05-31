@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,13 +35,25 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
     addItem,
     removeItem,
     updateItem,
-    initializeFormData
+    initializeFormData,
+    updateFormattedTotal,
+    isNewOrder
   } = useOrderFormState(orderData);
 
   const {
     handleSubmit: handleFormSubmit,
-    validateForm
-  } = useOrderFormActions(formData, items, orderData);
+    validateForm,
+    handleChange,
+    handleClientSelect,
+    handleDateSelect
+  } = useOrderFormActions({
+    formData,
+    setFormData,
+    updateFormattedTotal,
+    isNewOrder,
+    onClose,
+    items
+  });
 
   const {
     openClientCombobox,
@@ -93,10 +106,14 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           <OrderClientSection
-            formData={formData}
+            client_id={formData.client_id}
+            client_name={formData.client_name}
+            seller={formData.seller}
             onUpdateFormData={updateFormData}
             openClientCombobox={openClientCombobox}
             setOpenClientCombobox={setOpenClientCombobox}
+            handleChange={handleChange}
+            handleClientSelect={handleClientSelect}
           />
 
           <Separator />
@@ -113,16 +130,21 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
           <Separator />
 
           <OrderPaymentSection
-            formData={formData}
+            payment_method={formData.payment_method}
+            payment_term={formData.payment_term}
             onUpdateFormData={updateFormData}
             totalAmount={totalAmount}
+            handleChange={handleChange}
           />
 
           <Separator />
 
           <OrderDeliverySection
-            formData={formData}
+            delivery_deadline={formData.delivery_deadline}
+            notes={formData.notes}
             onUpdateFormData={updateFormData}
+            handleChange={handleChange}
+            handleDateSelect={handleDateSelect}
           />
 
           <OrderFormActions
