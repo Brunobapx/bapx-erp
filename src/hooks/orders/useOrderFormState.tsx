@@ -28,10 +28,10 @@ export interface OrderFormState {
 }
 
 interface UseOrderFormStateProps {
-  orderData: Order | null;
+  orderData?: any;
 }
 
-export const useOrderFormState = ({ orderData }: UseOrderFormStateProps) => {
+export const useOrderFormState = (orderData?: any) => {
   const { products } = useProducts();
   const [formData, setFormData] = useState<OrderFormState>({
     id: '',
@@ -52,12 +52,9 @@ export const useOrderFormState = ({ orderData }: UseOrderFormStateProps) => {
   
   const isNewOrder = !orderData?.id || orderData.id === 'NOVO';
 
-  useEffect(() => {
-    console.log("OrderFormState - OrderData received:", orderData);
-    
-    if (orderData && orderData.id && orderData.id !== 'NOVO') {
-      // Para pedidos existentes, carregar todos os itens
-      const items: OrderFormItem[] = orderData.order_items?.map(item => ({
+  const initializeFormData = (data: any) => {
+    if (data && data.id && data.id !== 'NOVO') {
+      const items: OrderFormItem[] = data.order_items?.map((item: any) => ({
         id: item.id,
         product_id: item.product_id,
         product_name: item.product_name,
@@ -66,27 +63,30 @@ export const useOrderFormState = ({ orderData }: UseOrderFormStateProps) => {
         total_price: item.total_price,
       })) || [];
       
-      console.log("OrderFormState - Loading existing order with items:", items);
-      
       setFormData({
-        id: orderData.id?.toString() || '',
-        order_number: orderData.order_number || '',
-        client_id: orderData.client_id || '',
-        client_name: orderData.client_name || '',
+        id: data.id?.toString() || '',
+        order_number: data.order_number || '',
+        client_id: data.client_id || '',
+        client_name: data.client_name || '',
         items,
-        delivery_deadline: orderData.delivery_deadline ? new Date(orderData.delivery_deadline) : null,
-        payment_method: orderData.payment_method || '',
-        payment_term: orderData.payment_term || '',
-        seller: orderData.seller || '',
-        status: orderData.status || 'pending',
-        notes: orderData.notes || '',
-        total_amount: orderData.total_amount || 0,
+        delivery_deadline: data.delivery_deadline ? new Date(data.delivery_deadline) : null,
+        payment_method: data.payment_method || '',
+        payment_term: data.payment_term || '',
+        seller: data.seller || '',
+        status: data.status || 'pending',
+        notes: data.notes || '',
+        total_amount: data.total_amount || 0,
       });
       
-      updateFormattedTotal(orderData.total_amount);
+      updateFormattedTotal(data.total_amount);
     } else {
-      console.log("OrderFormState - Resetting form for new order");
       resetForm();
+    }
+  };
+
+  useEffect(() => {
+    if (orderData) {
+      initializeFormData(orderData);
     }
   }, [orderData, products]);
 
@@ -124,8 +124,11 @@ export const useOrderFormState = ({ orderData }: UseOrderFormStateProps) => {
     return items.reduce((sum, item) => sum + item.total_price, 0);
   };
 
+  const updateFormData = (updates: Partial<OrderFormState>) => {
+    setFormData(prev => ({ ...prev, ...updates }));
+  };
+
   const addItem = () => {
-    console.log("OrderFormState - Adding new item");
     const newItem: OrderFormItem = {
       id: `temp-${Date.now()}-${Math.random()}`,
       product_id: '',
@@ -148,7 +151,6 @@ export const useOrderFormState = ({ orderData }: UseOrderFormStateProps) => {
   };
 
   const removeItem = (itemId: string) => {
-    console.log("OrderFormState - Removing item:", itemId);
     setFormData(prev => {
       const newItems = prev.items.filter(item => item.id !== itemId);
       const newTotal = calculateTotalAmount(newItems);
@@ -162,12 +164,10 @@ export const useOrderFormState = ({ orderData }: UseOrderFormStateProps) => {
   };
 
   const updateItem = (itemId: string, updates: Partial<OrderFormItem>) => {
-    console.log("OrderFormState - Updating item:", itemId, updates);
     setFormData(prev => {
       const newItems = prev.items.map(item => {
         if (item.id === itemId) {
           const updatedItem = { ...item, ...updates };
-          // Recalcular total do item
           updatedItem.total_price = updatedItem.quantity * updatedItem.unit_price;
           return updatedItem;
         }
@@ -188,8 +188,12 @@ export const useOrderFormState = ({ orderData }: UseOrderFormStateProps) => {
   return {
     formData,
     setFormData,
+    items: formData.items,
+    totalAmount: formData.total_amount,
     formattedTotal,
     updateFormattedTotal,
+    updateFormData,
+    initializeFormData,
     isNewOrder,
     formatCurrency,
     resetForm,

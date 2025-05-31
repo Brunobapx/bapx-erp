@@ -2,37 +2,16 @@
 import { useState } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { OrderFormState } from './useOrderFormState';
+import { OrderFormState, OrderFormItem } from './useOrderFormState';
 
 interface UseOrderFormActionsProps {
   formData: OrderFormState;
-  setFormData: (data: OrderFormState | ((prev: OrderFormState) => OrderFormState)) => void;
-  updateFormattedTotal: (total?: number) => void;
-  isNewOrder: boolean;
-  onClose: (refresh?: boolean) => void;
+  items: OrderFormItem[];
+  orderData?: any;
 }
 
-export const useOrderFormActions = ({
-  formData,
-  setFormData,
-  updateFormattedTotal,
-  isNewOrder,
-  onClose
-}: UseOrderFormActionsProps) => {
+export const useOrderFormActions = (formData: OrderFormState, items: OrderFormItem[], orderData?: any) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleClientSelect = (clientId: string, clientName: string) => {
-    setFormData(prev => ({ ...prev, client_id: clientId, client_name: clientName }));
-  };
-
-  const handleDateSelect = (date: Date | null) => {
-    setFormData(prev => ({ ...prev, delivery_deadline: date }));
-  };
 
   const validateForm = () => {
     if (!formData.client_id.trim()) {
@@ -40,12 +19,12 @@ export const useOrderFormActions = ({
       return false;
     }
 
-    if (formData.items.length === 0) {
+    if (items.length === 0) {
       toast.error("Adicione pelo menos um item ao pedido");
       return false;
     }
 
-    for (const item of formData.items) {
+    for (const item of items) {
       if (!item.product_id.trim()) {
         toast.error("Todos os itens devem ter um produto selecionado");
         return false;
@@ -60,7 +39,7 @@ export const useOrderFormActions = ({
   };
 
   const handleSubmit = async () => {
-    if (!validateForm()) return;
+    if (!validateForm()) return null;
 
     try {
       setIsSubmitting(true);
@@ -69,8 +48,10 @@ export const useOrderFormActions = ({
       
       if (userError || !user) {
         toast.error("Usuário não autenticado. Faça login para continuar.");
-        return;
+        return null;
       }
+
+      const isNewOrder = !orderData?.id || orderData.id === 'NOVO';
 
       if (isNewOrder) {
         // Criar novo pedido
@@ -96,7 +77,7 @@ export const useOrderFormActions = ({
         if (orderError) throw orderError;
         
         // Criar todos os itens do pedido
-        const itemsData = formData.items.map(item => ({
+        const itemsData = items.map(item => ({
           user_id: user.id,
           order_id: insertedOrder.id,
           product_id: item.product_id,
@@ -113,9 +94,10 @@ export const useOrderFormActions = ({
         if (itemsError) throw itemsError;
         
         toast.success("Pedido criado com sucesso");
+        return insertedOrder.id;
       } else {
         // Atualizar pedido existente
-        const orderData = {
+        const orderUpdateData = {
           client_id: formData.client_id,
           client_name: formData.client_name,
           seller: formData.seller || null,
@@ -129,7 +111,7 @@ export const useOrderFormActions = ({
         
         const { error: orderError } = await supabase
           .from('orders')
-          .update(orderData)
+          .update(orderUpdateData)
           .eq('id', formData.id);
           
         if (orderError) throw orderError;
@@ -143,7 +125,7 @@ export const useOrderFormActions = ({
         if (deleteError) throw deleteError;
         
         // Recriar todos os itens
-        const itemsData = formData.items.map(item => ({
+        const itemsData = items.map(item => ({
           user_id: user.id,
           order_id: formData.id,
           product_id: item.product_id,
@@ -160,12 +142,12 @@ export const useOrderFormActions = ({
         if (itemsError) throw itemsError;
         
         toast.success("Pedido atualizado com sucesso");
+        return formData.id;
       }
-      
-      onClose(true);
     } catch (error: any) {
       console.error("Erro ao salvar pedido:", error);
-      toast.error(`Erro ao ${isNewOrder ? 'criar' : 'atualizar'} pedido: ${error.message}`);
+      toast.error(`Erro ao ${!orderData?.id ? 'criar' : 'atualizar'} pedido: ${error.message}`);
+      return null;
     } finally {
       setIsSubmitting(false);
     }
@@ -173,9 +155,7 @@ export const useOrderFormActions = ({
 
   return {
     isSubmitting,
-    handleChange,
-    handleClientSelect,
-    handleDateSelect,
-    handleSubmit
+    handleSubmit,
+    validateForm
   };
 };

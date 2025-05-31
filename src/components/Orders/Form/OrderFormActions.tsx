@@ -5,13 +5,13 @@ import { Button } from "@/components/ui/button";
 interface OrderFormActionsProps {
   onCancel: () => void;
   isSubmitting: boolean;
-  isNewOrder: boolean;
+  isEditing: boolean;
 }
 
 export const OrderFormActions: React.FC<OrderFormActionsProps> = ({
   onCancel,
   isSubmitting,
-  isNewOrder
+  isEditing
 }) => {
   return (
     <div className="flex justify-end gap-4">
@@ -26,7 +26,7 @@ export const OrderFormActions: React.FC<OrderFormActionsProps> = ({
         type="submit" 
         disabled={isSubmitting}
       >
-        {isSubmitting ? 'Salvando...' : (isNewOrder ? 'Criar Pedido' : 'Salvar Alterações')}
+        {isSubmitting ? 'Salvando...' : (isEditing ? 'Salvar Alterações' : 'Criar Pedido')}
       </Button>
     </div>
   );

@@ -4,29 +4,27 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Plus, RefreshCw } from "lucide-react";
 import { ClientSelector } from '../ClientSelector';
-import { Client } from '@/hooks/useClients';
+import { useClients } from '@/hooks/useClients';
 
 interface OrderClientSectionProps {
-  selectedClientId: string;
-  selectedClientName: string;
-  onClientSelect: (clientId: string, clientName: string) => void;
-  clients: Client[];
+  formData: any;
+  onUpdateFormData: (updates: any) => void;
   openClientCombobox: boolean;
   setOpenClientCombobox: (open: boolean) => void;
-  loading?: boolean;
-  error?: string | null;
 }
 
 export const OrderClientSection: React.FC<OrderClientSectionProps> = ({
-  selectedClientId,
-  selectedClientName,
-  onClientSelect,
-  clients,
+  formData,
+  onUpdateFormData,
   openClientCombobox,
-  setOpenClientCombobox,
-  loading = false,
-  error = null
+  setOpenClientCombobox
 }) => {
+  const { clients, loading, error } = useClients();
+
+  const handleClientSelect = (clientId: string, clientName: string) => {
+    onUpdateFormData({ client_id: clientId, client_name: clientName });
+  };
+
   const handleRefresh = () => {
     window.location.reload();
   };
@@ -76,9 +74,9 @@ export const OrderClientSection: React.FC<OrderClientSectionProps> = ({
       
       <ClientSelector 
         clients={clients}
-        selectedClientId={selectedClientId}
-        selectedClientName={selectedClientName}
-        onClientSelect={onClientSelect}
+        selectedClientId={formData.client_id}
+        selectedClientName={formData.client_name}
+        onClientSelect={handleClientSelect}
         open={openClientCombobox}
         setOpen={setOpenClientCombobox}
       />

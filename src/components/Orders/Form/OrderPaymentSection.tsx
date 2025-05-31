@@ -11,28 +11,47 @@ import {
 } from "@/components/ui/select";
 
 interface OrderPaymentSectionProps {
-  paymentMethod: string;
-  paymentTerm: string;
-  seller: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onSelectChange: (name: string, value: string) => void;
+  formData: any;
+  onUpdateFormData: (updates: any) => void;
+  totalAmount: number;
 }
 
 export const OrderPaymentSection: React.FC<OrderPaymentSectionProps> = ({
-  paymentMethod,
-  paymentTerm,
-  seller,
-  onChange,
-  onSelectChange
+  formData,
+  onUpdateFormData,
+  totalAmount
 }) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    onUpdateFormData({ [name]: value });
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
+    onUpdateFormData({ [name]: value });
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
   return (
     <>
+      <div className="grid gap-2">
+        <Label>Total do Pedido</Label>
+        <div className="text-2xl font-bold text-green-600 p-3 border rounded bg-green-50">
+          {formatCurrency(totalAmount)}
+        </div>
+      </div>
+
       <div className="grid gap-2">
         <Label htmlFor="payment_method">Forma de Pagamento</Label>
         <Select 
           name="payment_method"
-          value={paymentMethod}
-          onValueChange={(value) => onSelectChange('payment_method', value)}
+          value={formData.payment_method}
+          onValueChange={(value) => handleSelectChange('payment_method', value)}
         >
           <SelectTrigger>
             <SelectValue placeholder="Selecione a forma de pagamento" />
@@ -52,8 +71,8 @@ export const OrderPaymentSection: React.FC<OrderPaymentSectionProps> = ({
         <Label htmlFor="payment_term">Prazo de Pagamento</Label>
         <Select 
           name="payment_term"
-          value={paymentTerm}
-          onValueChange={(value) => onSelectChange('payment_term', value)}
+          value={formData.payment_term}
+          onValueChange={(value) => handleSelectChange('payment_term', value)}
         >
           <SelectTrigger>
             <SelectValue placeholder="Selecione o prazo de pagamento" />
@@ -74,8 +93,8 @@ export const OrderPaymentSection: React.FC<OrderPaymentSectionProps> = ({
         <Input 
           id="seller"
           name="seller"
-          value={seller || ''}
-          onChange={onChange}
+          value={formData.seller || ''}
+          onChange={handleChange}
           placeholder="Nome do vendedor"
         />
       </div>
