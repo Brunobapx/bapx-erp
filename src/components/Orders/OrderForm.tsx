@@ -106,14 +106,10 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           <OrderClientSection
-            client_id={formData.client_id}
-            client_name={formData.client_name}
-            seller={formData.seller}
+            formData={formData}
             onUpdateFormData={updateFormData}
             openClientCombobox={openClientCombobox}
             setOpenClientCombobox={setOpenClientCombobox}
-            handleChange={handleChange}
-            handleClientSelect={handleClientSelect}
           />
 
           <Separator />
@@ -130,21 +126,16 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
           <Separator />
 
           <OrderPaymentSection
-            payment_method={formData.payment_method}
-            payment_term={formData.payment_term}
+            formData={formData}
             onUpdateFormData={updateFormData}
             totalAmount={totalAmount}
-            handleChange={handleChange}
           />
 
           <Separator />
 
           <OrderDeliverySection
-            delivery_deadline={formData.delivery_deadline}
-            notes={formData.notes}
+            formData={formData}
             onUpdateFormData={updateFormData}
-            handleChange={handleChange}
-            handleDateSelect={handleDateSelect}
           />
 
           <OrderFormActions
