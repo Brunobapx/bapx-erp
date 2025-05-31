@@ -40,6 +40,7 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
   const [recipeItems, setRecipeItems] = useState<Array<{id: string, productId: string, quantity: string}>>([]);
   const [isRecipeOpen, setIsRecipeOpen] = useState(false);
   const [availableIngredients, setAvailableIngredients] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const isNewProduct = !productData?.id;
@@ -74,7 +75,33 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
     }
     
     fetchIngredients();
+    fetchCategories();
   }, [productData]);
+
+  const fetchCategories = async () => {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        console.error('User not authenticated');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('product_categories')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('name', { ascending: true });
+        
+      if (error) throw error;
+      
+      if (data) {
+        setCategories(data);
+      }
+    } catch (err: any) {
+      console.error('Error fetching categories:', err);
+    }
+  };
 
   const fetchIngredients = async () => {
     try {
@@ -272,14 +299,6 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
     { value: 'CX', label: 'Caixa' }
   ];
 
-  const categoryOptions = [
-    { value: 'Eletrônicos', label: 'Eletrônicos' },
-    { value: 'Energia', label: 'Energia' },
-    { value: 'Médico', label: 'Médico' },
-    { value: 'Embalagens', label: 'Embalagens' },
-    { value: 'Insumos', label: 'Insumos' }
-  ];
-
   const taxTypeOptions = [
     { value: 'Tributado', label: 'Tributado' },
     { value: 'Isento', label: 'Isento' },
@@ -337,9 +356,9 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
                   <SelectValue placeholder="Selecionar..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {categoryOptions.map(option => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
+                  {categories.map(category => (
+                    <SelectItem key={category.id} value={category.name}>
+                      {category.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

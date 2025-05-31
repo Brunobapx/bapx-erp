@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,10 +21,12 @@ import {
 import { ProductModal } from '@/components/Modals/ProductModal';
 import { CategoriesTab } from '@/components/Products/CategoriesTab';
 import { useProducts } from '@/hooks/useProducts';
+import { supabase } from "@/integrations/supabase/client";
 
 const ProductsPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [categories, setCategories] = useState<any[]>([]);
   const { 
     products: filteredProducts, 
     loading, 
@@ -34,6 +35,32 @@ const ProductsPage = () => {
     setSearchQuery, 
     refreshProducts 
   } = useProducts();
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('product_categories')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+
+      setCategories(data || []);
+    } catch (err: any) {
+      console.error('Error fetching categories:', err);
+    }
+  };
 
   const handleProductClick = (product: any) => {
     setSelectedProduct(product);
@@ -109,11 +136,11 @@ const ProductsPage = () => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                   <DropdownMenuItem>Todas</DropdownMenuItem>
-                  <DropdownMenuItem>Eletrônicos</DropdownMenuItem>
-                  <DropdownMenuItem>Energia</DropdownMenuItem>
-                  <DropdownMenuItem>Médico</DropdownMenuItem>
-                  <DropdownMenuItem>Embalagens</DropdownMenuItem>
-                  <DropdownMenuItem>Insumos</DropdownMenuItem>
+                  {categories.map(category => (
+                    <DropdownMenuItem key={category.id}>
+                      {category.name}
+                    </DropdownMenuItem>
+                  ))}
                 </DropdownMenuContent>
               </DropdownMenu>
               
