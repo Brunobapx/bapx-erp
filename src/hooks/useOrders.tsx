@@ -176,6 +176,125 @@ export const useOrders = () => {
     }
   };
 
+  // Função para verificar estoque e enviar automaticamente para produção
+  const checkStockAndSendToProduction = async (orderId: string) => {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      console.log(`Verificando estoque para pedido ${orderId}`);
+
+      // Get order with items
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (*)
+        `)
+        .eq('id', orderId)
+        .single();
+      
+      if (orderError) throw orderError;
+      if (!order) throw new Error('Pedido não encontrado');
+
+      let needsProduction = false;
+      const productionEntries = [];
+
+      // Para cada item do pedido, verificar estoque
+      for (const item of order.order_items) {
+        console.log(`Verificando item: ${item.product_name}, quantidade solicitada: ${item.quantity}`);
+        
+        // Buscar dados do produto (estoque e se é fabricado)
+        const { data: productData, error: productError } = await supabase
+          .from('products')
+          .select('stock, is_manufactured')
+          .eq('id', item.product_id)
+          .single();
+
+        if (productError) {
+          console.error('Erro ao buscar produto:', productError);
+          continue;
+        }
+
+        const currentStock = productData.stock || 0;
+        const quantityNeeded = item.quantity;
+        const shortage = quantityNeeded - currentStock;
+
+        console.log(`Produto: ${item.product_name}, Estoque atual: ${currentStock}, Necessário: ${quantityNeeded}, Falta: ${shortage}`);
+
+        // Se há falta de estoque e o produto é fabricado
+        if (shortage > 0 && productData.is_manufactured) {
+          console.log(`Enviando ${shortage} unidades de ${item.product_name} para produção`);
+          
+          productionEntries.push({
+            user_id: user.id,
+            order_item_id: item.id,
+            product_id: item.product_id,
+            product_name: item.product_name,
+            quantity_requested: shortage, // Apenas a quantidade que falta
+            status: 'pending'
+          });
+
+          needsProduction = true;
+        } else if (shortage > 0 && !productData.is_manufactured) {
+          console.log(`Produto ${item.product_name} não é fabricado e há falta de estoque. Será necessário reposição manual.`);
+          toast.error(`Produto ${item.product_name} tem estoque insuficiente e não é fabricado. Reposição manual necessária.`);
+        }
+      }
+
+      // Se há itens para produção, criar as entradas
+      if (productionEntries.length > 0) {
+        const { data: createdProductions, error: productionError } = await supabase
+          .from('production')
+          .insert(productionEntries)
+          .select();
+        
+        if (productionError) throw productionError;
+
+        console.log(`Criadas ${productionEntries.length} entradas de produção`);
+
+        // Abater ingredientes do estoque para cada item enviado para produção
+        for (const entry of productionEntries) {
+          console.log(`Abatendo ingredientes para produção de ${entry.quantity_requested} unidades de ${entry.product_name}`);
+          
+          const stockUpdateSuccess = await deductIngredientsFromStock(
+            entry.product_id, 
+            entry.quantity_requested
+          );
+          
+          if (!stockUpdateSuccess) {
+            toast.error(`Aviso: Não foi possível atualizar completamente o estoque dos ingredientes para ${entry.product_name}`);
+          } else {
+            console.log(`Ingredientes abatidos com sucesso para ${entry.product_name}`);
+          }
+        }
+
+        // Atualizar status do pedido para em produção
+        await supabase
+          .from('orders')
+          .update({ 
+            status: 'in_production',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', orderId);
+
+        toast.success(`Pedido criado! ${productionEntries.length} item(ns) enviado(s) automaticamente para produção devido à falta de estoque.`);
+      } else {
+        console.log('Todos os itens têm estoque suficiente, pedido mantido como pendente');
+        toast.success('Pedido criado com sucesso! Todos os itens têm estoque suficiente.');
+      }
+
+      return true;
+    } catch (error: any) {
+      console.error('Erro ao verificar estoque e enviar para produção:', error);
+      toast.error('Erro ao processar verificação de estoque');
+      return false;
+    }
+  };
+
   const sendToProduction = async (orderId: string) => {
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -313,6 +432,7 @@ export const useOrders = () => {
     refreshOrders,
     deleteOrder,
     sendToProduction,
+    checkStockAndSendToProduction,
     formatCurrency,
     getOrderById,
     isOrderCompleted,

@@ -1,132 +1,137 @@
-
-import React, { useEffect } from 'react';
-import { useClients } from '@/hooks/useClients';
-import { useOrderForm } from '@/hooks/useOrderForm';
-import { Order } from '@/hooks/useOrders';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useOrderFormState } from '@/hooks/orders/useOrderFormState';
+import { useOrderFormActions } from '@/hooks/orders/useOrderFormActions';
+import { useOrderFormUI } from '@/hooks/orders/useOrderFormUI';
 import { OrderClientSection } from './Form/OrderClientSection';
 import { OrderItemsSection } from './Form/OrderItemsSection';
-import { OrderDeliverySection } from './Form/OrderDeliverySection';
 import { OrderPaymentSection } from './Form/OrderPaymentSection';
+import { OrderDeliverySection } from './Form/OrderDeliverySection';
 import { OrderFormActions } from './Form/OrderFormActions';
-import { Label } from "@/components/ui/label";
+import { useOrders } from '@/hooks/useOrders';
 
 interface OrderFormProps {
-  orderData: Order | null;
+  orderData?: any;
   onClose: (refresh?: boolean) => void;
 }
 
 export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
-  const { clients, loading: clientsLoading, error: clientsError, refreshClients } = useClients();
+  const navigate = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { checkStockAndSendToProduction } = useOrders();
   
   const {
     formData,
+    items,
+    totalAmount,
+    setFormData,
+    updateFormData,
+    addItem,
+    removeItem,
+    updateItem,
+    initializeFormData
+  } = useOrderFormState(orderData);
+
+  const {
+    handleSubmit: handleFormSubmit,
+    validateForm
+  } = useOrderFormActions(formData, items, orderData);
+
+  const {
     openClientCombobox,
     setOpenClientCombobox,
     openProductCombobox,
-    setOpenProductCombobox,
-    openCalendar,
-    setOpenCalendar,
-    handleChange,
-    handleClientSelect,
-    handleDateSelect,
-    handleSubmit,
-    isSubmitting,
-    isNewOrder,
-    formattedTotal,
-    addItem,
-    removeItem,
-    updateItem
-  } = useOrderForm({ orderData, onClose });
+    setOpenProductCombobox
+  } = useOrderFormUI();
 
-  // Debug logging
   useEffect(() => {
-    console.log("OrderForm - Debug info:", {
-      formData,
-      clientsCount: clients?.length || 0,
-      clientsLoading,
-      clientsError
-    });
-  }, [formData, clients, clientsLoading, clientsError]);
-
-  // Auto-refresh clients if there's an error or if no clients are loaded
-  useEffect(() => {
-    if (clientsError || (!clientsLoading && (!clients || clients.length === 0))) {
-      console.log('OrderForm - Tentando recarregar clientes...');
-      refreshClients();
+    if (orderData) {
+      initializeFormData(orderData);
     }
-  }, [clientsError, clientsLoading, clients, refreshClients]);
+  }, [orderData, initializeFormData]);
 
-  // Automatically add first item for new orders
-  useEffect(() => {
-    if (isNewOrder && formData.items.length === 0) {
-      addItem();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      const orderId = await handleFormSubmit();
+      
+      if (orderId) {
+        // Se é um novo pedido (não edição), verificar estoque automaticamente
+        if (!orderData) {
+          console.log('Novo pedido criado, verificando estoque automaticamente...');
+          await checkStockAndSendToProduction(orderId);
+        }
+        
+        onClose(true);
+      }
+    } catch (error) {
+      console.error('Erro ao processar pedido:', error);
+    } finally {
+      setIsSubmitting(false);
     }
-  }, [isNewOrder, formData.items.length, addItem]);
-
-  // Handler for select changes
-  const handleSelectChange = (name: string, value: string) => {
-    handleChange({
-      target: { name, value }
-    } as React.ChangeEvent<HTMLInputElement>);
   };
 
-  return (
-    <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="space-y-6 bg-white p-6 rounded-lg shadow">
-      <div className="grid gap-6">
-        {/* Client Selection */}
-        <OrderClientSection 
-          selectedClientId={formData.client_id || ''}
-          selectedClientName={formData.client_name || ''}
-          onClientSelect={handleClientSelect}
-          clients={clients}
-          openClientCombobox={openClientCombobox}
-          setOpenClientCombobox={setOpenClientCombobox}
-          loading={clientsLoading}
-          error={clientsError}
-        />
-        
-        {/* Items Section */}
-        <OrderItemsSection
-          items={formData.items}
-          onAddItem={addItem}
-          onRemoveItem={removeItem}
-          onUpdateItem={updateItem}
-          openProductCombobox={openProductCombobox}
-          setOpenProductCombobox={setOpenProductCombobox}
-        />
-        
-        {/* Total */}
-        <div className="grid gap-1">
-          <Label>Valor Total do Pedido</Label>
-          <div className="text-xl font-bold p-3 border rounded bg-gray-50 text-green-700">
-            {formattedTotal}
-          </div>
-        </div>
-        
-        {/* Delivery Date */}
-        <OrderDeliverySection 
-          selectedDate={formData.delivery_deadline}
-          onDateSelect={handleDateSelect}
-          openCalendar={openCalendar}
-          setOpenCalendar={setOpenCalendar}
-        />
-        
-        {/* Payment Details */}
-        <OrderPaymentSection 
-          paymentMethod={formData.payment_method || ''}
-          paymentTerm={formData.payment_term || ''}
-          seller={formData.seller || ''}
-          onChange={handleChange}
-          onSelectChange={handleSelectChange}
-        />
-      </div>
+  const handleCancel = () => {
+    onClose(false);
+  };
 
-      {/* Form Actions */}
-      <OrderFormActions 
-        onCancel={() => onClose()}
-        isSubmitting={isSubmitting}
-        isNewOrder={isNewOrder}
-      />
-    </form>
+  const isEditing = !!orderData;
+
+  return (
+    <Card className="w-full max-w-4xl mx-auto">
+      <CardHeader>
+        <CardTitle>{isEditing ? 'Editar Pedido' : 'Novo Pedido'}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <OrderClientSection
+            formData={formData}
+            onUpdateFormData={updateFormData}
+            openClientCombobox={openClientCombobox}
+            setOpenClientCombobox={setOpenClientCombobox}
+          />
+
+          <Separator />
+
+          <OrderItemsSection
+            items={items}
+            onAddItem={addItem}
+            onRemoveItem={removeItem}
+            onUpdateItem={updateItem}
+            openProductCombobox={openProductCombobox}
+            setOpenProductCombobox={setOpenProductCombobox}
+          />
+
+          <Separator />
+
+          <OrderPaymentSection
+            formData={formData}
+            onUpdateFormData={updateFormData}
+            totalAmount={totalAmount}
+          />
+
+          <Separator />
+
+          <OrderDeliverySection
+            formData={formData}
+            onUpdateFormData={updateFormData}
+          />
+
+          <OrderFormActions
+            onCancel={handleCancel}
+            isSubmitting={isSubmitting}
+            isEditing={isEditing}
+          />
+        </form>
+      </CardContent>
+    </Card>
   );
 };
