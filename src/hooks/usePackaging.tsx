@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -130,7 +129,7 @@ export const usePackaging = () => {
           if (itemError) throw itemError;
 
           // Se é fabricado mas não tem produção, não está pronto
-          if (orderItemData.products?.is_manufactured) {
+          if (orderItemData.products?.[0]?.is_manufactured) {
             console.log(`Item ${item.id} é fabricado mas não tem produção aprovada`);
             return false;
           }
