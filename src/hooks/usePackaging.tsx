@@ -130,7 +130,7 @@ export const usePackaging = () => {
           if (itemError) throw itemError;
 
           // Se é fabricado mas não tem produção, não está pronto
-          if (orderItemData.products.is_manufactured) {
+          if (orderItemData.products?.is_manufactured) {
             console.log(`Item ${item.id} é fabricado mas não tem produção aprovada`);
             return false;
           }
