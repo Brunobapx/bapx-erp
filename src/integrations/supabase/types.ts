@@ -355,7 +355,7 @@ export type Database = {
           packaging_number: string
           product_id: string
           product_name: string
-          production_id: string
+          production_id: string | null
           quality_check: boolean | null
           quantity_packaged: number | null
           quantity_to_package: number
@@ -374,7 +374,7 @@ export type Database = {
           packaging_number: string
           product_id: string
           product_name: string
-          production_id: string
+          production_id?: string | null
           quality_check?: boolean | null
           quantity_packaged?: number | null
           quantity_to_package: number
@@ -393,7 +393,7 @@ export type Database = {
           packaging_number?: string
           product_id?: string
           product_name?: string
-          production_id?: string
+          production_id?: string | null
           quality_check?: boolean | null
           quantity_packaged?: number | null
           quantity_to_package?: number

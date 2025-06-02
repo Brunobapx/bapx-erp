@@ -231,17 +231,18 @@ export const useOrders = () => {
         if (shortage <= 0) {
           console.log(`Enviando ${quantityNeeded} unidades de ${item.product_name} diretamente para embalagem`);
           
-          // Criar entrada de embalagem diretamente
+          // Criar entrada de embalagem diretamente (production_id será null)
           packagingEntries.push({
             user_id: user.id,
-            production_id: null, // Não há produção, vai direto para embalagem
+            production_id: null, // NULL para produtos que vão direto do estoque
             product_id: item.product_id,
             product_name: item.product_name,
             quantity_to_package: quantityNeeded,
+            quantity_packaged: 0,
             status: 'pending'
           });
 
-          // Zerar o estoque do produto pois foi liberado para embalagem
+          // Deduzir a quantidade do estoque
           const { error: stockUpdateError } = await supabase
             .from('products')
             .update({ 
@@ -279,10 +280,11 @@ export const useOrders = () => {
             
             packagingEntries.push({
               user_id: user.id,
-              production_id: null,
+              production_id: null, // NULL para produtos que vão direto do estoque
               product_id: item.product_id,
               product_name: item.product_name,
               quantity_to_package: currentStock,
+              quantity_packaged: 0,
               status: 'pending'
             });
 
