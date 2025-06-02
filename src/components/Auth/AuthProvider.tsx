@@ -42,7 +42,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 .rpc('get_current_user_role');
               setUserRole(roleData || 'user');
             } catch (error) {
-              console.error('Error fetching user role:', error);
+              if (process.env.NODE_ENV === 'development') {
+                console.error('Error fetching user role:', error);
+              }
               setUserRole('user');
             }
           }, 0);
@@ -66,7 +68,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
-    if (error) {
+    if (error && process.env.NODE_ENV === 'development') {
       console.error('Error signing out:', error);
     }
   };

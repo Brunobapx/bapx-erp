@@ -8,6 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from '@supabase/supabase-js';
+import { z } from 'zod';
+
+// Input validation schemas
+const emailSchema = z.string().email('Email inválido');
+const passwordSchema = z.string().min(6, 'Senha deve ter pelo menos 6 caracteres');
 
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -15,6 +20,7 @@ const AuthPage = () => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [validationErrors, setValidationErrors] = useState<{ email?: string; password?: string }>({});
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -42,37 +48,51 @@ const AuthPage = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
+  const validateInputs = () => {
+    const errors: { email?: string; password?: string } = {};
+    
+    try {
+      emailSchema.parse(email);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        errors.email = error.errors[0]?.message;
+      }
+    }
+
+    try {
+      passwordSchema.parse(password);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        errors.password = error.errors[0]?.message;
+      }
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateInputs()) {
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       if (isLogin) {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
+        const { error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
           password,
         });
 
         if (error) throw error;
 
-        // Check if this is the master user
-        if (email === 'master@erp.com') {
-          // Assign master role to this user
-          const { error: roleError } = await supabase
-            .from('user_roles')
-            .upsert([
-              { user_id: data.user.id, role: 'master' }
-            ], { onConflict: 'user_id,role' });
-
-          if (roleError) {
-            console.error('Error assigning master role:', roleError);
-          }
-        }
-
         toast.success("Login realizado com sucesso!");
       } else {
-        const { data, error } = await supabase.auth.signUp({
-          email,
+        const { error } = await supabase.auth.signUp({
+          email: email.trim(),
           password,
           options: {
             emailRedirectTo: undefined // Remove email confirmation
@@ -81,55 +101,20 @@ const AuthPage = () => {
 
         if (error) throw error;
 
-        // User is created and logged in immediately
         toast.success("Cadastro realizado com sucesso!");
       }
     } catch (error: any) {
-      console.error('Auth error:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Auth error:', error);
+      }
+      
+      // Sanitized error messages
       if (error.message.includes('Invalid login credentials')) {
         toast.error("Email ou senha incorretos");
       } else if (error.message.includes('User already registered')) {
         toast.error("Este email já está cadastrado");
       } else {
-        toast.error(`Erro ao ${isLogin ? 'fazer login' : 'cadastrar'}: ${error.message}`);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const createMasterUser = async () => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email: 'master@erp.com',
-        password: 'master123',
-        options: {
-          emailRedirectTo: undefined // Remove email confirmation
-        }
-      });
-
-      if (error) throw error;
-
-      if (data.user) {
-        // Assign master role
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .upsert([
-            { user_id: data.user.id, role: 'master' }
-          ], { onConflict: 'user_id,role' });
-
-        if (roleError) {
-          console.error('Error assigning master role:', roleError);
-        }
-
-        toast.success("Usuário master criado com sucesso! Email: master@erp.com | Senha: master123");
-      }
-    } catch (error: any) {
-      if (error.message.includes('User already registered')) {
-        toast.info("Usuário master já existe. Use: master@erp.com | Senha: master123");
-      } else {
-        toast.error(`Erro ao criar usuário master: ${error.message}`);
+        toast.error(`Erro ao ${isLogin ? 'fazer login' : 'cadastrar'}`);
       }
     } finally {
       setIsLoading(false);
@@ -168,7 +153,11 @@ const AuthPage = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="seu@email.com"
                   required
+                  className={validationErrors.email ? 'border-red-500' : ''}
                 />
+                {validationErrors.email && (
+                  <p className="text-sm text-red-500">{validationErrors.email}</p>
+                )}
               </div>
               
               <div className="space-y-2">
@@ -180,7 +169,11 @@ const AuthPage = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Sua senha"
                   required
+                  className={validationErrors.password ? 'border-red-500' : ''}
                 />
+                {validationErrors.password && (
+                  <p className="text-sm text-red-500">{validationErrors.password}</p>
+                )}
               </div>
 
               <Button 
@@ -202,23 +195,19 @@ const AuthPage = () => {
               </Button>
             </div>
 
-            {/* Master User Creation */}
-            <div className="mt-6 pt-4 border-t">
-              <div className="text-center space-y-2">
-                <p className="text-sm text-gray-600">Para testes:</p>
-                <Button
-                  variant="outline"
-                  onClick={createMasterUser}
-                  disabled={isLoading}
-                  className="w-full"
-                >
-                  Criar Usuário Master de Teste
-                </Button>
-                <p className="text-xs text-gray-500">
-                  Email: master@erp.com | Senha: master123
-                </p>
+            {/* Development Notice */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="mt-6 pt-4 border-t">
+                <div className="text-center space-y-2">
+                  <p className="text-sm text-amber-600 bg-amber-50 p-2 rounded">
+                    ⚠️ Ambiente de desenvolvimento
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Para criar um usuário administrador, use o painel do Supabase
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>

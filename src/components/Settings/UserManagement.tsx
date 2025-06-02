@@ -9,6 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { UserPlus, Mail, Edit, Trash2, RefreshCw } from 'lucide-react';
+import { z } from 'zod';
+import { useAuth } from '@/components/Auth/AuthProvider';
+
+// Input validation schemas
+const emailSchema = z.string().email('Email inválido');
 
 interface UserInvitation {
   id: string;
@@ -38,7 +43,18 @@ export const UserManagement = () => {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('user');
   const [loading, setLoading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<{ email?: string }>({});
   const { toast } = useToast();
+  const { userRole } = useAuth();
+
+  // Security check - only admins and masters can access this component
+  if (userRole !== 'admin' && userRole !== 'master') {
+    return (
+      <div className="text-center p-4">
+        <p className="text-red-500">Acesso negado. Apenas administradores podem gerenciar usuários.</p>
+      </div>
+    );
+  }
 
   const loadInvitations = async () => {
     try {
@@ -50,7 +66,9 @@ export const UserManagement = () => {
       if (error) throw error;
       setInvitations(data || []);
     } catch (error) {
-      console.error('Erro ao carregar convites:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Erro ao carregar convites:', error);
+      }
     }
   };
 
@@ -73,7 +91,9 @@ export const UserManagement = () => {
       
       setUsers(usersWithRoles);
     } catch (error) {
-      console.error('Erro ao carregar usuários:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Erro ao carregar usuários:', error);
+      }
     }
   };
 
@@ -82,13 +102,21 @@ export const UserManagement = () => {
     loadUsers();
   }, []);
 
+  const validateEmail = (email: string) => {
+    try {
+      emailSchema.parse(email);
+      setValidationErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        setValidationErrors({ email: error.errors[0]?.message });
+      }
+      return false;
+    }
+  };
+
   const sendInvitation = async () => {
-    if (!inviteEmail.trim()) {
-      toast({
-        title: "Erro",
-        description: "Email é obrigatório",
-        variant: "destructive",
-      });
+    if (!validateEmail(inviteEmail.trim())) {
       return;
     }
 
@@ -97,7 +125,7 @@ export const UserManagement = () => {
       const { error } = await supabase
         .from('user_invitations')
         .insert({
-          email: inviteEmail,
+          email: inviteEmail.trim(),
           role: inviteRole,
           invited_by: (await supabase.auth.getUser()).data.user?.id
         });
@@ -116,7 +144,7 @@ export const UserManagement = () => {
     } catch (error: any) {
       toast({
         title: "Erro",
-        description: error.message || "Erro ao enviar convite",
+        description: "Erro ao enviar convite",
         variant: "destructive",
       });
     } finally {
@@ -125,6 +153,10 @@ export const UserManagement = () => {
   };
 
   const deleteInvitation = async (invitationId: string) => {
+    if (!confirm('Tem certeza que deseja remover este convite?')) {
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('user_invitations')
@@ -142,13 +174,17 @@ export const UserManagement = () => {
     } catch (error: any) {
       toast({
         title: "Erro",
-        description: error.message || "Erro ao remover convite",
+        description: "Erro ao remover convite",
         variant: "destructive",
       });
     }
   };
 
   const updateUserStatus = async (userId: string, isActive: boolean) => {
+    if (!confirm(`Tem certeza que deseja ${isActive ? 'ativar' : 'desativar'} este usuário?`)) {
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('profiles')
@@ -166,13 +202,27 @@ export const UserManagement = () => {
     } catch (error: any) {
       toast({
         title: "Erro",
-        description: error.message || "Erro ao atualizar usuário",
+        description: "Erro ao atualizar usuário",
         variant: "destructive",
       });
     }
   };
 
   const updateUserRole = async (userId: string, newRole: string) => {
+    // Only masters can assign master role
+    if (newRole === 'master' && userRole !== 'master') {
+      toast({
+        title: "Erro",
+        description: "Apenas usuários master podem atribuir a função master",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!confirm('Tem certeza que deseja alterar a função deste usuário?')) {
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('user_roles')
@@ -190,7 +240,7 @@ export const UserManagement = () => {
     } catch (error: any) {
       toast({
         title: "Erro",
-        description: error.message || "Erro ao atualizar função",
+        description: "Erro ao atualizar função",
         variant: "destructive",
       });
     }
@@ -230,7 +280,11 @@ export const UserManagement = () => {
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                   placeholder="usuario@email.com"
+                  className={validationErrors.email ? 'border-red-500' : ''}
                 />
+                {validationErrors.email && (
+                  <p className="text-sm text-red-500">{validationErrors.email}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="role">Função</Label>
@@ -241,7 +295,9 @@ export const UserManagement = () => {
                   <SelectContent>
                     <SelectItem value="user">Usuário</SelectItem>
                     <SelectItem value="admin">Administrador</SelectItem>
-                    <SelectItem value="master">Master</SelectItem>
+                    {userRole === 'master' && (
+                      <SelectItem value="master">Master</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>

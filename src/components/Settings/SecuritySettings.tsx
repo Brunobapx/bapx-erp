@@ -8,6 +8,11 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Save, Shield, Key } from 'lucide-react';
+import { z } from 'zod';
+
+// Input validation schemas
+const sessionTimeoutSchema = z.number().min(5).max(1440); // 5 minutes to 24 hours
+const passwordLengthSchema = z.number().min(6).max(128);
 
 export const SecuritySettings = () => {
   const [securitySettings, setSecuritySettings] = useState({
@@ -19,6 +24,7 @@ export const SecuritySettings = () => {
     require_symbols: false
   });
   const [loading, setLoading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<{ sessionTimeout?: string; passwordLength?: string }>({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -46,11 +52,40 @@ export const SecuritySettings = () => {
         }
       }
     } catch (error) {
-      console.error('Erro ao carregar configurações de segurança:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Erro ao carregar configurações de segurança:', error);
+      }
     }
   };
 
+  const validateSettings = () => {
+    const errors: { sessionTimeout?: string; passwordLength?: string } = {};
+    
+    try {
+      sessionTimeoutSchema.parse(securitySettings.session_timeout);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        errors.sessionTimeout = 'Timeout deve estar entre 5 e 1440 minutos';
+      }
+    }
+
+    try {
+      passwordLengthSchema.parse(securitySettings.password_min_length);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        errors.passwordLength = 'Comprimento deve estar entre 6 e 128 caracteres';
+      }
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const saveSecuritySettings = async () => {
+    if (!validateSettings()) {
+      return;
+    }
+
     setLoading(true);
     try {
       const { error } = await supabase
@@ -67,7 +102,7 @@ export const SecuritySettings = () => {
     } catch (error: any) {
       toast({
         title: "Erro",
-        description: error.message || "Erro ao salvar configurações",
+        description: "Erro ao salvar configurações",
         variant: "destructive",
       });
     } finally {
@@ -91,18 +126,25 @@ export const SecuritySettings = () => {
             <div>
               <Label>Timeout da Sessão (minutos)</Label>
               <p className="text-sm text-muted-foreground">
-                Tempo limite para sessões inativas
+                Tempo limite para sessões inativas (5-1440 min)
               </p>
             </div>
-            <Input
-              type="number"
-              value={securitySettings.session_timeout}
-              onChange={(e) => setSecuritySettings(prev => ({
-                ...prev,
-                session_timeout: parseInt(e.target.value)
-              }))}
-              className="w-24"
-            />
+            <div className="space-y-1">
+              <Input
+                type="number"
+                value={securitySettings.session_timeout}
+                onChange={(e) => setSecuritySettings(prev => ({
+                  ...prev,
+                  session_timeout: parseInt(e.target.value) || 30
+                }))}
+                className={`w-24 ${validationErrors.sessionTimeout ? 'border-red-500' : ''}`}
+                min="5"
+                max="1440"
+              />
+              {validationErrors.sessionTimeout && (
+                <p className="text-xs text-red-500">{validationErrors.sessionTimeout}</p>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center justify-between">
@@ -135,18 +177,25 @@ export const SecuritySettings = () => {
             <div>
               <Label>Comprimento Mínimo</Label>
               <p className="text-sm text-muted-foreground">
-                Número mínimo de caracteres
+                Número mínimo de caracteres (6-128)
               </p>
             </div>
-            <Input
-              type="number"
-              value={securitySettings.password_min_length}
-              onChange={(e) => setSecuritySettings(prev => ({
-                ...prev,
-                password_min_length: parseInt(e.target.value)
-              }))}
-              className="w-24"
-            />
+            <div className="space-y-1">
+              <Input
+                type="number"
+                value={securitySettings.password_min_length}
+                onChange={(e) => setSecuritySettings(prev => ({
+                  ...prev,
+                  password_min_length: parseInt(e.target.value) || 8
+                }))}
+                className={`w-24 ${validationErrors.passwordLength ? 'border-red-500' : ''}`}
+                min="6"
+                max="128"
+              />
+              {validationErrors.passwordLength && (
+                <p className="text-xs text-red-500">{validationErrors.passwordLength}</p>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center justify-between">
