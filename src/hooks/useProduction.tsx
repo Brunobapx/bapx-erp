@@ -242,13 +242,16 @@ export const useProduction = () => {
         }
         
         const currentStock = productData.stock || 0;
-        const newStock = currentStock + finalQuantityProduced;
         
-        // Atualizar estoque do produto com a quantidade produzida
+        // Primeiro somar temporariamente ao estoque para calcular o total
+        const totalQuantityForPackaging = currentStock + finalQuantityProduced;
+        
+        // Atualizar estoque do produto: manter apenas a quantidade produzida
+        // (o estoque anterior será "consumido" para embalagem)
         const { error: stockUpdateError } = await supabase
           .from('products')
           .update({ 
-            stock: newStock,
+            stock: finalQuantityProduced, // Mantém apenas o que foi produzido
             updated_at: new Date().toISOString()
           })
           .eq('id', productionData.product_id);
@@ -257,7 +260,7 @@ export const useProduction = () => {
           console.error('Erro ao atualizar estoque do produto:', stockUpdateError);
           toast.error('Erro ao atualizar estoque do produto');
         } else {
-          console.log(`Estoque do produto ${productionData.product_id} atualizado: ${currentStock} + ${finalQuantityProduced} = ${newStock}`);
+          console.log(`Estoque do produto ${productionData.product_id} atualizado para: ${finalQuantityProduced} (quantidade produzida). Estoque anterior ${currentStock} será enviado para embalagem`);
         }
         
         // Verificar se já existe um registro de embalagem para esta produção
@@ -271,8 +274,8 @@ export const useProduction = () => {
           console.error('Erro ao verificar embalagem existente:', checkError);
         }
         
-        // A quantidade para embalar será a quantidade total em estoque (estoque anterior + produzido)
-        const quantityToPackage = newStock;
+        // A quantidade para embalar será a quantidade total (estoque anterior + produzido)
+        const quantityToPackage = totalQuantityForPackaging;
         
         if (existingPackaging) {
           // Atualizar o registro existente com a quantidade total disponível para embalagem
@@ -289,8 +292,8 @@ export const useProduction = () => {
             console.error('Erro ao atualizar embalagem:', packagingUpdateError);
             toast.error('Erro ao atualizar registro de embalagem');
           } else {
-            console.log('Embalagem atualizada com quantidade total em estoque:', quantityToPackage);
-            toast.success(`Produção aprovada! Quantidade total disponível para embalagem: ${quantityToPackage} (${finalQuantityProduced} produzidos + ${currentStock} em estoque)`);
+            console.log('Embalagem atualizada com quantidade total para embalar:', quantityToPackage);
+            toast.success(`Produção aprovada! Quantidade total para embalagem: ${quantityToPackage} (${currentStock} em estoque + ${finalQuantityProduced} produzidos). Estoque atual: ${finalQuantityProduced}`);
           }
         } else {
           // Criar novo registro de embalagem com a quantidade total disponível
@@ -310,8 +313,8 @@ export const useProduction = () => {
             console.error('Erro ao criar embalagem:', packagingError);
             toast.error('Erro ao criar registro de embalagem');
           } else {
-            console.log('Embalagem criada com quantidade total em estoque:', quantityToPackage);
-            toast.success(`Produção aprovada! Quantidade total disponível para embalagem: ${quantityToPackage} (${finalQuantityProduced} produzidos + ${currentStock} em estoque)`);
+            console.log('Embalagem criada com quantidade total para embalar:', quantityToPackage);
+            toast.success(`Produção aprovada! Quantidade total para embalagem: ${quantityToPackage} (${currentStock} em estoque + ${finalQuantityProduced} produzidos). Estoque atual: ${finalQuantityProduced}`);
           }
         }
         
