@@ -124,7 +124,7 @@ export const StockReportsTab = () => {
             movement_type: 'Saída - Pedido',
             quantity: -item.quantity,
             date: new Date(item.created_at).toLocaleDateString('pt-BR'),
-            reference: item.orders?.order_number || 'N/A'
+            reference: Array.isArray(item.orders) ? item.orders[0]?.order_number || 'N/A' : item.orders?.order_number || 'N/A'
           })) || [];
           
           setReportData(data);
