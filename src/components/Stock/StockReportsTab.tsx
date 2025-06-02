@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -125,7 +124,7 @@ export const StockReportsTab = () => {
             movement_type: 'Saída - Pedido',
             quantity: -item.quantity,
             date: new Date(item.created_at).toLocaleDateString('pt-BR'),
-            reference: item.orders.order_number
+            reference: item.orders?.order_number || 'N/A'
           })) || [];
           
           setReportData(data);

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -42,6 +41,7 @@ const StockPage = () => {
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
+  const [movementType, setMovementType] = useState<'in' | 'out'>('in');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -90,6 +90,15 @@ const StockPage = () => {
     setSelectedProduct(null);
   };
 
+  const handleMovementModalClose = (refresh?: boolean) => {
+    setIsMovementModalOpen(false);
+    setSelectedProduct(null);
+    if (refresh) {
+      loadProducts();
+      loadMovements();
+    }
+  };
+
   const getStockStatus = (stock: number) => {
     if (stock <= 0) return { label: 'Sem Estoque', variant: 'destructive' as const };
     if (stock <= 10) return { label: 'Estoque Baixo', variant: 'secondary' as const };
@@ -121,27 +130,10 @@ const StockPage = () => {
           <Package className="h-8 w-8 text-primary" />
           <h1 className="text-3xl font-bold">Controle de Estoque</h1>
         </div>
-        <Dialog open={isMovementModalOpen} onOpenChange={setIsMovementModalOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Movimentação
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Nova Movimentação de Estoque</DialogTitle>
-            </DialogHeader>
-            <StockMovementModal
-              product={selectedProduct}
-              onSuccess={handleMovementSuccess}
-              onCancel={() => {
-                setIsMovementModalOpen(false);
-                setSelectedProduct(null);
-              }}
-            />
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => setIsMovementModalOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Nova Movimentação
+        </Button>
       </div>
 
       {/* Cards de Resumo */}
@@ -240,16 +232,30 @@ const StockPage = () => {
                           <Badge variant={status.variant}>{status.label}</Badge>
                         </TableCell>
                         <TableCell>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedProduct(product);
-                              setIsMovementModalOpen(true);
-                            }}
-                          >
-                            Movimentar
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedProduct(product);
+                                setMovementType('in');
+                                setIsMovementModalOpen(true);
+                              }}
+                            >
+                              Entrada
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedProduct(product);
+                                setMovementType('out');
+                                setIsMovementModalOpen(true);
+                              }}
+                            >
+                              Saída
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -311,6 +317,13 @@ const StockPage = () => {
           <StockReportsTab />
         </TabsContent>
       </Tabs>
+
+      <StockMovementModal
+        isOpen={isMovementModalOpen}
+        onClose={handleMovementModalClose}
+        product={selectedProduct}
+        movementType={movementType}
+      />
     </div>
   );
 };
