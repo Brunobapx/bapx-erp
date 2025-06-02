@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -68,8 +69,7 @@ const ProductionPage = () => {
   const handleSendToPackaging = async (e, item) => {
     e.stopPropagation();
     if (window.confirm(`Tem certeza que deseja enviar a produção ${item.production_number} para embalagem?`)) {
-      // Apenas aprovar a produção com a quantidade produzida
-      // O hook já cuida de criar o registro de embalagem
+      // Aprovar a produção com a quantidade produzida
       await updateProductionStatus(item.id, 'approved', item.quantity_produced);
     }
   };
@@ -109,6 +109,7 @@ const ProductionPage = () => {
 
   const handleApproveProduction = async (data) => {
     if (selectedItem) {
+      console.log('Aprovando produção com quantidade:', data.quantity);
       const success = await updateProductionStatus(selectedItem.id, 'approved', data.quantity);
       if (success) {
         setShowModal(false);

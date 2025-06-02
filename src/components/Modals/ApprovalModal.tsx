@@ -43,8 +43,13 @@ export const ApprovalModal = ({
   React.useEffect(() => {
     if (isOpen && orderData) {
       setNotes('');
+      // Para produção, usar quantity_produced se disponível, senão quantity_requested
+      if (stage === 'production') {
+        const initialQuantity = orderData.quantity_produced || orderData.quantity_requested || orderData.quantity || 0;
+        setQuantity(initialQuantity.toString());
+      }
       // Para embalagem, usar quantity_packaged se disponível, senão quantity_to_package
-      if (stage === 'packaging') {
+      else if (stage === 'packaging') {
         const initialQuantity = orderData.quantity_packaged || orderData.quantity_to_package || orderData.quantity || 0;
         setQuantity(initialQuantity.toString());
       } else {
@@ -65,11 +70,11 @@ export const ApprovalModal = ({
     },
     production: {
       title: 'Aprovar Produção',
-      description: 'Confirme os detalhes da produção antes de aprovar.',
+      description: 'Confirme a quantidade produzida antes de aprovar.',
       primaryAction: 'Aprovar Produção',
       secondaryAction: 'Enviar para Embalagem',
       showQuantity: true,
-      quantityLabel: 'Quantidade',
+      quantityLabel: 'Quantidade Produzida',
       nextStage: 'packaging'
     },
     packaging: {
@@ -115,10 +120,20 @@ export const ApprovalModal = ({
   const handleApprove = async () => {
     setIsSubmitting(true);
     try {
+      const quantityValue = parseInt(quantity) || 0;
+      
+      // Validação específica para produção
+      if (stage === 'production' && quantityValue <= 0) {
+        toast.error('Quantidade produzida deve ser maior que zero');
+        setIsSubmitting(false);
+        return;
+      }
+      
       const data = { 
         ...orderData, 
         notes, 
-        quantityPackaged: parseInt(quantity) || 0,
+        quantity: quantityValue,
+        quantityPackaged: quantityValue,
         qualityCheck: true,
         status: 'approved',
         updatedAt: new Date()
@@ -128,7 +143,11 @@ export const ApprovalModal = ({
         await onApprove(data);
       }
       
-      toast.success(`${config.title} realizado com sucesso!`);
+      const successMessage = stage === 'production' 
+        ? `Produção aprovada! Quantidade ${quantityValue} enviada para embalagem`
+        : `${config.title} realizado com sucesso!`;
+      
+      toast.success(successMessage);
       onClose(true);
     } catch (error) {
       console.error('Erro ao aprovar:', error);
@@ -144,6 +163,7 @@ export const ApprovalModal = ({
       const data = {
         ...orderData,
         notes,
+        quantity: parseInt(quantity) || 0,
         quantityPackaged: parseInt(quantity) || 0,
         status: `Em ${config.nextStage}`,
         stage: config.nextStage,
@@ -206,6 +226,7 @@ export const ApprovalModal = ({
                 onChange={(e) => setQuantity(e.target.value)}
                 type="number"
                 min="0"
+                required
               />
             </div>
           )}

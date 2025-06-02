@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -150,6 +151,8 @@ export const useProduction = () => {
 
   const updateProductionStatus = async (id: string, status: ProductionStatus, quantityProduced?: number) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const updateData: any = { 
         status,
         updated_at: new Date().toISOString()
@@ -195,8 +198,16 @@ export const useProduction = () => {
       
       if (status === 'approved') {
         updateData.approved_at = new Date().toISOString();
-        const { data: { user } } = await supabase.auth.getUser();
         updateData.approved_by = user?.email || 'Sistema';
+        
+        // Garantir que temos a quantidade produzida
+        const finalQuantityProduced = quantityProduced || 0;
+        if (finalQuantityProduced <= 0) {
+          toast.error('Quantidade produzida deve ser maior que zero');
+          return false;
+        }
+        
+        updateData.quantity_produced = finalQuantityProduced;
         
         // Primeiro, atualizar a produção com a quantidade produzida
         const { error: updateError } = await supabase
@@ -206,70 +217,67 @@ export const useProduction = () => {
         
         if (updateError) throw updateError;
         
-        // Agora criar o registro de embalagem com a quantidade aprovada
-        if (quantityProduced && quantityProduced > 0) {
-          // Buscar dados da produção atualizada
-          const { data: productionData, error: fetchError } = await supabase
-            .from('production')
-            .select('*')
-            .eq('id', id)
-            .single();
-          
-          if (fetchError) {
-            console.error('Erro ao buscar dados da produção:', fetchError);
-            throw fetchError;
-          }
-          
-          // Verificar se já existe um registro de embalagem para esta produção
-          const { data: existingPackaging, error: checkError } = await supabase
+        // Buscar dados da produção atualizada
+        const { data: productionData, error: fetchError } = await supabase
+          .from('production')
+          .select('*')
+          .eq('id', id)
+          .single();
+        
+        if (fetchError) {
+          console.error('Erro ao buscar dados da produção:', fetchError);
+          throw fetchError;
+        }
+        
+        // Verificar se já existe um registro de embalagem para esta produção
+        const { data: existingPackaging, error: checkError } = await supabase
+          .from('packaging')
+          .select('id')
+          .eq('production_id', id)
+          .maybeSingle();
+        
+        if (checkError) {
+          console.error('Erro ao verificar embalagem existente:', checkError);
+        }
+        
+        if (existingPackaging) {
+          // Atualizar o registro existente com a quantidade aprovada
+          const { error: packagingUpdateError } = await supabase
             .from('packaging')
-            .select('id')
-            .eq('production_id', id)
-            .maybeSingle();
+            .update({
+              quantity_to_package: finalQuantityProduced,
+              status: 'pending',
+              updated_at: new Date().toISOString()
+            })
+            .eq('production_id', id);
           
-          if (checkError) {
-            console.error('Erro ao verificar embalagem existente:', checkError);
-          }
-          
-          if (existingPackaging) {
-            // Atualizar o registro existente
-            const { error: packagingUpdateError } = await supabase
-              .from('packaging')
-              .update({
-                quantity_to_package: quantityProduced,
-                status: 'pending',
-                updated_at: new Date().toISOString()
-              })
-              .eq('production_id', id);
-            
-            if (packagingUpdateError) {
-              console.error('Erro ao atualizar embalagem:', packagingUpdateError);
-              toast.error('Erro ao atualizar registro de embalagem');
-            } else {
-              console.log('Embalagem atualizada com sucesso com quantidade:', quantityProduced);
-              toast.success('Produção aprovada e quantidade atualizada na embalagem');
-            }
+          if (packagingUpdateError) {
+            console.error('Erro ao atualizar embalagem:', packagingUpdateError);
+            toast.error('Erro ao atualizar registro de embalagem');
           } else {
-            // Criar novo registro de embalagem
-            const { error: packagingError } = await supabase
-              .from('packaging')
-              .insert({
-                user_id: user?.id,
-                production_id: id,
-                product_id: productionData.product_id,
-                product_name: productionData.product_name,
-                quantity_to_package: quantityProduced,
-                quantity_packaged: 0,
-                status: 'pending'
-              });
-            
-            if (packagingError) {
-              console.error('Erro ao criar embalagem:', packagingError);
-              toast.error('Erro ao criar registro de embalagem');
-            } else {
-              console.log('Embalagem criada com sucesso com quantidade:', quantityProduced);
-              toast.success('Produção aprovada e enviada para embalagem');
-            }
+            console.log('Embalagem atualizada com quantidade aprovada:', finalQuantityProduced);
+            toast.success(`Produção aprovada! Quantidade ${finalQuantityProduced} enviada para embalagem`);
+          }
+        } else {
+          // Criar novo registro de embalagem com a quantidade aprovada
+          const { error: packagingError } = await supabase
+            .from('packaging')
+            .insert({
+              user_id: user?.id,
+              production_id: id,
+              product_id: productionData.product_id,
+              product_name: productionData.product_name,
+              quantity_to_package: finalQuantityProduced,
+              quantity_packaged: 0,
+              status: 'pending'
+            });
+          
+          if (packagingError) {
+            console.error('Erro ao criar embalagem:', packagingError);
+            toast.error('Erro ao criar registro de embalagem');
+          } else {
+            console.log('Embalagem criada com quantidade aprovada:', finalQuantityProduced);
+            toast.success(`Produção aprovada! Quantidade ${finalQuantityProduced} enviada para embalagem`);
           }
         }
         
