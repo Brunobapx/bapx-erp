@@ -45,7 +45,7 @@ export const PackagingSummaryTable = ({ summary }: PackagingSummaryTableProps) =
               <div className="space-y-1">
                 {item.packaging_items.slice(0, 3).map((packItem, index) => (
                   <div key={index} className="text-xs text-muted-foreground">
-                    {packItem.packaging_number}: {packItem.quantity} un. - {packItem.client_name}
+                    {packItem.packaging_number}: {packItem.quantity} un. - {packItem.client_name || 'N/A'}
                   </div>
                 ))}
                 {item.packaging_items.length > 3 && (
