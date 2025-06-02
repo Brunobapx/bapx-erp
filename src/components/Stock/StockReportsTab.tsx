@@ -118,14 +118,26 @@ export const StockReportsTab = () => {
             .order('created_at', { ascending: false })
             .limit(100);
 
-          data = orders?.map(item => ({
-            id: item.id,
-            product_name: item.product_name,
-            movement_type: 'Saída - Pedido',
-            quantity: -item.quantity,
-            date: new Date(item.created_at).toLocaleDateString('pt-BR'),
-            reference: Array.isArray(item.orders) ? item.orders[0]?.order_number || 'N/A' : item.orders?.order_number || 'N/A'
-          })) || [];
+          data = orders?.map(item => {
+            // Safely access order_number with proper type handling
+            let orderNumber = 'N/A';
+            if (item.orders) {
+              if (Array.isArray(item.orders) && item.orders.length > 0) {
+                orderNumber = item.orders[0]?.order_number || 'N/A';
+              } else if (!Array.isArray(item.orders) && typeof item.orders === 'object') {
+                orderNumber = (item.orders as any).order_number || 'N/A';
+              }
+            }
+
+            return {
+              id: item.id,
+              product_name: item.product_name,
+              movement_type: 'Saída - Pedido',
+              quantity: -item.quantity,
+              date: new Date(item.created_at).toLocaleDateString('pt-BR'),
+              reference: orderNumber
+            };
+          }) || [];
           
           setReportData(data);
           setLoading(false);
