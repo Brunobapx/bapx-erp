@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,67 +13,111 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { NewPayableModal } from './NewPayableModal';
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+interface AccountPayable {
+  id: string;
+  supplier_name: string;
+  description: string;
+  amount: number;
+  due_date: string;
+  status: 'pending' | 'paid' | 'overdue' | 'cancelled';
+  category: string;
+  invoice_number?: string;
+  payment_date?: string;
+  payment_method?: string;
+  notes?: string;
+}
 
 export const AccountsPayableTab = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewPayableModal, setShowNewPayableModal] = useState(false);
+  const [accountsPayable, setAccountsPayable] = useState<AccountPayable[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data for accounts payable
-  const accountsPayable = [
-    { 
-      id: 'CP-001', 
-      supplier: 'Fornecedor ABC', 
-      description: 'Matéria Prima', 
-      amount: 15000, 
-      dueDate: '2025-05-20', 
-      status: 'vencido',
-      category: 'Compras'
-    },
-    { 
-      id: 'CP-002', 
-      supplier: 'Transportadora XYZ', 
-      description: 'Frete Maio', 
-      amount: 3500, 
-      dueDate: '2025-05-25', 
-      status: 'pendente',
-      category: 'Logística'
-    },
-    { 
-      id: 'CP-003', 
-      supplier: 'Energia Elétrica', 
-      description: 'Conta de Luz', 
-      amount: 2800, 
-      dueDate: '2025-05-30', 
-      status: 'pendente',
-      category: 'Utilidades'
-    },
-    { 
-      id: 'CP-004', 
-      supplier: 'Banco Central', 
-      description: 'Empréstimo Parcela', 
-      amount: 8500, 
-      dueDate: '2025-06-01', 
-      status: 'agendado',
-      category: 'Financiamento'
-    },
-  ];
+  useEffect(() => {
+    loadAccountsPayable();
+  }, []);
+
+  const loadAccountsPayable = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('accounts_payable')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('due_date', { ascending: true });
+
+      if (error) throw error;
+      
+      // Atualizar status das contas vencidas
+      const today = new Date().toISOString().split('T')[0];
+      const updatedData = (data || []).map(account => ({
+        ...account,
+        status: account.status === 'pending' && account.due_date < today ? 'overdue' : account.status
+      }));
+      
+      setAccountsPayable(updatedData);
+    } catch (error: any) {
+      console.error('Erro ao carregar contas a pagar:', error);
+      toast.error('Erro ao carregar contas a pagar');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePayAccount = async (accountId: string) => {
+    try {
+      const { error } = await supabase
+        .from('accounts_payable')
+        .update({ 
+          status: 'paid',
+          payment_date: new Date().toISOString().split('T')[0],
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', accountId);
+
+      if (error) throw error;
+
+      toast.success('Conta marcada como paga!');
+      loadAccountsPayable();
+    } catch (error: any) {
+      console.error('Erro ao pagar conta:', error);
+      toast.error('Erro ao pagar conta');
+    }
+  };
 
   const filteredAccounts = accountsPayable.filter(account =>
-    account.supplier.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    account.description.toLowerCase().includes(searchQuery.toLowerCase())
+    account.supplier_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    account.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    account.invoice_number?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const totalVencido = accountsPayable
-    .filter(account => account.status === 'vencido')
+    .filter(account => account.status === 'overdue')
     .reduce((sum, account) => sum + account.amount, 0);
 
   const totalPendente = accountsPayable
-    .filter(account => account.status === 'pendente')
+    .filter(account => account.status === 'pending')
     .reduce((sum, account) => sum + account.amount, 0);
 
-  const totalAgendado = accountsPayable
-    .filter(account => account.status === 'agendado')
+  const totalPago = accountsPayable
+    .filter(account => account.status === 'paid')
     .reduce((sum, account) => sum + account.amount, 0);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando contas a pagar...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -108,13 +153,13 @@ export const AccountsPayableTab = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-blue-500">
+        <Card className="border-l-4 border-l-green-500">
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-blue-600" />
+              <Clock className="h-4 w-4 text-green-600" />
               <div>
-                <p className="text-sm text-muted-foreground">Agendadas</p>
-                <p className="text-lg font-bold text-blue-600">R$ {totalAgendado.toLocaleString('pt-BR')}</p>
+                <p className="text-sm text-muted-foreground">Pagas</p>
+                <p className="text-lg font-bold text-green-600">R$ {totalPago.toLocaleString('pt-BR')}</p>
               </div>
             </div>
           </CardContent>
@@ -138,9 +183,9 @@ export const AccountsPayableTab = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID</TableHead>
                 <TableHead>Fornecedor</TableHead>
                 <TableHead>Descrição</TableHead>
+                <TableHead>NF</TableHead>
                 <TableHead>Categoria</TableHead>
                 <TableHead>Vencimento</TableHead>
                 <TableHead className="text-right">Valor</TableHead>
@@ -151,38 +196,56 @@ export const AccountsPayableTab = () => {
             <TableBody>
               {filteredAccounts.map((account) => (
                 <TableRow key={account.id}>
-                  <TableCell className="font-medium">{account.id}</TableCell>
-                  <TableCell>{account.supplier}</TableCell>
+                  <TableCell className="font-medium">{account.supplier_name}</TableCell>
                   <TableCell>{account.description}</TableCell>
+                  <TableCell>{account.invoice_number || '-'}</TableCell>
                   <TableCell>{account.category}</TableCell>
-                  <TableCell>{new Date(account.dueDate).toLocaleDateString('pt-BR')}</TableCell>
+                  <TableCell>{new Date(account.due_date).toLocaleDateString('pt-BR')}</TableCell>
                   <TableCell className="text-right font-medium">
                     R$ {account.amount.toLocaleString('pt-BR')}
                   </TableCell>
                   <TableCell>
                     <span className={`stage-badge ${
-                      account.status === 'vencido' ? 'badge-route' : 
-                      account.status === 'pendente' ? 'badge-packaging' : 'badge-finance'
+                      account.status === 'overdue' ? 'badge-route' : 
+                      account.status === 'pending' ? 'badge-packaging' : 
+                      account.status === 'paid' ? 'badge-sales' : 'badge-finance'
                     }`}>
-                      {account.status === 'vencido' ? 'Vencido' : 
-                       account.status === 'pendente' ? 'Pendente' : 'Agendado'}
+                      {account.status === 'overdue' ? 'Vencido' : 
+                       account.status === 'pending' ? 'Pendente' : 
+                       account.status === 'paid' ? 'Pago' : 'Cancelado'}
                     </span>
                   </TableCell>
                   <TableCell>
-                    <Button variant="outline" size="sm">
-                      Pagar
-                    </Button>
+                    {account.status === 'pending' || account.status === 'overdue' ? (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handlePayAccount(account.id)}
+                      >
+                        Pagar
+                      </Button>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">
+                        {account.payment_date ? `Pago em ${new Date(account.payment_date).toLocaleDateString('pt-BR')}` : '-'}
+                      </span>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
+          {filteredAccounts.length === 0 && (
+            <div className="p-4 text-center text-muted-foreground">
+              Nenhuma conta a pagar encontrada.
+            </div>
+          )}
         </CardContent>
       </Card>
 
       <NewPayableModal
         isOpen={showNewPayableModal}
         onClose={() => setShowNewPayableModal(false)}
+        onSuccess={loadAccountsPayable}
       />
     </div>
   );

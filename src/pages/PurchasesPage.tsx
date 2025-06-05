@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -281,7 +280,28 @@ const PurchasesPage = () => {
 
       if (itemsError) throw itemsError;
 
-      toast.success('XML importado com sucesso! Fornecedor verificado/criado automaticamente.');
+      // Criar lançamento em contas a pagar automaticamente
+      const dueDate = new Date(nfeData.dataEmissao);
+      dueDate.setDate(dueDate.getDate() + 30); // Vencimento padrão de 30 dias
+
+      const { error: payableError } = await supabase
+        .from('accounts_payable')
+        .insert({
+          user_id: user.id,
+          purchase_id: purchase.id,
+          supplier_name: nfeData.fornecedor.nome,
+          description: `Compra - NF ${nfeData.numeroNF}`,
+          amount: nfeData.valorTotal,
+          due_date: dueDate.toISOString().split('T')[0],
+          status: 'pending',
+          category: 'Compras',
+          invoice_number: nfeData.numeroNF,
+          notes: `Importação automática - XML processado em ${new Date().toLocaleDateString('pt-BR')}`
+        });
+
+      if (payableError) throw payableError;
+
+      toast.success('XML importado com sucesso! Fornecedor e conta a pagar criados automaticamente.');
       setIsImportModalOpen(false);
       setSelectedFile(null);
       loadPurchases();
@@ -379,7 +399,7 @@ const PurchasesPage = () => {
               .from('products')
               .update({
                 stock: newStock,
-                cost: item.unit_price,
+                cost: item.unit_price, // Atualizar preço de custo
                 updated_at: new Date().toISOString()
               })
               .eq('id', association.productId);
@@ -405,7 +425,7 @@ const PurchasesPage = () => {
 
       if (statusError) throw statusError;
 
-      toast.success('Compra processada com sucesso! Estoque e produtos atualizados.');
+      toast.success('Compra processada com sucesso! Estoque, produtos e contas a pagar atualizados.');
       setIsProcessModalOpen(false);
       loadPurchases();
       loadProducts();
