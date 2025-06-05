@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { ShoppingCart, Upload, Package, FileX, Check, AlertTriangle } from 'lucide-react';
+import { ShoppingCart, Upload, Package, FileX, Check, AlertTriangle, Link } from 'lucide-react';
 
 interface Purchase {
   id: string;
@@ -33,6 +33,7 @@ interface PurchaseItem {
   total_price: number;
   ncm: string;
   unit: string;
+  product_id?: string;
 }
 
 interface Vendor {
@@ -41,18 +42,36 @@ interface Vendor {
   cnpj: string;
 }
 
+interface Product {
+  id: string;
+  name: string;
+  code?: string;
+  stock: number;
+  cost: number;
+}
+
+interface ProductAssociation {
+  purchaseItemId: string;
+  productId: string | null;
+  createNew: boolean;
+}
+
 const PurchasesPage = () => {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedPurchase, setSelectedPurchase] = useState<Purchase | null>(null);
   const [purchaseItems, setPurchaseItems] = useState<PurchaseItem[]>([]);
+  const [isProcessModalOpen, setIsProcessModalOpen] = useState(false);
+  const [productAssociations, setProductAssociations] = useState<ProductAssociation[]>([]);
 
   useEffect(() => {
     loadPurchases();
     loadVendors();
+    loadProducts();
   }, []);
 
   const loadPurchases = async () => {
@@ -91,6 +110,24 @@ const PurchasesPage = () => {
       setVendors(data || []);
     } catch (error: any) {
       console.error('Erro ao carregar fornecedores:', error);
+    }
+  };
+
+  const loadProducts = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name, code, stock, cost')
+        .eq('user_id', user.id)
+        .order('name');
+
+      if (error) throw error;
+      setProducts(data || []);
+    } catch (error: any) {
+      console.error('Erro ao carregar produtos:', error);
     }
   };
 
@@ -151,6 +188,41 @@ const PurchasesPage = () => {
     });
   };
 
+  const checkOrCreateVendor = async (vendorName: string, vendorCnpj: string, userId: string) => {
+    try {
+      // Verificar se fornecedor já existe
+      const { data: existingVendor, error: vendorError } = await supabase
+        .from('vendors')
+        .select('*')
+        .eq('user_id', userId)
+        .or(`name.eq.${vendorName},cnpj.eq.${vendorCnpj}`)
+        .limit(1);
+
+      if (vendorError) throw vendorError;
+
+      if (existingVendor && existingVendor.length > 0) {
+        return existingVendor[0];
+      }
+
+      // Criar novo fornecedor
+      const { data: newVendor, error: createError } = await supabase
+        .from('vendors')
+        .insert({
+          user_id: userId,
+          name: vendorName,
+          cnpj: vendorCnpj
+        })
+        .select()
+        .single();
+
+      if (createError) throw createError;
+      return newVendor;
+    } catch (error) {
+      console.error('Erro ao verificar/criar fornecedor:', error);
+      throw error;
+    }
+  };
+
   const handleFileImport = async () => {
     if (!selectedFile) {
       toast.error('Selecione um arquivo XML');
@@ -164,11 +236,19 @@ const PurchasesPage = () => {
 
       const nfeData = await parseXMLFile(selectedFile);
       
+      // Verificar ou criar fornecedor
+      const vendor = await checkOrCreateVendor(
+        nfeData.fornecedor.nome,
+        nfeData.fornecedor.cnpj,
+        user.id
+      );
+      
       // Inserir compra
       const { data: purchase, error: purchaseError } = await supabase
         .from('purchases')
         .insert({
           user_id: user.id,
+          vendor_id: vendor.id,
           vendor_name: nfeData.fornecedor.nome,
           invoice_number: nfeData.numeroNF,
           invoice_key: nfeData.chaveNFe,
@@ -201,10 +281,11 @@ const PurchasesPage = () => {
 
       if (itemsError) throw itemsError;
 
-      toast.success('XML importado com sucesso!');
+      toast.success('XML importado com sucesso! Fornecedor verificado/criado automaticamente.');
       setIsImportModalOpen(false);
       setSelectedFile(null);
       loadPurchases();
+      loadVendors();
     } catch (error: any) {
       console.error('Erro ao importar XML:', error);
       toast.error(error.message || 'Erro ao importar XML');
@@ -213,54 +294,106 @@ const PurchasesPage = () => {
     }
   };
 
-  const processPurchase = async (purchase: Purchase) => {
+  const openProcessModal = async (purchase: Purchase) => {
+    try {
+      const { data: items, error } = await supabase
+        .from('purchase_items')
+        .select('*')
+        .eq('purchase_id', purchase.id);
+
+      if (error) throw error;
+
+      setPurchaseItems(items || []);
+      setSelectedPurchase(purchase);
+      
+      // Inicializar associações
+      const associations = (items || []).map(item => ({
+        purchaseItemId: item.id,
+        productId: null,
+        createNew: true
+      }));
+      setProductAssociations(associations);
+      setIsProcessModalOpen(true);
+    } catch (error: any) {
+      console.error('Erro ao carregar itens:', error);
+      toast.error('Erro ao carregar itens da compra');
+    }
+  };
+
+  const updateAssociation = (itemId: string, productId: string | null, createNew: boolean) => {
+    setProductAssociations(prev => 
+      prev.map(assoc => 
+        assoc.purchaseItemId === itemId 
+          ? { ...assoc, productId, createNew }
+          : assoc
+      )
+    );
+  };
+
+  const processPurchase = async () => {
+    if (!selectedPurchase) return;
+
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
-      // Buscar itens da compra
-      const { data: items, error: itemsError } = await supabase
-        .from('purchase_items')
-        .select('*')
-        .eq('purchase_id', purchase.id);
+      for (const item of purchaseItems) {
+        const association = productAssociations.find(a => a.purchaseItemId === item.id);
+        if (!association) continue;
 
-      if (itemsError) throw itemsError;
-
-      // Processar cada item
-      for (const item of items) {
-        // Buscar produto por código ou nome
-        const { data: products, error: productError } = await supabase
-          .from('products')
-          .select('*')
-          .eq('user_id', user.id)
-          .or(`code.eq.${item.product_code},name.eq.${item.product_name}`)
-          .limit(1);
-
-        if (productError) throw productError;
-
-        if (products && products.length > 0) {
-          const product = products[0];
-          // Atualizar estoque e custo do produto
-          const newStock = (product.stock || 0) + item.quantity;
-          const { error: updateError } = await supabase
+        if (association.createNew) {
+          // Criar novo produto
+          const { data: newProduct, error: productError } = await supabase
             .from('products')
-            .update({
-              stock: newStock,
+            .insert({
+              user_id: user.id,
+              name: item.product_name,
+              code: item.product_code,
+              stock: item.quantity,
               cost: item.unit_price,
-              updated_at: new Date().toISOString()
+              price: item.unit_price * 1.3, // Margem padrão de 30%
+              ncm: item.ncm,
+              unit: item.unit
             })
-            .eq('id', product.id);
+            .select()
+            .single();
 
-          if (updateError) throw updateError;
+          if (productError) throw productError;
 
-          // Associar item com produto
+          // Associar item com novo produto
           const { error: linkError } = await supabase
             .from('purchase_items')
-            .update({ product_id: product.id })
+            .update({ product_id: newProduct.id })
             .eq('id', item.id);
 
           if (linkError) throw linkError;
+
+        } else if (association.productId) {
+          // Atualizar produto existente
+          const existingProduct = products.find(p => p.id === association.productId);
+          if (existingProduct) {
+            const newStock = existingProduct.stock + item.quantity;
+            
+            const { error: updateError } = await supabase
+              .from('products')
+              .update({
+                stock: newStock,
+                cost: item.unit_price,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', association.productId);
+
+            if (updateError) throw updateError;
+
+            // Associar item com produto existente
+            const { error: linkError } = await supabase
+              .from('purchase_items')
+              .update({ product_id: association.productId })
+              .eq('id', item.id);
+
+            if (linkError) throw linkError;
+          }
         }
       }
 
@@ -268,12 +401,14 @@ const PurchasesPage = () => {
       const { error: statusError } = await supabase
         .from('purchases')
         .update({ status: 'processed' })
-        .eq('id', purchase.id);
+        .eq('id', selectedPurchase.id);
 
       if (statusError) throw statusError;
 
-      toast.success('Compra processada e estoque atualizado!');
+      toast.success('Compra processada com sucesso! Estoque e produtos atualizados.');
+      setIsProcessModalOpen(false);
       loadPurchases();
+      loadProducts();
     } catch (error: any) {
       console.error('Erro ao processar compra:', error);
       toast.error('Erro ao processar compra');
@@ -387,7 +522,7 @@ const PurchasesPage = () => {
                           {purchase.status === 'pending' && (
                             <Button
                               size="sm"
-                              onClick={() => processPurchase(purchase)}
+                              onClick={() => openProcessModal(purchase)}
                               disabled={loading}
                             >
                               <Check className="h-4 w-4 mr-1" />
@@ -470,8 +605,96 @@ const PurchasesPage = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Modal de Processamento */}
+      <Dialog open={isProcessModalOpen} onOpenChange={setIsProcessModalOpen}>
+        <DialogContent className="sm:max-w-[900px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Processar Compra - {selectedPurchase?.invoice_number}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Configure como cada item será processado no estoque:
+            </p>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Produto</TableHead>
+                  <TableHead>Qtd</TableHead>
+                  <TableHead>Valor Unit.</TableHead>
+                  <TableHead>Ação</TableHead>
+                  <TableHead>Produto Associado</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {purchaseItems.map((item) => {
+                  const association = productAssociations.find(a => a.purchaseItemId === item.id);
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{item.product_name}</p>
+                          <p className="text-sm text-gray-500">Cód: {item.product_code}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>{item.quantity} {item.unit}</TableCell>
+                      <TableCell>R$ {item.unit_price.toFixed(2)}</TableCell>
+                      <TableCell>
+                        <Select
+                          value={association?.createNew ? 'new' : association?.productId || 'new'}
+                          onValueChange={(value) => {
+                            if (value === 'new') {
+                              updateAssociation(item.id, null, true);
+                            } else {
+                              updateAssociation(item.id, value, false);
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="w-40">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="new">Criar Novo</SelectItem>
+                            {products.map((product) => (
+                              <SelectItem key={product.id} value={product.id}>
+                                Associar a {product.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        {association?.createNew ? (
+                          <Badge variant="outline">Novo Produto</Badge>
+                        ) : association?.productId ? (
+                          <div className="flex items-center gap-2">
+                            <Link className="h-4 w-4" />
+                            <span className="text-sm">
+                              {products.find(p => p.id === association.productId)?.name}
+                            </span>
+                          </div>
+                        ) : null}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+            <div className="flex gap-2 pt-4">
+              <Button variant="outline" onClick={() => setIsProcessModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={processPurchase} disabled={loading}>
+                {loading ? 'Processando...' : 'Processar Compra'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Modal de Itens da Compra */}
-      {selectedPurchase && (
+      {selectedPurchase && !isProcessModalOpen && (
         <Dialog open={!!selectedPurchase} onOpenChange={() => setSelectedPurchase(null)}>
           <DialogContent className="sm:max-w-[800px]">
             <DialogHeader>
