@@ -676,6 +676,117 @@ export type Database = {
         }
         Relationships: []
       }
+      purchase_items: {
+        Row: {
+          created_at: string
+          id: string
+          ncm: string | null
+          product_code: string | null
+          product_id: string | null
+          product_name: string
+          purchase_id: string
+          quantity: number
+          total_price: number
+          unit: string | null
+          unit_price: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ncm?: string | null
+          product_code?: string | null
+          product_id?: string | null
+          product_name: string
+          purchase_id: string
+          quantity: number
+          total_price: number
+          unit?: string | null
+          unit_price: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ncm?: string | null
+          product_code?: string | null
+          product_id?: string | null
+          product_name?: string
+          purchase_id?: string
+          quantity?: number
+          total_price?: number
+          unit?: string | null
+          unit_price?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_items_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchases: {
+        Row: {
+          created_at: string
+          id: string
+          invoice_date: string
+          invoice_key: string | null
+          invoice_number: string
+          notes: string | null
+          status: string | null
+          total_amount: number
+          updated_at: string
+          user_id: string
+          vendor_id: string | null
+          vendor_name: string
+          xml_content: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invoice_date: string
+          invoice_key?: string | null
+          invoice_number: string
+          notes?: string | null
+          status?: string | null
+          total_amount?: number
+          updated_at?: string
+          user_id: string
+          vendor_id?: string | null
+          vendor_name: string
+          xml_content?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invoice_date?: string
+          invoice_key?: string | null
+          invoice_number?: string
+          notes?: string | null
+          status?: string | null
+          total_amount?: number
+          updated_at?: string
+          user_id?: string
+          vendor_id?: string | null
+          vendor_name?: string
+          xml_content?: string | null
+        }
+        Relationships: []
+      }
       sales: {
         Row: {
           client_id: string
@@ -829,6 +940,57 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      vendors: {
+        Row: {
+          address: string | null
+          city: string | null
+          cnpj: string | null
+          contact_person: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          state: string | null
+          updated_at: string
+          user_id: string
+          zip: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          cnpj?: string | null
+          contact_person?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          state?: string | null
+          updated_at?: string
+          user_id: string
+          zip?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          cnpj?: string | null
+          contact_person?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          state?: string | null
+          updated_at?: string
+          user_id?: string
+          zip?: string | null
         }
         Relationships: []
       }

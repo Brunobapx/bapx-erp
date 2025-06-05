@@ -19,6 +19,7 @@ import CalendarPage from "./pages/CalendarPage";
 import ClientsPage from "./pages/ClientsPage";
 import ProductsPage from "./pages/ProductsPage";
 import VendorsPage from "./pages/VendorsPage";
+import PurchasesPage from "./pages/PurchasesPage";
 import FiscalEmissionPage from "./pages/FiscalEmissionPage";
 import SettingsPage from "./pages/SettingsPage";
 import StockPage from "./pages/StockPage";
@@ -46,6 +47,7 @@ const App = () => (
                       <Route path="/clientes" element={<ClientsPage />} />
                       <Route path="/produtos" element={<ProductsPage />} />
                       <Route path="/fornecedores" element={<VendorsPage />} />
+                      <Route path="/compras" element={<PurchasesPage />} />
                       <Route path="/pedidos" element={<OrdersPage />} />
                       <Route path="/pedidos/:id" element={<OrderFormPage />} />
                       <Route path="/producao" element={<ProductionPage />} />

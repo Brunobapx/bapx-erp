@@ -13,7 +13,8 @@ import {
   User,
   Users,
   FilePen,
-  Warehouse
+  Warehouse,
+  ShoppingCart
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { UserSection } from './UserSection';
@@ -52,6 +53,7 @@ export const Sidebar = () => {
     { path: "/clientes", text: "Clientes", icon: User },
     { path: "/produtos", text: "Produtos", icon: Package },
     { path: "/fornecedores", text: "Fornecedores", icon: Users },
+    { path: "/compras", text: "Compras", icon: ShoppingCart },
     { path: "/estoque", text: "Estoque", icon: Warehouse },
     { path: "/pedidos", text: "Pedidos", icon: Package },
     { path: "/producao", text: "Produção", icon: Box },
