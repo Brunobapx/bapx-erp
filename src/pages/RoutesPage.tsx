@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ApprovalModal } from '@/components/Modals/ApprovalModal';
@@ -27,6 +28,7 @@ import { useRoutes } from '@/hooks/useRoutes';
 
 const RoutesPage = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { routes, loading, fetchRoutes } = useRoutes();
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -37,13 +39,8 @@ const RoutesPage = () => {
   const saleData = location.state?.saleData;
   const initialTab = location.state?.activeTab || 'routes';
 
-  useEffect(() => {
-    setActiveTab(initialTab);
-    fetchRoutes();
-  }, [initialTab]);
-
-  // Mock routes data
-  const alerts = [
+  // Convert alerts to state
+  const [alerts, setAlerts] = useState([
     {
       id: 'alert-1',
       type: 'route' as const,
@@ -56,7 +53,12 @@ const RoutesPage = () => {
       message: 'Rota #RT-001 com confirmação de entrega pendente',
       time: '1 dia'
     }
-  ];
+  ]);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+    fetchRoutes();
+  }, [initialTab]);
 
   // Usar dados reais do banco ao invés de mock data
   const filteredItems = routes.filter(route => {
@@ -76,6 +78,10 @@ const RoutesPage = () => {
 
   const handleDismissAlert = (id: string) => {
     setAlerts(alerts.filter(alert => alert.id !== id));
+  };
+
+  const handleNavigateToSales = () => {
+    navigate('/sales');
   };
 
   return (
