@@ -78,8 +78,18 @@ export const useRoutes = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
+      // Primeiro buscar os IDs dos pedidos que já estão em rotas
+      const { data: routeItems, error: routeItemsError } = await supabase
+        .from('route_items')
+        .select('order_id')
+        .eq('user_id', user.id);
+
+      if (routeItemsError) throw routeItemsError;
+
+      const usedOrderIds = routeItems?.map(item => item.order_id) || [];
+
       // Buscar pedidos que estão prontos para entrega (confirmados em vendas)
-      const { data, error } = await supabase
+      let query = supabase
         .from('orders')
         .select(`
           id,
@@ -92,10 +102,14 @@ export const useRoutes = () => {
           )
         `)
         .eq('user_id', user.id)
-        .in('status', ['sale_confirmed', 'released_for_sale'])
-        .not('id', 'in', 
-          `(SELECT order_id FROM route_items WHERE user_id = '${user.id}')`
-        );
+        .in('status', ['sale_confirmed', 'released_for_sale']);
+
+      // Se há pedidos já usados, excluí-los da consulta
+      if (usedOrderIds.length > 0) {
+        query = query.not('id', 'in', `(${usedOrderIds.map(id => `"${id}"`).join(',')})`);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
