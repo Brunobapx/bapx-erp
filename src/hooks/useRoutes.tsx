@@ -105,7 +105,7 @@ export const useRoutes = () => {
           return sum + (item.quantity * (item.products?.weight || 1));
         }, 0);
 
-        const client = order.clients;
+        const client = Array.isArray(order.clients) ? order.clients[0] : order.clients;
         const deliveryAddress = client 
           ? `${client.address}, ${client.city} - ${client.state}`
           : 'Endereço não informado';
