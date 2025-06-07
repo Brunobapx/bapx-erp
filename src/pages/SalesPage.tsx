@@ -66,7 +66,7 @@ const SalesPage = () => {
     setShowInvoiceModal(true);
   };
 
-  const handleDeliverySlipClick = (item) => {
+  const handleRomaneioClick = (item) => {
     // Adicionar o pedido à lista de roteirização
     adicionarPedidoParaRoterizacao({
       order_id: item.order_id,
@@ -302,7 +302,7 @@ const SalesPage = () => {
                           variant="outline"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleDeliverySlipClick(item);
+                            handleRomaneioClick(item);
                           }}
                         >
                           <Truck className="mr-1 h-3 w-3" />
