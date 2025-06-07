@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,12 +21,15 @@ const RotasOtimizadasTab = () => {
   const [origem, setOrigem] = useState('');
   const [pedidosSelecionados, setPedidosSelecionados] = useState<string[]>([]);
 
+  // Buscar pedidos automaticamente quando houver pedidos enviados
   useEffect(() => {
-    // Buscar pedidos quando houver pedidos enviados
+    console.log('Pedidos enviados alterados:', pedidosEnviados);
     if (pedidosEnviados.length > 0) {
       buscarPedidosDisponiveis();
+    } else {
+      setPedidosSelecionados([]);
     }
-  }, [pedidosEnviados]);
+  }, [pedidosEnviados.length]);
 
   const handleGerarRotas = async () => {
     if (!origem.trim() || pedidosSelecionados.length === 0) {
@@ -64,12 +66,14 @@ const RotasOtimizadasTab = () => {
     setPedidosSelecionados(prev => prev.filter(id => id !== pedidoId));
   };
 
+  console.log('Estado atual:', { pedidosEnviados, pedidosDisponiveis, loading });
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-semibold">Rotas Otimizadas com Veículos</h2>
         <p className="text-muted-foreground">
-          Selecione os pedidos enviados via "Gerar Romaneio" e gere rotas otimizadas automaticamente considerando veículos e regiões
+          Selecione os pedidos enviados via "Romaneio" e gere rotas otimizadas automaticamente considerando veículos e regiões
         </p>
       </div>
 
@@ -100,7 +104,7 @@ const RotasOtimizadasTab = () => {
                     variant="outline"
                     size="sm"
                     onClick={buscarPedidosDisponiveis}
-                    disabled={loading}
+                    disabled={loading || pedidosEnviados.length === 0}
                   >
                     <RefreshCw className="h-3 w-3 mr-1" />
                     Atualizar
@@ -118,14 +122,17 @@ const RotasOtimizadasTab = () => {
               </div>
               
               <div className="max-h-64 overflow-y-auto border rounded-md p-2 space-y-2">
-                {pedidosDisponiveis.length === 0 ? (
+                {pedidosEnviados.length === 0 ? (
                   <div className="text-center py-4 text-muted-foreground">
-                    {pedidosEnviados.length === 0 
-                      ? 'Nenhum pedido enviado para roteirização. Use o botão "Gerar Romaneio" na página de vendas para adicionar pedidos.'
-                      : loading 
-                        ? 'Carregando pedidos...' 
-                        : 'Nenhum pedido encontrado'
-                    }
+                    Nenhum pedido enviado para roteirização. Use o botão "Romaneio" na página de vendas para adicionar pedidos.
+                  </div>
+                ) : loading ? (
+                  <div className="text-center py-4 text-muted-foreground">
+                    Carregando pedidos...
+                  </div>
+                ) : pedidosDisponiveis.length === 0 ? (
+                  <div className="text-center py-4 text-muted-foreground">
+                    Dados dos pedidos não encontrados. Clique em "Atualizar" para tentar novamente.
                   </div>
                 ) : (
                   pedidosDisponiveis.map((pedido) => (
@@ -155,7 +162,7 @@ const RotasOtimizadasTab = () => {
                         variant="ghost"
                         size="sm"
                         className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                        onClick={() => handleRemoverPedido(pedido.id)}
+                        onClick={() => handleRemoverPedido(pedido.order_id)}
                         title="Remover da roteirização"
                       >
                         <X className="h-3 w-3" />

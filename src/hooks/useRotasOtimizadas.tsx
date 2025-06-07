@@ -25,20 +25,32 @@ export interface PedidoDisponivel {
   status: string;
   sale_id?: string;
   sale_number?: string;
+  order_id: string;
 }
 
 export const useRotasOtimizadas = () => {
   const [loading, setLoading] = useState(false);
   const [rotas, setRotas] = useState<RotaOtimizada[]>([]);
   const [pedidosDisponiveis, setPedidosDisponiveis] = useState<PedidoDisponivel[]>([]);
-  const [pedidosEnviados, setPedidosEnviados] = useState<string[]>([]);
+  const [pedidosEnviados, setPedidosEnviados] = useState<any[]>([]);
 
   const adicionarPedidoParaRoterizacao = (saleData: any) => {
     console.log('Adicionando pedido para roteirização:', saleData);
     
-    // Adicionar o pedido à lista de pedidos enviados
-    if (!pedidosEnviados.includes(saleData.order_id)) {
-      setPedidosEnviados(prev => [...prev, saleData.order_id]);
+    // Verificar se o pedido já foi adicionado
+    const jaExiste = pedidosEnviados.find(p => p.order_id === saleData.order_id);
+    
+    if (!jaExiste) {
+      const novoPedido = {
+        id: saleData.order_id,
+        order_id: saleData.order_id,
+        sale_id: saleData.sale_id,
+        sale_number: saleData.sale_number,
+        client_name: saleData.client_name,
+        total_amount: saleData.total_amount
+      };
+      
+      setPedidosEnviados(prev => [...prev, novoPedido]);
       toast.success('Pedido adicionado à lista de roteirização!');
     } else {
       toast.info('Pedido já está na lista de roteirização');
@@ -57,7 +69,11 @@ export const useRotasOtimizadas = () => {
         return;
       }
 
-      // Buscar apenas os pedidos que foram enviados via botão "Gerar Romaneio"
+      console.log('Pedidos enviados para busca:', pedidosEnviados);
+
+      // Buscar apenas os pedidos que foram enviados via botão "Romaneio"
+      const orderIds = pedidosEnviados.map(p => p.order_id);
+      
       const { data, error } = await supabase
         .from('orders')
         .select(`
@@ -75,9 +91,11 @@ export const useRotasOtimizadas = () => {
           )
         `)
         .eq('user_id', user.id)
-        .in('id', pedidosEnviados);
+        .in('id', orderIds);
 
       if (error) throw error;
+
+      console.log('Dados dos pedidos encontrados:', data);
 
       // Processar os dados para calcular peso total e endereço de entrega
       const processedOrders = (data || []).map(order => {
@@ -91,21 +109,25 @@ export const useRotasOtimizadas = () => {
           : 'Endereço não informado';
 
         const sale = Array.isArray(order.sales) ? order.sales[0] : order.sales;
+        
+        // Encontrar os dados do pedido enviado
+        const pedidoEnviado = pedidosEnviados.find(p => p.order_id === order.id);
 
         return {
           id: order.id,
+          order_id: order.id,
           order_number: order.order_number,
           client_name: order.client_name,
           delivery_address: deliveryAddress,
           total_weight: totalWeight,
           status: 'available',
-          sale_id: sale?.id,
-          sale_number: sale?.sale_number
+          sale_id: sale?.id || pedidoEnviado?.sale_id,
+          sale_number: sale?.sale_number || pedidoEnviado?.sale_number
         };
       });
 
+      console.log('Pedidos processados:', processedOrders);
       setPedidosDisponiveis(processedOrders);
-      console.log('Pedidos disponíveis para roteirização:', processedOrders);
     } catch (error: any) {
       console.error('Erro ao buscar pedidos disponíveis:', error);
       toast.error('Erro ao carregar pedidos disponíveis');
@@ -115,8 +137,8 @@ export const useRotasOtimizadas = () => {
   };
 
   const removerPedidoDaRoteirizacao = (orderId: string) => {
-    setPedidosEnviados(prev => prev.filter(id => id !== orderId));
-    setPedidosDisponiveis(prev => prev.filter(pedido => pedido.id !== orderId));
+    setPedidosEnviados(prev => prev.filter(p => p.order_id !== orderId));
+    setPedidosDisponiveis(prev => prev.filter(pedido => pedido.order_id !== orderId));
     toast.success('Pedido removido da roteirização');
   };
 
