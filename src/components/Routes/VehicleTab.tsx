@@ -41,6 +41,7 @@ const VehicleTab = () => {
     capacity: '',
     driver_name: '',
     status: 'active',
+    regiao_atendida: '',
     notes: ''
   });
 
@@ -53,7 +54,9 @@ const VehicleTab = () => {
     
     const vehicleData = {
       ...formData,
-      capacity: Number(formData.capacity)
+      capacity: Number(formData.capacity),
+      // Armazenar região atendida nas notes por enquanto
+      notes: `Região: ${formData.regiao_atendida}${formData.notes ? ` | ${formData.notes}` : ''}`
     };
 
     try {
@@ -71,6 +74,7 @@ const VehicleTab = () => {
         capacity: '',
         driver_name: '',
         status: 'active',
+        regiao_atendida: '',
         notes: ''
       });
     } catch (error) {
@@ -80,13 +84,20 @@ const VehicleTab = () => {
 
   const handleEdit = (vehicle: Vehicle) => {
     setEditingVehicle(vehicle);
+    
+    // Extrair região das notes se existir
+    const notesMatch = vehicle.notes?.match(/Região: ([^|]+)/);
+    const regiao = notesMatch ? notesMatch[1].trim() : '';
+    const otherNotes = vehicle.notes?.replace(/Região: [^|]+\s*\|\s*/, '') || '';
+    
     setFormData({
       model: vehicle.model,
       license_plate: vehicle.license_plate,
       capacity: vehicle.capacity.toString(),
       driver_name: vehicle.driver_name || '',
       status: vehicle.status,
-      notes: vehicle.notes || ''
+      regiao_atendida: regiao,
+      notes: otherNotes
     });
     setIsModalOpen(true);
   };
@@ -95,6 +106,12 @@ const VehicleTab = () => {
     if (confirm('Tem certeza que deseja remover este veículo?')) {
       await deleteVehicle(id);
     }
+  };
+
+  const extractRegiao = (notes?: string) => {
+    if (!notes) return '-';
+    const match = notes.match(/Região: ([^|]+)/);
+    return match ? match[1].trim() : '-';
   };
 
   return (
@@ -115,6 +132,7 @@ const VehicleTab = () => {
                 capacity: '',
                 driver_name: '',
                 status: 'active',
+                regiao_atendida: '',
                 notes: ''
               });
             }}>
@@ -164,6 +182,20 @@ const VehicleTab = () => {
                   placeholder="Ex: 1000"
                   required
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="regiao_atendida">Região Atendida</Label>
+                <Select value={formData.regiao_atendida} onValueChange={(value) => setFormData({...formData, regiao_atendida: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a região" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Zona Norte">Zona Norte</SelectItem>
+                    <SelectItem value="Baixada">Baixada</SelectItem>
+                    <SelectItem value="Zona Sul / Centro / Niterói">Zona Sul / Centro / Niterói</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               
               <div className="space-y-2">
@@ -226,6 +258,7 @@ const VehicleTab = () => {
                 <TableHead>Modelo</TableHead>
                 <TableHead>Placa</TableHead>
                 <TableHead>Capacidade</TableHead>
+                <TableHead>Região</TableHead>
                 <TableHead>Motorista</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Ações</TableHead>
@@ -242,6 +275,7 @@ const VehicleTab = () => {
                   </TableCell>
                   <TableCell>{vehicle.license_plate}</TableCell>
                   <TableCell>{vehicle.capacity} kg</TableCell>
+                  <TableCell>{extractRegiao(vehicle.notes)}</TableCell>
                   <TableCell>{vehicle.driver_name || '-'}</TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 rounded-full text-xs ${

@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ApprovalModal } from '@/components/Modals/ApprovalModal';
-import { Truck, ChevronDown, Search, MapPin, Plus, Route } from 'lucide-react';
+import { Truck, ChevronDown, Search, MapPin, Plus, Route, Zap } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -24,6 +24,7 @@ import {
 import StageAlert from '@/components/Alerts/StageAlert';
 import VehicleTab from '@/components/Routes/VehicleTab';
 import CreateRouteTab from '@/components/Routes/CreateRouteTab';
+import RotasOtimizadasTab from '@/components/Routes/RotasOtimizadasTab';
 import { useRoutes } from '@/hooks/useRoutes';
 
 const RoutesPage = () => {
@@ -96,7 +97,7 @@ const RoutesPage = () => {
       <StageAlert alerts={alerts} onDismiss={handleDismissAlert} />
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="routes" className="flex items-center gap-2">
             <Truck className="h-4 w-4" />
             Rotas
@@ -108,6 +109,10 @@ const RoutesPage = () => {
           <TabsTrigger value="create-route" className="flex items-center gap-2">
             <Route className="h-4 w-4" />
             Criar Rotas
+          </TabsTrigger>
+          <TabsTrigger value="rotas-otimizadas" className="flex items-center gap-2">
+            <Zap className="h-4 w-4" />
+            Rotas Otimizadas
           </TabsTrigger>
         </TabsList>
 
@@ -211,6 +216,10 @@ const RoutesPage = () => {
 
         <TabsContent value="create-route">
           <CreateRouteTab saleData={saleData} />
+        </TabsContent>
+
+        <TabsContent value="rotas-otimizadas">
+          <RotasOtimizadasTab />
         </TabsContent>
       </Tabs>
       
