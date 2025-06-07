@@ -646,6 +646,7 @@ export type Database = {
           unit: string | null
           updated_at: string
           user_id: string
+          weight: number | null
         }
         Insert: {
           category?: string | null
@@ -668,6 +669,7 @@ export type Database = {
           unit?: string | null
           updated_at?: string
           user_id: string
+          weight?: number | null
         }
         Update: {
           category?: string | null
@@ -690,6 +692,7 @@ export type Database = {
           unit?: string | null
           updated_at?: string
           user_id?: string
+          weight?: number | null
         }
         Relationships: []
       }
@@ -849,6 +852,116 @@ export type Database = {
         }
         Relationships: []
       }
+      route_assignments: {
+        Row: {
+          created_at: string
+          driver_name: string | null
+          estimated_distance: number | null
+          estimated_time: number | null
+          id: string
+          route_name: string
+          status: string | null
+          total_capacity_used: number | null
+          updated_at: string
+          user_id: string
+          vehicle_id: string
+        }
+        Insert: {
+          created_at?: string
+          driver_name?: string | null
+          estimated_distance?: number | null
+          estimated_time?: number | null
+          id?: string
+          route_name: string
+          status?: string | null
+          total_capacity_used?: number | null
+          updated_at?: string
+          user_id: string
+          vehicle_id: string
+        }
+        Update: {
+          created_at?: string
+          driver_name?: string | null
+          estimated_distance?: number | null
+          estimated_time?: number | null
+          id?: string
+          route_name?: string
+          status?: string | null
+          total_capacity_used?: number | null
+          updated_at?: string
+          user_id?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "route_assignments_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      route_items: {
+        Row: {
+          client_name: string
+          created_at: string
+          delivery_address: string
+          estimated_delivery_time: string | null
+          id: string
+          order_id: string
+          route_assignment_id: string
+          sequence_order: number | null
+          status: string | null
+          total_weight: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_name: string
+          created_at?: string
+          delivery_address: string
+          estimated_delivery_time?: string | null
+          id?: string
+          order_id: string
+          route_assignment_id: string
+          sequence_order?: number | null
+          status?: string | null
+          total_weight?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_name?: string
+          created_at?: string
+          delivery_address?: string
+          estimated_delivery_time?: string | null
+          id?: string
+          order_id?: string
+          route_assignment_id?: string
+          sequence_order?: number | null
+          status?: string | null
+          total_weight?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "route_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "route_items_route_assignment_id_fkey"
+            columns: ["route_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "route_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales: {
         Row: {
           client_id: string
@@ -1001,6 +1114,45 @@ export type Database = {
           created_at?: string | null
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      vehicles: {
+        Row: {
+          capacity: number
+          created_at: string
+          driver_name: string | null
+          id: string
+          license_plate: string
+          model: string
+          notes: string | null
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          capacity: number
+          created_at?: string
+          driver_name?: string | null
+          id?: string
+          license_plate: string
+          model: string
+          notes?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          capacity?: number
+          created_at?: string
+          driver_name?: string | null
+          id?: string
+          license_plate?: string
+          model?: string
+          notes?: string | null
+          status?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: []

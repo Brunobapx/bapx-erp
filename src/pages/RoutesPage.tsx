@@ -1,10 +1,11 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ApprovalModal } from '@/components/Modals/ApprovalModal';
-import { Truck, ChevronDown, Search, MapPin } from 'lucide-react';
+import { Truck, ChevronDown, Search, MapPin, Plus, Route } from 'lucide-react';
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -20,6 +21,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import StageAlert from '@/components/Alerts/StageAlert';
+import VehicleTab from '@/components/Routes/VehicleTab';
+import CreateRouteTab from '@/components/Routes/CreateRouteTab';
 
 const RoutesPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -104,110 +107,138 @@ const RoutesPage = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Roteirização</h1>
-          <p className="text-muted-foreground">Gerencie todas as rotas de entrega.</p>
+          <p className="text-muted-foreground">Gerencie todas as rotas de entrega e veículos.</p>
         </div>
-        <Button onClick={() => setShowModal(true)}>
-          <Truck className="mr-2 h-4 w-4" /> Nova Rota
-        </Button>
       </div>
       
       <StageAlert alerts={alerts} onDismiss={handleDismissAlert} />
       
-      <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
-        <div className="relative w-full sm:max-w-xs">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar rotas..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8"
-          />
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                Status <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem>Todos</DropdownMenuItem>
-              <DropdownMenuItem>Em Trânsito</DropdownMenuItem>
-              <DropdownMenuItem>Saiu para Entrega</DropdownMenuItem>
-              <DropdownMenuItem>Entregue</DropdownMenuItem>
-              <DropdownMenuItem>Aguardando</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                Ordenar <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem>Data programada (próxima)</DropdownMenuItem>
-              <DropdownMenuItem>Data programada (distante)</DropdownMenuItem>
-              <DropdownMenuItem>Cliente (A-Z)</DropdownMenuItem>
-              <DropdownMenuItem>Status</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-      
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Pedido</TableHead>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Endereço</TableHead>
-                <TableHead>Motorista</TableHead>
-                <TableHead>Veículo</TableHead>
-                <TableHead>Data Programada</TableHead>
-                <TableHead>Data Entrega</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredItems.map((item) => (
-                <TableRow 
-                  key={item.id}
-                  className="cursor-pointer hover:bg-accent/5"
-                  onClick={() => handleItemClick(item)}
-                >
-                  <TableCell className="font-medium">{item.id}</TableCell>
-                  <TableCell>{item.orderId}</TableCell>
-                  <TableCell>{item.customer}</TableCell>
-                  <TableCell className="max-w-xs truncate" title={item.address}>
-                    <div className="flex items-center gap-1">
-                      <MapPin className="h-3 w-3 flex-shrink-0" />
-                      <span className="truncate">{item.address}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>{item.driver}</TableCell>
-                  <TableCell>{item.vehicle}</TableCell>
-                  <TableCell>{item.scheduledDate}</TableCell>
-                  <TableCell>{item.deliveryDate}</TableCell>
-                  <TableCell>
-                    <span className="stage-badge badge-route">
-                      {item.status}
-                    </span>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          {filteredItems.length === 0 && (
-            <div className="p-4 text-center text-muted-foreground">
-              Nenhum item encontrado.
+      <Tabs defaultValue="routes" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="routes" className="flex items-center gap-2">
+            <Truck className="h-4 w-4" />
+            Rotas
+          </TabsTrigger>
+          <TabsTrigger value="vehicles" className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Veículos
+          </TabsTrigger>
+          <TabsTrigger value="create-route" className="flex items-center gap-2">
+            <Route className="h-4 w-4" />
+            Criar Rotas
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="routes" className="space-y-6">
+          <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
+            <div className="relative w-full sm:max-w-xs">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar rotas..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8"
+              />
             </div>
-          )}
-        </CardContent>
-      </Card>
+            
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    Status <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem>Todos</DropdownMenuItem>
+                  <DropdownMenuItem>Em Trânsito</DropdownMenuItem>
+                  <DropdownMenuItem>Saiu para Entrega</DropdownMenuItem>
+                  <DropdownMenuItem>Entregue</DropdownMenuItem>
+                  <DropdownMenuItem>Aguardando</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    Ordenar <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem>Data programada (próxima)</DropdownMenuItem>
+                  <DropdownMenuItem>Data programada (distante)</DropdownMenuItem>
+                  <DropdownMenuItem>Cliente (A-Z)</DropdownMenuItem>
+                  <DropdownMenuItem>Status</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
+              <Button onClick={() => setShowModal(true)}>
+                <Truck className="mr-2 h-4 w-4" /> Nova Rota
+              </Button>
+            </div>
+          </div>
+          
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Pedido</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Endereço</TableHead>
+                    <TableHead>Motorista</TableHead>
+                    <TableHead>Veículo</TableHead>
+                    <TableHead>Data Programada</TableHead>
+                    <TableHead>Data Entrega</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredItems.map((item) => (
+                    <TableRow 
+                      key={item.id}
+                      className="cursor-pointer hover:bg-accent/5"
+                      onClick={() => handleItemClick(item)}
+                    >
+                      <TableCell className="font-medium">{item.id}</TableCell>
+                      <TableCell>{item.orderId}</TableCell>
+                      <TableCell>{item.customer}</TableCell>
+                      <TableCell className="max-w-xs truncate" title={item.address}>
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">{item.address}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{item.driver}</TableCell>
+                      <TableCell>{item.vehicle}</TableCell>
+                      <TableCell>{item.scheduledDate}</TableCell>
+                      <TableCell>{item.deliveryDate}</TableCell>
+                      <TableCell>
+                        <span className="stage-badge badge-route">
+                          {item.status}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              {filteredItems.length === 0 && (
+                <div className="p-4 text-center text-muted-foreground">
+                  Nenhum item encontrado.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="vehicles">
+          <VehicleTab />
+        </TabsContent>
+
+        <TabsContent value="create-route">
+          <CreateRouteTab />
+        </TabsContent>
+      </Tabs>
       
       <ApprovalModal
         isOpen={showModal}
