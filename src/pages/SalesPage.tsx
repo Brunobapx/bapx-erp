@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ApprovalModal } from '@/components/Modals/ApprovalModal';
@@ -25,6 +26,7 @@ import { toast } from "sonner";
 import { useSales } from '@/hooks/useSales';
 
 const SalesPage = () => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
@@ -63,8 +65,13 @@ const SalesPage = () => {
   };
 
   const handleDeliverySlipClick = (item) => {
-    setSelectedItem(item);
-    setShowDeliverySlipModal(true);
+    // Navegar para a página de roteirização com os dados da venda
+    navigate('/rotas', { 
+      state: { 
+        saleData: item,
+        activeTab: 'create-route'
+      }
+    });
   };
 
   const handleDismissAlert = (id) => {

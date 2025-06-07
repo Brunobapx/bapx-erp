@@ -1,5 +1,5 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ApprovalModal } from '@/components/Modals/ApprovalModal';
@@ -23,12 +23,27 @@ import {
 import StageAlert from '@/components/Alerts/StageAlert';
 import VehicleTab from '@/components/Routes/VehicleTab';
 import CreateRouteTab from '@/components/Routes/CreateRouteTab';
+import { useRoutes } from '@/hooks/useRoutes';
 
 const RoutesPage = () => {
+  const location = useLocation();
+  const { routes, loading, fetchRoutes } = useRoutes();
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [alerts, setAlerts] = useState([
+  const [activeTab, setActiveTab] = useState('routes');
+  
+  // Receber dados da venda se vier da página de vendas
+  const saleData = location.state?.saleData;
+  const initialTab = location.state?.activeTab || 'routes';
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+    fetchRoutes();
+  }, [initialTab]);
+
+  // Mock routes data
+  const alerts = [
     {
       id: 'alert-1',
       type: 'route' as const,
@@ -41,55 +56,16 @@ const RoutesPage = () => {
       message: 'Rota #RT-001 com confirmação de entrega pendente',
       time: '1 dia'
     }
-  ]);
-
-  // Mock routes data
-  const routesItems = [
-    { 
-      id: 'RT-001', 
-      orderId: 'PED-001',
-      customer: 'Tech Solutions',
-      address: 'Av. Paulista, 1000, São Paulo - SP',
-      driver: 'João Silva',
-      vehicle: 'Furgão - ABC-1234',
-      scheduledDate: '19/05/2025',
-      deliveryDate: '-',
-      status: 'Em Trânsito'
-    },
-    { 
-      id: 'RT-002', 
-      orderId: 'PED-003',
-      customer: 'City Hospital',
-      address: 'Rua das Flores, 500, Rio de Janeiro - RJ',
-      driver: 'Carlos Santos',
-      vehicle: 'Van - DEF-5678',
-      scheduledDate: '18/05/2025',
-      deliveryDate: '-',
-      status: 'Saiu para Entrega'
-    },
-    { 
-      id: 'RT-003', 
-      orderId: 'PED-004',
-      customer: 'Global Foods',
-      address: 'Rua Comércio, 230, Belo Horizonte - MG',
-      driver: 'Pedro Almeida',
-      vehicle: 'Caminhão - GHI-9012',
-      scheduledDate: '17/05/2025',
-      deliveryDate: '17/05/2025',
-      status: 'Entregue'
-    }
   ];
 
-  // Filter items based on search query
-  const filteredItems = routesItems.filter(item => {
+  // Usar dados reais do banco ao invés de mock data
+  const filteredItems = routes.filter(route => {
     const searchString = searchQuery.toLowerCase();
     return (
-      item.id.toLowerCase().includes(searchString) ||
-      item.orderId.toLowerCase().includes(searchString) ||
-      item.customer.toLowerCase().includes(searchString) ||
-      item.address.toLowerCase().includes(searchString) ||
-      item.driver.toLowerCase().includes(searchString) ||
-      item.status.toLowerCase().includes(searchString)
+      route.id.toLowerCase().includes(searchString) ||
+      route.route_name.toLowerCase().includes(searchString) ||
+      route.driver_name?.toLowerCase().includes(searchString) ||
+      route.status.toLowerCase().includes(searchString)
     );
   });
 
@@ -113,7 +89,7 @@ const RoutesPage = () => {
       
       <StageAlert alerts={alerts} onDismiss={handleDismissAlert} />
       
-      <Tabs defaultValue="routes" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="routes" className="flex items-center gap-2">
             <Truck className="h-4 w-4" />
@@ -183,48 +159,40 @@ const RoutesPage = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>ID</TableHead>
-                    <TableHead>Pedido</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Endereço</TableHead>
-                    <TableHead>Motorista</TableHead>
+                    <TableHead>Nome da Rota</TableHead>
                     <TableHead>Veículo</TableHead>
-                    <TableHead>Data Programada</TableHead>
-                    <TableHead>Data Entrega</TableHead>
+                    <TableHead>Motorista</TableHead>
+                    <TableHead>Capacidade Usada</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredItems.map((item) => (
+                  {filteredItems.map((route) => (
                     <TableRow 
-                      key={item.id}
+                      key={route.id}
                       className="cursor-pointer hover:bg-accent/5"
-                      onClick={() => handleItemClick(item)}
+                      onClick={() => handleItemClick(route)}
                     >
-                      <TableCell className="font-medium">{item.id}</TableCell>
-                      <TableCell>{item.orderId}</TableCell>
-                      <TableCell>{item.customer}</TableCell>
-                      <TableCell className="max-w-xs truncate" title={item.address}>
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3 flex-shrink-0" />
-                          <span className="truncate">{item.address}</span>
-                        </div>
+                      <TableCell className="font-medium">{route.id.slice(0, 8)}</TableCell>
+                      <TableCell>{route.route_name}</TableCell>
+                      <TableCell>
+                        {route.vehicle?.model} - {route.vehicle?.license_plate}
                       </TableCell>
-                      <TableCell>{item.driver}</TableCell>
-                      <TableCell>{item.vehicle}</TableCell>
-                      <TableCell>{item.scheduledDate}</TableCell>
-                      <TableCell>{item.deliveryDate}</TableCell>
+                      <TableCell>{route.driver_name || '-'}</TableCell>
+                      <TableCell>{route.total_capacity_used.toFixed(2)} kg</TableCell>
                       <TableCell>
                         <span className="stage-badge badge-route">
-                          {item.status}
+                          {route.status === 'pending' ? 'Pendente' :
+                           route.status === 'in_progress' ? 'Em Andamento' : 'Concluída'}
                         </span>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-              {filteredItems.length === 0 && (
+              {filteredItems.length === 0 && !loading && (
                 <div className="p-4 text-center text-muted-foreground">
-                  Nenhum item encontrado.
+                  Nenhuma rota encontrada.
                 </div>
               )}
             </CardContent>
@@ -236,7 +204,7 @@ const RoutesPage = () => {
         </TabsContent>
 
         <TabsContent value="create-route">
-          <CreateRouteTab />
+          <CreateRouteTab saleData={saleData} />
         </TabsContent>
       </Tabs>
       

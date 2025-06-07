@@ -78,7 +78,7 @@ export const useRoutes = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
-      // Buscar pedidos que estão prontos para entrega e ainda não foram atribuídos a uma rota
+      // Buscar pedidos que estão prontos para entrega (confirmados em vendas)
       const { data, error } = await supabase
         .from('orders')
         .select(`
@@ -92,7 +92,7 @@ export const useRoutes = () => {
           )
         `)
         .eq('user_id', user.id)
-        .in('status', ['released_for_sale', 'sale_confirmed'])
+        .in('status', ['sale_confirmed', 'released_for_sale'])
         .not('id', 'in', 
           `(SELECT order_id FROM route_items WHERE user_id = '${user.id}')`
         );

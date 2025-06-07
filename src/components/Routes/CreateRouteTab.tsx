@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,11 @@ import { MapPin, Package, Truck } from 'lucide-react';
 import { useRoutes, OrderForRoute } from '@/hooks/useRoutes';
 import { useVehicles } from '@/hooks/useVehicles';
 
-const CreateRouteTab = () => {
+interface CreateRouteTabProps {
+  saleData?: any;
+}
+
+const CreateRouteTab = ({ saleData }: CreateRouteTabProps) => {
   const { availableOrders, routes, loading, fetchAvailableOrders, fetchRoutes, createOptimizedRoutes } = useRoutes();
   const { vehicles, fetchVehicles } = useVehicles();
   
@@ -33,7 +36,12 @@ const CreateRouteTab = () => {
     fetchAvailableOrders();
     fetchRoutes();
     fetchVehicles();
-  }, []);
+    
+    // Se há dados de venda, pré-selecionar o pedido correspondente
+    if (saleData?.order_id) {
+      setSelectedOrders([saleData.order_id]);
+    }
+  }, [saleData]);
 
   const handleOrderSelection = (orderId: string, checked: boolean) => {
     if (checked) {
@@ -76,7 +84,14 @@ const CreateRouteTab = () => {
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-semibold">Criar Rotas</h2>
-        <p className="text-muted-foreground">Selecione pedidos e veículo para criar uma rota otimizada</p>
+        <p className="text-muted-foreground">
+          Selecione pedidos e veículo para criar uma rota otimizada
+          {saleData && (
+            <span className="text-blue-600 ml-2">
+              • Venda {saleData.sale_number} selecionada
+            </span>
+          )}
+        </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
