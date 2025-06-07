@@ -85,7 +85,7 @@ export const useRoutes = () => {
           id,
           order_number,
           client_name,
-          delivery_address: clients(address, city, state),
+          clients!inner(address, city, state),
           order_items(
             quantity,
             products(weight)
@@ -105,8 +105,9 @@ export const useRoutes = () => {
           return sum + (item.quantity * (item.products?.weight || 1));
         }, 0);
 
-        const deliveryAddress = order.delivery_address 
-          ? `${order.delivery_address.address}, ${order.delivery_address.city} - ${order.delivery_address.state}`
+        const client = order.clients;
+        const deliveryAddress = client 
+          ? `${client.address}, ${client.city} - ${client.state}`
           : 'Endereço não informado';
 
         return {
