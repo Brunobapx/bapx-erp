@@ -4,158 +4,157 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "@/hooks/use-toast";
+import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface VendorModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  onClose: (refresh?: boolean) => void;
   vendorData: any | null;
 }
 
 export const VendorModal = ({ isOpen, onClose, vendorData }: VendorModalProps) => {
   const [formData, setFormData] = useState({
-    id: '',
     name: '',
     cnpj: '',
-    ie: '',
     email: '',
     phone: '',
     address: '',
     city: '',
     state: '',
     zip: '',
-    type: 'Distribuidor',
-    contactName: '',
-    contactEmail: '',
-    contactPhone: ''
+    contact_person: '',
+    notes: ''
   });
+  const [loading, setLoading] = useState(false);
 
   const isNewVendor = !vendorData?.id;
   
   useEffect(() => {
     if (vendorData) {
       setFormData({
-        id: vendorData.id || '',
         name: vendorData.name || '',
         cnpj: vendorData.cnpj || '',
-        ie: vendorData.ie || '',
         email: vendorData.email || '',
         phone: vendorData.phone || '',
         address: vendorData.address || '',
         city: vendorData.city || '',
         state: vendorData.state || '',
         zip: vendorData.zip || '',
-        type: vendorData.type || 'Distribuidor',
-        contactName: vendorData.contactName || '',
-        contactEmail: vendorData.contactEmail || '',
-        contactPhone: vendorData.contactPhone || ''
+        contact_person: vendorData.contact_person || '',
+        notes: vendorData.notes || ''
       });
     } else {
       resetForm();
     }
-  }, [vendorData]);
+  }, [vendorData, isOpen]);
 
   const resetForm = () => {
     setFormData({
-      id: '',
       name: '',
       cnpj: '',
-      ie: '',
       email: '',
       phone: '',
       address: '',
       city: '',
       state: '',
       zip: '',
-      type: 'Distribuidor',
-      contactName: '',
-      contactEmail: '',
-      contactPhone: ''
+      contact_person: '',
+      notes: ''
     });
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.name.trim()) {
+      toast.error('Nome do fornecedor é obrigatório');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Usuário não autenticado');
+        return;
+      }
+
+      if (isNewVendor) {
+        // Criar novo fornecedor
+        const { error } = await supabase
+          .from('vendors')
+          .insert({
+            user_id: user.id,
+            ...formData
+          });
+
+        if (error) throw error;
+        
+        toast.success('Fornecedor cadastrado com sucesso!');
+      } else {
+        // Atualizar fornecedor existente
+        const { error } = await supabase
+          .from('vendors')
+          .update(formData)
+          .eq('id', vendorData.id);
+
+        if (error) throw error;
+        
+        toast.success('Fornecedor atualizado com sucesso!');
+      }
+      
+      onClose(true); // true indica que deve fazer refresh
+      resetForm();
+      
+    } catch (error: any) {
+      console.error('Erro ao salvar fornecedor:', error);
+      toast.error('Erro ao salvar fornecedor: ' + (error.message || 'Erro desconhecido'));
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSubmit = () => {
-    // Here we would submit to backend API
-    // For now just show a toast notification
-    toast({
-      title: isNewVendor ? "Fornecedor adicionado" : "Fornecedor atualizado",
-      description: `${formData.name} foi ${isNewVendor ? 'adicionado' : 'atualizado'} com sucesso.`,
-    });
+  const handleClose = () => {
     onClose();
+    resetForm();
   };
-
-  const vendorTypes = [
-    { value: 'Distribuidor', label: 'Distribuidor' },
-    { value: 'Fabricante', label: 'Fabricante' },
-    { value: 'Importador', label: 'Importador' },
-    { value: 'Atacadista', label: 'Atacadista' }
-  ];
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isNewVendor ? 'Novo Fornecedor' : 'Editar Fornecedor'}</DialogTitle>
         </DialogHeader>
         
-        <div className="grid gap-4 py-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-2">
-            <Label htmlFor="name">Razão Social</Label>
+            <Label htmlFor="name">Razão Social *</Label>
             <Input
               id="name"
               name="name"
               value={formData.name}
               onChange={handleChange}
+              required
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="cnpj">CNPJ</Label>
-              <Input
-                id="cnpj"
-                name="cnpj"
-                value={formData.cnpj}
-                onChange={handleChange}
-                placeholder="00.000.000/0000-00"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="ie">Inscrição Estadual</Label>
-              <Input
-                id="ie"
-                name="ie"
-                value={formData.ie}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
-
           <div className="grid gap-2">
-            <Label htmlFor="type">Tipo de Fornecedor</Label>
-            <Select 
-              value={formData.type} 
-              onValueChange={(value) => handleSelectChange('type', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecionar..." />
-              </SelectTrigger>
-              <SelectContent>
-                {vendorTypes.map(type => (
-                  <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="cnpj">CNPJ</Label>
+            <Input
+              id="cnpj"
+              name="cnpj"
+              value={formData.cnpj}
+              onChange={handleChange}
+              placeholder="00.000.000/0000-00"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -178,6 +177,16 @@ export const VendorModal = ({ isOpen, onClose, vendorData }: VendorModalProps) =
                 onChange={handleChange}
               />
             </div>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="contact_person">Nome do Contato</Label>
+            <Input
+              id="contact_person"
+              name="contact_person"
+              value={formData.contact_person}
+              onChange={handleChange}
+            />
           </div>
 
           <div className="grid gap-2">
@@ -220,53 +229,30 @@ export const VendorModal = ({ isOpen, onClose, vendorData }: VendorModalProps) =
             </div>
           </div>
 
-          {/* Contact Information */}
-          <div className="border-t pt-4 mt-2">
-            <h4 className="text-sm font-medium mb-2">Informações de Contato</h4>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="contactName">Nome do Contato</Label>
-              <Input
-                id="contactName"
-                name="contactName"
-                value={formData.contactName}
-                onChange={handleChange}
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4 mt-4">
-              <div className="grid gap-2">
-                <Label htmlFor="contactEmail">Email do Contato</Label>
-                <Input
-                  id="contactEmail"
-                  name="contactEmail"
-                  type="email"
-                  value={formData.contactEmail}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="contactPhone">Telefone do Contato</Label>
-                <Input
-                  id="contactPhone"
-                  name="contactPhone"
-                  value={formData.contactPhone}
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
+          <div className="grid gap-2">
+            <Label htmlFor="notes">Observações</Label>
+            <Textarea
+              id="notes"
+              name="notes"
+              value={formData.notes}
+              onChange={handleChange}
+              rows={3}
+            />
           </div>
-        </div>
-        
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button 
-            onClick={handleSubmit}
-            className="bg-erp-production hover:bg-erp-production/90"
-          >
-            {isNewVendor ? 'Adicionar' : 'Salvar'}
-          </Button>
-        </DialogFooter>
+          
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={handleClose}>
+              Cancelar
+            </Button>
+            <Button 
+              type="submit"
+              disabled={loading}
+              className="bg-erp-production hover:bg-erp-production/90"
+            >
+              {loading ? 'Salvando...' : (isNewVendor ? 'Cadastrar' : 'Salvar')}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

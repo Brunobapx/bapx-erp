@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Users, ChevronDown, Search, FileText, Plus } from 'lucide-react';
+import { Users, ChevronDown, Search, FileText, Plus, Trash2 } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -18,65 +18,37 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { VendorModal } from '@/components/Modals/VendorModal';
+import { useVendors } from '@/hooks/useVendors';
+import { toast } from "sonner";
 
 const VendorsPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState(null);
+  const [vendorToDelete, setVendorToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // Mock vendor data
-  const vendors = [
-    { 
-      id: 1, 
-      name: 'Fornecedores Unidos Ltda', 
-      cnpj: '12.345.678/0001-90', 
-      ie: '123456789', 
-      email: 'contato@fornecedoresunidos.com',
-      phone: '(11) 3456-7890',
-      address: 'Av. Industrial, 1000, São Paulo - SP',
-      type: 'Distribuidor'
-    },
-    { 
-      id: 2, 
-      name: 'Matéria Prima S/A', 
-      cnpj: '98.765.432/0001-21', 
-      ie: '987654321', 
-      email: 'vendas@materiaprima.com',
-      phone: '(11) 9876-5432',
-      address: 'Rua das Indústrias, 500, São Paulo - SP',
-      type: 'Fabricante'
-    },
-    { 
-      id: 3, 
-      name: 'Tecnologia Avançada Ltda', 
-      cnpj: '45.678.901/0001-23', 
-      ie: '456789012', 
-      email: 'vendas@tecnologiaavancada.com',
-      phone: '(11) 4567-8901',
-      address: 'Av. Paulista, 1500, São Paulo - SP',
-      type: 'Importador'
-    },
-    { 
-      id: 4, 
-      name: 'Importadora Global Ltda', 
-      cnpj: '78.901.234/0001-56', 
-      ie: '789012345', 
-      email: 'contato@importadoraglobal.com',
-      phone: '(11) 7890-1234',
-      address: 'Av. do Comércio, 800, São Paulo - SP',
-      type: 'Importador'
-    },
-  ];
+  const { vendors, loading, error, deleteVendor, refreshVendors } = useVendors();
 
   // Filter vendors based on search query
   const filteredVendors = vendors.filter(vendor => {
     const searchString = searchQuery.toLowerCase();
     return (
-      vendor.name.toLowerCase().includes(searchString) ||
-      vendor.cnpj.toLowerCase().includes(searchString) ||
-      vendor.email.toLowerCase().includes(searchString) ||
-      vendor.type.toLowerCase().includes(searchString)
+      (vendor.name && vendor.name.toLowerCase().includes(searchString)) ||
+      (vendor.cnpj && vendor.cnpj.toLowerCase().includes(searchString)) ||
+      (vendor.email && vendor.email.toLowerCase().includes(searchString)) ||
+      (vendor.contact_person && vendor.contact_person.toLowerCase().includes(searchString))
     );
   });
 
@@ -84,6 +56,48 @@ const VendorsPage = () => {
     setSelectedVendor(vendor);
     setShowModal(true);
   };
+
+  const handleDeleteVendor = async () => {
+    if (!vendorToDelete) return;
+    
+    try {
+      setIsDeleting(true);
+      await deleteVendor(vendorToDelete);
+      setVendorToDelete(null);
+    } catch (error) {
+      // Error already handled in the hook
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleModalClose = (refresh?: boolean) => {
+    setShowModal(false);
+    setSelectedVendor(null);
+    if (refresh) {
+      refreshVendors();
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-4 sm:p-6 space-y-6">
+        <div className="flex items-center justify-center h-32">
+          <div className="text-muted-foreground">Carregando fornecedores...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 sm:p-6 space-y-6">
+        <div className="flex items-center justify-center h-32">
+          <div className="text-red-500">Erro ao carregar fornecedores: {error}</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
@@ -117,27 +131,13 @@ const VendorsPage = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
-                Tipo <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem>Todos</DropdownMenuItem>
-              <DropdownMenuItem>Distribuidor</DropdownMenuItem>
-              <DropdownMenuItem>Fabricante</DropdownMenuItem>
-              <DropdownMenuItem>Importador</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
                 Ordenar <ChevronDown className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               <DropdownMenuItem>Nome (A-Z)</DropdownMenuItem>
               <DropdownMenuItem>Nome (Z-A)</DropdownMenuItem>
-              <DropdownMenuItem>Tipo (A-Z)</DropdownMenuItem>
+              <DropdownMenuItem>Data de Cadastro</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -150,31 +150,43 @@ const VendorsPage = () => {
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead>CNPJ</TableHead>
-                <TableHead>IE</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Telefone</TableHead>
-                <TableHead>Tipo</TableHead>
+                <TableHead>Contato</TableHead>
+                <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredVendors.map((vendor) => (
-                <TableRow 
-                  key={vendor.id}
-                  className="cursor-pointer hover:bg-accent/5"
-                  onClick={() => handleVendorClick(vendor)}
-                >
-                  <TableCell className="font-medium">{vendor.name}</TableCell>
-                  <TableCell>{vendor.cnpj}</TableCell>
-                  <TableCell>{vendor.ie}</TableCell>
-                  <TableCell>{vendor.email}</TableCell>
-                  <TableCell>{vendor.phone}</TableCell>
+                <TableRow key={vendor.id}>
+                  <TableCell 
+                    className="font-medium cursor-pointer hover:text-blue-600"
+                    onClick={() => handleVendorClick(vendor)}
+                  >
+                    {vendor.name}
+                  </TableCell>
+                  <TableCell>{vendor.cnpj || '-'}</TableCell>
+                  <TableCell>{vendor.email || '-'}</TableCell>
+                  <TableCell>{vendor.phone || '-'}</TableCell>
+                  <TableCell>{vendor.contact_person || '-'}</TableCell>
                   <TableCell>
-                    <span className={`stage-badge ${
-                      vendor.type === 'Distribuidor' ? 'badge-sales' : 
-                      vendor.type === 'Fabricante' ? 'badge-production' : 'badge-finance'
-                    }`}>
-                      {vendor.type}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleVendorClick(vendor)}
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setVendorToDelete(vendor.id)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -182,7 +194,7 @@ const VendorsPage = () => {
           </Table>
           {filteredVendors.length === 0 && (
             <div className="p-4 text-center text-muted-foreground">
-              Nenhum fornecedor encontrado.
+              {searchQuery ? 'Nenhum fornecedor encontrado com esse termo.' : 'Nenhum fornecedor cadastrado.'}
             </div>
           )}
         </CardContent>
@@ -190,9 +202,30 @@ const VendorsPage = () => {
       
       <VendorModal
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
+        onClose={handleModalClose}
         vendorData={selectedVendor || null}
       />
+
+      <AlertDialog open={!!vendorToDelete} onOpenChange={() => setVendorToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este fornecedor? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteVendor}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? 'Excluindo...' : 'Excluir'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
