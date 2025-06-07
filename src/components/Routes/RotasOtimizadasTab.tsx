@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { MapPin, Route, ExternalLink, Package, RefreshCw, X } from 'lucide-react';
+import { MapPin, Route, ExternalLink, Package, RefreshCw, X, Trash2 } from 'lucide-react';
 import { useRotasOtimizadas } from '@/hooks/useRotasOtimizadas';
 
 const RotasOtimizadasTab = () => {
@@ -15,7 +16,8 @@ const RotasOtimizadasTab = () => {
     pedidosEnviados,
     buscarPedidosDisponiveis, 
     gerarRotasOtimizadasComVeiculos,
-    removerPedidoDaRoteirizacao
+    removerPedidoDaRoteirizacao,
+    limparTodosPedidos
   } = useRotasOtimizadas();
   
   const [origem, setOrigem] = useState('');
@@ -23,13 +25,12 @@ const RotasOtimizadasTab = () => {
 
   // Buscar pedidos automaticamente quando houver pedidos enviados
   useEffect(() => {
-    console.log('Pedidos enviados alterados:', pedidosEnviados);
-    if (pedidosEnviados.length > 0) {
+    console.log('RotasOtimizadasTab - Pedidos enviados alterados:', pedidosEnviados);
+    if (pedidosEnviados.length > 0 && pedidosDisponiveis.length === 0) {
+      console.log('Buscando pedidos disponíveis automaticamente');
       buscarPedidosDisponiveis();
-    } else {
-      setPedidosSelecionados([]);
     }
-  }, [pedidosEnviados.length]);
+  }, [pedidosEnviados.length, pedidosDisponiveis.length]);
 
   const handleGerarRotas = async () => {
     if (!origem.trim() || pedidosSelecionados.length === 0) {
@@ -66,6 +67,13 @@ const RotasOtimizadasTab = () => {
     setPedidosSelecionados(prev => prev.filter(id => id !== pedidoId));
   };
 
+  const handleLimparTodos = () => {
+    if (window.confirm('Tem certeza que deseja remover todos os pedidos da roteirização?')) {
+      limparTodosPedidos();
+      setPedidosSelecionados([]);
+    }
+  };
+
   console.log('Estado atual:', { pedidosEnviados, pedidosDisponiveis, loading });
 
   return (
@@ -98,7 +106,12 @@ const RotasOtimizadasTab = () => {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>Pedidos para Roteirização ({pedidosDisponiveis.length})</Label>
+                <Label>
+                  Pedidos para Roteirização 
+                  <span className="ml-1 text-sm text-muted-foreground">
+                    ({pedidosDisponiveis.length} disponíveis de {pedidosEnviados.length} enviados)
+                  </span>
+                </Label>
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
@@ -110,13 +123,24 @@ const RotasOtimizadasTab = () => {
                     Atualizar
                   </Button>
                   {pedidosDisponiveis.length > 0 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleSelectAll}
-                    >
-                      {pedidosSelecionados.length === pedidosDisponiveis.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
-                    </Button>
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSelectAll}
+                      >
+                        {pedidosSelecionados.length === pedidosDisponiveis.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleLimparTodos}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Limpar Todos
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>
@@ -124,15 +148,21 @@ const RotasOtimizadasTab = () => {
               <div className="max-h-64 overflow-y-auto border rounded-md p-2 space-y-2">
                 {pedidosEnviados.length === 0 ? (
                   <div className="text-center py-4 text-muted-foreground">
-                    Nenhum pedido enviado para roteirização. Use o botão "Romaneio" na página de vendas para adicionar pedidos.
+                    <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>Nenhum pedido enviado para roteirização.</p>
+                    <p className="text-sm">Use o botão "Romaneio" na página de vendas para adicionar pedidos.</p>
                   </div>
                 ) : loading ? (
                   <div className="text-center py-4 text-muted-foreground">
+                    <RefreshCw className="h-6 w-6 mx-auto mb-2 animate-spin" />
                     Carregando pedidos...
                   </div>
                 ) : pedidosDisponiveis.length === 0 ? (
                   <div className="text-center py-4 text-muted-foreground">
-                    Dados dos pedidos não encontrados. Clique em "Atualizar" para tentar novamente.
+                    <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>Dados dos pedidos não encontrados.</p>
+                    <p className="text-sm">Clique em "Atualizar" para tentar novamente.</p>
+                    <p className="text-xs mt-2">Pedidos enviados: {pedidosEnviados.length}</p>
                   </div>
                 ) : (
                   pedidosDisponiveis.map((pedido) => (
@@ -199,7 +229,9 @@ const RotasOtimizadasTab = () => {
           <CardContent>
             {rotas.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                Nenhuma rota gerada ainda. Selecione os pedidos e configure a origem para gerar rotas otimizadas.
+                <Route className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Nenhuma rota gerada ainda.</p>
+                <p className="text-sm">Selecione os pedidos e configure a origem para gerar rotas otimizadas.</p>
               </div>
             ) : (
               <div className="space-y-4">

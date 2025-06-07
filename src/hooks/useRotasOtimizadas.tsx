@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -28,17 +28,62 @@ export interface PedidoDisponivel {
   order_id: string;
 }
 
+const STORAGE_KEY = 'pedidos_roteirizacao';
+
+// Funções auxiliares para localStorage
+const saveToStorage = (pedidos: any[]) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(pedidos));
+  } catch (error) {
+    console.error('Erro ao salvar no localStorage:', error);
+  }
+};
+
+const loadFromStorage = (): any[] => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch (error) {
+    console.error('Erro ao carregar do localStorage:', error);
+    return [];
+  }
+};
+
+const clearStorage = () => {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (error) {
+    console.error('Erro ao limpar localStorage:', error);
+  }
+};
+
 export const useRotasOtimizadas = () => {
   const [loading, setLoading] = useState(false);
   const [rotas, setRotas] = useState<RotaOtimizada[]>([]);
   const [pedidosDisponiveis, setPedidosDisponiveis] = useState<PedidoDisponivel[]>([]);
-  const [pedidosEnviados, setPedidosEnviados] = useState<any[]>([]);
+  
+  // Inicializar pedidosEnviados com dados do localStorage
+  const [pedidosEnviados, setPedidosEnviados] = useState<any[]>(() => {
+    const stored = loadFromStorage();
+    console.log('Inicializando pedidosEnviados com dados do localStorage:', stored);
+    return stored;
+  });
+
+  // Buscar pedidos automaticamente quando o hook for inicializado e houver pedidos salvos
+  useEffect(() => {
+    console.log('useEffect executado - pedidosEnviados:', pedidosEnviados);
+    if (pedidosEnviados.length > 0) {
+      console.log('Executando buscarPedidosDisponiveis automaticamente');
+      buscarPedidosDisponiveis();
+    }
+  }, []); // Executar apenas na inicialização
 
   const adicionarPedidoParaRoterizacao = (saleData: any) => {
     console.log('Adicionando pedido para roteirização:', saleData);
     
     // Verificar se o pedido já foi adicionado
-    const jaExiste = pedidosEnviados.find(p => p.order_id === saleData.order_id);
+    const pedidosAtuais = loadFromStorage();
+    const jaExiste = pedidosAtuais.find(p => p.order_id === saleData.order_id);
     
     if (!jaExiste) {
       const novoPedido = {
@@ -50,7 +95,13 @@ export const useRotasOtimizadas = () => {
         total_amount: saleData.total_amount
       };
       
-      setPedidosEnviados(prev => [...prev, novoPedido]);
+      const novosPedidos = [...pedidosAtuais, novoPedido];
+      
+      // Atualizar estado e localStorage
+      setPedidosEnviados(novosPedidos);
+      saveToStorage(novosPedidos);
+      
+      console.log('Pedido adicionado e salvo no localStorage:', novoPedido);
       toast.success('Pedido adicionado à lista de roteirização!');
     } else {
       toast.info('Pedido já está na lista de roteirização');
@@ -63,16 +114,20 @@ export const useRotasOtimizadas = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
+      // Carregar pedidos enviados mais recentes do localStorage
+      const pedidosAtuais = loadFromStorage();
+      console.log('Pedidos atuais do localStorage:', pedidosAtuais);
+
       // Se não há pedidos enviados, não buscar nada
-      if (pedidosEnviados.length === 0) {
+      if (pedidosAtuais.length === 0) {
+        console.log('Nenhum pedido enviado encontrado no localStorage');
         setPedidosDisponiveis([]);
         return;
       }
 
-      console.log('Pedidos enviados para busca:', pedidosEnviados);
-
       // Buscar apenas os pedidos que foram enviados via botão "Romaneio"
-      const orderIds = pedidosEnviados.map(p => p.order_id);
+      const orderIds = pedidosAtuais.map(p => p.order_id);
+      console.log('Buscando pedidos com IDs:', orderIds);
       
       const { data, error } = await supabase
         .from('orders')
@@ -111,7 +166,7 @@ export const useRotasOtimizadas = () => {
         const sale = Array.isArray(order.sales) ? order.sales[0] : order.sales;
         
         // Encontrar os dados do pedido enviado
-        const pedidoEnviado = pedidosEnviados.find(p => p.order_id === order.id);
+        const pedidoEnviado = pedidosAtuais.find(p => p.order_id === order.id);
 
         return {
           id: order.id,
@@ -137,7 +192,13 @@ export const useRotasOtimizadas = () => {
   };
 
   const removerPedidoDaRoteirizacao = (orderId: string) => {
-    setPedidosEnviados(prev => prev.filter(p => p.order_id !== orderId));
+    const pedidosAtuais = loadFromStorage();
+    const novosPedidos = pedidosAtuais.filter(p => p.order_id !== orderId);
+    
+    // Atualizar estado e localStorage
+    setPedidosEnviados(novosPedidos);
+    saveToStorage(novosPedidos);
+    
     setPedidosDisponiveis(prev => prev.filter(pedido => pedido.order_id !== orderId));
     toast.success('Pedido removido da roteirização');
   };
@@ -186,6 +247,13 @@ export const useRotasOtimizadas = () => {
     }
   };
 
+  const limparTodosPedidos = () => {
+    setPedidosEnviados([]);
+    setPedidosDisponiveis([]);
+    clearStorage();
+    toast.success('Todos os pedidos foram removidos da roteirização');
+  };
+
   return {
     rotas,
     loading,
@@ -195,6 +263,7 @@ export const useRotasOtimizadas = () => {
     gerarRotasOtimizadasComVeiculos,
     adicionarPedidoParaRoterizacao,
     removerPedidoDaRoteirizacao,
+    limparTodosPedidos,
     setRotas
   };
 };
