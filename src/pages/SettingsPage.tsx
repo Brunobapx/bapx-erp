@@ -31,33 +31,26 @@ const SettingsPage = () => {
             <User className="h-4 w-4" />
             Perfil
           </TabsTrigger>
-          <TabsTrigger value="users" className="flex items-center gap-2">
+          <TabsTrigger value="users" className="flex items-center gap-2" disabled={!isAdmin}>
             <Users className="h-4 w-4" />
             Usuários
           </TabsTrigger>
-          <TabsTrigger value="company" className="flex items-center gap-2">
+          <TabsTrigger value="company" className="flex items-center gap-2" disabled={!isAdmin}>
             <Building className="h-4 w-4" />
             Empresa
           </TabsTrigger>
-          <TabsTrigger value="system" className="flex items-center gap-2">
+          <TabsTrigger value="system" className="flex items-center gap-2" disabled={!isMaster}>
             <Settings className="h-4 w-4" />
             Sistema
           </TabsTrigger>
-          <TabsTrigger value="security" className="flex items-center gap-2">
+          <TabsTrigger value="security" className="flex items-center gap-2" disabled={!isMaster}>
             <Shield className="h-4 w-4" />
             Segurança
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile">
-          <Card>
-            <CardHeader>
-              <CardTitle>Gerenciar Perfil</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ProfileManagement />
-            </CardContent>
-          </Card>
+          <ProfileManagement />
         </TabsContent>
 
         <TabsContent value="users">
@@ -68,14 +61,7 @@ const SettingsPage = () => {
               </AlertDescription>
             </Alert>
           ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>Gerenciamento de Usuários</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <UserManagement />
-              </CardContent>
-            </Card>
+            <UserManagement />
           )}
         </TabsContent>
 
@@ -87,14 +73,7 @@ const SettingsPage = () => {
               </AlertDescription>
             </Alert>
           ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>Configurações da Empresa</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CompanySettings />
-              </CardContent>
-            </Card>
+            <CompanySettings />
           )}
         </TabsContent>
 
@@ -106,14 +85,7 @@ const SettingsPage = () => {
               </AlertDescription>
             </Alert>
           ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>Configurações do Sistema</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <SystemSettings />
-              </CardContent>
-            </Card>
+            <SystemSettings />
           )}
         </TabsContent>
 
@@ -125,14 +97,7 @@ const SettingsPage = () => {
               </AlertDescription>
             </Alert>
           ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>Configurações de Segurança</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <SecuritySettings />
-              </CardContent>
-            </Card>
+            <SecuritySettings />
           )}
         </TabsContent>
       </Tabs>
