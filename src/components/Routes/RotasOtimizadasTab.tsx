@@ -1,40 +1,49 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { MapPin, Route, ExternalLink } from 'lucide-react';
-import { useRotasOtimizadas, PedidoRota, RotaOtimizada } from '@/hooks/useRotasOtimizadas';
+import { Checkbox } from "@/components/ui/checkbox";
+import { MapPin, Route, ExternalLink, Package, RefreshCw } from 'lucide-react';
+import { useRotasOtimizadas, PedidoDisponivel } from '@/hooks/useRotasOtimizadas';
 
 const RotasOtimizadasTab = () => {
-  const { rotas, loading, gerarRotasOtimizadasComVeiculos } = useRotasOtimizadas();
+  const { rotas, loading, pedidosDisponiveis, buscarPedidosDisponiveis, gerarRotasOtimizadasComVeiculos } = useRotasOtimizadas();
   const [origem, setOrigem] = useState('');
-  const [pedidosTexto, setPedidosTexto] = useState('');
+  const [pedidosSelecionados, setPedidosSelecionados] = useState<string[]>([]);
+
+  useEffect(() => {
+    buscarPedidosDisponiveis();
+  }, []);
 
   const handleGerarRotas = async () => {
-    if (!origem.trim() || !pedidosTexto.trim()) {
-      alert('Por favor, preencha o endereço de origem e os pedidos');
+    if (!origem.trim() || pedidosSelecionados.length === 0) {
+      alert('Por favor, preencha o endereço de origem e selecione pelo menos um pedido');
       return;
     }
 
     try {
-      // Converter texto dos pedidos em array de objetos
-      const linhas = pedidosTexto.split('\n').filter(linha => linha.trim());
-      const pedidos: PedidoRota[] = linhas.map((linha, index) => {
-        const partes = linha.split(' - ');
-        return {
-          id: `pedido-${index + 1}`,
-          endereco: partes[0].trim(),
-          cliente: partes[1]?.trim() || `Cliente ${index + 1}`
-        };
-      });
-
-      console.log('Gerando rotas com:', { origem, pedidos });
-      await gerarRotasOtimizadasComVeiculos(origem, pedidos);
+      console.log('Gerando rotas com:', { origem, pedidosSelecionados });
+      await gerarRotasOtimizadasComVeiculos(origem, pedidosSelecionados);
     } catch (error) {
       console.error('Erro ao gerar rotas:', error);
+    }
+  };
+
+  const handleSelectPedido = (pedidoId: string, checked: boolean) => {
+    if (checked) {
+      setPedidosSelecionados([...pedidosSelecionados, pedidoId]);
+    } else {
+      setPedidosSelecionados(pedidosSelecionados.filter(id => id !== pedidoId));
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (pedidosSelecionados.length === pedidosDisponiveis.length) {
+      setPedidosSelecionados([]);
+    } else {
+      setPedidosSelecionados(pedidosDisponiveis.map(p => p.id));
     }
   };
 
@@ -43,7 +52,7 @@ const RotasOtimizadasTab = () => {
       <div>
         <h2 className="text-xl font-semibold">Rotas Otimizadas com Veículos</h2>
         <p className="text-muted-foreground">
-          Gere rotas otimizadas automaticamente considerando veículos e regiões
+          Selecione os pedidos e gere rotas otimizadas automaticamente considerando veículos e regiões
         </p>
       </div>
 
@@ -67,25 +76,67 @@ const RotasOtimizadasTab = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="pedidos">Pedidos (um por linha)</Label>
-              <Textarea
-                id="pedidos"
-                value={pedidosTexto}
-                onChange={(e) => setPedidosTexto(e.target.value)}
-                placeholder={`Exemplo:
-Rua A, 100 - Madureira - João Silva
-Av. Brasil, 200 - Nova Iguaçu - Maria Santos
-Rua C, 300 - Copacabana - Pedro Costa`}
-                rows={8}
-              />
-              <p className="text-xs text-muted-foreground">
-                Formato: Endereço - [Bairro] - [Cliente] (um pedido por linha)
-              </p>
+              <div className="flex items-center justify-between">
+                <Label>Pedidos Disponíveis ({pedidosDisponiveis.length})</Label>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={buscarPedidosDisponiveis}
+                    disabled={loading}
+                  >
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Atualizar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSelectAll}
+                  >
+                    {pedidosSelecionados.length === pedidosDisponiveis.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="max-h-64 overflow-y-auto border rounded-md p-2 space-y-2">
+                {pedidosDisponiveis.length === 0 ? (
+                  <div className="text-center py-4 text-muted-foreground">
+                    {loading ? 'Carregando pedidos...' : 'Nenhum pedido disponível para entrega'}
+                  </div>
+                ) : (
+                  pedidosDisponiveis.map((pedido) => (
+                    <div key={pedido.id} className="flex items-start space-x-3 p-2 border rounded hover:bg-accent/5">
+                      <Checkbox
+                        id={pedido.id}
+                        checked={pedidosSelecionados.includes(pedido.id)}
+                        onCheckedChange={(checked) => handleSelectPedido(pedido.id, checked as boolean)}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <Package className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-xs font-medium">{pedido.order_number}</span>
+                          <span className="text-xs bg-green-100 text-green-800 px-1 py-0.5 rounded">
+                            {pedido.total_weight.toFixed(1)}kg
+                          </span>
+                        </div>
+                        <div className="text-sm font-medium">{pedido.client_name}</div>
+                        <div className="text-xs text-muted-foreground">{pedido.delivery_address}</div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+              
+              {pedidosSelecionados.length > 0 && (
+                <div className="text-sm text-muted-foreground">
+                  {pedidosSelecionados.length} pedido(s) selecionado(s)
+                </div>
+              )}
             </div>
 
             <Button 
               onClick={handleGerarRotas}
-              disabled={loading || !origem.trim() || !pedidosTexto.trim()}
+              disabled={loading || !origem.trim() || pedidosSelecionados.length === 0}
               className="w-full"
             >
               {loading ? 'Gerando Rotas...' : 'Gerar Rotas Otimizadas'}
@@ -103,7 +154,7 @@ Rua C, 300 - Copacabana - Pedro Costa`}
           <CardContent>
             {rotas.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                Nenhuma rota gerada ainda. Configure e gere rotas usando o formulário ao lado.
+                Nenhuma rota gerada ainda. Selecione os pedidos e configure a origem para gerar rotas otimizadas.
               </div>
             ) : (
               <div className="space-y-4">
