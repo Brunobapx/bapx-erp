@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ApprovalModal } from '@/components/Modals/ApprovalModal';
 import { DollarSign, ChevronDown, Search, ArrowDown, ArrowUp, TrendingUp } from 'lucide-react';
@@ -26,6 +25,7 @@ import { AccountsPayableTab } from '@/components/Finance/AccountsPayableTab';
 import { AccountsReceivableTab } from '@/components/Finance/AccountsReceivableTab';
 import { DRETab } from '@/components/Finance/DRETab';
 import { ReportsTab } from '@/components/Finance/ReportsTab';
+import { useFinancialEntries } from '@/hooks/useFinancialEntries';
 
 const FinancePage = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -40,74 +40,28 @@ const FinancePage = () => {
     }
   ]);
 
-  // Mock finance data
-  const financeItems = [
-    { 
-      id: 'F-001', 
-      saleId: 'V-001',
-      customer: 'Tech Solutions',
-      description: 'Venda de Server Hardware', 
-      type: 'receita', 
-      value: 50000,
-      dueDate: '25/05/2025',
-      status: 'Pago',
-      paymentDate: '19/05/2025'
-    },
-    { 
-      id: 'F-002', 
-      saleId: 'V-003',
-      customer: 'City Hospital',
-      description: 'Venda de Medical Equipment', 
-      type: 'receita', 
-      value: 35000,
-      dueDate: '27/05/2025',
-      status: 'Pendente',
-      paymentDate: '-'
-    },
-    { 
-      id: 'F-003', 
-      saleId: 'V-004',
-      customer: 'Global Foods',
-      description: 'Venda de Packaging Materials', 
-      type: 'receita', 
-      value: 9800,
-      dueDate: '30/05/2025',
-      status: 'Pendente',
-      paymentDate: '-'
-    },
-    { 
-      id: 'F-004', 
-      saleId: 'V-002',
-      customer: 'Green Energy Inc',
-      description: 'Venda de Solar Panels', 
-      type: 'receita', 
-      value: 75000,
-      dueDate: '15/06/2025',
-      status: 'Aguardando Confirmação',
-      paymentDate: '-'
-    },
-    { 
-      id: 'F-005', 
-      saleId: '-',
-      customer: 'Fornecedor A',
-      description: 'Compra de Matéria Prima', 
-      type: 'despesa', 
-      value: 15000,
-      dueDate: '20/05/2025',
-      status: 'Pago',
-      paymentDate: '18/05/2025'
-    }
-  ];
+  const { entries, loading, error } = useFinancialEntries();
+
+  if (loading) {
+    return (
+      <div className="p-4 sm:p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600">Carregando dados financeiros...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Filter items based on search query
-  const filteredItems = financeItems.filter(item => {
+  const filteredItems = entries.filter(item => {
     const searchString = searchQuery.toLowerCase();
     return (
-      item.id.toLowerCase().includes(searchString) ||
-      item.saleId.toLowerCase().includes(searchString) ||
-      item.customer.toLowerCase().includes(searchString) ||
+      item.entry_number.toLowerCase().includes(searchString) ||
       item.description.toLowerCase().includes(searchString) ||
-      item.status.toLowerCase().includes(searchString)
+      item.type.toLowerCase().includes(searchString)
     );
   });
 
@@ -121,13 +75,13 @@ const FinancePage = () => {
   };
 
   // Calculate financial metrics
-  const totalReceitas = financeItems
-    .filter(item => item.type === 'receita')
-    .reduce((total, item) => total + item.value, 0);
+  const totalReceitas = entries
+    .filter(item => item.type === 'receivable')
+    .reduce((total, item) => total + Number(item.amount), 0);
   
-  const totalDespesas = financeItems
-    .filter(item => item.type === 'despesa')
-    .reduce((total, item) => total + item.value, 0);
+  const totalDespesas = entries
+    .filter(item => item.type === 'payable')
+    .reduce((total, item) => total + Number(item.amount), 0);
   
   const saldo = totalReceitas - totalDespesas;
 
@@ -249,8 +203,6 @@ const FinancePage = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead>ID</TableHead>
-                      <TableHead>ID Venda</TableHead>
-                      <TableHead>Cliente/Fornecedor</TableHead>
                       <TableHead>Descrição</TableHead>
                       <TableHead>Tipo</TableHead>
                       <TableHead className="text-right">Valor (R$)</TableHead>
@@ -266,23 +218,23 @@ const FinancePage = () => {
                         className="cursor-pointer hover:bg-accent/5"
                         onClick={() => handleItemClick(item)}
                       >
-                        <TableCell className="font-medium">{item.id}</TableCell>
-                        <TableCell>{item.saleId}</TableCell>
-                        <TableCell>{item.customer}</TableCell>
+                        <TableCell className="font-medium">{item.entry_number}</TableCell>
                         <TableCell>{item.description}</TableCell>
                         <TableCell>
-                          <span className={`stage-badge ${item.type === 'receita' ? 'badge-sales' : 'badge-route'}`}>
-                            {item.type === 'receita' ? 'Receita' : 'Despesa'}
+                          <span className={`stage-badge ${item.type === 'receivable' ? 'badge-sales' : 'badge-route'}`}>
+                            {item.type === 'receivable' ? 'Receita' : 'Despesa'}
                           </span>
                         </TableCell>
-                        <TableCell className="text-right">{item.value.toLocaleString('pt-BR')}</TableCell>
-                        <TableCell>{item.dueDate}</TableCell>
+                        <TableCell className="text-right">{Number(item.amount).toLocaleString('pt-BR')}</TableCell>
+                        <TableCell>{new Date(item.due_date).toLocaleDateString('pt-BR')}</TableCell>
                         <TableCell>
                           <span className="stage-badge badge-finance">
-                            {item.status}
+                            {item.payment_status === 'paid' ? 'Pago' : 
+                             item.payment_status === 'pending' ? 'Pendente' : 
+                             item.payment_status === 'overdue' ? 'Vencido' : 'Cancelado'}
                           </span>
                         </TableCell>
-                        <TableCell>{item.paymentDate}</TableCell>
+                        <TableCell>{item.payment_date ? new Date(item.payment_date).toLocaleDateString('pt-BR') : '-'}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

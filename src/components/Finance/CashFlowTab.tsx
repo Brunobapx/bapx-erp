@@ -2,9 +2,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { CalendarDays, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -13,18 +11,33 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useCashFlow } from '@/hooks/useCashFlow';
 
 export const CashFlowTab = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('month');
+  const { cashFlowData, loading, error } = useCashFlow();
 
-  // Mock data for cash flow
-  const cashFlowData = [
-    { date: '01/05/2025', description: 'Venda Tech Solutions', type: 'entrada', amount: 50000, balance: 150000 },
-    { date: '02/05/2025', description: 'Pagamento Fornecedor', type: 'saida', amount: 15000, balance: 135000 },
-    { date: '03/05/2025', description: 'Recebimento City Hospital', type: 'entrada', amount: 35000, balance: 170000 },
-    { date: '04/05/2025', description: 'Salários', type: 'saida', amount: 25000, balance: 145000 },
-    { date: '05/05/2025', description: 'Venda Global Foods', type: 'entrada', amount: 9800, balance: 154800 },
-  ];
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando fluxo de caixa...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Erro ao carregar fluxo de caixa</p>
+          <p className="text-gray-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   const totalEntradas = cashFlowData
     .filter(item => item.type === 'entrada')
@@ -34,7 +47,8 @@ export const CashFlowTab = () => {
     .filter(item => item.type === 'saida')
     .reduce((sum, item) => sum + item.amount, 0);
 
-  const saldoFinal = totalEntradas - totalSaidas;
+  const saldoFinal = cashFlowData.length > 0 ? cashFlowData[cashFlowData.length - 1].balance : 0;
+  const saldoLiquido = totalEntradas - totalSaidas;
 
   return (
     <div className="space-y-6">
@@ -96,8 +110,8 @@ export const CashFlowTab = () => {
               <DollarSign className="h-4 w-4 text-blue-600" />
               <div>
                 <p className="text-sm text-muted-foreground">Saldo Líquido</p>
-                <p className={`text-lg font-bold ${saldoFinal >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  R$ {saldoFinal.toLocaleString('pt-BR')}
+                <p className={`text-lg font-bold ${saldoLiquido >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  R$ {saldoLiquido.toLocaleString('pt-BR')}
                 </p>
               </div>
             </div>
@@ -110,7 +124,7 @@ export const CashFlowTab = () => {
               <CalendarDays className="h-4 w-4 text-purple-600" />
               <div>
                 <p className="text-sm text-muted-foreground">Saldo Final</p>
-                <p className="text-lg font-bold text-purple-600">R$ 154.800</p>
+                <p className="text-lg font-bold text-purple-600">R$ {saldoFinal.toLocaleString('pt-BR')}</p>
               </div>
             </div>
           </CardContent>
@@ -133,9 +147,9 @@ export const CashFlowTab = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {cashFlowData.map((item, index) => (
-                <TableRow key={index}>
-                  <TableCell>{item.date}</TableCell>
+              {cashFlowData.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell>{new Date(item.date).toLocaleDateString('pt-BR')}</TableCell>
                   <TableCell>{item.description}</TableCell>
                   <TableCell>
                     <span className={`stage-badge ${item.type === 'entrada' ? 'badge-sales' : 'badge-route'}`}>
@@ -152,6 +166,11 @@ export const CashFlowTab = () => {
               ))}
             </TableBody>
           </Table>
+          {cashFlowData.length === 0 && (
+            <div className="p-4 text-center text-muted-foreground">
+              Nenhuma movimentação encontrada.
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

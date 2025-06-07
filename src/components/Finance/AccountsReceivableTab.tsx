@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, CheckCircle, Clock } from 'lucide-react';
@@ -12,50 +12,34 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { NewReceivableModal } from './NewReceivableModal';
+import { useAccountsReceivable } from '@/hooks/useAccountsReceivable';
 
 export const AccountsReceivableTab = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewReceivableModal, setShowNewReceivableModal] = useState(false);
+  const { accountsReceivable, loading, error, confirmReceivable } = useAccountsReceivable();
 
-  // Mock data for accounts receivable
-  const accountsReceivable = [
-    { 
-      id: 'CR-001', 
-      client: 'Tech Solutions', 
-      description: 'Venda Server Hardware', 
-      amount: 50000, 
-      dueDate: '2025-05-25', 
-      status: 'pendente',
-      saleId: 'V-001'
-    },
-    { 
-      id: 'CR-002', 
-      client: 'City Hospital', 
-      description: 'Venda Medical Equipment', 
-      amount: 35000, 
-      dueDate: '2025-05-27', 
-      status: 'recebido',
-      saleId: 'V-003'
-    },
-    { 
-      id: 'CR-003', 
-      client: 'Global Foods', 
-      description: 'Venda Packaging Materials', 
-      amount: 9800, 
-      dueDate: '2025-05-30', 
-      status: 'pendente',
-      saleId: 'V-004'
-    },
-    { 
-      id: 'CR-004', 
-      client: 'Green Energy Inc', 
-      description: 'Venda Solar Panels', 
-      amount: 75000, 
-      dueDate: '2025-06-15', 
-      status: 'vencido',
-      saleId: 'V-002'
-    },
-  ];
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando contas a receber...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Erro ao carregar contas a receber</p>
+          <p className="text-gray-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   const filteredAccounts = accountsReceivable.filter(account =>
     account.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -151,10 +135,10 @@ export const AccountsReceivableTab = () => {
             <TableBody>
               {filteredAccounts.map((account) => (
                 <TableRow key={account.id}>
-                  <TableCell className="font-medium">{account.id}</TableCell>
+                  <TableCell className="font-medium">{account.entry_number}</TableCell>
                   <TableCell>{account.client}</TableCell>
                   <TableCell>{account.description}</TableCell>
-                  <TableCell>{account.saleId}</TableCell>
+                  <TableCell>{account.saleId || '-'}</TableCell>
                   <TableCell>{new Date(account.dueDate).toLocaleDateString('pt-BR')}</TableCell>
                   <TableCell className="text-right font-medium">
                     R$ {account.amount.toLocaleString('pt-BR')}
@@ -170,7 +154,11 @@ export const AccountsReceivableTab = () => {
                   </TableCell>
                   <TableCell>
                     {account.status !== 'recebido' && (
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => confirmReceivable(account.id)}
+                      >
                         Confirmar
                       </Button>
                     )}
@@ -179,6 +167,11 @@ export const AccountsReceivableTab = () => {
               ))}
             </TableBody>
           </Table>
+          {filteredAccounts.length === 0 && (
+            <div className="p-4 text-center text-muted-foreground">
+              Nenhuma conta a receber encontrada.
+            </div>
+          )}
         </CardContent>
       </Card>
 
