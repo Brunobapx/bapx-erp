@@ -23,12 +23,27 @@ export interface PedidoDisponivel {
   delivery_address: string;
   total_weight: number;
   status: string;
+  sale_id?: string;
+  sale_number?: string;
 }
 
 export const useRotasOtimizadas = () => {
   const [loading, setLoading] = useState(false);
   const [rotas, setRotas] = useState<RotaOtimizada[]>([]);
   const [pedidosDisponiveis, setPedidosDisponiveis] = useState<PedidoDisponivel[]>([]);
+  const [pedidosEnviados, setPedidosEnviados] = useState<string[]>([]);
+
+  const adicionarPedidoParaRoterizacao = (saleData: any) => {
+    console.log('Adicionando pedido para roteirização:', saleData);
+    
+    // Adicionar o pedido à lista de pedidos enviados
+    if (!pedidosEnviados.includes(saleData.order_id)) {
+      setPedidosEnviados(prev => [...prev, saleData.order_id]);
+      toast.success('Pedido adicionado à lista de roteirização!');
+    } else {
+      toast.info('Pedido já está na lista de roteirização');
+    }
+  };
 
   const buscarPedidosDisponiveis = async () => {
     try {
@@ -36,7 +51,13 @@ export const useRotasOtimizadas = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
-      // Buscar pedidos que estão prontos para entrega (confirmados em vendas)
+      // Se não há pedidos enviados, não buscar nada
+      if (pedidosEnviados.length === 0) {
+        setPedidosDisponiveis([]);
+        return;
+      }
+
+      // Buscar apenas os pedidos que foram enviados via botão "Gerar Romaneio"
       const { data, error } = await supabase
         .from('orders')
         .select(`
@@ -47,10 +68,14 @@ export const useRotasOtimizadas = () => {
           order_items(
             quantity,
             products(weight)
+          ),
+          sales(
+            id,
+            sale_number
           )
         `)
         .eq('user_id', user.id)
-        .in('status', ['sale_confirmed', 'released_for_sale']);
+        .in('id', pedidosEnviados);
 
       if (error) throw error;
 
@@ -65,24 +90,34 @@ export const useRotasOtimizadas = () => {
           ? `${client.address}, ${client.city} - ${client.state}`
           : 'Endereço não informado';
 
+        const sale = Array.isArray(order.sales) ? order.sales[0] : order.sales;
+
         return {
           id: order.id,
           order_number: order.order_number,
           client_name: order.client_name,
           delivery_address: deliveryAddress,
           total_weight: totalWeight,
-          status: 'available'
+          status: 'available',
+          sale_id: sale?.id,
+          sale_number: sale?.sale_number
         };
       });
 
       setPedidosDisponiveis(processedOrders);
-      console.log('Pedidos disponíveis carregados:', processedOrders);
+      console.log('Pedidos disponíveis para roteirização:', processedOrders);
     } catch (error: any) {
       console.error('Erro ao buscar pedidos disponíveis:', error);
       toast.error('Erro ao carregar pedidos disponíveis');
     } finally {
       setLoading(false);
     }
+  };
+
+  const removerPedidoDaRoteirizacao = (orderId: string) => {
+    setPedidosEnviados(prev => prev.filter(id => id !== orderId));
+    setPedidosDisponiveis(prev => prev.filter(pedido => pedido.id !== orderId));
+    toast.success('Pedido removido da roteirização');
   };
 
   const gerarRotasOtimizadasComVeiculos = async (origem: string, pedidosSelecionados: string[]) => {
@@ -133,8 +168,11 @@ export const useRotasOtimizadas = () => {
     rotas,
     loading,
     pedidosDisponiveis,
+    pedidosEnviados,
     buscarPedidosDisponiveis,
     gerarRotasOtimizadasComVeiculos,
+    adicionarPedidoParaRoterizacao,
+    removerPedidoDaRoteirizacao,
     setRotas
   };
 };

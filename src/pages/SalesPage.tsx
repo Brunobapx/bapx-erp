@@ -24,6 +24,7 @@ import {
 import StageAlert from '@/components/Alerts/StageAlert';
 import { toast } from "sonner";
 import { useSales } from '@/hooks/useSales';
+import { useRotasOtimizadas } from '@/hooks/useRotasOtimizadas';
 
 const SalesPage = () => {
   const navigate = useNavigate();
@@ -42,6 +43,7 @@ const SalesPage = () => {
   ]);
 
   const { sales, loading, error, updateSaleStatus } = useSales();
+  const { adicionarPedidoParaRoterizacao } = useRotasOtimizadas();
 
   // Filter items based on search query
   const filteredItems = sales.filter(item => {
@@ -65,17 +67,19 @@ const SalesPage = () => {
   };
 
   const handleDeliverySlipClick = (item) => {
-    // Navegar para a página de roteirização com os dados do pedido
+    // Adicionar o pedido à lista de roteirização
+    adicionarPedidoParaRoterizacao({
+      order_id: item.order_id,
+      sale_id: item.id,
+      sale_number: item.sale_number,
+      client_name: item.client_name,
+      total_amount: item.total_amount
+    });
+
+    // Navegar para a página de roteirização na aba de rotas otimizadas
     navigate('/rotas', { 
       state: { 
-        saleData: {
-          order_id: item.order_id,
-          sale_id: item.id,
-          sale_number: item.sale_number,
-          client_name: item.client_name,
-          total_amount: item.total_amount
-        },
-        activeTab: 'create-route'
+        activeTab: 'rotas-otimizadas'
       }
     });
   };

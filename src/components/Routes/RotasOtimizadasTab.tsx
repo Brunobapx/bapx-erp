@@ -5,17 +5,29 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { MapPin, Route, ExternalLink, Package, RefreshCw } from 'lucide-react';
-import { useRotasOtimizadas, PedidoDisponivel } from '@/hooks/useRotasOtimizadas';
+import { MapPin, Route, ExternalLink, Package, RefreshCw, X } from 'lucide-react';
+import { useRotasOtimizadas } from '@/hooks/useRotasOtimizadas';
 
 const RotasOtimizadasTab = () => {
-  const { rotas, loading, pedidosDisponiveis, buscarPedidosDisponiveis, gerarRotasOtimizadasComVeiculos } = useRotasOtimizadas();
+  const { 
+    rotas, 
+    loading, 
+    pedidosDisponiveis, 
+    pedidosEnviados,
+    buscarPedidosDisponiveis, 
+    gerarRotasOtimizadasComVeiculos,
+    removerPedidoDaRoteirizacao
+  } = useRotasOtimizadas();
+  
   const [origem, setOrigem] = useState('');
   const [pedidosSelecionados, setPedidosSelecionados] = useState<string[]>([]);
 
   useEffect(() => {
-    buscarPedidosDisponiveis();
-  }, []);
+    // Buscar pedidos quando houver pedidos enviados
+    if (pedidosEnviados.length > 0) {
+      buscarPedidosDisponiveis();
+    }
+  }, [pedidosEnviados]);
 
   const handleGerarRotas = async () => {
     if (!origem.trim() || pedidosSelecionados.length === 0) {
@@ -47,12 +59,17 @@ const RotasOtimizadasTab = () => {
     }
   };
 
+  const handleRemoverPedido = (pedidoId: string) => {
+    removerPedidoDaRoteirizacao(pedidoId);
+    setPedidosSelecionados(prev => prev.filter(id => id !== pedidoId));
+  };
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-semibold">Rotas Otimizadas com Veículos</h2>
         <p className="text-muted-foreground">
-          Selecione os pedidos e gere rotas otimizadas automaticamente considerando veículos e regiões
+          Selecione os pedidos enviados via "Gerar Romaneio" e gere rotas otimizadas automaticamente considerando veículos e regiões
         </p>
       </div>
 
@@ -77,7 +94,7 @@ const RotasOtimizadasTab = () => {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>Pedidos Disponíveis ({pedidosDisponiveis.length})</Label>
+                <Label>Pedidos para Roteirização ({pedidosDisponiveis.length})</Label>
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
@@ -88,20 +105,27 @@ const RotasOtimizadasTab = () => {
                     <RefreshCw className="h-3 w-3 mr-1" />
                     Atualizar
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSelectAll}
-                  >
-                    {pedidosSelecionados.length === pedidosDisponiveis.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
-                  </Button>
+                  {pedidosDisponiveis.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSelectAll}
+                    >
+                      {pedidosSelecionados.length === pedidosDisponiveis.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
+                    </Button>
+                  )}
                 </div>
               </div>
               
               <div className="max-h-64 overflow-y-auto border rounded-md p-2 space-y-2">
                 {pedidosDisponiveis.length === 0 ? (
                   <div className="text-center py-4 text-muted-foreground">
-                    {loading ? 'Carregando pedidos...' : 'Nenhum pedido disponível para entrega'}
+                    {pedidosEnviados.length === 0 
+                      ? 'Nenhum pedido enviado para roteirização. Use o botão "Gerar Romaneio" na página de vendas para adicionar pedidos.'
+                      : loading 
+                        ? 'Carregando pedidos...' 
+                        : 'Nenhum pedido encontrado'
+                    }
                   </div>
                 ) : (
                   pedidosDisponiveis.map((pedido) => (
@@ -118,10 +142,24 @@ const RotasOtimizadasTab = () => {
                           <span className="text-xs bg-green-100 text-green-800 px-1 py-0.5 rounded">
                             {pedido.total_weight.toFixed(1)}kg
                           </span>
+                          {pedido.sale_number && (
+                            <span className="text-xs bg-blue-100 text-blue-800 px-1 py-0.5 rounded">
+                              {pedido.sale_number}
+                            </span>
+                          )}
                         </div>
                         <div className="text-sm font-medium">{pedido.client_name}</div>
                         <div className="text-xs text-muted-foreground">{pedido.delivery_address}</div>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                        onClick={() => handleRemoverPedido(pedido.id)}
+                        title="Remover da roteirização"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
                     </div>
                   ))
                 )}
