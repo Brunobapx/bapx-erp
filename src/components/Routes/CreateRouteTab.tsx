@@ -22,7 +22,13 @@ import { useRoutes, OrderForRoute } from '@/hooks/useRoutes';
 import { useVehicles } from '@/hooks/useVehicles';
 
 interface CreateRouteTabProps {
-  saleData?: any;
+  saleData?: {
+    order_id: string;
+    sale_id: string;
+    sale_number: string;
+    client_name: string;
+    total_amount: number;
+  };
 }
 
 const CreateRouteTab = ({ saleData }: CreateRouteTabProps) => {
@@ -33,15 +39,28 @@ const CreateRouteTab = ({ saleData }: CreateRouteTabProps) => {
   const [selectedVehicle, setSelectedVehicle] = useState<string>('');
 
   useEffect(() => {
-    fetchAvailableOrders();
+    console.log('CreateRouteTab mounted with saleData:', saleData);
+    
+    // Se há dados de venda, buscar pedidos incluindo o específico
+    if (saleData?.order_id) {
+      fetchAvailableOrders(saleData.order_id);
+    } else {
+      fetchAvailableOrders();
+    }
+    
     fetchRoutes();
     fetchVehicles();
-    
-    // Se há dados de venda, pré-selecionar o pedido correspondente
-    if (saleData?.order_id) {
-      setSelectedOrders([saleData.order_id]);
-    }
   }, [saleData]);
+
+  useEffect(() => {
+    // Pré-selecionar o pedido da venda quando os pedidos estiverem carregados
+    if (saleData?.order_id && availableOrders.length > 0) {
+      const orderExists = availableOrders.find(order => order.id === saleData.order_id);
+      if (orderExists && !selectedOrders.includes(saleData.order_id)) {
+        setSelectedOrders([saleData.order_id]);
+      }
+    }
+  }, [saleData, availableOrders]);
 
   const handleOrderSelection = (orderId: string, checked: boolean) => {
     if (checked) {
@@ -101,6 +120,11 @@ const CreateRouteTab = ({ saleData }: CreateRouteTabProps) => {
               <CardTitle className="flex items-center gap-2">
                 <Package className="h-5 w-5" />
                 Pedidos Disponíveis
+                {saleData && (
+                  <span className="text-sm text-blue-600 font-normal">
+                    (Incluindo pedido da venda {saleData.sale_number})
+                  </span>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -123,11 +147,15 @@ const CreateRouteTab = ({ saleData }: CreateRouteTabProps) => {
                     <TableHead>Cliente</TableHead>
                     <TableHead>Endereço</TableHead>
                     <TableHead>Peso (kg)</TableHead>
+                    <TableHead>Venda</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {availableOrders.map((order) => (
-                    <TableRow key={order.id}>
+                    <TableRow 
+                      key={order.id}
+                      className={saleData?.order_id === order.id ? 'bg-blue-50' : ''}
+                    >
                       <TableCell>
                         <Checkbox
                           checked={selectedOrders.includes(order.id)}
@@ -143,6 +171,15 @@ const CreateRouteTab = ({ saleData }: CreateRouteTabProps) => {
                         </div>
                       </TableCell>
                       <TableCell>{order.total_weight.toFixed(2)}</TableCell>
+                      <TableCell>
+                        {order.sale_number ? (
+                          <span className="text-blue-600 font-medium">
+                            {order.sale_number}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -222,6 +259,11 @@ const CreateRouteTab = ({ saleData }: CreateRouteTabProps) => {
                   <span>Peso total:</span>
                   <span>{totalWeight.toFixed(2)} kg</span>
                 </div>
+                {saleData && selectedOrders.includes(saleData.order_id) && (
+                  <div className="text-blue-600 text-xs bg-blue-50 p-2 rounded">
+                    Incluindo pedido da venda {saleData.sale_number}
+                  </div>
+                )}
               </div>
               
               <Button 

@@ -37,6 +37,8 @@ export interface OrderForRoute {
   delivery_address: string;
   total_weight: number;
   status: string;
+  sale_id?: string;
+  sale_number?: string;
 }
 
 export const useRoutes = () => {
@@ -73,7 +75,7 @@ export const useRoutes = () => {
     }
   };
 
-  const fetchAvailableOrders = async () => {
+  const fetchAvailableOrders = async (specificOrderId?: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
@@ -99,14 +101,30 @@ export const useRoutes = () => {
           order_items(
             quantity,
             products(weight)
+          ),
+          sales(
+            id,
+            sale_number
           )
         `)
-        .eq('user_id', user.id)
-        .in('status', ['sale_confirmed', 'released_for_sale']);
+        .eq('user_id', user.id);
 
-      // Se há pedidos já usados, excluí-los da consulta
+      // Se um pedido específico foi solicitado, incluí-lo sempre
+      if (specificOrderId) {
+        query = query.or(`id.eq.${specificOrderId},status.in.(sale_confirmed,released_for_sale)`);
+      } else {
+        query = query.in('status', ['sale_confirmed', 'released_for_sale']);
+      }
+
+      // Se há pedidos já usados, excluí-los da consulta (exceto se for o específico)
       if (usedOrderIds.length > 0) {
-        query = query.not('id', 'in', `(${usedOrderIds.map(id => `"${id}"`).join(',')})`);
+        const excludeIds = specificOrderId 
+          ? usedOrderIds.filter(id => id !== specificOrderId)
+          : usedOrderIds;
+        
+        if (excludeIds.length > 0) {
+          query = query.not('id', 'in', `(${excludeIds.map(id => `"${id}"`).join(',')})`);
+        }
       }
 
       const { data, error } = await query;
@@ -124,13 +142,17 @@ export const useRoutes = () => {
           ? `${client.address}, ${client.city} - ${client.state}`
           : 'Endereço não informado';
 
+        const sale = Array.isArray(order.sales) ? order.sales[0] : order.sales;
+
         return {
           id: order.id,
           order_number: order.order_number,
           client_name: order.client_name,
           delivery_address: deliveryAddress,
           total_weight: totalWeight,
-          status: 'available'
+          status: 'available',
+          sale_id: sale?.id,
+          sale_number: sale?.sale_number
         };
       });
 

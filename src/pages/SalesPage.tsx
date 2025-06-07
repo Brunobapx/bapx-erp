@@ -65,10 +65,16 @@ const SalesPage = () => {
   };
 
   const handleDeliverySlipClick = (item) => {
-    // Navegar para a página de roteirização com os dados da venda
+    // Navegar para a página de roteirização com os dados do pedido
     navigate('/rotas', { 
       state: { 
-        saleData: item,
+        saleData: {
+          order_id: item.order_id,
+          sale_id: item.id,
+          sale_number: item.sale_number,
+          client_name: item.client_name,
+          total_amount: item.total_amount
+        },
         activeTab: 'create-route'
       }
     });
