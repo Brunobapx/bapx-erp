@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { CompanyProvider } from "./components/Auth/CompanyProvider";
 import { AuthProvider } from "./components/Auth/AuthProvider";
 import { ProtectedRoute } from "./components/Auth/ProtectedRoute";
 import { Sidebar } from "./components/Sidebar/Sidebar";
@@ -34,39 +35,41 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/*" element={
-              <ProtectedRoute>
-                <div className="flex h-screen overflow-hidden">
-                  <Sidebar />
-                  <div className="flex-1 overflow-auto">
-                    <Routes>
-                      <Route path="/" element={<Index />} />
-                      <Route path="/clientes" element={<ClientsPage />} />
-                      <Route path="/produtos" element={<ProductsPage />} />
-                      <Route path="/fornecedores" element={<VendorsPage />} />
-                      <Route path="/compras" element={<PurchasesPage />} />
-                      <Route path="/pedidos" element={<OrdersPage />} />
-                      <Route path="/pedidos/:id" element={<OrderFormPage />} />
-                      <Route path="/producao" element={<ProductionPage />} />
-                      <Route path="/embalagem" element={<PackagingPage />} />
-                      <Route path="/vendas" element={<SalesPage />} />
-                      <Route path="/emissao-fiscal" element={<FiscalEmissionPage />} />
-                      <Route path="/financeiro" element={<FinancePage />} />
-                      <Route path="/rotas" element={<RoutesPage />} />
-                      <Route path="/calendario" element={<CalendarPage />} />
-                      <Route path="/estoque" element={<StockPage />} />
-                      <Route path="/configuracoes" element={<SettingsPage />} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
+        <CompanyProvider>
+          <AuthProvider>
+            <Routes>
+              <Route path="/auth" element={<AuthPage />} />
+              <Route path="/*" element={
+                <ProtectedRoute>
+                  <div className="flex h-screen overflow-hidden">
+                    <Sidebar />
+                    <div className="flex-1 overflow-auto">
+                      <Routes>
+                        <Route path="/" element={<Index />} />
+                        <Route path="/clientes" element={<ClientsPage />} />
+                        <Route path="/produtos" element={<ProductsPage />} />
+                        <Route path="/fornecedores" element={<VendorsPage />} />
+                        <Route path="/compras" element={<PurchasesPage />} />
+                        <Route path="/pedidos" element={<OrdersPage />} />
+                        <Route path="/pedidos/:id" element={<OrderFormPage />} />
+                        <Route path="/producao" element={<ProductionPage />} />
+                        <Route path="/embalagem" element={<PackagingPage />} />
+                        <Route path="/vendas" element={<SalesPage />} />
+                        <Route path="/emissao-fiscal" element={<FiscalEmissionPage />} />
+                        <Route path="/financeiro" element={<FinancePage />} />
+                        <Route path="/rotas" element={<RoutesPage />} />
+                        <Route path="/calendario" element={<CalendarPage />} />
+                        <Route path="/estoque" element={<StockPage />} />
+                        <Route path="/configuracoes" element={<SettingsPage />} />
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </div>
                   </div>
-                </div>
-              </ProtectedRoute>
-            } />
-          </Routes>
-        </AuthProvider>
+                </ProtectedRoute>
+              } />
+            </Routes>
+          </AuthProvider>
+        </CompanyProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

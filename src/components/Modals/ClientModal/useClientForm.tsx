@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Client } from '@/hooks/useClients';
+import { useAuth } from '@/components/Auth/AuthProvider';
 
 interface FormData {
   id: string;
@@ -21,6 +22,7 @@ interface FormData {
 }
 
 export const useClientForm = (clientData: Client | null, onClose: (refresh?: boolean) => void) => {
+  const { companyId } = useAuth();
   const [formData, setFormData] = useState<FormData>({
     id: '',
     name: '',
@@ -113,6 +115,11 @@ export const useClientForm = (clientData: Client | null, onClose: (refresh?: boo
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
+    if (!companyId) {
+      toast.error("Erro: Empresa não identificada. Faça login novamente.");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       
@@ -126,7 +133,7 @@ export const useClientForm = (clientData: Client | null, onClose: (refresh?: boo
         return;
       }
 
-      console.log('ClientForm - Usuário autenticado:', user.id);
+      console.log('ClientForm - Usuário autenticado:', user.id, 'Empresa:', companyId);
       
       const clientData = {
         name: formData.name,
@@ -141,7 +148,8 @@ export const useClientForm = (clientData: Client | null, onClose: (refresh?: boo
         city: formData.city || null,
         state: formData.state || null,
         zip: formData.zip || null,
-        user_id: user.id
+        user_id: user.id,
+        company_id: companyId
       };
       
       console.log('ClientForm - Dados para salvar:', clientData);
