@@ -14,10 +14,12 @@ import {
   Users,
   FilePen,
   Warehouse,
-  ShoppingCart
+  ShoppingCart,
+  Building2
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { UserSection } from './UserSection';
+import { useAuth } from '@/components/Auth/AuthProvider';
 
 const SidebarLink = ({ 
   to, 
@@ -47,9 +49,12 @@ const SidebarLink = ({
 export const Sidebar = () => {
   const location = useLocation();
   const [collapsed, setCollapsed] = React.useState(false);
+  const { userRole } = useAuth();
   
   const navigationItems = [
     { path: "/", text: "Dashboard", icon: ChartBar },
+    // Adicionar link SaaS apenas para usuários master
+    ...(userRole === 'master' ? [{ path: "/saas", text: "SaaS", icon: Building2 }] : []),
     { path: "/clientes", text: "Clientes", icon: User },
     { path: "/produtos", text: "Produtos", icon: Package },
     { path: "/fornecedores", text: "Fornecedores", icon: Users },

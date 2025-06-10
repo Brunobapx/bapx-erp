@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -25,6 +24,7 @@ import SettingsPage from "./pages/SettingsPage";
 import StockPage from "./pages/StockPage";
 import NotFound from "./pages/NotFound";
 import AuthPage from "./pages/AuthPage";
+import SaasPage from "./pages/SaasPage";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +44,7 @@ const App = () => (
                   <div className="flex-1 overflow-auto">
                     <Routes>
                       <Route path="/" element={<Index />} />
+                      <Route path="/saas" element={<SaasPage />} />
                       <Route path="/clientes" element={<ClientsPage />} />
                       <Route path="/produtos" element={<ProductsPage />} />
                       <Route path="/fornecedores" element={<VendorsPage />} />

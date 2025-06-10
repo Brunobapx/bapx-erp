@@ -18,6 +18,9 @@ const SettingsPage = () => {
   const isMaster = userRole === 'master';
   const isAdmin = userRole === 'admin' || userRole === 'master';
 
+  // Definir número de colunas baseado no papel do usuário
+  const gridCols = isMaster ? 'grid-cols-5' : 'grid-cols-4';
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center gap-3 mb-6">
@@ -26,7 +29,7 @@ const SettingsPage = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className={`grid w-full ${gridCols}`}>
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             Perfil
