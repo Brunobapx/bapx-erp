@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +11,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { UserPlus, Mail, Edit, Trash2, RefreshCw } from 'lucide-react';
 import { z } from 'zod';
 import { useAuth } from '@/components/Auth/AuthProvider';
-import { useCompanyContext } from '@/components/Auth/CompanyProvider';
 
 // Input validation schemas
 const emailSchema = z.string().email('Email inválido');
@@ -48,7 +46,6 @@ export const UserManagement = () => {
   const [validationErrors, setValidationErrors] = useState<{ email?: string }>({});
   const { toast } = useToast();
   const { userRole } = useAuth();
-  const { company } = useCompanyContext();
 
   // Security check - only admins and masters can access this component
   if (userRole !== 'admin' && userRole !== 'master') {
@@ -60,25 +57,22 @@ export const UserManagement = () => {
   }
 
   const loadInvitations = async () => {
-    if (!company) return;
-    
     try {
       const { data, error } = await supabase
         .from('user_invitations')
         .select('*')
-        .eq('company_id', company.id)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       setInvitations(data || []);
     } catch (error) {
-      console.error('Erro ao carregar convites:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Erro ao carregar convites:', error);
+      }
     }
   };
 
   const loadUsers = async () => {
-    if (!company) return;
-    
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -86,7 +80,6 @@ export const UserManagement = () => {
           *,
           user_roles!inner(role)
         `)
-        .eq('company_id', company.id)
         .eq('is_active', true);
       
       if (error) throw error;
@@ -98,16 +91,16 @@ export const UserManagement = () => {
       
       setUsers(usersWithRoles);
     } catch (error) {
-      console.error('Erro ao carregar usuários:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Erro ao carregar usuários:', error);
+      }
     }
   };
 
   useEffect(() => {
-    if (company) {
-      loadInvitations();
-      loadUsers();
-    }
-  }, [company]);
+    loadInvitations();
+    loadUsers();
+  }, []);
 
   const validateEmail = (email: string) => {
     try {
@@ -123,7 +116,7 @@ export const UserManagement = () => {
   };
 
   const sendInvitation = async () => {
-    if (!validateEmail(inviteEmail.trim()) || !company) {
+    if (!validateEmail(inviteEmail.trim())) {
       return;
     }
 
@@ -134,7 +127,6 @@ export const UserManagement = () => {
         .insert({
           email: inviteEmail.trim(),
           role: inviteRole,
-          company_id: company.id,
           invited_by: (await supabase.auth.getUser()).data.user?.id
         });
 
@@ -217,8 +209,6 @@ export const UserManagement = () => {
   };
 
   const updateUserRole = async (userId: string, newRole: string) => {
-    if (!company) return;
-    
     // Only masters can assign master role
     if (newRole === 'master' && userRole !== 'master') {
       toast({
@@ -237,8 +227,7 @@ export const UserManagement = () => {
       const { error } = await supabase
         .from('user_roles')
         .update({ role: newRole })
-        .eq('user_id', userId)
-        .eq('company_id', company.id);
+        .eq('user_id', userId);
 
       if (error) throw error;
 
@@ -270,7 +259,7 @@ export const UserManagement = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Usuários da Empresa</h3>
+        <h3 className="text-lg font-semibold">Usuários do Sistema</h3>
         <Dialog open={isInviteModalOpen} onOpenChange={setIsInviteModalOpen}>
           <DialogTrigger asChild>
             <Button>
