@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +32,7 @@ export const SaasCompanyManagement = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
+  const [currentCompanyPlan, setCurrentCompanyPlan] = useState<string>('');
   const [formData, setFormData] = useState({
     // Dados da empresa
     name: '',
@@ -79,6 +79,7 @@ export const SaasCompanyManagement = () => {
       admin_first_name: '',
       admin_last_name: '',
     });
+    setCurrentCompanyPlan('');
   };
 
   const createCompany = async () => {
@@ -188,7 +189,7 @@ export const SaasCompanyManagement = () => {
     }
   };
 
-  const handleEdit = (company: Company) => {
+  const handleEdit = async (company: Company) => {
     setEditingCompany(company);
     setFormData({
       name: company.name,
@@ -200,6 +201,24 @@ export const SaasCompanyManagement = () => {
       admin_first_name: '',
       admin_last_name: '',
     });
+
+    // Buscar plano atual da empresa
+    try {
+      const { data: subscription } = await supabase
+        .from('company_subscriptions')
+        .select('plan_id')
+        .eq('company_id', company.id)
+        .eq('status', 'active')
+        .single();
+
+      if (subscription) {
+        setCurrentCompanyPlan(subscription.plan_id);
+        setFormData(prev => ({ ...prev, plan_id: subscription.plan_id }));
+      }
+    } catch (error) {
+      console.error('Erro ao buscar plano atual:', error);
+    }
+
     setIsEditModalOpen(true);
   };
 
@@ -216,7 +235,8 @@ export const SaasCompanyManagement = () => {
     setIsUpdating(true);
     
     try {
-      const { error } = await supabase
+      // Atualizar dados da empresa
+      const { error: companyError } = await supabase
         .from('companies')
         .update({
           name: formData.name,
@@ -225,7 +245,31 @@ export const SaasCompanyManagement = () => {
         })
         .eq('id', editingCompany.id);
 
-      if (error) throw error;
+      if (companyError) throw companyError;
+
+      // Se o plano foi alterado, atualizar assinatura
+      if (formData.plan_id && formData.plan_id !== currentCompanyPlan) {
+        // Cancelar assinatura atual
+        await supabase
+          .from('company_subscriptions')
+          .update({ status: 'cancelled' })
+          .eq('company_id', editingCompany.id)
+          .eq('status', 'active');
+
+        // Criar nova assinatura
+        const { error: subscriptionError } = await supabase
+          .from('company_subscriptions')
+          .insert({
+            company_id: editingCompany.id,
+            plan_id: formData.plan_id,
+            status: 'active',
+            starts_at: new Date().toISOString(),
+          });
+
+        if (subscriptionError) {
+          console.warn('Erro ao atualizar assinatura:', subscriptionError);
+        }
+      }
 
       toast({
         title: "Sucesso",
@@ -553,6 +597,27 @@ export const SaasCompanyManagement = () => {
                 placeholder="financeiro@empresa.com"
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-plan">Plano</Label>
+              <Select value={formData.plan_id} onValueChange={(value) => setFormData({ ...formData, plan_id: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um plano" />
+                </SelectTrigger>
+                <SelectContent>
+                  {plans.filter(plan => plan.is_active).map((plan) => (
+                    <SelectItem key={plan.id} value={plan.id}>
+                      {plan.name} - R$ {plan.price.toFixed(2)} ({plan.billing_cycle === 'monthly' ? 'Mensal' : 'Anual'})
+                      {plan.max_users && ` - Máx. ${plan.max_users} usuários`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {currentCompanyPlan && (
+                <p className="text-xs text-muted-foreground">
+                  Plano atual será alterado se você selecionar um novo plano
+                </p>
+              )}
+            </div>
             <Button 
               onClick={updateCompany} 
               className="w-full"
@@ -566,3 +631,5 @@ export const SaasCompanyManagement = () => {
     </div>
   );
 };
+
+export default SaasCompanyManagement;

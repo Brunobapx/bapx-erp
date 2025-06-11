@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,13 +10,17 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSaasPlans, SaasPlan } from '@/hooks/useSaasPlans';
+import { useSaasModules } from '@/hooks/useSaasModules';
+import { ModuleSelector } from './ModuleSelector';
 import { Plus, Edit, Trash2, Package } from 'lucide-react';
 
 export const SaasPlansManagement = () => {
   const { plans, loading, createPlan, updatePlan, deletePlan } = useSaasPlans();
+  const { getPlanModules, updatePlanModules } = useSaasModules();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<SaasPlan | null>(null);
+  const [selectedModules, setSelectedModules] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -33,11 +37,12 @@ export const SaasPlansManagement = () => {
       billing_cycle: 'monthly',
       max_users: '',
     });
+    setSelectedModules([]);
   };
 
   const handleCreate = async () => {
     try {
-      await createPlan({
+      const newPlan = await createPlan({
         name: formData.name,
         description: formData.description,
         price: parseFloat(formData.price),
@@ -47,6 +52,11 @@ export const SaasPlansManagement = () => {
         is_active: true,
       });
 
+      // Atualizar módulos do plano
+      if (newPlan && selectedModules.length > 0) {
+        await updatePlanModules(newPlan.id, selectedModules);
+      }
+
       setIsCreateModalOpen(false);
       resetForm();
     } catch (error) {
@@ -54,7 +64,7 @@ export const SaasPlansManagement = () => {
     }
   };
 
-  const handleEdit = (plan: SaasPlan) => {
+  const handleEdit = async (plan: SaasPlan) => {
     setEditingPlan(plan);
     setFormData({
       name: plan.name,
@@ -63,6 +73,10 @@ export const SaasPlansManagement = () => {
       billing_cycle: plan.billing_cycle,
       max_users: plan.max_users?.toString() || '',
     });
+
+    // Carregar módulos do plano
+    const planModules = await getPlanModules(plan.id);
+    setSelectedModules(planModules);
     setIsEditModalOpen(true);
   };
 
@@ -77,6 +91,9 @@ export const SaasPlansManagement = () => {
         billing_cycle: formData.billing_cycle,
         max_users: formData.max_users ? parseInt(formData.max_users) : null,
       });
+
+      // Atualizar módulos do plano
+      await updatePlanModules(editingPlan.id, selectedModules);
 
       setIsEditModalOpen(false);
       setEditingPlan(null);
@@ -110,20 +127,34 @@ export const SaasPlansManagement = () => {
               Novo Plano
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Criar Novo Plano</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome do Plano</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Ex: Básico, Premium"
-                />
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nome do Plano</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Ex: Básico, Premium"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="price">Preço (R$)</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    step="0.01"
+                    value={formData.price}
+                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                    placeholder="99.90"
+                  />
+                </div>
               </div>
+              
               <div className="space-y-2">
                 <Label htmlFor="description">Descrição</Label>
                 <Textarea
@@ -133,39 +164,37 @@ export const SaasPlansManagement = () => {
                   placeholder="Descrição do plano"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="price">Preço (R$)</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  step="0.01"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  placeholder="99.90"
-                />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="billing_cycle">Ciclo de Cobrança</Label>
+                  <Select value={formData.billing_cycle} onValueChange={(value) => setFormData({ ...formData, billing_cycle: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">Mensal</SelectItem>
+                      <SelectItem value="yearly">Anual</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="max_users">Máximo de Usuários</Label>
+                  <Input
+                    id="max_users"
+                    type="number"
+                    value={formData.max_users}
+                    onChange={(e) => setFormData({ ...formData, max_users: e.target.value })}
+                    placeholder="Deixe vazio para ilimitado"
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="billing_cycle">Ciclo de Cobrança</Label>
-                <Select value={formData.billing_cycle} onValueChange={(value) => setFormData({ ...formData, billing_cycle: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="monthly">Mensal</SelectItem>
-                    <SelectItem value="yearly">Anual</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="max_users">Máximo de Usuários</Label>
-                <Input
-                  id="max_users"
-                  type="number"
-                  value={formData.max_users}
-                  onChange={(e) => setFormData({ ...formData, max_users: e.target.value })}
-                  placeholder="Deixe vazio para ilimitado"
-                />
-              </div>
+
+              <ModuleSelector
+                selectedModules={selectedModules}
+                onModulesChange={setSelectedModules}
+              />
+
               <Button onClick={handleCreate} className="w-full">
                 Criar Plano
               </Button>
@@ -227,19 +256,32 @@ export const SaasPlansManagement = () => {
 
       {/* Modal de Edição */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Plano</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">Nome do Plano</Label>
-              <Input
-                id="edit-name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Nome do Plano</Label>
+                <Input
+                  id="edit-name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-price">Preço (R$)</Label>
+                <Input
+                  id="edit-price"
+                  type="number"
+                  step="0.01"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                />
+              </div>
             </div>
+            
             <div className="space-y-2">
               <Label htmlFor="edit-description">Descrição</Label>
               <Textarea
@@ -248,37 +290,36 @@ export const SaasPlansManagement = () => {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-price">Preço (R$)</Label>
-              <Input
-                id="edit-price"
-                type="number"
-                step="0.01"
-                value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-              />
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-billing_cycle">Ciclo de Cobrança</Label>
+                <Select value={formData.billing_cycle} onValueChange={(value) => setFormData({ ...formData, billing_cycle: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">Mensal</SelectItem>
+                    <SelectItem value="yearly">Anual</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-max_users">Máximo de Usuários</Label>
+                <Input
+                  id="edit-max_users"
+                  type="number"
+                  value={formData.max_users}
+                  onChange={(e) => setFormData({ ...formData, max_users: e.target.value })}
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-billing_cycle">Ciclo de Cobrança</Label>
-              <Select value={formData.billing_cycle} onValueChange={(value) => setFormData({ ...formData, billing_cycle: value })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="monthly">Mensal</SelectItem>
-                  <SelectItem value="yearly">Anual</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-max_users">Máximo de Usuários</Label>
-              <Input
-                id="edit-max_users"
-                type="number"
-                value={formData.max_users}
-                onChange={(e) => setFormData({ ...formData, max_users: e.target.value })}
-              />
-            </div>
+
+            <ModuleSelector
+              selectedModules={selectedModules}
+              onModulesChange={setSelectedModules}
+            />
+
             <Button onClick={handleUpdate} className="w-full">
               Atualizar Plano
             </Button>
