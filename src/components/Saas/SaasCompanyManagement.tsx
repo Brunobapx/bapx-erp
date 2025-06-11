@@ -8,9 +8,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Building, User } from 'lucide-react';
+import { useSaasPlans } from '@/hooks/useSaasPlans';
+import { Plus, Edit, Building, User, Trash2 } from 'lucide-react';
 
 interface Company {
   id: string;
@@ -27,12 +29,16 @@ export const SaasCompanyManagement = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [editingCompany, setEditingCompany] = useState<Company | null>(null);
   const [formData, setFormData] = useState({
     // Dados da empresa
     name: '',
     subdomain: '',
     billing_email: '',
+    plan_id: '',
     // Dados do usuário administrador
     admin_email: '',
     admin_password: '',
@@ -40,6 +46,7 @@ export const SaasCompanyManagement = () => {
     admin_last_name: '',
   });
   const { toast } = useToast();
+  const { plans, loading: plansLoading } = useSaasPlans();
 
   const loadCompanies = async () => {
     try {
@@ -61,8 +68,21 @@ export const SaasCompanyManagement = () => {
     }
   };
 
+  const resetForm = () => {
+    setFormData({ 
+      name: '', 
+      subdomain: '', 
+      billing_email: '',
+      plan_id: '',
+      admin_email: '',
+      admin_password: '',
+      admin_first_name: '',
+      admin_last_name: '',
+    });
+  };
+
   const createCompany = async () => {
-    if (!formData.name || !formData.subdomain || !formData.admin_email || !formData.admin_password) {
+    if (!formData.name || !formData.subdomain || !formData.admin_email || !formData.admin_password || !formData.plan_id) {
       toast({
         title: "Erro",
         description: "Preencha todos os campos obrigatórios",
@@ -118,7 +138,6 @@ export const SaasCompanyManagement = () => {
 
       if (profileError) {
         console.warn('Erro ao criar perfil:', profileError);
-        // Não interromper o processo se falhar ao criar perfil
       }
 
       // 4. Atribuir role de admin ao usuário
@@ -132,7 +151,20 @@ export const SaasCompanyManagement = () => {
 
       if (roleError) {
         console.warn('Erro ao atribuir role:', roleError);
-        // Não interromper o processo se falhar ao atribuir role
+      }
+
+      // 5. Criar assinatura do plano
+      const { error: subscriptionError } = await supabase
+        .from('company_subscriptions')
+        .insert({
+          company_id: company.id,
+          plan_id: formData.plan_id,
+          status: 'active',
+          starts_at: new Date().toISOString(),
+        });
+
+      if (subscriptionError) {
+        console.warn('Erro ao criar assinatura:', subscriptionError);
       }
 
       toast({
@@ -141,15 +173,7 @@ export const SaasCompanyManagement = () => {
       });
 
       setIsCreateModalOpen(false);
-      setFormData({ 
-        name: '', 
-        subdomain: '', 
-        billing_email: '',
-        admin_email: '',
-        admin_password: '',
-        admin_first_name: '',
-        admin_last_name: '',
-      });
+      resetForm();
       loadCompanies();
 
     } catch (error: any) {
@@ -161,6 +185,95 @@ export const SaasCompanyManagement = () => {
       });
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleEdit = (company: Company) => {
+    setEditingCompany(company);
+    setFormData({
+      name: company.name,
+      subdomain: company.subdomain,
+      billing_email: company.billing_email || '',
+      plan_id: '',
+      admin_email: '',
+      admin_password: '',
+      admin_first_name: '',
+      admin_last_name: '',
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const updateCompany = async () => {
+    if (!editingCompany || !formData.name || !formData.subdomain) {
+      toast({
+        title: "Erro",
+        description: "Preencha todos os campos obrigatórios",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUpdating(true);
+    
+    try {
+      const { error } = await supabase
+        .from('companies')
+        .update({
+          name: formData.name,
+          subdomain: formData.subdomain,
+          billing_email: formData.billing_email,
+        })
+        .eq('id', editingCompany.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Empresa atualizada com sucesso!",
+      });
+
+      setIsEditModalOpen(false);
+      setEditingCompany(null);
+      resetForm();
+      loadCompanies();
+
+    } catch (error: any) {
+      console.error('Erro ao atualizar empresa:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao atualizar empresa",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const deleteCompany = async (companyId: string, companyName: string) => {
+    if (!confirm(`Tem certeza que deseja excluir a empresa "${companyName}"? Esta ação não pode ser desfeita.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('companies')
+        .delete()
+        .eq('id', companyId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Empresa excluída com sucesso!",
+      });
+
+      loadCompanies();
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao excluir empresa",
+        variant: "destructive",
+      });
     }
   };
 
@@ -237,15 +350,33 @@ export const SaasCompanyManagement = () => {
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="billing-email">Email de Cobrança</Label>
-                  <Input
-                    id="billing-email"
-                    type="email"
-                    value={formData.billing_email}
-                    onChange={(e) => setFormData({ ...formData, billing_email: e.target.value })}
-                    placeholder="financeiro@empresa.com"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="billing-email">Email de Cobrança</Label>
+                    <Input
+                      id="billing-email"
+                      type="email"
+                      value={formData.billing_email}
+                      onChange={(e) => setFormData({ ...formData, billing_email: e.target.value })}
+                      placeholder="financeiro@empresa.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="plan">Plano *</Label>
+                    <Select value={formData.plan_id} onValueChange={(value) => setFormData({ ...formData, plan_id: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um plano" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {plans.filter(plan => plan.is_active).map((plan) => (
+                          <SelectItem key={plan.id} value={plan.id}>
+                            {plan.name} - R$ {plan.price.toFixed(2)} ({plan.billing_cycle === 'monthly' ? 'Mensal' : 'Anual'})
+                            {plan.max_users && ` - Máx. ${plan.max_users} usuários`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
 
@@ -359,6 +490,20 @@ export const SaasCompanyManagement = () => {
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={() => handleEdit(company)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteCompany(company.id, company.name)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => toggleCompanyStatus(company.id, !company.is_active)}
                         >
                           {company.is_active ? 'Desativar' : 'Ativar'}
@@ -372,6 +517,52 @@ export const SaasCompanyManagement = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de Edição */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Empresa</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Nome da Empresa *</Label>
+              <Input
+                id="edit-name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Nome da empresa"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-subdomain">Subdomínio *</Label>
+              <Input
+                id="edit-subdomain"
+                value={formData.subdomain}
+                onChange={(e) => setFormData({ ...formData, subdomain: e.target.value })}
+                placeholder="empresa1"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-billing-email">Email de Cobrança</Label>
+              <Input
+                id="edit-billing-email"
+                type="email"
+                value={formData.billing_email}
+                onChange={(e) => setFormData({ ...formData, billing_email: e.target.value })}
+                placeholder="financeiro@empresa.com"
+              />
+            </div>
+            <Button 
+              onClick={updateCompany} 
+              className="w-full"
+              disabled={isUpdating}
+            >
+              {isUpdating ? 'Atualizando...' : 'Atualizar Empresa'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
