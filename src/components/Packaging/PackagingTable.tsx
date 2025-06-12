@@ -54,11 +54,11 @@ export const PackagingTable = ({
       <TableHeader>
         <TableRow>
           <TableHead>Embalagem</TableHead>
+          <TableHead>Pedido</TableHead>
+          <TableHead>Cliente</TableHead>
           <TableHead>Produto</TableHead>
           <TableHead className="text-center">Qtd para Embalar</TableHead>
           <TableHead className="text-center">Qtd Embalada</TableHead>
-          <TableHead>Embalado Por</TableHead>
-          <TableHead>Data Embalagem</TableHead>
           <TableHead>Status</TableHead>
           <TableHead className="text-center">Qualidade</TableHead>
           <TableHead className="text-center">Ações</TableHead>
@@ -72,11 +72,11 @@ export const PackagingTable = ({
             onClick={() => onItemClick(item)}
           >
             <TableCell className="font-medium">{item.packaging_number}</TableCell>
+            <TableCell>{item.order_number || 'N/A'}</TableCell>
+            <TableCell>{item.client_name || 'N/A'}</TableCell>
             <TableCell>{item.product_name}</TableCell>
             <TableCell className="text-center">{item.quantity_to_package}</TableCell>
             <TableCell className="text-center">{item.quantity_packaged || 0}</TableCell>
-            <TableCell>{item.packaged_by || '-'}</TableCell>
-            <TableCell>{formatDate(item.packaged_at)}</TableCell>
             <TableCell>
               <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(item.status)}`}>
                 {item.status}

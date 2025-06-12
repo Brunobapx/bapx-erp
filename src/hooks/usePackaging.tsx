@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,7 +13,7 @@ export type PackagingStatus =
 export type Packaging = {
   id: string;
   packaging_number: string;
-  production_id: string;
+  production_id: string | null;
   product_id: string;
   product_name: string;
   quantity_to_package: number;
@@ -27,8 +28,10 @@ export type Packaging = {
   created_at?: string;
   updated_at?: string;
   user_id?: string;
-  order_number?: string;
+  order_id?: string;
+  client_id?: string;
   client_name?: string;
+  order_number?: string;
 };
 
 export const usePackaging = () => {
@@ -75,12 +78,33 @@ export const usePackaging = () => {
         
         if (error) throw error;
         
-        // Mapear os dados para incluir order_number e client_name
-        const packagingsWithOrderInfo = (data || []).map(pack => ({
-          ...pack,
-          order_number: pack.production?.order_items?.orders?.order_number || 'Direto do Estoque',
-          client_name: pack.production?.order_items?.orders?.client_name || 'N/A'
-        }));
+        // Mapear os dados para incluir order_number e client_name com prioridade para dados diretos
+        const packagingsWithOrderInfo = (data || []).map(pack => {
+          // Se tem order_id e client_name diretamente (embalagem direta do estoque)
+          if (pack.order_id && pack.client_name) {
+            return {
+              ...pack,
+              order_number: `Pedido Direct-${pack.order_id.slice(-6)}`,
+              client_name: pack.client_name
+            };
+          }
+          
+          // Se tem production associada (vem da produção)
+          if (pack.production?.order_items?.orders) {
+            return {
+              ...pack,
+              order_number: pack.production.order_items.orders.order_number || 'N/A',
+              client_name: pack.production.order_items.orders.client_name || 'N/A'
+            };
+          }
+          
+          // Fallback
+          return {
+            ...pack,
+            order_number: 'N/A',
+            client_name: 'N/A'
+          };
+        });
         
         setPackagings(packagingsWithOrderInfo);
       } catch (error: any) {
@@ -242,13 +266,37 @@ export const usePackaging = () => {
         
         if (packagingError) throw packagingError;
         
-        // Verificar se a embalagem tem produção associada
-        if (packagingData.production && packagingData.production.order_items && packagingData.production.order_items.orders) {
+        let orderId, orderNumber, clientId, clientName, orderTotal;
+        
+        // Verificar se a embalagem tem dados diretos do pedido (estoque direto)
+        if (packagingData.order_id && packagingData.client_name) {
+          orderId = packagingData.order_id;
+          clientId = packagingData.client_id;
+          clientName = packagingData.client_name;
+          
+          // Buscar dados do pedido
+          const { data: orderData, error: orderError } = await supabase
+            .from('orders')
+            .select('order_number, total_amount')
+            .eq('id', orderId)
+            .single();
+          
+          if (!orderError && orderData) {
+            orderNumber = orderData.order_number;
+            orderTotal = orderData.total_amount;
+          }
+        } 
+        // Verificar se tem produção associada
+        else if (packagingData.production && packagingData.production.order_items && packagingData.production.order_items.orders) {
           const orderData = packagingData.production.order_items.orders;
           const orderItem = packagingData.production.order_items;
-          const finalQuantity = quantityPackaged || packagingData.quantity_packaged || packagingData.quantity_to_package;
+          orderId = orderData.id;
+          orderNumber = orderData.order_number;
+          clientId = orderData.client_id;
+          clientName = orderData.client_name;
+          orderTotal = orderData.total_amount;
           
-          // Recalcular valores com base na quantidade embalada
+          const finalQuantity = quantityPackaged || packagingData.quantity_packaged || packagingData.quantity_to_package;
           const originalQuantity = orderItem.quantity;
           const unitPrice = orderItem.unit_price;
           const newTotalPrice = finalQuantity * unitPrice;
@@ -272,12 +320,11 @@ export const usePackaging = () => {
           const { data: allOrderItems, error: itemsError } = await supabase
             .from('order_items')
             .select('total_price')
-            .eq('order_id', orderData.id);
+            .eq('order_id', orderId);
           
-          if (itemsError) {
-            console.error('Erro ao buscar itens do pedido:', itemsError);
-          } else {
+          if (!itemsError && allOrderItems) {
             const newOrderTotal = allOrderItems.reduce((sum, item) => sum + item.total_price, 0);
+            orderTotal = newOrderTotal;
             
             // Atualizar o valor total do pedido
             const { error: updateOrderError } = await supabase
@@ -286,90 +333,67 @@ export const usePackaging = () => {
                 total_amount: newOrderTotal,
                 updated_at: new Date().toISOString()
               })
-              .eq('id', orderData.id);
+              .eq('id', orderId);
             
             if (updateOrderError) {
               console.error('Erro ao atualizar total do pedido:', updateOrderError);
               toast.error('Erro ao atualizar valor total do pedido');
             }
           }
+        }
+        
+        // Se temos dados do pedido, verificar se pode criar venda
+        if (orderId && clientId && clientName) {
+          // Verificar se já existe uma venda para este pedido
+          const { data: existingSale, error: saleCheckError } = await supabase
+            .from('sales')
+            .select('id')
+            .eq('order_id', orderId)
+            .maybeSingle();
           
-          // Verificar se todos os itens do pedido foram aprovados na embalagem
-          const allItemsPackaged = await checkAllOrderItemsPackaged(orderData.id);
+          if (saleCheckError) {
+            console.error('Erro ao verificar venda existente:', saleCheckError);
+          }
           
-          if (allItemsPackaged) {
-            // Verificar se já existe uma venda para este pedido
-            const { data: existingSale, error: saleCheckError } = await supabase
-              .from('sales')
-              .select('id')
-              .eq('order_id', orderData.id)
-              .maybeSingle();
+          if (!existingSale) {
+            // Recalcular o valor total do pedido para a venda
+            const { data: finalOrderItems, error: finalItemsError } = await supabase
+              .from('order_items')
+              .select('total_price')
+              .eq('order_id', orderId);
             
-            if (saleCheckError) {
-              console.error('Erro ao verificar venda existente:', saleCheckError);
+            let saleTotal = orderTotal || 0;
+            if (!finalItemsError && finalOrderItems) {
+              saleTotal = finalOrderItems.reduce((sum, item) => sum + item.total_price, 0);
             }
             
-            if (!existingSale) {
-              // Gerar número da venda
-              const saleNumber = `VDA-${Date.now().toString().slice(-6)}`;
-              
-              // Recalcular o valor total do pedido para a venda
-              const { data: finalOrderItems, error: finalItemsError } = await supabase
-                .from('order_items')
-                .select('total_price')
-                .eq('order_id', orderData.id);
-              
-              let saleTotal = orderData.total_amount;
-              if (!finalItemsError && finalOrderItems) {
-                saleTotal = finalOrderItems.reduce((sum, item) => sum + item.total_price, 0);
-              }
-              
-              // Criar nova venda com o valor recalculado
-              const { error: saleError } = await supabase
-                .from('sales')
-                .insert({
-                  user_id: user?.id,
-                  sale_number: saleNumber,
-                  order_id: orderData.id,
-                  client_id: orderData.client_id,
-                  client_name: orderData.client_name,
-                  total_amount: saleTotal,
-                  status: 'pending'
-                });
-              
-              if (saleError) {
-                console.error('Erro ao criar venda:', saleError);
-                toast.error('Erro ao criar venda');
-              } else {
-                const quantityDifference = originalQuantity - finalQuantity;
-                let message = `Embalagem aprovada! Todos os itens do pedido foram processados. Venda ${saleNumber} criada`;
-                
-                if (quantityDifference > 0) {
-                  message += ` - Quantidade ajustada de ${originalQuantity} para ${finalQuantity} unidades (${quantityDifference} unidades não embaladas)`;
-                } else {
-                  message += ` com ${finalQuantity} unidades`;
-                }
-                
-                console.log(`Venda ${saleNumber} criada - Quantidade: ${finalQuantity}, Valor: R$ ${saleTotal.toFixed(2)}`);
-                toast.success(message);
-              }
+            // Criar nova venda com o valor recalculado
+            const { error: saleError } = await supabase
+              .from('sales')
+              .insert({
+                user_id: user?.id,
+                order_id: orderId,
+                client_id: clientId,
+                client_name: clientName,
+                total_amount: saleTotal,
+                status: 'pending'
+              });
+            
+            if (saleError) {
+              console.error('Erro ao criar venda:', saleError);
+              toast.error('Erro ao criar venda');
+            } else {
+              const finalQuantity = quantityPackaged || packagingData.quantity_packaged || packagingData.quantity_to_package;
+              console.log(`Venda criada - Cliente: ${clientName}, Quantidade: ${finalQuantity}, Valor: R$ ${saleTotal.toFixed(2)}`);
+              toast.success(`Embalagem aprovada! Venda criada para ${clientName} com ${finalQuantity} unidades - Valor: R$ ${saleTotal.toFixed(2)}`);
             }
           } else {
-            // Nem todos os itens foram aprovados ainda
-            const quantityDifference = originalQuantity - finalQuantity;
-            let message = 'Embalagem aprovada! Aguardando aprovação dos demais itens do pedido para liberar venda';
-            
-            if (quantityDifference > 0) {
-              message += ` - Quantidade ajustada de ${originalQuantity} para ${finalQuantity} unidades`;
-            }
-            
-            console.log(`Embalagem aprovada, mas nem todos os itens do pedido ${orderData.id} foram processados`);
-            toast.success(message);
+            toast.success('Embalagem aprovada! Venda já existe para este pedido.');
           }
         } else {
           // Embalagem direta do estoque (sem produção)
           const finalQuantity = quantityPackaged || packagingData.quantity_packaged || packagingData.quantity_to_package;
-          toast.success(`Embalagem aprovada! ${finalQuantity} unidades de ${packagingData.product_name} processadas diretamente do estoque.`);
+          toast.success(`Embalagem aprovada! ${finalQuantity} unidades de ${packagingData.product_name} processadas.`);
         }
         
         refreshPackagings();

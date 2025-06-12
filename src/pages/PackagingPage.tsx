@@ -94,7 +94,9 @@ const PackagingPage = () => {
       quantity_to_package: 1,
       quantity_packaged: 0,
       status: 'pending' as const,
-      quality_check: false
+      quality_check: false,
+      client_name: '',
+      order_number: ''
     };
     
     setSelectedItem(newPackaging);
@@ -186,7 +188,9 @@ const PackagingPage = () => {
           id: 'NOVO', 
           product_name: '', 
           quantity_to_package: 1, 
-          customer: ''
+          customer: '',
+          client_name: '',
+          order_number: ''
         }}
         onApprove={handleApprovePackaging}
         onNextStage={handleNextStage}
