@@ -611,10 +611,13 @@ export type Database = {
         Row: {
           approved_at: string | null
           approved_by: string | null
+          client_id: string | null
+          client_name: string | null
           company_id: string
           created_at: string
           id: string
           notes: string | null
+          order_id: string | null
           packaged_at: string | null
           packaged_by: string | null
           packaging_number: string
@@ -631,10 +634,13 @@ export type Database = {
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
+          client_id?: string | null
+          client_name?: string | null
           company_id?: string
           created_at?: string
           id?: string
           notes?: string | null
+          order_id?: string | null
           packaged_at?: string | null
           packaged_by?: string | null
           packaging_number: string
@@ -651,10 +657,13 @@ export type Database = {
         Update: {
           approved_at?: string | null
           approved_by?: string | null
+          client_id?: string | null
+          client_name?: string | null
           company_id?: string
           created_at?: string
           id?: string
           notes?: string | null
+          order_id?: string | null
           packaged_at?: string | null
           packaged_by?: string | null
           packaging_number?: string

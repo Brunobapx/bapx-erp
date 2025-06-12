@@ -223,15 +223,14 @@ export const useOrders = () => {
 
         const currentStock = productData.stock || 0;
         const quantityNeeded = item.quantity;
-        const shortage = quantityNeeded - currentStock;
 
-        console.log(`Produto: ${item.product_name}, Estoque atual: ${currentStock}, Necessário: ${quantityNeeded}, Falta: ${shortage}`);
+        console.log(`Produto: ${item.product_name}, Estoque atual: ${currentStock}, Necessário: ${quantityNeeded}`);
 
         // Se há estoque suficiente, enviar direto para embalagem
         if (currentStock >= quantityNeeded) {
           console.log(`Enviando ${quantityNeeded} unidades de ${item.product_name} diretamente para embalagem`);
           
-          // Criar entrada de embalagem diretamente
+          // Criar entrada de embalagem diretamente com dados do pedido
           packagingEntries.push({
             user_id: user.id,
             production_id: null, // NULL para produtos que vão direto do estoque
@@ -239,7 +238,10 @@ export const useOrders = () => {
             product_name: item.product_name,
             quantity_to_package: quantityNeeded,
             quantity_packaged: 0,
-            status: 'pending'
+            status: 'pending',
+            order_id: order.id,
+            client_id: order.client_id,
+            client_name: order.client_name
           });
 
           // Deduzir a quantidade do estoque
@@ -329,7 +331,10 @@ export const useOrders = () => {
           .insert(packagingEntries)
           .select();
         
-        if (packagingError) throw packagingError;
+        if (packagingError) {
+          console.error('Erro ao criar entradas de embalagem:', packagingError);
+          throw packagingError;
+        }
 
         console.log(`Criadas ${packagingEntries.length} entradas de embalagem`);
       }
