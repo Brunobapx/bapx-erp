@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
@@ -5,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ApprovalModal } from '@/components/Modals/ApprovalModal';
 import { InvoiceModal } from '@/components/Modals/InvoiceModal';
 import { DeliverySlipModal } from '@/components/Modals/DeliverySlipModal';
-import { DollarSign, ChevronDown, Search, TrendingUp, FileText, Truck } from 'lucide-react';
+import { DollarSign, ChevronDown, Search, TrendingUp, FileText, Truck, Eye } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -64,6 +65,11 @@ const SalesPage = () => {
   const handleInvoiceClick = (item) => {
     setSelectedItem(item);
     setShowInvoiceModal(true);
+  };
+
+  const handleViewDeliverySlip = (item) => {
+    setSelectedItem(item);
+    setShowDeliverySlipModal(true);
   };
 
   const handleRomaneioClick = (item) => {
@@ -283,6 +289,18 @@ const SalesPage = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewDeliverySlip(item);
+                        }}
+                        title="Visualizar Romaneio"
+                      >
+                        <Eye className="mr-1 h-3 w-3" />
+                        Ver
+                      </Button>
                       {item.status === 'confirmed' && (
                         <Button 
                           size="sm" 

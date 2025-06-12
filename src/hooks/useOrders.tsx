@@ -231,7 +231,7 @@ export const useOrders = () => {
         if (shortage <= 0) {
           console.log(`Enviando ${quantityNeeded} unidades de ${item.product_name} diretamente para embalagem`);
           
-          // Criar entrada de embalagem diretamente (production_id será null)
+          // Criar entrada de embalagem diretamente com dados do cliente
           packagingEntries.push({
             user_id: user.id,
             production_id: null, // NULL para produtos que vão direto do estoque
@@ -239,7 +239,11 @@ export const useOrders = () => {
             product_name: item.product_name,
             quantity_to_package: quantityNeeded,
             quantity_packaged: 0,
-            status: 'pending'
+            status: 'pending',
+            // Adicionar dados do cliente para rastreamento
+            order_id: order.id,
+            client_id: order.client_id,
+            client_name: order.client_name
           });
 
           // Deduzir a quantidade do estoque
@@ -285,7 +289,11 @@ export const useOrders = () => {
               product_name: item.product_name,
               quantity_to_package: currentStock,
               quantity_packaged: 0,
-              status: 'pending'
+              status: 'pending',
+              // Adicionar dados do cliente
+              order_id: order.id,
+              client_id: order.client_id,
+              client_name: order.client_name
             });
 
             // Zerar o estoque pois foi liberado para embalagem
