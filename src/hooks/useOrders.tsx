@@ -228,10 +228,10 @@ export const useOrders = () => {
         console.log(`Produto: ${item.product_name}, Estoque atual: ${currentStock}, Necessário: ${quantityNeeded}, Falta: ${shortage}`);
 
         // Se há estoque suficiente, enviar direto para embalagem
-        if (shortage <= 0) {
+        if (currentStock >= quantityNeeded) {
           console.log(`Enviando ${quantityNeeded} unidades de ${item.product_name} diretamente para embalagem`);
           
-          // Criar entrada de embalagem diretamente com dados do cliente
+          // Criar entrada de embalagem diretamente
           packagingEntries.push({
             user_id: user.id,
             production_id: null, // NULL para produtos que vão direto do estoque
@@ -239,11 +239,7 @@ export const useOrders = () => {
             product_name: item.product_name,
             quantity_to_package: quantityNeeded,
             quantity_packaged: 0,
-            status: 'pending',
-            // Adicionar dados do cliente para rastreamento
-            order_id: order.id,
-            client_id: order.client_id,
-            client_name: order.client_name
+            status: 'pending'
           });
 
           // Deduzir a quantidade do estoque
@@ -263,40 +259,23 @@ export const useOrders = () => {
           }
 
           hasDirectPackaging = true;
-        } else if (shortage > 0 && productData.is_manufactured) {
+        } else if (productData.is_manufactured) {
           // Se há falta de estoque e o produto é fabricado, enviar para produção
-          console.log(`Enviando ${shortage} unidades de ${item.product_name} para produção`);
+          console.log(`Enviando ${quantityNeeded} unidades de ${item.product_name} para produção`);
           
           productionEntries.push({
             user_id: user.id,
             order_item_id: item.id,
             product_id: item.product_id,
             product_name: item.product_name,
-            quantity_requested: shortage,
+            quantity_requested: quantityNeeded,
             status: 'pending'
           });
 
           needsProduction = true;
 
-          // Se há estoque parcial, enviar o que tem direto para embalagem
+          // Se há estoque parcial, deduzir também
           if (currentStock > 0) {
-            console.log(`Enviando ${currentStock} unidades de ${item.product_name} (estoque disponível) diretamente para embalagem`);
-            
-            packagingEntries.push({
-              user_id: user.id,
-              production_id: null, // NULL para produtos que vão direto do estoque
-              product_id: item.product_id,
-              product_name: item.product_name,
-              quantity_to_package: currentStock,
-              quantity_packaged: 0,
-              status: 'pending',
-              // Adicionar dados do cliente
-              order_id: order.id,
-              client_id: order.client_id,
-              client_name: order.client_name
-            });
-
-            // Zerar o estoque pois foi liberado para embalagem
             const { error: stockUpdateError } = await supabase
               .from('products')
               .update({ 
@@ -307,13 +286,9 @@ export const useOrders = () => {
 
             if (stockUpdateError) {
               console.error('Erro ao atualizar estoque:', stockUpdateError);
-            } else {
-              console.log(`Estoque do produto ${item.product_name} zerado após liberar ${currentStock} unidades para embalagem`);
             }
-
-            hasDirectPackaging = true;
           }
-        } else if (shortage > 0 && !productData.is_manufactured) {
+        } else {
           console.log(`Produto ${item.product_name} não é fabricado e há falta de estoque. Será necessário reposição manual.`);
           toast.error(`Produto ${item.product_name} tem estoque insuficiente e não é fabricado. Reposição manual necessária.`);
         }
