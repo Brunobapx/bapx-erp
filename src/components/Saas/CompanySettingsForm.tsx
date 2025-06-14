@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSaasPlans } from "@/hooks/useSaasPlans";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Switch } from "@/components/ui/switch";
 
 interface Props {
   company: any;
@@ -66,6 +66,7 @@ export function CompanySettingsForm({ company, refresh }: Props) {
     logo_url: company?.logo_url || "",
     primary_color: company?.primary_color || "#2563eb",
     secondary_color: company?.secondary_color || "#1e40af",
+    is_active: company?.is_active ?? true,
   });
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -87,6 +88,7 @@ export function CompanySettingsForm({ company, refresh }: Props) {
         logo_url: company.logo_url || "",
         primary_color: company.primary_color || "#2563eb",
         secondary_color: company.secondary_color || "#1e40af",
+        is_active: company.is_active ?? true,
       });
     }
     if (currentSubscription) {
@@ -157,6 +159,16 @@ export function CompanySettingsForm({ company, refresh }: Props) {
         <CardTitle>Configurações da Empresa: {company?.name}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="company-status"
+            checked={formData.is_active}
+            onCheckedChange={(checked) => setFormData(f => ({ ...f, is_active: checked }))}
+          />
+          <Label htmlFor="company-status" className={formData.is_active ? 'text-green-600' : 'text-red-600'}>
+            {formData.is_active ? "Empresa Ativa" : "Empresa Inativa"}
+          </Label>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label>Nome</Label>
