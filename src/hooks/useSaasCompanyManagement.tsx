@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -62,11 +63,19 @@ export const useSaasCompanyManagement = () => {
     }
     try {
       // Checar subdomínio/email duplicado
-      const { data: existing } = await supabase
+      const orConditions = [`subdomain.eq.${formData.subdomain}`];
+      if (formData.billing_email && formData.billing_email.trim() !== '') {
+        orConditions.push(`billing_email.eq.${formData.billing_email}`);
+      }
+      
+      const { data: existing, error: existingError } = await supabase
         .from('companies')
         .select('id')
-        .or(`subdomain.eq.${formData.subdomain},billing_email.eq.${formData.billing_email}`)
+        .or(orConditions.join(','))
         .maybeSingle();
+
+      if (existingError) throw existingError;
+
       if (existing) {
         toast({ title: 'Erro', description: 'Já existe uma empresa com esse subdomínio ou email de cobrança.', variant: 'destructive' });
         return null;

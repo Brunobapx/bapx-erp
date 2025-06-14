@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -50,8 +49,6 @@ export function CompanyCreateModal({ open, setOpen }: Props) {
         admin_email: '', admin_password: '', admin_first_name: '', admin_last_name: '',
       });
       await loadCompanies();
-    } else {
-      setError('Não foi possível criar a empresa. Verifique se todos os campos obrigatórios estão preenchidos e se o subdomínio ou email de cobrança já estão em uso.');
     }
     setSaving(false);
   };
