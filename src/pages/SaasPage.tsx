@@ -8,8 +8,9 @@ import { Building, Users, BarChart3, CreditCard } from 'lucide-react';
 import { SaasDashboard } from '@/components/Saas/SaasDashboard';
 import { CompanyCreateModal } from '@/components/Saas/CompanyCreateModal';
 import { CompanySettingsForm } from '@/components/Saas/CompanySettingsForm';
-// ...import outros conforme modularização
 import { useSaasCompanyManagement } from '@/hooks/useSaasCompanyManagement';
+// IMPORTAÇÃO CORRETA DO COMPONENTE BUTTON
+import { Button } from "@/components/ui/button";
 
 const SaasPage = () => {
   const { userRole } = useAuth();
