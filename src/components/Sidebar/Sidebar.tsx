@@ -96,7 +96,7 @@ export const Sidebar = () => {
               className="w-10 h-10 object-contain bg-white rounded shadow"
               style={{ background: '#eaf7fb' }}
             />
-            <h2 className="text-xl font-bold text-primary ml-1">
+            <h2 className="text-xl font-bold text-primary ml-1 font-poppins">
               BAPX ERP
             </h2>
           </div>
