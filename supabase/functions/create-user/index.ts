@@ -62,65 +62,139 @@ serve(async (req) => {
     console.log("Configuração Supabase OK");
 
     // Criar cliente Supabase com service role
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    const supabaseServiceRole = createClient(supabaseUrl, serviceRoleKey);
+
+    // Obter o company_id do usuário solicitante usando o token de autorização
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Token de autorização não fornecido" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Criar cliente com token do usuário para obter dados do solicitante
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    if (!anonKey) {
+      console.error("SUPABASE_ANON_KEY não configurada");
+      return new Response(JSON.stringify({ error: "Configuração do servidor inválida" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabaseUser = createClient(supabaseUrl, anonKey, {
+      global: {
+        headers: {
+          Authorization: authHeader,
+        },
+      },
+    });
+
+    // Obter dados do usuário atual
+    console.log("Obtendo dados do usuário solicitante...");
+    const { data: userData, error: userError } = await supabaseUser.auth.getUser();
+    
+    if (userError || !userData.user) {
+      console.error("Erro ao obter usuário:", userError);
+      return new Response(JSON.stringify({ error: "Usuário não autenticado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const requesterId = userData.user.id;
+    console.log("ID do usuário solicitante:", requesterId);
+
+    // Obter company_id do usuário solicitante
+    console.log("Obtendo company_id do usuário solicitante...");
+    const { data: requesterProfile, error: profileError } = await supabaseServiceRole
+      .from('profiles')
+      .select('company_id')
+      .eq('id', requesterId)
+      .single();
+
+    if (profileError || !requesterProfile?.company_id) {
+      console.error("Erro ao obter company_id do solicitante:", profileError);
+      return new Response(JSON.stringify({ error: "Não foi possível obter dados da empresa do usuário" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const companyId = requesterProfile.company_id;
+    console.log("Company ID obtido:", companyId);
 
     // Criar usuário via Auth API
     console.log("Criando usuário...");
-    const { data: userData, error: userError } = await supabase.auth.admin.createUser({
+    const { data: newUserData, error: createUserError } = await supabaseServiceRole.auth.admin.createUser({
       email: email.trim(),
       password,
       email_confirm: true,
     });
 
-    if (userError || !userData.user) {
-      console.error("Erro ao criar usuário:", userError);
+    if (createUserError || !newUserData.user) {
+      console.error("Erro ao criar usuário:", createUserError);
       return new Response(JSON.stringify({ 
-        error: userError?.message || "Erro ao criar usuário na autenticação" 
+        error: createUserError?.message || "Erro ao criar usuário na autenticação" 
       }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const userId = userData.user.id;
-    console.log("Usuário criado com ID:", userId);
+    const newUserId = newUserData.user.id;
+    console.log("Usuário criado com ID:", newUserId);
 
-    // Criar ou atualizar perfil
-    console.log("Criando perfil...");
-    const { error: profileError } = await supabase
+    // Criar perfil com o company_id correto
+    console.log("Criando perfil com company_id:", companyId);
+    const { error: profileCreateError } = await supabaseServiceRole
       .from('profiles')
       .upsert({ 
-        id: userId, 
+        id: newUserId, 
+        company_id: companyId,
         is_active: true,
         first_name: '',
         last_name: ''
       });
 
-    if (profileError) {
-      console.error("Erro ao criar perfil:", profileError);
-      // Não retornar erro aqui, pois o usuário já foi criado
+    if (profileCreateError) {
+      console.error("Erro ao criar perfil:", profileCreateError);
+      return new Response(JSON.stringify({ 
+        error: "Erro ao criar perfil do usuário: " + profileCreateError.message 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // Criar role
-    console.log("Definindo role...");
-    const { error: roleError } = await supabase
+    // Criar role com o company_id correto
+    console.log("Definindo role com company_id:", companyId);
+    const { error: roleCreateError } = await supabaseServiceRole
       .from('user_roles')
       .insert({ 
-        user_id: userId, 
-        role: role 
+        user_id: newUserId, 
+        role: role,
+        company_id: companyId
       });
 
-    if (roleError) {
-      console.error("Erro ao definir role:", roleError);
-      // Não retornar erro aqui, pois o usuário já foi criado
+    if (roleCreateError) {
+      console.error("Erro ao definir role:", roleCreateError);
+      return new Response(JSON.stringify({ 
+        error: "Erro ao definir função do usuário: " + roleCreateError.message 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    console.log("Usuário criado com sucesso!");
+    console.log("Usuário criado com sucesso na empresa:", companyId);
 
     return new Response(JSON.stringify({ 
       success: true, 
-      user: userData.user,
-      message: "Usuário criado com sucesso!" 
+      user: newUserData.user,
+      company_id: companyId,
+      message: "Usuário criado com sucesso e associado à empresa!" 
     }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

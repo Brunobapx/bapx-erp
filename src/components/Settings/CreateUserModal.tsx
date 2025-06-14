@@ -57,7 +57,16 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
       console.log("Iniciando criação de usuário...");
       console.log("Dados:", { email: form.email, role: form.role, userRole });
 
-      // Chamar Edge Function com melhor tratamento de erro
+      // Obter o token de autenticação atual
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session?.access_token) {
+        throw new Error("Usuário não autenticado");
+      }
+
+      console.log("Token obtido, chamando Edge Function...");
+
+      // Chamar Edge Function com token de autorização
       const { data, error } = await supabase.functions.invoke('create-user', {
         body: {
           email: form.email.trim(),
@@ -65,6 +74,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
           role: form.role,
         },
         headers: {
+          'Authorization': `Bearer ${session.access_token}`,
           'x-requester-role': userRole
         }
       });
@@ -86,11 +96,11 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
         throw new Error("Resposta inesperada do servidor");
       }
 
-      console.log("Usuário criado com sucesso!");
+      console.log("Usuário criado com sucesso! Company ID:", data.company_id);
       
       toast({
         title: "Sucesso",
-        description: "Usuário criado e ativado com sucesso!",
+        description: "Usuário criado e associado à empresa com sucesso!",
       });
       
       setForm({ email: '', password: '', role: 'user' });
