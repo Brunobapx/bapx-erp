@@ -54,20 +54,23 @@ async function createCompanyInDB(supabaseAdmin: SupabaseClient, formData: any) {
     createdAuthUserId = authUser.user.id;
     console.log(`Auth user created: ${createdAuthUserId}`);
     
-    // 3. Criar perfil
-    console.log(`Creating profile for user ${createdAuthUserId}`);
-    const { error: profileError } = await supabaseAdmin.from('profiles').insert({
-        id: createdAuthUserId,
-        first_name: admin_first_name,
-        last_name: admin_last_name,
-        company_id: company.id,
-        role: 'admin',
-    });
+    // 3. Criar/Atualizar perfil
+    // Um gatilho no banco pode ter criado um perfil básico. Usamos o upsert para garantir que os dados corretos sejam salvos.
+    console.log(`Upserting profile for user ${createdAuthUserId}`);
+    const { error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .upsert({
+            id: createdAuthUserId,
+            first_name: admin_first_name,
+            last_name: admin_last_name,
+            company_id: company.id,
+            role: 'admin',
+        });
     if (profileError) {
-        console.error('DB Error: Failed to create profile.', profileError);
+        console.error('DB Error: Failed to upsert profile.', profileError);
         throw profileError;
     }
-    console.log(`Profile created for user ${createdAuthUserId}`);
+    console.log(`Profile upserted for user ${createdAuthUserId}`);
 
     // 4. Atribuir role de admin
     console.log(`Assigning role 'admin' to user ${createdAuthUserId}`);
@@ -180,3 +183,4 @@ serve(async (req) => {
     })
   }
 })
+
