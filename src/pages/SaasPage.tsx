@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { SaasDashboard } from '@/components/Saas/SaasDashboard';
 import { CompanySettingsForm } from '@/components/Saas/CompanySettingsForm';
-import { useSaasCompanyManagement } from '@/hooks/useSaasCompanyManagement';
+import { useSaasCompanies } from '@/hooks/useSaasCompanies';
 import { SaasCompaniesTab } from "@/components/Saas/SaasCompaniesTab";
 import { SaasPageHeader } from "@/components/Saas/SaasPageHeader";
 import { SaasPlansManagement } from "@/components/Saas/SaasPlansManagement";
@@ -19,7 +19,7 @@ import { SaasPaymentsManagement } from "@/components/Saas/SaasPaymentsManagement
 const SaasPage = () => {
   const { userRole } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
-  const { companies, loading, loadCompanies } = useSaasCompanyManagement();
+  const { data: companies, isLoading: loading, refetch: loadCompanies } = useSaasCompanies();
   const [companySettingsOpen, setCompanySettingsOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<any>(null);
 
@@ -74,7 +74,7 @@ const SaasPage = () => {
         {/* Empresas/Clientes */}
         <TabsContent value="companies">
           <SaasCompaniesTab
-            companies={companies}
+            companies={companies || []}
             loading={loading}
             onConfig={(company) => {
               setSelectedCompany(company);

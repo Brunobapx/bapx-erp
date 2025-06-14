@@ -5,8 +5,10 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { User, Building } from "lucide-react";
-import { useSaasCompanyManagement, CreateCompanyData } from '@/hooks/useSaasCompanyManagement';
+import { CreateCompanyData } from '@/types/saas';
 import { Separator } from "@/components/ui/separator";
+import { useSaasPlans } from "@/hooks/useSaasPlans";
+import { useCreateCompany } from "@/hooks/useCompanyMutations";
 
 interface Props {
   open: boolean;
@@ -14,13 +16,13 @@ interface Props {
 }
 
 export function CompanyCreateModal({ open, setOpen }: Props) {
-  const { createCompany, plans, loading, loadCompanies } = useSaasCompanyManagement();
+  const { plans, loading: plansLoading } = useSaasPlans();
+  const { mutateAsync: createCompany, isPending: saving } = useCreateCompany();
   const [formData, setFormData] = useState<CreateCompanyData>({
     name: '', subdomain: '', billing_email: '', plan_id: '',
     logo_url: '', primary_color: '', secondary_color: '',
     admin_email: '', admin_password: '', admin_first_name: '', admin_last_name: '',
   });
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isFormFilled =
@@ -37,20 +39,22 @@ export function CompanyCreateModal({ open, setOpen }: Props) {
       setError("Preencha todos os campos obrigatórios! A senha deve ter no mínimo 6 caracteres.");
       return;
     }
-    setSaving(true);
     setError(null);
 
-    const company = await createCompany(formData);
-    if (company) {
-      setOpen(false);
-      setFormData({
-        name: '', subdomain: '', billing_email: '', plan_id: '',
-        logo_url: '', primary_color: '', secondary_color: '',
-        admin_email: '', admin_password: '', admin_first_name: '', admin_last_name: '',
-      });
-      await loadCompanies();
+    try {
+        const company = await createCompany(formData);
+        if (company) {
+          setOpen(false);
+          setFormData({
+            name: '', subdomain: '', billing_email: '', plan_id: '',
+            logo_url: '', primary_color: '', secondary_color: '',
+            admin_email: '', admin_password: '', admin_first_name: '', admin_last_name: '',
+          });
+        }
+    } catch (e: any) {
+        // The hook shows a toast, but we can set a local error for the form field
+        setError(e.message || "Ocorreu um erro ao criar a empresa.");
     }
-    setSaving(false);
   };
 
   return (
@@ -158,7 +162,7 @@ export function CompanyCreateModal({ open, setOpen }: Props) {
           <Button
             className="w-full"
             onClick={handleSubmit}
-            disabled={!isFormFilled || saving || loading}
+            disabled={!isFormFilled || saving || plansLoading}
             type="button"
           >
             {saving ? "Criando..." : "Criar Empresa"}

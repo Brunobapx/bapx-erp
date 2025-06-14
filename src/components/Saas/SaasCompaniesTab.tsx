@@ -11,50 +11,42 @@ import { Pencil, Trash2, Eye, User, Calendar } from "lucide-react";
 import { BadgeCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useSaasCompanyManagement } from "@/hooks/useSaasCompanyManagement";
-import { useToast } from "@/hooks/use-toast";
+import { useDeleteCompany } from "@/hooks/useCompanyMutations";
 import { CompanyCreateModal } from "./CompanyCreateModal";
+import { Company } from "@/types/saas";
 
 // Helper para garantir que as infos principais estejam presentes
-const getCompanyPlanInfo = (company: any) => {
+const getCompanyPlanInfo = (company: Company) => {
   const sub = Array.isArray(company.company_subscriptions) ? company.company_subscriptions.find((s:any)=>s.status==="active") : null;
+  const planName = sub?.saas_plans?.name || "-";
   return {
     vencimento: sub?.expires_at ? new Date(sub.expires_at).toLocaleDateString("pt-BR") : "",
-    plano: sub?.plan_name || "",
+    plano: planName,
     isExpired: sub?.expires_at ? new Date(sub.expires_at) < new Date() : false,
   };
 };
 
 export const SaasCompaniesTab: React.FC<{
-  companies: any[];
+  companies: Company[];
   loading: boolean;
-  onConfig: (company: any) => void;
+  onConfig: (company: Company) => void;
 }> = ({ companies, loading, onConfig }) => {
   // Modals para ações
-  const [viewModal, setViewModal] = useState<any | null>(null);
-  const [usersModal, setUsersModal] = useState<any | null>(null);
-  const [planModal, setPlanModal] = useState<any | null>(null);
-  const [deleteModal, setDeleteModal] = useState<any | null>(null);
+  const [viewModal, setViewModal] = useState<Company | null>(null);
+  const [usersModal, setUsersModal] = useState<Company | null>(null);
+  const [planModal, setPlanModal] = useState<Company | null>(null);
+  const [deleteModal, setDeleteModal] = useState<Company | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  const { deleteCompany } = useSaasCompanyManagement();
-  const { toast } = useToast();
-  const [isDeleting, setIsDeleting] = useState(false);
+  const { mutate: deleteCompany, isPending: isDeleting } = useDeleteCompany();
 
-  const handleDelete = async (company: any) => {
+  const handleDelete = (company: Company | null) => {
     if (!company) return;
-    setIsDeleting(true);
-    try {
-      console.log('Tentando excluir empresa:', company);
-      await deleteCompany(company.id);
-      toast({ title: "Empresa excluída!", description: `Todos os dados da empresa "${company.name}" foram removidos de forma permanente.`, variant: "default" });
-      setDeleteModal(null);
-    } catch (e: any) {
-      toast({ title: "Erro", description: "Não foi possível excluir a empresa.", variant: "destructive" });
-      console.error('Erro ao excluir empresa:', e);
-    } finally {
-      setIsDeleting(false);
-    }
+    deleteCompany(company.id, {
+        onSuccess: () => {
+            setDeleteModal(null);
+        }
+    })
   };
 
   return (
@@ -101,7 +93,7 @@ export const SaasCompaniesTab: React.FC<{
                       </span>
                     ) : "-"}
                   </TableCell>
-                  <TableCell>{planInfo.plano || "-"}</TableCell>
+                  <TableCell>{planInfo.plano}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       {/* Visualizar */}
