@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -19,6 +18,7 @@ export const ClientModal = ({ isOpen, onClose, clientData }: ClientModalProps) =
     isNewClient,
     handleChange,
     handleTypeChange,
+    handleAutoAddressChange,
     handleSubmit
   } = useClientForm(clientData, onClose);
 
@@ -33,6 +33,7 @@ export const ClientModal = ({ isOpen, onClose, clientData }: ClientModalProps) =
           formData={formData}
           onChange={handleChange}
           onTypeChange={handleTypeChange}
+          handleAutoAddressChange={handleAutoAddressChange}
         />
         
         <DialogFooter>
