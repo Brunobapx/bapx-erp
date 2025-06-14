@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from '@/components/Auth/AuthProvider';
@@ -77,8 +76,6 @@ const SaasPage = () => {
           <SaasCompaniesTab
             companies={companies}
             loading={loading}
-            companySettingsOpen={companySettingsOpen}
-            setCompanySettingsOpen={setCompanySettingsOpen}
             onConfig={(company) => {
               setSelectedCompany(company);
               setActiveTab("company-settings");
