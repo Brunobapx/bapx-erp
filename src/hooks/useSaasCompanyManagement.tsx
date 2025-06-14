@@ -213,6 +213,7 @@ export const useSaasCompanyManagement = () => {
     currentCompanyPlan,
     setCurrentCompanyPlan,
     plans,
-    setCompanies
+    setCompanies,
+    deleteCompany
   };
 };
