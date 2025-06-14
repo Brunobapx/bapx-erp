@@ -14,6 +14,7 @@ export function buildClientData(formData: any, userId: string, companyId: string
     state: formData.state || null,
     zip: formData.zip || null,
     user_id: userId,
-    company_id: companyId
+    company_id: companyId,
+    // NÃO incluir bairro e outros campos visuais!
   };
 }
