@@ -87,23 +87,25 @@ export const Sidebar = () => {
 
   return (
     <aside className={`bg-background border-r border-border h-screen transition-all duration-300 flex flex-col ${collapsed ? 'w-16' : 'w-64'}`}>
-      <div className="p-4 flex items-center justify-between">
+      <div className="p-4 flex flex-col items-center justify-between">
         {!collapsed && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col items-center gap-2 w-full">
             <img
               src="/lovable-uploads/a627e39d-287e-4e8b-96f3-d8c8f7b7d997.png"
               alt="BAPX ERP Logo"
-              className="w-10 h-10 object-contain bg-white rounded shadow"
+              className="w-14 h-14 object-contain bg-white rounded shadow mb-1"
               style={{ background: '#eaf7fb' }}
             />
-            <h2 className="text-xl font-bold text-primary ml-1 font-poppins">
+            <h2
+              className="text-2xl font-extrabold text-primary font-poppins tracking-tight text-center w-full"
+            >
               BAPX ERP
             </h2>
           </div>
         )}
         <button 
           onClick={() => setCollapsed(!collapsed)}
-          className="rounded-lg p-1 hover:bg-accent/50 text-muted-foreground"
+          className="rounded-lg p-1 hover:bg-accent/50 text-muted-foreground absolute right-4 top-4 md:relative md:right-0 md:top-0"
         >
           {collapsed ? 
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
