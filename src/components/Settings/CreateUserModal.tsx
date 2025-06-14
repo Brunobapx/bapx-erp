@@ -54,7 +54,10 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
     setLoading(true);
 
     try {
-      // Chamar Edge Function de forma oficial com invoke
+      console.log("Iniciando criação de usuário...");
+      console.log("Dados:", { email: form.email, role: form.role, userRole });
+
+      // Chamar Edge Function com melhor tratamento de erro
       const { data, error } = await supabase.functions.invoke('create-user', {
         body: {
           email: form.email.trim(),
@@ -66,23 +69,55 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
         }
       });
 
-      if (error || data?.error) {
-        throw new Error(data?.error || error?.message || "Erro na criação do usuário");
+      console.log("Resposta da Edge Function:", { data, error });
+
+      if (error) {
+        console.error("Erro da Edge Function:", error);
+        throw new Error(`Erro na comunicação: ${error.message}`);
       }
 
+      if (data?.error) {
+        console.error("Erro retornado pela função:", data.error);
+        throw new Error(data.error);
+      }
+
+      if (!data?.success) {
+        console.error("Resposta inesperada:", data);
+        throw new Error("Resposta inesperada do servidor");
+      }
+
+      console.log("Usuário criado com sucesso!");
+      
       toast({
         title: "Sucesso",
         description: "Usuário criado e ativado com sucesso!",
       });
+      
       setForm({ email: '', password: '', role: 'user' });
       setOpen(false);
       onSuccess();
+      
     } catch (err: any) {
-      let desc = "Erro ao criar usuário";
-      if (err?.message) desc = err.message;
+      console.error("Erro completo:", err);
+      
+      let errorMessage = "Erro desconhecido ao criar usuário";
+      
+      if (err?.message) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      
+      // Mensagens mais específicas baseadas no tipo de erro
+      if (errorMessage.includes("Failed to send")) {
+        errorMessage = "Erro de comunicação com o servidor. Verifique sua conexão.";
+      } else if (errorMessage.includes("fetch")) {
+        errorMessage = "Erro de rede. Tente novamente em alguns instantes.";
+      }
+      
       toast({
         title: "Erro",
-        description: desc,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
