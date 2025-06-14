@@ -1,228 +1,85 @@
 import React from 'react';
-import { StatusCards } from '@/components/Dashboard/StatusCards';
-import { ProcessFunnel } from '@/components/Dashboard/ProcessFunnel';
-import StageAlert from '@/components/Alerts/StageAlert';
-import { ApprovalModal } from '@/components/Modals/ApprovalModal';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock } from 'lucide-react';
-import { useDashboardStats } from '@/hooks/useDashboardStats';
-import { Skeleton } from "@/components/ui/skeleton";
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from '@/components/Auth/AuthProvider';
+import { RequireAuth } from '@/components/Auth/RequireAuth';
+import { RequireCompany } from '@/components/Auth/RequireCompany';
+import { Toaster } from '@/components/ui/sonner';
+import { ThemeProvider } from '@/components/ThemeProvider';
+import { Layout } from '@/components/Layout';
+import { SaasLayout } from '@/components/Saas/SaasLayout';
 
-const Index = () => {
-  const { recentOrders, loading } = useDashboardStats();
-  
-  const [alerts, setAlerts] = React.useState([
-    {
-      id: '1',
-      type: 'production' as const,
-      message: 'Verificar pedidos parados na produção há mais de 2 dias.',
-      time: '2 dias atrás'
-    },
-    {
-      id: '2',
-      type: 'route' as const,
-      message: 'Revisar pedidos aguardando definição de rota.',
-      time: '5 horas atrás'
-    }
-  ]);
+// Auth Pages
+import LoginPage from './LoginPage';
+import RegisterPage from './RegisterPage';
+import ForgotPasswordPage from './ForgotPasswordPage';
+import ResetPasswordPage from './ResetPasswordPage';
+import AcceptInvitePage from './AcceptInvitePage';
 
-  const [showApprovalModal, setShowApprovalModal] = React.useState(false);
-  const [currentStage, setCurrentStage] = React.useState<'order' | 'production' | 'packaging' | 'sales' | 'finance' | 'route'>('order');
+// SaaS Pages
+import SaasHomePage from './SaasHomePage';
+import CompaniesPage from './CompaniesPage';
+import CompanySettingsPage from './CompanySettingsPage';
+import SaasSettingsPage from './SaasSettingsPage';
 
-  const handleDismissAlert = (id: string) => {
-    setAlerts(alerts.filter(alert => alert.id !== id));
-  };
+// App Pages
+import DashboardPage from './DashboardPage';
+import ProductsPage from './ProductsPage';
+import ProductFormPage from './ProductFormPage';
+import ClientsPage from './ClientsPage';
+import ClientFormPage from './ClientFormPage';
+import OrdersPage from './OrdersPage';
+import OrderFormPage from './OrderFormPage';
+import ProductionPage from './ProductionPage';
+import PackagingPage from './PackagingPage';
+import SalesPage from './SalesPage';
+import RoutesPage from './RoutesPage';
+import SettingsPage from './SettingsPage';
+import VendorsPage from './VendorsPage';
+import CommissionsPage from './CommissionsPage';
 
-  const openModal = (stage: 'order' | 'production' | 'packaging' | 'sales' | 'finance' | 'route') => {
-    setCurrentStage(stage);
-    setShowApprovalModal(true);
-  };
-
-  const translateStatus = (status: string): string => {
-    const statusTranslations: Record<string, string> = {
-      'pending': 'Pendente',
-      'in_production': 'Em Produção',
-      'in_packaging': 'Em Embalagem',
-      'packaged': 'Embalado',
-      'released_for_sale': 'Liberado para Venda',
-      'sale_confirmed': 'Venda Confirmada',
-      'in_delivery': 'Em Entrega',
-      'delivered': 'Entregue',
-      'cancelled': 'Cancelado'
-    };
-    return statusTranslations[status] || status;
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
-  };
-
-  const formatTimeAgo = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) return 'Agora';
-    if (diffInHours < 24) return `${diffInHours}h atrás`;
-    
-    const diffInDays = Math.floor(diffInHours / 24);
-    return `${diffInDays}d atrás`;
-  };
-
+export default function Index() {
   return (
-    <div className="p-4 sm:p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <div>
-          <Button onClick={() => openModal('order')}>Novo Pedido</Button>
-        </div>
-      </div>
-      
-      <StageAlert alerts={alerts} onDismiss={handleDismissAlert} />
+    <ThemeProvider defaultTheme="light" storageKey="erp-theme">
+      <AuthProvider>
+        <Router>
+          <Routes>
+            {/* Auth Routes */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/accept-invite" element={<AcceptInvitePage />} />
 
-      <StatusCards />
-      
-      <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
-        <ProcessFunnel />
-        
-        <Card className="col-span-1 lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Pedidos Recentes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 5 }).map((_, index) => (
-                  <div key={index} className="p-3 border rounded-md">
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Skeleton className="h-4 w-16" />
-                          <Skeleton className="h-5 w-20" />
-                        </div>
-                        <Skeleton className="h-3 w-32" />
-                      </div>
-                      <Skeleton className="h-3 w-12" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : recentOrders.length > 0 ? (
-              <div className="space-y-3">
-                {recentOrders.map((order) => (
-                  <div 
-                    key={order.id}
-                    className="p-3 border rounded-md hover:bg-accent/5 cursor-pointer transition-colors"
-                    onClick={() => openModal('order')}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{order.order_number}</span>
-                          <span className={`stage-badge badge-${order.status}`}>
-                            {translateStatus(order.status)}
-                          </span>
-                        </div>
-                        <div className="text-sm text-muted-foreground mt-1">
-                          {order.client_name} - {formatCurrency(order.total_amount)}
-                        </div>
-                      </div>
-                      <div className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {formatTimeAgo(order.created_at)}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center p-4 text-muted-foreground">
-                Nenhum pedido recente encontrado
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Pedidos por Categoria</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span>Hardware</span>
-                <span className="font-medium">12</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Software</span>
-                <span className="font-medium">8</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Serviços</span>
-                <span className="font-medium">4</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Entregas Programadas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span>Hoje</span>
-                <span className="font-medium">3</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Amanhã</span>
-                <span className="font-medium">5</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Esta semana</span>
-                <span className="font-medium">12</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Status Financeiro</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span>A receber (7d)</span>
-                <span className="font-medium">R$ 12.450</span>
-              </div>
-              <div className="flex justify-between">
-                <span>A receber (30d)</span>
-                <span className="font-medium">R$ 45.820</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Recebido (mês)</span>
-                <span className="font-medium">R$ 38.670</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      <ApprovalModal 
-        isOpen={showApprovalModal}
-        onClose={() => setShowApprovalModal(false)}
-        stage={currentStage}
-      />
-    </div>
+            {/* SaaS Routes */}
+            <Route path="/saas" element={<RequireAuth><SaasLayout /></RequireAuth>}>
+              <Route index element={<SaasHomePage />} />
+              <Route path="empresas" element={<CompaniesPage />} />
+              <Route path="empresas/:id/configuracoes" element={<CompanySettingsPage />} />
+              <Route path="configuracoes" element={<SaasSettingsPage />} />
+            </Route>
+
+            {/* App Routes */}
+            <Route path="/" element={<RequireAuth><RequireCompany><Layout /></RequireCompany></RequireAuth>}>
+              <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="produtos" element={<ProductsPage />} />
+              <Route path="produtos/:id" element={<ProductFormPage />} />
+              <Route path="clientes" element={<ClientsPage />} />
+              <Route path="clientes/:id" element={<ClientFormPage />} />
+              <Route path="pedidos" element={<OrdersPage />} />
+              <Route path="pedidos/:id" element={<OrderFormPage />} />
+              <Route path="producao" element={<ProductionPage />} />
+              <Route path="embalagem" element={<PackagingPage />} />
+              <Route path="vendas" element={<SalesPage />} />
+              <Route path="rotas" element={<RoutesPage />} />
+              <Route path="configuracoes" element={<SettingsPage />} />
+              <Route path="fornecedores" element={<VendorsPage />} />
+              <Route path="/comissoes" element={<CommissionsPage />} />
+            </Route>
+          </Routes>
+        </Router>
+        <Toaster />
+      </AuthProvider>
+    </ThemeProvider>
   );
-};
-
-export default Index;
+}

@@ -158,6 +158,76 @@ export type Database = {
           },
         ]
       }
+      commission_payments: {
+        Row: {
+          amount: number
+          commission_id: string
+          id: string
+          notes: string | null
+          paid_at: string
+          payment_method: string | null
+        }
+        Insert: {
+          amount: number
+          commission_id: string
+          id?: string
+          notes?: string | null
+          paid_at?: string
+          payment_method?: string | null
+        }
+        Update: {
+          amount?: number
+          commission_id?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string
+          payment_method?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_payments_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: false
+            referencedRelation: "salesperson_commissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_settings: {
+        Row: {
+          commission_type: string
+          commission_value: number
+          company_id: string
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          commission_type?: string
+          commission_value?: number
+          company_id: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          commission_type?: string
+          commission_value?: number
+          company_id?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           billing_email: string | null
@@ -559,6 +629,7 @@ export type Database = {
           order_number: string
           payment_method: string | null
           payment_term: string | null
+          salesperson_id: string | null
           seller: string | null
           status: Database["public"]["Enums"]["order_status"] | null
           total_amount: number | null
@@ -576,6 +647,7 @@ export type Database = {
           order_number: string
           payment_method?: string | null
           payment_term?: string | null
+          salesperson_id?: string | null
           seller?: string | null
           status?: Database["public"]["Enums"]["order_status"] | null
           total_amount?: number | null
@@ -593,6 +665,7 @@ export type Database = {
           order_number?: string
           payment_method?: string | null
           payment_term?: string | null
+          salesperson_id?: string | null
           seller?: string | null
           status?: Database["public"]["Enums"]["order_status"] | null
           total_amount?: number | null
@@ -612,6 +685,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_salesperson_id_fkey"
+            columns: ["salesperson_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -744,6 +824,41 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_commissions: {
+        Row: {
+          commission_type: string
+          commission_value: number
+          created_at: string
+          id: string
+          product_id: string
+          updated_at: string
+        }
+        Insert: {
+          commission_type?: string
+          commission_value?: number
+          created_at?: string
+          id?: string
+          product_id: string
+          updated_at?: string
+        }
+        Update: {
+          commission_type?: string
+          commission_value?: number
+          created_at?: string
+          id?: string
+          product_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_commissions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
@@ -890,6 +1005,8 @@ export type Database = {
           category: string | null
           code: string | null
           cofins: string | null
+          commission_type: string | null
+          commission_value: number | null
           company_id: string
           cost: number | null
           created_at: string
@@ -914,6 +1031,8 @@ export type Database = {
           category?: string | null
           code?: string | null
           cofins?: string | null
+          commission_type?: string | null
+          commission_value?: number | null
           company_id?: string
           cost?: number | null
           created_at?: string
@@ -938,6 +1057,8 @@ export type Database = {
           category?: string | null
           code?: string | null
           cofins?: string | null
+          commission_type?: string | null
+          commission_value?: number | null
           company_id?: string
           cost?: number | null
           created_at?: string
@@ -1447,6 +1568,7 @@ export type Database = {
           payment_method: string | null
           payment_term: string | null
           sale_number: string
+          salesperson_id: string | null
           status: Database["public"]["Enums"]["sale_status"] | null
           total_amount: number
           updated_at: string
@@ -1466,6 +1588,7 @@ export type Database = {
           payment_method?: string | null
           payment_term?: string | null
           sale_number: string
+          salesperson_id?: string | null
           status?: Database["public"]["Enums"]["sale_status"] | null
           total_amount: number
           updated_at?: string
@@ -1485,6 +1608,7 @@ export type Database = {
           payment_method?: string | null
           payment_term?: string | null
           sale_number?: string
+          salesperson_id?: string | null
           status?: Database["public"]["Enums"]["sale_status"] | null
           total_amount?: number
           updated_at?: string
@@ -1510,6 +1634,57 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_salesperson_id_fkey"
+            columns: ["salesperson_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      salesperson_commissions: {
+        Row: {
+          commission_rate: number
+          commission_type: string
+          commission_value: number
+          created_at: string
+          id: string
+          is_paid: boolean
+          paid_at: string | null
+          sale_id: string
+          salesperson_id: string
+        }
+        Insert: {
+          commission_rate: number
+          commission_type: string
+          commission_value: number
+          created_at?: string
+          id?: string
+          is_paid?: boolean
+          paid_at?: string | null
+          sale_id: string
+          salesperson_id: string
+        }
+        Update: {
+          commission_rate?: number
+          commission_type?: string
+          commission_value?: number
+          created_at?: string
+          id?: string
+          is_paid?: boolean
+          paid_at?: string | null
+          sale_id?: string
+          salesperson_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salesperson_commissions_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
             referencedColumns: ["id"]
           },
         ]
