@@ -81,11 +81,15 @@ export const useUpdateCompany = () => {
 const deleteCompanyFn = async (id: string) => {
   const { error } = await supabase.rpc("delete_company_and_related", { _company_id: id });
   if (error) {
-    // Faz log detalhado do erro, incluindo hint e constraints se existirem
+    // Log detalhadíssimo para Supabase errors
     let msg = error.message;
-    if (error.details) msg += " | " + error.details;
-    if (error.hint) msg += " | Hint: " + error.hint;
-    if (error.code) msg += " | Code: " + error.code;
+    if (error.details) msg += " | Detalhes: " + error.details;
+    if (error.hint) msg += " | Dica: " + error.hint;
+    if (error.code) msg += " | Código: " + error.code;
+    // Adiciona um alerta para erros comuns de constraint
+    if (msg.includes('violates foreign key constraint')) {
+      msg += " (Possível causa: ainda há dados dependentes não removidos ou ordem de deleção incorreta.)";
+    }
     throw new Error(msg);
   }
 };
@@ -104,13 +108,13 @@ export const useDeleteCompany = () => {
       queryClient.invalidateQueries({ queryKey: ['companies'] });
     },
     onError: (error: any) => {
+      // Mostra erro completo e loga no console para debug
       toast({
         title: "Erro",
-        description: error.message || "Erro ao excluir empresa",
+        description: error.message || "Erro ao excluir empresa. Confira se o usuário é master e se a função/fk está correta.",
         variant: "destructive",
       });
-      // Opcional: console extra
-      console.error("Erro detalhado ao excluir empresa:", error);
+      console.error("Erro detalhado ao excluir empresa (Supabase):", error);
     }
   });
 };
