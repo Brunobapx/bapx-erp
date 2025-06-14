@@ -10,15 +10,8 @@ import { z } from 'zod';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-// Esquemas de validação
 const emailSchema = z.string().email('Email inválido');
 const passwordSchema = z.string().min(6, 'Senha deve ter pelo menos 6 caracteres');
-
-// URL da function edge do Supabase
-const SUPABASE_PROJECT_URL = "https://gtqmwlxzszttzriswoxj.functions.supabase.co";
-const CREATE_USER_FUNCTION_URL = `${SUPABASE_PROJECT_URL}/create-user`;
-// chave apikey (anon)
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0cW13bHh6c3p0dHpyaXN3b3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc3NzUwMjUsImV4cCI6MjA2MzM1MTAyNX0.03XyZCOF5UnUUaNpn44-MlQW0J6Vfo3_rb7mhE7D-Bk";
 
 interface CreateUserModalProps {
   open: boolean;
@@ -54,37 +47,28 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
     }
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
-  }
+  };
 
   const handleSubmit = async () => {
     if (!validate()) return;
     setLoading(true);
 
     try {
-      // Chamar a Edge Function na url COMPLETA (+ apikey obrigatória)
-      const res = await fetch(CREATE_USER_FUNCTION_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-requester-role": userRole,
-          "apikey": SUPABASE_ANON_KEY,
-        },
-        body: JSON.stringify({
+      // Chamar Edge Function de forma oficial com invoke
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: {
           email: form.email.trim(),
           password: form.password,
           role: form.role,
-        }),
+        },
+        headers: {
+          'x-requester-role': userRole
+        }
       });
 
-      // Tentar parsear resultado. Se não for json, apresentar erro bruto.
-      let data = null;
-      try {
-        data = await res.json();
-      } catch (jsonErr) {
-        throw new Error("Erro inesperado: Não foi possível interpretar resposta do servidor.");
+      if (error || data?.error) {
+        throw new Error(data?.error || error?.message || "Erro na criação do usuário");
       }
-
-      if (!res.ok) throw new Error(data?.error || "Erro na criação do usuário");
 
       toast({
         title: "Sucesso",
@@ -94,9 +78,11 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
       setOpen(false);
       onSuccess();
     } catch (err: any) {
+      let desc = "Erro ao criar usuário";
+      if (err?.message) desc = err.message;
       toast({
         title: "Erro",
-        description: err?.message || "Erro ao criar usuário",
+        description: desc,
         variant: "destructive",
       });
     } finally {
@@ -146,7 +132,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-              {availableRoles.map(role =>
+                {availableRoles.map(role =>
                   role.value === 'master' && userRole !== 'master' ? null : (
                     <SelectItem value={role.value} key={role.value}>
                       {role.label}
@@ -166,5 +152,5 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
     </Dialog>
   );
 };
-export default CreateUserModal;
 
+export default CreateUserModal;
