@@ -63,13 +63,9 @@ export function CompanySettingsForm({ company, refresh }: Props) {
     name: company?.name || "",
     subdomain: company?.subdomain || "",
     billing_email: company?.billing_email || "",
-    logo_url: company?.logo_url || "",
-    primary_color: company?.primary_color || "#2563eb",
-    secondary_color: company?.secondary_color || "#1e40af",
     is_active: company?.is_active ?? true,
   });
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   const { plans, loading: plansLoading } = useSaasPlans();
   
@@ -85,9 +81,6 @@ export function CompanySettingsForm({ company, refresh }: Props) {
         name: company.name || "",
         subdomain: company.subdomain || "",
         billing_email: company.billing_email || "",
-        logo_url: company.logo_url || "",
-        primary_color: company.primary_color || "#2563eb",
-        secondary_color: company.secondary_color || "#1e40af",
         is_active: company.is_active ?? true,
       });
     }
@@ -121,24 +114,6 @@ export function CompanySettingsForm({ company, refresh }: Props) {
     }
   });
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files?.length) return;
-    const file = e.target.files[0];
-    setUploadingLogo(true);
-    const filename = `company-logos/${company.id}-${file.name}`;
-    const { data, error } = await supabase.storage
-      .from("public-company-logos")
-      .upload(filename, file, { upsert: true });
-    if (error) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-      setUploadingLogo(false);
-      return;
-    }
-    const url = supabase.storage.from("public-company-logos").getPublicUrl(filename).data.publicUrl;
-    setFormData(f => ({ ...f, logo_url: url }));
-    setUploadingLogo(false);
-  };
-
   const handleSave = async () => {
     updateCompanyMutation.mutate({ companyId: company.id, formData });
 
@@ -151,7 +126,7 @@ export function CompanySettingsForm({ company, refresh }: Props) {
     }
   };
 
-  const isSaving = updateCompanyMutation.isPending || updateSubscriptionMutation.isPending || uploadingLogo;
+  const isSaving = updateCompanyMutation.isPending || updateSubscriptionMutation.isPending;
 
   return (
     <Card>
@@ -204,22 +179,6 @@ export function CompanySettingsForm({ company, refresh }: Props) {
           </Select>
         </div>
 
-        <div>
-          <Label>Logo</Label>
-          <Input type="file" accept="image/*" onChange={handleFileUpload} disabled={uploadingLogo} />
-          {formData.logo_url && <img src={formData.logo_url} alt="Logo" className="h-12 mt-2 rounded border p-1" />}
-        </div>
-
-        <div className="flex gap-4">
-          <div>
-            <Label>Cor Primária</Label>
-            <Input type="color" value={formData.primary_color} onChange={e => setFormData(f => ({ ...f, primary_color: e.target.value }))} className="p-1 h-10 w-24" />
-          </div>
-          <div>
-            <Label>Cor Secundária</Label>
-            <Input type="color" value={formData.secondary_color} onChange={e => setFormData(f => ({ ...f, secondary_color: e.target.value }))} className="p-1 h-10 w-24" />
-          </div>
-        </div>
         <Button disabled={isSaving} onClick={handleSave} className="w-full">{isSaving ? "Salvando..." : "Salvar alterações"}</Button>
       </CardContent>
     </Card>
