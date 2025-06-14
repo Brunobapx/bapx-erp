@@ -1,8 +1,7 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { CreateCompanyData } from '@/types/saas';
+import { CreateCompanyData, Company } from '@/types/saas';
 
 // --- CREATE ---
 const createCompanyFn = async (formData: CreateCompanyData) => {
@@ -50,6 +49,29 @@ export const useCreateCompany = () => {
       }
       
       toast({ title: 'Erro', description, variant: 'destructive' });
+    }
+  });
+};
+
+
+// --- UPDATE ---
+const updateCompanyFn = async ({ id, formData }: { id: string, formData: Partial<Company> }) => {
+  const { error } = await supabase.from('companies').update(formData).eq('id', id);
+  if (error) throw error;
+};
+
+export const useUpdateCompany = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: updateCompanyFn,
+    onSuccess: () => {
+      toast({ title: 'Sucesso', description: 'Empresa atualizada com sucesso!' });
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
+    },
+    onError: (err: any) => {
+      toast({ title: 'Erro', description: err.message || 'Ocorreu um erro ao atualizar a empresa.', variant: 'destructive' });
     }
   });
 };

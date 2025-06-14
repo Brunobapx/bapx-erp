@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   Table,
@@ -7,11 +8,11 @@ import {
   TableRow,
   TableCell,
 } from "@/components/ui/table";
-import { Pencil, Trash2, Eye, User, Calendar } from "lucide-react";
+import { Pencil, Trash2, Eye, User, Calendar, Power, PowerOff } from "lucide-react";
 import { BadgeCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useDeleteCompany } from "@/hooks/useCompanyMutations";
+import { useDeleteCompany, useUpdateCompany } from "@/hooks/useCompanyMutations";
 import { useToast } from "@/hooks/use-toast";
 import { Company } from "@/types/saas";
 
@@ -38,6 +39,7 @@ export const SaasCompanyTable: React.FC<{
   const [deleteModal, setDeleteModal] = useState<Company | null>(null);
 
   const { mutate: deleteCompany, isPending: isDeleting } = useDeleteCompany();
+  const { mutate: updateCompany, isPending: isUpdatingStatus } = useUpdateCompany();
 
   const handleDelete = (company: Company | null) => {
     if (!company) return;
@@ -46,6 +48,10 @@ export const SaasCompanyTable: React.FC<{
             setDeleteModal(null);
         }
     });
+  };
+
+  const handleToggleActive = (company: Company) => {
+    updateCompany({ id: company.id, formData: { is_active: !company.is_active } });
   };
 
   return (
@@ -102,6 +108,10 @@ export const SaasCompanyTable: React.FC<{
                       {/* Plano */}
                       <Button size="sm" variant="outline" title="Plano" onClick={() => setPlanModal(company)}>
                         <Calendar className="text-blue-500" />
+                      </Button>
+                      {/* Ativar/Desativar */}
+                      <Button size="sm" variant="outline" title={company.is_active ? "Desativar" : "Ativar"} onClick={() => handleToggleActive(company)} disabled={isUpdatingStatus}>
+                        {company.is_active ? <PowerOff className="text-red-500" /> : <Power className="text-green-500" />}
                       </Button>
                       {/* Editar */}
                       <Button size="sm" variant="ghost" title="Editar" onClick={() => onConfig(company)}>
