@@ -84,15 +84,18 @@ export type Database = {
       clients: {
         Row: {
           address: string | null
+          bairro: string | null
           city: string | null
           cnpj: string | null
           company_id: string
+          complement: string | null
           cpf: string | null
           created_at: string
           email: string | null
           id: string
           ie: string | null
           name: string
+          number: string | null
           phone: string | null
           rg: string | null
           state: string | null
@@ -103,15 +106,18 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          bairro?: string | null
           city?: string | null
           cnpj?: string | null
           company_id?: string
+          complement?: string | null
           cpf?: string | null
           created_at?: string
           email?: string | null
           id?: string
           ie?: string | null
           name: string
+          number?: string | null
           phone?: string | null
           rg?: string | null
           state?: string | null
@@ -122,15 +128,18 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          bairro?: string | null
           city?: string | null
           cnpj?: string | null
           company_id?: string
+          complement?: string | null
           cpf?: string | null
           created_at?: string
           email?: string | null
           id?: string
           ie?: string | null
           name?: string
+          number?: string | null
           phone?: string | null
           rg?: string | null
           state?: string | null

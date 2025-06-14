@@ -13,9 +13,11 @@ export function buildClientData(formData: any, userId: string, companyId: string
     city: formData.city || null,
     state: formData.state || null,
     zip: formData.zip || null,
-    // bairro removido temporariamente até o banco estar atualizado!
+    bairro: formData.bairro || null,
+    number: formData.number || null,
+    complement: formData.complement || null,
     user_id: userId,
     company_id: companyId,
-    // NÃO incluir número e complemento e outros campos visuais!
+    // Agora inclui bairro, number e complement pois já existem na tabela!
   };
 }
