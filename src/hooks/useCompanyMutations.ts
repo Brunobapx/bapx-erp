@@ -80,7 +80,14 @@ export const useUpdateCompany = () => {
 // --- DELETE ---
 const deleteCompanyFn = async (id: string) => {
   const { error } = await supabase.rpc("delete_company_and_related", { _company_id: id });
-  if (error) throw error;
+  if (error) {
+    // Faz log detalhado do erro, incluindo hint e constraints se existirem
+    let msg = error.message;
+    if (error.details) msg += " | " + error.details;
+    if (error.hint) msg += " | Hint: " + error.hint;
+    if (error.code) msg += " | Code: " + error.code;
+    throw new Error(msg);
+  }
 };
 
 export const useDeleteCompany = () => {
@@ -102,6 +109,8 @@ export const useDeleteCompany = () => {
         description: error.message || "Erro ao excluir empresa",
         variant: "destructive",
       });
+      // Opcional: console extra
+      console.error("Erro detalhado ao excluir empresa:", error);
     }
   });
 };
