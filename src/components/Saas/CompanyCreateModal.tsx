@@ -22,18 +22,29 @@ export function CompanyCreateModal({ open, setOpen }: Props) {
     admin_email: '', admin_password: '', admin_first_name: '', admin_last_name: '',
   });
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
     setSaving(true);
+    setError(null);
     const company = await createCompany(formData);
-    if (company) setOpen(false);
+    if (company) {
+      setOpen(false);
+      setFormData({
+        name: '', subdomain: '', billing_email: '', plan_id: '',
+        logo_url: '', primary_color: '', secondary_color: '',
+        admin_email: '', admin_password: '', admin_first_name: '', admin_last_name: '',
+      });
+    } else {
+      setError('Não foi possível criar a empresa. Verifique se todos os campos obrigatórios estão preenchidos e se o subdomínio/email não está em uso.');
+    }
     setSaving(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>Novo Empresa</Button>
+        <Button>Nova Empresa</Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
@@ -85,10 +96,13 @@ export function CompanyCreateModal({ open, setOpen }: Props) {
             </div>
             <div>
               <Label>Senha *</Label>
-              <Input value={formData.admin_password} type="password" onChange={e => setFormData(s => ({ ...s, admin_password: e.target.value }))} />
+              <Input value={formData.admin_password} type="password" onChange={e => setFormData(s => ({ ...s, admin_password: e.target.value }))} minLength={6} />
             </div>
           </div>
-          <Button className="w-full" onClick={handleSubmit} disabled={saving || loading}>{saving ? "Criando..." : "Criar Empresa"}</Button>
+          {error && <div className="text-destructive text-sm">{error}</div>}
+          <Button className="w-full" onClick={handleSubmit} disabled={saving || loading}>
+            {saving ? "Criando..." : "Criar Empresa"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
