@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,8 @@ interface ClientModalFormProps {
     email: string;
     phone: string;
     address: string;
+    number: string;
+    complement: string;
     city: string;
     state: string;
     zip: string;
@@ -67,6 +70,8 @@ export const ClientModalForm = ({ formData, onChange, onTypeChange, handleAutoAd
       <AddressFields
         formData={{
           address: formData.address,
+          number: formData.number,
+          complement: formData.complement,
           city: formData.city,
           state: formData.state,
           zip: formData.zip,

@@ -14,9 +14,12 @@ interface FormData {
   email: string;
   phone: string;
   address: string;
+  number: string;        // Novo campo
+  complement: string;    // Novo campo
   city: string;
   state: string;
   zip: string;
+  bairro?: string; // opcional
 }
 
 export const useClientForm = (clientData: Client | null, onClose: (refresh?: boolean) => void) => {
@@ -31,9 +34,12 @@ export const useClientForm = (clientData: Client | null, onClose: (refresh?: boo
     email: '',
     phone: '',
     address: '',
+    number: '',
+    complement: '',
     city: '',
     state: '',
-    zip: ''
+    zip: '',
+    bairro: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -53,9 +59,12 @@ export const useClientForm = (clientData: Client | null, onClose: (refresh?: boo
         email: clientData.email || '',
         phone: clientData.phone || '',
         address: clientData.address || '',
+        number: (clientData as any).number || '',         // garantir retrocompatibilidade
+        complement: (clientData as any).complement || '',
         city: clientData.city || '',
         state: clientData.state || '',
-        zip: clientData.zip || ''
+        zip: clientData.zip || '',
+        bairro: (clientData as any).bairro || ''
       });
     } else {
       console.log('ClientForm - Novo cliente, resetando formulário');
@@ -75,9 +84,12 @@ export const useClientForm = (clientData: Client | null, onClose: (refresh?: boo
       email: '',
       phone: '',
       address: '',
+      number: '',
+      complement: '',
       city: '',
       state: '',
-      zip: ''
+      zip: '',
+      bairro: ''
     });
   };
 
@@ -141,6 +153,8 @@ export const useClientForm = (clientData: Client | null, onClose: (refresh?: boo
         email: formData.email || null,
         phone: formData.phone || null,
         address: formData.address || null,
+        number: formData.number || null,
+        complement: formData.complement || null,
         city: formData.city || null,
         state: formData.state || null,
         zip: formData.zip || null,

@@ -8,10 +8,12 @@ import { Loader2 } from "lucide-react";
 interface AddressFieldsProps {
   formData: {
     address: string;
+    number: string;
+    complement: string;
     city: string;
     state: string;
     zip: string;
-    bairro?: string; // viaCEP
+    bairro?: string;
   };
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onAutoAddressChange?: (fields: Partial<AddressFieldsProps["formData"]>) => void;
@@ -25,7 +27,6 @@ export const AddressFields = ({
   const { lookupCep, loading } = useCepLookup();
   const [lastCep, setLastCep] = useState(""); // controla pra não repetir requisição
 
-  // Função para buscar e atualizar os campos ao digitar CEP
   const handleCepBlur = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawCep = e.target.value.replace(/\D/g, "");
     if (rawCep.length === 8 && rawCep !== lastCep) {
@@ -40,7 +41,6 @@ export const AddressFields = ({
             bairro: result.bairro || ""
           });
       } else {
-        // Limpa campos se não achou (opcional)
         onAutoAddressChange &&
           onAutoAddressChange({
             address: "",
@@ -52,21 +52,64 @@ export const AddressFields = ({
     }
   };
 
-  // Máscara para CEP: 00000-000
+  // Máscara CEP
   const formatCep = (cep: string) =>
     cep.replace(/\D/g, "").replace(/(\d{5})(\d)/, "$1-$2").substring(0, 9);
 
   return (
     <>
-      <div className="grid gap-2">
-        <Label htmlFor="address">Endereço</Label>
-        <Input
-          id="address"
-          name="address"
-          value={formData.address}
-          onChange={onChange}
-          placeholder="Rua, Av..."
-        />
+      <div className="grid grid-cols-4 gap-4">
+        <div className="grid gap-2 col-span-2">
+          <Label htmlFor="zip">CEP</Label>
+          <div className="relative">
+            <Input
+              id="zip"
+              name="zip"
+              value={formatCep(formData.zip)}
+              onChange={onChange}
+              onBlur={handleCepBlur}
+              placeholder="00000-000"
+              maxLength={9}
+              autoComplete="postal-code"
+              inputMode="numeric"
+            />
+            {loading && (
+              <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 animate-spin h-4 w-4 text-muted-foreground" />
+            )}
+          </div>
+        </div>
+        <div className="grid gap-2 col-span-2">
+          <Label htmlFor="address">Endereço</Label>
+          <Input
+            id="address"
+            name="address"
+            value={formData.address}
+            onChange={onChange}
+            placeholder="Rua, Av..."
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-4">
+        <div className="grid gap-2">
+          <Label htmlFor="number">Número</Label>
+          <Input
+            id="number"
+            name="number"
+            value={formData.number}
+            onChange={onChange}
+            placeholder="Nº"
+          />
+        </div>
+        <div className="grid gap-2 col-span-2">
+          <Label htmlFor="complement">Complemento</Label>
+          <Input
+            id="complement"
+            name="complement"
+            value={formData.complement}
+            onChange={onChange}
+            placeholder="Apto, Casa, Fundos etc."
+          />
+        </div>
       </div>
       <div className="grid grid-cols-4 gap-4">
         <div className="grid gap-2 col-span-2">
@@ -91,37 +134,16 @@ export const AddressFields = ({
           />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="zip">CEP</Label>
-          <div className="relative">
-            <Input
-              id="zip"
-              name="zip"
-              value={formatCep(formData.zip)}
-              onChange={onChange}
-              onBlur={handleCepBlur}
-              placeholder="00000-000"
-              maxLength={9}
-              autoComplete="postal-code"
-              inputMode="numeric"
-            />
-            {loading && (
-              <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 animate-spin h-4 w-4 text-muted-foreground" />
-            )}
-          </div>
-        </div>
-      </div>
-      {formData.bairro !== undefined && (
-        <div className="grid gap-2">
           <Label htmlFor="bairro">Bairro</Label>
           <Input
             id="bairro"
             name="bairro"
-            value={formData.bairro}
+            value={formData.bairro || ''}
             onChange={onChange}
             placeholder="Bairro"
           />
         </div>
-      )}
+      </div>
     </>
   );
 };
