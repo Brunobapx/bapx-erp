@@ -36,7 +36,7 @@
 
     --radius: 0.5rem;
 
-    --sidebar-background: 199 56% 78%;  /* tom pastel claro */
+    --sidebar-background: 198 68% 32%; /* azul escuro da logo: #195e80 */
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 195 56% 72%;
     --sidebar-primary-foreground: 0 0% 98%;
@@ -75,7 +75,7 @@
     --input: 201 53% 28%;
     --ring: 201 73% 92%;
     
-    --sidebar-background: 198 54% 24%;
+    --sidebar-background: 198 78% 18%; /* azul escuro na versão dark: #0d2b3a */
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 195 56% 72%;
     --sidebar-primary-foreground: 0 0% 100%;
