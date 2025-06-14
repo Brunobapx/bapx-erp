@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/Auth/AuthProvider';
 
@@ -8,7 +8,7 @@ export const useModuleAccess = () => {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
-  const checkModuleAccess = async (route: string): Promise<boolean> => {
+  const checkModuleAccess = useCallback(async (route: string): Promise<boolean> => {
     if (!user) return false;
 
     try {
@@ -38,9 +38,9 @@ export const useModuleAccess = () => {
       console.error('Erro ao verificar acesso ao módulo:', error);
       return false;
     }
-  };
+  }, [user]);
 
-  const loadAllowedRoutes = async () => {
+  const loadAllowedRoutes = useCallback(async () => {
     if (!user) {
       setLoading(false);
       return;
@@ -72,11 +72,11 @@ export const useModuleAccess = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, checkModuleAccess]);
 
   useEffect(() => {
     loadAllowedRoutes();
-  }, [user]);
+  }, [loadAllowedRoutes]);
 
   return {
     allowedRoutes,
