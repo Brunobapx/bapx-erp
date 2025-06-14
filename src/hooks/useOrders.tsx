@@ -180,7 +180,7 @@ export const useOrders = () => {
   const checkStockAndSendToProduction = async (orderId: string) => {
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
+
       if (userError || !user) {
         throw new Error('Usuário não autenticado');
       }
@@ -196,7 +196,7 @@ export const useOrders = () => {
         `)
         .eq('id', orderId)
         .single();
-      
+
       if (orderError) throw orderError;
       if (!order) throw new Error('Pedido não encontrado');
 
@@ -204,11 +204,12 @@ export const useOrders = () => {
       let hasDirectPackaging = false;
       const productionEntries = [];
       const packagingEntries = [];
+      const packagingInfoMsgs: string[] = [];
 
       // Para cada item do pedido, verificar estoque
       for (const item of order.order_items) {
         console.log(`Verificando item: ${item.product_name}, quantidade solicitada: ${item.quantity}`);
-        
+
         // Buscar dados do produto (estoque e se é fabricado)
         const { data: productData, error: productError } = await supabase
           .from('products')
@@ -221,19 +222,17 @@ export const useOrders = () => {
           continue;
         }
 
-        const currentStock = productData.stock || 0;
-        const quantityNeeded = item.quantity;
+        const currentStock = Number(productData.stock) || 0;
+        const quantityNeeded = Number(item.quantity);
 
         console.log(`Produto: ${item.product_name}, Estoque atual: ${currentStock}, Necessário: ${quantityNeeded}`);
 
-        // Se há estoque suficiente, enviar direto para embalagem
+        // 1. Se há estoque suficiente, tudo para embalagem
         if (currentStock >= quantityNeeded) {
           console.log(`Enviando ${quantityNeeded} unidades de ${item.product_name} diretamente para embalagem`);
-          
-          // Criar entrada de embalagem diretamente com dados do pedido
           packagingEntries.push({
             user_id: user.id,
-            production_id: null, // NULL para produtos que vão direto do estoque
+            production_id: null,
             product_id: item.product_id,
             product_name: item.product_name,
             quantity_to_package: quantityNeeded,
@@ -247,24 +246,77 @@ export const useOrders = () => {
           // Deduzir a quantidade do estoque
           const { error: stockUpdateError } = await supabase
             .from('products')
-            .update({ 
+            .update({
               stock: currentStock - quantityNeeded,
               updated_at: new Date().toISOString()
             })
             .eq('id', item.product_id);
 
           if (stockUpdateError) {
-            console.error('Erro ao atualizar estoque:', stockUpdateError);
+            console.error('Erro ao atualizar estoque do produto:', stockUpdateError);
             toast.error(`Erro ao atualizar estoque do produto ${item.product_name}`);
           } else {
             console.log(`Estoque do produto ${item.product_name} atualizado: ${currentStock} -> ${currentStock - quantityNeeded}`);
           }
 
           hasDirectPackaging = true;
+          packagingInfoMsgs.push(`${item.product_name}: ${quantityNeeded} direto para embalagem (estoque suficiente)`);
+        } else if (currentStock > 0) {
+          // 2. Se há estoque parcial, dividir: parte vai direto para embalagem, parte vai para produção
+          const missingQty = quantityNeeded - currentStock;
+
+          // Embalagem para parte em estoque
+          packagingEntries.push({
+            user_id: user.id,
+            production_id: null,
+            product_id: item.product_id,
+            product_name: item.product_name,
+            quantity_to_package: currentStock,
+            quantity_packaged: 0,
+            status: 'pending',
+            order_id: order.id,
+            client_id: order.client_id,
+            client_name: order.client_name
+          });
+
+          // Deduzir só a quantidade disponível do estoque
+          const { error: stockUpdateError } = await supabase
+            .from('products')
+            .update({
+              stock: 0,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', item.product_id);
+
+          if (stockUpdateError) {
+            console.error('Erro ao atualizar estoque do produto:', stockUpdateError);
+            toast.error(`Erro ao atualizar estoque do produto ${item.product_name}`);
+          } else {
+            console.log(`Estoque do produto ${item.product_name} atualizado: ${currentStock} -> 0`);
+          }
+
+          // Produção para parte faltante
+          // Verifica se produto é fabricado antes de enviar para produção
+          if (productData.is_manufactured) {
+            productionEntries.push({
+              user_id: user.id,
+              order_item_id: item.id,
+              product_id: item.product_id,
+              product_name: item.product_name,
+              quantity_requested: missingQty,
+              status: 'pending'
+            });
+            needsProduction = true;
+            packagingInfoMsgs.push(`${item.product_name}: ${currentStock} para embalagem (estoque), ${missingQty} para produção (falta estoque)`);
+          } else {
+            packagingInfoMsgs.push(`${item.product_name}: ${currentStock} para embalagem (estoque disponível), ${missingQty} não pode ser produzido automaticamente`);
+            toast.error(`Produto ${item.product_name} tem estoque insuficiente e não é fabricado. Reposição manual necessária para ${missingQty} unidade(s).`);
+          }
+
+          hasDirectPackaging = true;
         } else if (productData.is_manufactured) {
-          // Se há falta de estoque e o produto é fabricado, enviar para produção
+          // 3. Se não há estoque e produto é fabricado, enviar toda a quantidade para produção
           console.log(`Enviando ${quantityNeeded} unidades de ${item.product_name} para produção`);
-          
           productionEntries.push({
             user_id: user.id,
             order_item_id: item.id,
@@ -273,25 +325,11 @@ export const useOrders = () => {
             quantity_requested: quantityNeeded,
             status: 'pending'
           });
-
           needsProduction = true;
-
-          // Se há estoque parcial, deduzir também
-          if (currentStock > 0) {
-            const { error: stockUpdateError } = await supabase
-              .from('products')
-              .update({ 
-                stock: 0,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', item.product_id);
-
-            if (stockUpdateError) {
-              console.error('Erro ao atualizar estoque:', stockUpdateError);
-            }
-          }
+          packagingInfoMsgs.push(`${item.product_name}: ${quantityNeeded} para produção`);
         } else {
-          console.log(`Produto ${item.product_name} não é fabricado e há falta de estoque. Será necessário reposição manual.`);
+          // 4. Produto não é fabricado e faltou estoque
+          packagingInfoMsgs.push(`${item.product_name}: 0 em estoque, ${quantityNeeded} não pode ser produzido`);
           toast.error(`Produto ${item.product_name} tem estoque insuficiente e não é fabricado. Reposição manual necessária.`);
         }
       }
@@ -302,7 +340,7 @@ export const useOrders = () => {
           .from('production')
           .insert(productionEntries)
           .select();
-        
+
         if (productionError) throw productionError;
 
         console.log(`Criadas ${productionEntries.length} entradas de produção`);
@@ -310,12 +348,12 @@ export const useOrders = () => {
         // Abater ingredientes do estoque para cada item enviado para produção
         for (const entry of productionEntries) {
           console.log(`Abatendo ingredientes para produção de ${entry.quantity_requested} unidades de ${entry.product_name}`);
-          
+
           const stockUpdateSuccess = await deductIngredientsFromStock(
-            entry.product_id, 
+            entry.product_id,
             entry.quantity_requested
           );
-          
+
           if (!stockUpdateSuccess) {
             toast.error(`Aviso: Não foi possível atualizar completamente o estoque dos ingredientes para ${entry.product_name}`);
           } else {
@@ -330,7 +368,7 @@ export const useOrders = () => {
           .from('packaging')
           .insert(packagingEntries)
           .select();
-        
+
         if (packagingError) {
           console.error('Erro ao criar entradas de embalagem:', packagingError);
           throw packagingError;
@@ -345,20 +383,20 @@ export const useOrders = () => {
 
       if (hasDirectPackaging && needsProduction) {
         newStatus = 'in_packaging';
-        message = `Pedido criado! ${packagingEntries.length} item(ns) enviado(s) para embalagem (estoque disponível) e ${productionEntries.length} item(ns) para produção (falta de estoque).`;
+        message = `Itens enviados: \n${packagingInfoMsgs.join('\n')}\nItens enviados para embalagem (estoque disponível) e itens para produção (falta de estoque).`;
       } else if (hasDirectPackaging && !needsProduction) {
         newStatus = 'in_packaging';
-        message = `Pedido criado! Todos os itens enviados diretamente para embalagem (estoque suficiente).`;
+        message = `Itens enviados direto para embalagem:\n${packagingInfoMsgs.join('\n')}`;
       } else if (!hasDirectPackaging && needsProduction) {
         newStatus = 'in_production';
-        message = `Pedido criado! ${productionEntries.length} item(ns) enviado(s) para produção devido à falta de estoque.`;
+        message = `Itens enviados para produção devido à falta de estoque:\n${packagingInfoMsgs.join('\n')}`;
       } else {
         message = 'Pedido criado com sucesso!';
       }
 
       await supabase
         .from('orders')
-        .update({ 
+        .update({
           status: newStatus,
           updated_at: new Date().toISOString()
         })
