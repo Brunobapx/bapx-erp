@@ -1,11 +1,13 @@
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { DialogFooter } from "@/components/ui/dialog";
 import { useVendorForm } from "./useVendorForm";
+import { useCepLookup } from "@/hooks/useCepLookup";
+import { toast } from "@/components/ui/sonner";
 
 interface VendorModalFormProps {
   vendorData: any | null;
@@ -19,12 +21,43 @@ const VendorModalForm: React.FC<VendorModalFormProps> = ({ vendorData, onClose }
     isNewVendor,
     handleChange,
     handleSubmit,
-    resetForm
-  } = useVendorForm(vendorData, onClose);
+    resetForm,
+    setFormData
+  } = useVendorForm(vendorData, onClose) as any;
+
+  const { lookupCep, loading: loadingCep } = useCepLookup();
+  const cepButtonRef = useRef<HTMLButtonElement>(null);
 
   const handleCancel = () => {
     onClose();
     resetForm();
+  };
+
+  // Busca CEP e preenche campos de endereço
+  const handleCepSearch = async () => {
+    if (!formData.zip) {
+      toast.error("Digite um CEP para buscar o endereço.");
+      return;
+    }
+    const address = await lookupCep(formData.zip);
+    if (address) {
+      setFormData((prev: any) => ({
+        ...prev,
+        address: address.logradouro || '',
+        city: address.localidade || '',
+        state: address.uf || '',
+        // Não temos column bairro na tabela vendors, portanto não preenchemos
+      }));
+      toast.success("Endereço atualizado a partir do CEP!");
+    }
+  };
+
+  // Faz busca automática ao perder foco do campo zip (se o valor mudou)
+  const handleZipBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const formatted = formData.zip?.replace(/\D/g, "");
+    if (formatted && formatted.length === 8) {
+      handleCepSearch();
+    }
   };
 
   return (
@@ -114,12 +147,27 @@ const VendorModalForm: React.FC<VendorModalFormProps> = ({ vendorData, onClose }
         </div>
         <div className="grid gap-2">
           <Label htmlFor="zip">CEP</Label>
-          <Input
-            id="zip"
-            name="zip"
-            value={formData.zip}
-            onChange={handleChange}
-          />
+          <div className="flex gap-2">
+            <Input
+              id="zip"
+              name="zip"
+              value={formData.zip}
+              onChange={handleChange}
+              onBlur={handleZipBlur}
+              maxLength={9}
+              placeholder="00000-000"
+            />
+            <Button
+              type="button"
+              ref={cepButtonRef}
+              onClick={handleCepSearch}
+              disabled={loadingCep}
+              className="bg-muted border"
+              tabIndex={0}
+            >
+              {loadingCep ? "Buscando..." : "Buscar"}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -150,3 +198,4 @@ const VendorModalForm: React.FC<VendorModalFormProps> = ({ vendorData, onClose }
 };
 
 export default VendorModalForm;
+
