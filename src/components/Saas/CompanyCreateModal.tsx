@@ -24,18 +24,21 @@ export function CompanyCreateModal({ open, setOpen }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Botão e validação ao criar
+  const isFormFilled = !!(
+    formData.name.trim() && formData.subdomain.trim()
+    && formData.plan_id.trim()
+    && formData.admin_email.trim() && formData.admin_password.trim()
+    && formData.admin_first_name.trim() && formData.admin_last_name.trim()
+  );
+
   const handleSubmit = async () => {
-    if (
-      !formData.name || !formData.subdomain ||
-      !formData.admin_email || !formData.admin_password ||
-      !formData.plan_id || !formData.admin_first_name || !formData.admin_last_name
-    ) {
+    if (!isFormFilled) {
       setError("Preencha todos os campos obrigatórios!");
       return;
     }
     setSaving(true);
     setError(null);
+
     const company = await createCompany(formData);
     if (company) {
       setOpen(false);
@@ -44,7 +47,7 @@ export function CompanyCreateModal({ open, setOpen }: Props) {
         logo_url: '', primary_color: '', secondary_color: '',
         admin_email: '', admin_password: '', admin_first_name: '', admin_last_name: '',
       });
-      await loadCompanies(); // Atualiza lista após novo cadastro
+      await loadCompanies();
     } else {
       setError('Não foi possível criar a empresa. Verifique se todos os campos obrigatórios estão preenchidos e se o subdomínio ou email de cobrança já estão em uso.');
     }
@@ -65,20 +68,40 @@ export function CompanyCreateModal({ open, setOpen }: Props) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Nome *</Label>
-              <Input value={formData.name} onChange={e => setFormData(s => ({ ...s, name: e.target.value }))} />
+              <Input
+                required
+                value={formData.name || ""}
+                onChange={e => setFormData(s => ({ ...s, name: e.target.value }))}
+                placeholder="Nome da empresa"
+              />
             </div>
             <div>
               <Label>Subdomínio *</Label>
-              <Input value={formData.subdomain} onChange={e => setFormData(s => ({ ...s, subdomain: e.target.value }))} />
+              <Input
+                required
+                value={formData.subdomain || ""}
+                onChange={e => setFormData(s => ({ ...s, subdomain: e.target.value }))}
+                placeholder="subdominio"
+              />
             </div>
             <div>
               <Label>E-mail Cobrança</Label>
-              <Input value={formData.billing_email} onChange={e => setFormData(s => ({ ...s, billing_email: e.target.value }))} />
+              <Input
+                value={formData.billing_email || ""}
+                onChange={e => setFormData(s => ({ ...s, billing_email: e.target.value }))}
+                placeholder="E-mail de cobrança (opcional)"
+              />
             </div>
             <div>
               <Label>Plano *</Label>
-              <Select value={formData.plan_id} onValueChange={v => setFormData(s => ({ ...s, plan_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+              <Select
+                value={formData.plan_id || ""}
+                onValueChange={v => setFormData(s => ({ ...s, plan_id: v }))}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
                 <SelectContent>
                   {plans && plans.filter(p=>p.is_active).map(plan=>(
                     <SelectItem key={plan.id} value={plan.id}>
@@ -94,23 +117,51 @@ export function CompanyCreateModal({ open, setOpen }: Props) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Nome *</Label>
-              <Input value={formData.admin_first_name} onChange={e => setFormData(s => ({ ...s, admin_first_name: e.target.value }))} />
+              <Input
+                required
+                value={formData.admin_first_name || ""}
+                onChange={e => setFormData(s => ({ ...s, admin_first_name: e.target.value }))}
+                placeholder="Primeiro nome"
+              />
             </div>
             <div>
               <Label>Sobrenome *</Label>
-              <Input value={formData.admin_last_name} onChange={e => setFormData(s => ({ ...s, admin_last_name: e.target.value }))} />
+              <Input
+                required
+                value={formData.admin_last_name || ""}
+                onChange={e => setFormData(s => ({ ...s, admin_last_name: e.target.value }))}
+                placeholder="Sobrenome"
+              />
             </div>
             <div>
               <Label>Email *</Label>
-              <Input value={formData.admin_email} onChange={e => setFormData(s => ({ ...s, admin_email: e.target.value }))} />
+              <Input
+                required
+                value={formData.admin_email || ""}
+                onChange={e => setFormData(s => ({ ...s, admin_email: e.target.value }))}
+                placeholder="E-mail do administrador"
+                type="email"
+              />
             </div>
             <div>
               <Label>Senha *</Label>
-              <Input value={formData.admin_password} type="password" onChange={e => setFormData(s => ({ ...s, admin_password: e.target.value }))} minLength={6} />
+              <Input
+                required
+                value={formData.admin_password || ""}
+                type="password"
+                onChange={e => setFormData(s => ({ ...s, admin_password: e.target.value }))}
+                minLength={6}
+                placeholder="Senha"
+              />
             </div>
           </div>
           {error && <div className="text-destructive text-sm">{error}</div>}
-          <Button className="w-full" onClick={handleSubmit} disabled={saving || loading}>
+          <Button
+            className="w-full"
+            onClick={handleSubmit}
+            disabled={saving || loading}
+            type="button"
+          >
             {saving ? "Criando..." : "Criar Empresa"}
           </Button>
         </div>
@@ -118,3 +169,4 @@ export function CompanyCreateModal({ open, setOpen }: Props) {
     </Dialog>
   );
 }
+
