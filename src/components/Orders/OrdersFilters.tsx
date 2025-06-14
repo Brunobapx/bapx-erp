@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -15,13 +14,17 @@ interface OrdersFiltersProps {
   setSearchQuery: (query: string) => void;
   statusFilter: string;
   setStatusFilter: (filter: string) => void;
+  orderSort: string;
+  setOrderSort: (sort: string) => void;
 }
 
-export const OrdersFilters: React.FC<OrdersFiltersProps> = ({ 
-  searchQuery, 
-  setSearchQuery, 
-  statusFilter, 
-  setStatusFilter 
+export const OrdersFilters: React.FC<OrdersFiltersProps> = ({
+  searchQuery,
+  setSearchQuery,
+  statusFilter,
+  setStatusFilter,
+  orderSort,
+  setOrderSort
 }) => {
   return (
     <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
@@ -43,36 +46,12 @@ export const OrdersFilters: React.FC<OrdersFiltersProps> = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem onClick={() => setStatusFilter('all')}>
-              Todos
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setStatusFilter('active')}>
-              Ativos
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setStatusFilter('completed')}>
-              Concluídos
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSearchQuery('Aguardando Produção')}>
-              Aguardando Produção
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSearchQuery('Em Produção')}>
-              Em Produção
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSearchQuery('Aguardando Embalagem')}>
-              Aguardando Embalagem
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSearchQuery('Aguardando Venda')}>
-              Aguardando Venda
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSearchQuery('Financeiro Pendente')}>
-              Financeiro Pendente
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSearchQuery('Aguardando Rota')}>
-              Aguardando Rota
-            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setStatusFilter('all')}>Todos</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setStatusFilter('active')}>Ativos</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setStatusFilter('completed')}>Concluídos</DropdownMenuItem>
+            
           </DropdownMenuContent>
         </DropdownMenu>
-        
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm">
@@ -80,10 +59,10 @@ export const OrdersFilters: React.FC<OrdersFiltersProps> = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem>Mais recentes</DropdownMenuItem>
-            <DropdownMenuItem>Mais antigos</DropdownMenuItem>
-            <DropdownMenuItem>Cliente (A-Z)</DropdownMenuItem>
-            <DropdownMenuItem>Cliente (Z-A)</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setOrderSort('recent')}>Mais recentes</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setOrderSort('oldest')}>Mais antigos</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setOrderSort('client_az')}>Cliente (A-Z)</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setOrderSort('client_za')}>Cliente (Z-A)</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

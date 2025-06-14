@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,7 +15,8 @@ const OrdersPage = () => {
   const location = useLocation();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showOrderModal, setShowOrderModal] = useState(false);
-  
+  const [orderSort, setOrderSort] = useState('recent'); // novo estado de ordenação
+
   // Custom hook for orders data
   const { orders, loading, deleteOrder, sendToProduction, refreshOrders, isOrderCompleted, getFirstOrderItem, translateStatus } = useOrders();
 
@@ -30,8 +30,8 @@ const OrdersPage = () => {
     }
   }, [location.state, refreshOrders]);
 
-  // Filter orders based on search query and status filter
-  const filteredOrders = orders.filter(order => {
+  // Filtro (SEARCH + STATUS)
+  const filtered = orders.filter(order => {
     // Text search filter
     const searchString = searchQuery.toLowerCase();
     const firstItem = getFirstOrderItem(order);
@@ -52,6 +52,23 @@ const OrdersPage = () => {
     }
 
     return matchesSearch;
+  });
+
+  // Ordenação
+  const sortedOrders = [...filtered].sort((a, b) => {
+    if (orderSort === "recent") {
+      return new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime();
+    }
+    if (orderSort === "oldest") {
+      return new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime();
+    }
+    if (orderSort === "client_az") {
+      return (a.client_name || '').localeCompare(b.client_name || '');
+    }
+    if (orderSort === "client_za") {
+      return (b.client_name || '').localeCompare(a.client_name || '');
+    }
+    return 0;
   });
 
   // Event handlers
@@ -103,12 +120,14 @@ const OrdersPage = () => {
         setSearchQuery={setSearchQuery}
         statusFilter={statusFilter}
         setStatusFilter={setStatusFilter}
+        orderSort={orderSort}
+        setOrderSort={setOrderSort}
       />
       
       <Card>
         <CardContent className="p-0">
           <OrdersTable
-            orders={filteredOrders}
+            orders={sortedOrders}
             loading={loading}
             onViewOrder={handleViewOrder}
             onEditOrder={(e, order) => {
