@@ -67,9 +67,12 @@ const SaasPage = () => {
             <BarChart3 className="h-4 w-4" /> Analytics
           </TabsTrigger>
         </TabsList>
+
+        {/* Dashboard */}
         <TabsContent value="dashboard">
           <SaasDashboard />
         </TabsContent>
+        {/* Empresas/Clientes */}
         <TabsContent value="companies">
           <SaasCompaniesTab
             companies={companies}
@@ -82,6 +85,7 @@ const SaasPage = () => {
             }}
           />
         </TabsContent>
+        {/* Configurações da Empresa (acesso via Empresas) */}
         <TabsContent value="company-settings">
           {selectedCompany ? (
             <CompanySettingsForm company={selectedCompany} refresh={loadCompanies} />
@@ -89,18 +93,23 @@ const SaasPage = () => {
             <div>Selecione uma empresa em "Empresas" para editar as configurações.</div>
           )}
         </TabsContent>
+        {/* Gestão de Planos */}
         <TabsContent value="plans">
           <SaasPlansManagement />
         </TabsContent>
+        {/* Gestão de Módulos */}
         <TabsContent value="modules">
           <SaasModulesManagement />
         </TabsContent>
+        {/* Gestão de Assinaturas */}
         <TabsContent value="subscriptions">
           <SaasSubscriptionsManagement />
         </TabsContent>
+        {/* Controle de Pagamentos */}
         <TabsContent value="payments">
           <SaasPaymentsManagement />
         </TabsContent>
+        {/* Analytics */}
         <TabsContent value="analytics">
           <SaasAnalytics />
         </TabsContent>
