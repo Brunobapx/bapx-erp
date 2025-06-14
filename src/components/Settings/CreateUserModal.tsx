@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,26 +54,22 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
     setLoading(true);
 
     try {
-      // 1. Cria usuário no Auth
-      const { data: { user }, error: authError } = await supabase.auth.admin.createUser({
-        email: form.email.trim(),
-        password: form.password,
-        email_confirm: true, // não precisa confirmar email
+      // Chamar Edge Function para criar usuário
+      const res = await fetch("/functions/v1/create-user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-requester-role": userRole,
+        },
+        body: JSON.stringify({
+          email: form.email.trim(),
+          password: form.password,
+          role: form.role,
+        }),
       });
 
-      if (authError || !user) throw authError || new Error('Erro na criação do usuário');
-
-      // 2. Atualiza dados de perfil (pode ser adaptado conforme campos extras)
-      await supabase
-        .from('profiles')
-        .update({ is_active: true })
-        .eq('id', user.id);
-
-      // 3. Atualiza/insere papel principal
-      await supabase
-        .from('user_roles')
-        .update({ role: form.role })
-        .eq('user_id', user.id);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Erro na criação do usuário");
 
       toast({
         title: "Sucesso",
