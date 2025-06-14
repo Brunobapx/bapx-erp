@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,12 @@ import { supabase } from "@/integrations/supabase/client";
 // Esquemas de validação
 const emailSchema = z.string().email('Email inválido');
 const passwordSchema = z.string().min(6, 'Senha deve ter pelo menos 6 caracteres');
+
+// URL da function edge do Supabase
+const SUPABASE_PROJECT_URL = "https://gtqmwlxzszttzriswoxj.functions.supabase.co";
+const CREATE_USER_FUNCTION_URL = `${SUPABASE_PROJECT_URL}/create-user`;
+// chave apikey (anon)
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0cW13bHh6c3p0dHpyaXN3b3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc3NzUwMjUsImV4cCI6MjA2MzM1MTAyNX0.03XyZCOF5UnUUaNpn44-MlQW0J6Vfo3_rb7mhE7D-Bk";
 
 interface CreateUserModalProps {
   open: boolean;
@@ -54,12 +61,13 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
     setLoading(true);
 
     try {
-      // Chamar Edge Function para criar usuário
-      const res = await fetch("/functions/v1/create-user", {
+      // Chamar a Edge Function na url COMPLETA (+ apikey obrigatória)
+      const res = await fetch(CREATE_USER_FUNCTION_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "x-requester-role": userRole,
+          "apikey": SUPABASE_ANON_KEY,
         },
         body: JSON.stringify({
           email: form.email.trim(),
@@ -68,7 +76,14 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
         }),
       });
 
-      const data = await res.json();
+      // Tentar parsear resultado. Se não for json, apresentar erro bruto.
+      let data = null;
+      try {
+        data = await res.json();
+      } catch (jsonErr) {
+        throw new Error("Erro inesperado: Não foi possível interpretar resposta do servidor.");
+      }
+
       if (!res.ok) throw new Error(data?.error || "Erro na criação do usuário");
 
       toast({
@@ -152,3 +167,4 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
   );
 };
 export default CreateUserModal;
+
