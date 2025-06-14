@@ -1,16 +1,14 @@
-
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from '@/components/Auth/AuthProvider';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Building, Users, BarChart3, CreditCard } from 'lucide-react';
 import { SaasDashboard } from '@/components/Saas/SaasDashboard';
-import { CompanyCreateModal } from '@/components/Saas/CompanyCreateModal';
 import { CompanySettingsForm } from '@/components/Saas/CompanySettingsForm';
 import { useSaasCompanyManagement } from '@/hooks/useSaasCompanyManagement';
-// IMPORTAÇÃO CORRETA DO COMPONENTE BUTTON
 import { Button } from "@/components/ui/button";
+import { SaasCompaniesTab } from "@/components/Saas/SaasCompaniesTab";
+import { SaasPageHeader } from "@/components/Saas/SaasPageHeader";
 
 const SaasPage = () => {
   const { userRole } = useAuth();
@@ -23,7 +21,6 @@ const SaasPage = () => {
     loadCompanies();
   }, []);
 
-  // Permissão master
   if (userRole !== 'master') {
     return (
       <div className="container mx-auto p-6">
@@ -38,10 +35,7 @@ const SaasPage = () => {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center gap-3 mb-6">
-        <Building className="h-8 w-8 text-primary" />
-        <h1 className="text-3xl font-bold">Gestão SaaS</h1>
-      </div>
+      <SaasPageHeader />
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="dashboard" className="flex items-center gap-2">
@@ -67,46 +61,16 @@ const SaasPage = () => {
           <SaasDashboard />
         </TabsContent>
         <TabsContent value="companies">
-          <div className="flex justify-end mb-4">
-            <CompanyCreateModal open={companySettingsOpen} setOpen={setCompanySettingsOpen} />
-          </div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Empresas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div>Carregando empresas...</div>
-              ) : (
-                <table className="min-w-full table-auto">
-                  <thead>
-                    <tr>
-                      <th>Nome</th>
-                      <th>Subdomínio</th>
-                      <th>Email cobrança</th>
-                      <th>Status</th>
-                      <th>Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {companies.map((company: any) => (
-                      <tr key={company.id}>
-                        <td className="font-medium">{company.name}</td>
-                        <td>{company.subdomain}</td>
-                        <td>{company.billing_email || '-'}</td>
-                        <td>{company.is_active ? "Ativa" : "Inativa"}</td>
-                        <td>
-                          <Button size="sm" variant="outline" onClick={() => { setSelectedCompany(company); setActiveTab("company-settings"); }}>
-                            Configurar
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </CardContent>
-          </Card>
+          <SaasCompaniesTab
+            companies={companies}
+            loading={loading}
+            companySettingsOpen={companySettingsOpen}
+            setCompanySettingsOpen={setCompanySettingsOpen}
+            onConfig={(company) => {
+              setSelectedCompany(company);
+              setActiveTab("company-settings");
+            }}
+          />
         </TabsContent>
         <TabsContent value="company-settings">
           {selectedCompany ? (
@@ -115,17 +79,13 @@ const SaasPage = () => {
             <div>Selecione uma empresa em "Empresas" para editar as configurações.</div>
           )}
         </TabsContent>
-        {/* Mantido: planos, assinaturas, analytics */}
         <TabsContent value="plans">
-          {/* <SaasPlansManagement /> */}
           <div>Gestão de Planos (refatore futuramente para boa prática)</div>
         </TabsContent>
         <TabsContent value="subscriptions">
-          {/* <SaasSubscriptionsManagement /> */}
           <div>Gestão de Assinaturas (refatore futuramente para boa prática)</div>
         </TabsContent>
         <TabsContent value="analytics">
-          {/* <SaasAnalytics /> */}
           <div>Analytics SaaS (refatore futuramente para boa prática)</div>
         </TabsContent>
       </Tabs>
