@@ -38,14 +38,21 @@ export const SaasCompanyTable: React.FC<{
 
   const { deleteCompany } = useSaasCompanyManagement();
   const { toast } = useToast();
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async (company: any) => {
+    if (!company) return;
+    setIsDeleting(true);
     try {
+      console.log('Tentando excluir empresa:', company);
       await deleteCompany(company.id);
       toast({ title: "Empresa excluída!", description: `Empresa "${company.name}" foi removida.`, variant: "default" });
       setDeleteModal(null);
-    } catch {
+    } catch (e: any) {
       toast({ title: "Erro", description: "Não foi possível excluir a empresa.", variant: "destructive" });
+      console.error('Erro ao excluir empresa:', e);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -174,10 +181,13 @@ export const SaasCompanyTable: React.FC<{
             </DialogHeader>
             <div>
               Tem certeza que deseja excluir a empresa <b>{deleteModal?.name}</b>?
+              {isDeleting && <div className="text-xs text-muted-foreground mt-2">Excluindo...</div>}
             </div>
             <div className="flex justify-end gap-2 mt-4">
-              <Button variant="ghost" onClick={() => setDeleteModal(null)}>Cancelar</Button>
-              <Button variant="destructive" onClick={() => handleDelete(deleteModal)}>Excluir</Button>
+              <Button variant="ghost" onClick={() => setDeleteModal(null)} disabled={isDeleting}>Cancelar</Button>
+              <Button variant="destructive" onClick={() => handleDelete(deleteModal)} disabled={isDeleting}>
+                Excluir
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
