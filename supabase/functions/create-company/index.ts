@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
@@ -64,7 +63,7 @@ async function createCompanyInDB(supabaseAdmin: SupabaseClient, formData: any) {
             first_name: admin_first_name,
             last_name: admin_last_name,
             company_id: company.id,
-            role: 'admin',
+            // A role é gerenciada na tabela user_roles
         });
     if (profileError) {
         console.error('DB Error: Failed to upsert profile.', profileError);
@@ -102,14 +101,14 @@ async function createCompanyInDB(supabaseAdmin: SupabaseClient, formData: any) {
     return company;
 
   } catch (err) {
-      console.error(`Error during post-company creation. Initiating rollback for company ${company.id}.`, err);
-      if (createdAuthUserId) {
-          console.log(`Rolling back auth user: ${createdAuthUserId}`);
-          await supabaseAdmin.auth.admin.deleteUser(createdAuthUserId);
-      }
-      console.log(`Rolling back company row: ${company.id}`);
-      await supabaseAdmin.from('companies').delete().eq('id', company.id);
-      throw err;
+    console.error(`Error during post-company creation. Initiating rollback for company ${company.id}.`, err);
+    if (createdAuthUserId) {
+        console.log(`Rolling back auth user: ${createdAuthUserId}`);
+        await supabaseAdmin.auth.admin.deleteUser(createdAuthUserId);
+    }
+    console.log(`Rolling back company row: ${company.id}`);
+    await supabaseAdmin.from('companies').delete().eq('id', company.id);
+    throw err;
   }
 }
 
@@ -183,4 +182,3 @@ serve(async (req) => {
     })
   }
 })
-
