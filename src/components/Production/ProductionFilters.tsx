@@ -15,13 +15,17 @@ type ProductionFiltersProps = {
   setSearchQuery: (query: string) => void;
   statusFilter: string;
   setStatusFilter: (filter: string) => void;
+  orderSort: string;
+  setOrderSort: (sort: string) => void;
 };
 
 export const ProductionFilters = ({
   searchQuery,
   setSearchQuery,
   statusFilter,
-  setStatusFilter
+  setStatusFilter,
+  orderSort,
+  setOrderSort
 }: ProductionFiltersProps) => {
   return (
     <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
@@ -62,9 +66,9 @@ export const ProductionFilters = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem>Mais recentes</DropdownMenuItem>
-            <DropdownMenuItem>Mais antigos</DropdownMenuItem>
-            <DropdownMenuItem>Prazo (próximo)</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setOrderSort('recent')}>Mais recentes</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setOrderSort('oldest')}>Mais antigos</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setOrderSort('product_az')}>Produto (A-Z)</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

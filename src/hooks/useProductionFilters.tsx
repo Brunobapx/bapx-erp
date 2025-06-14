@@ -5,27 +5,30 @@ import { Production } from '@/types/production';
 export const useProductionFilters = (
   productions: Production[],
   searchQuery: string,
-  statusFilter: string
+  statusFilter: string,
+  orderSort: string
 ) => {
   return useMemo(() => {
-    return productions.filter(item => {
-      // Text search filter
+    let filtered = productions.filter(item => {
       const searchString = searchQuery.toLowerCase();
       const matchesSearch = 
         item.production_number?.toLowerCase().includes(searchString) ||
         item.product_name?.toLowerCase().includes(searchString) ||
         item.status?.toLowerCase().includes(searchString);
-      
-      // Status filter
       const isCompleted = ['completed', 'approved'].includes(item.status);
-      if (statusFilter === 'active' && isCompleted) {
-        return false;
-      }
-      if (statusFilter === 'completed' && !isCompleted) {
-        return false;
-      }
-
+      if (statusFilter === 'active' && isCompleted) return false;
+      if (statusFilter === 'completed' && !isCompleted) return false;
       return matchesSearch;
     });
-  }, [productions, searchQuery, statusFilter]);
+
+    // Ordenação
+    if (orderSort === 'recent') {
+      filtered = [...filtered].sort((a, b) => new Date(b.start_date || '').getTime() - new Date(a.start_date || '').getTime());
+    } else if (orderSort === 'oldest') {
+      filtered = [...filtered].sort((a, b) => new Date(a.start_date || '').getTime() - new Date(b.start_date || '').getTime());
+    } else if (orderSort === 'product_az') {
+      filtered = [...filtered].sort((a, b) => (a.product_name || '').localeCompare(b.product_name || ''));
+    }
+    return filtered;
+  }, [productions, searchQuery, statusFilter, orderSort]);
 };

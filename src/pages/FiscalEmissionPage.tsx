@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +21,9 @@ import { toast } from "@/hooks/use-toast";
 
 const FiscalEmissionPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [orderSort, setOrderSort] = useState('recent');
 
   // Mock invoice data
   const invoices = [
@@ -67,17 +69,27 @@ const FiscalEmissionPage = () => {
     }
   ];
 
-  // Filter invoices based on search query
-  const filteredInvoices = invoices.filter(invoice => {
-    const searchString = searchQuery.toLowerCase();
-    return (
-      invoice.id.toLowerCase().includes(searchString) ||
-      invoice.saleId.toLowerCase().includes(searchString) ||
-      invoice.customer.toLowerCase().includes(searchString) ||
-      invoice.type.toLowerCase().includes(searchString) ||
-      invoice.status.toLowerCase().includes(searchString)
-    );
-  });
+  // Filter invoices based on search query, type, status, and order
+  const filteredInvoices = invoices
+    .filter(invoice => {
+      const searchString = searchQuery.toLowerCase();
+      if (typeFilter !== 'all' && invoice.type !== typeFilter) return false;
+      if (statusFilter !== 'all' && invoice.status !== statusFilter) return false;
+      return (
+        invoice.id.toLowerCase().includes(searchString) ||
+        invoice.saleId.toLowerCase().includes(searchString) ||
+        invoice.customer.toLowerCase().includes(searchString) ||
+        invoice.type.toLowerCase().includes(searchString) ||
+        invoice.status.toLowerCase().includes(searchString)
+      );
+    })
+    .sort((a, b) => {
+      if (orderSort === 'recent') return b.id.localeCompare(a.id);
+      if (orderSort === 'oldest') return a.id.localeCompare(b.id);
+      if (orderSort === 'greater') return b.value - a.value;
+      if (orderSort === 'less') return a.value - b.value;
+      return 0;
+    });
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -143,10 +155,10 @@ const FiscalEmissionPage = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem>Todos</DropdownMenuItem>
-              <DropdownMenuItem>NFe</DropdownMenuItem>
-              <DropdownMenuItem>NFCe</DropdownMenuItem>
-              <DropdownMenuItem>CTe</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTypeFilter('all')}>Todos</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTypeFilter('NFe')}>NFe</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTypeFilter('NFCe')}>NFCe</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTypeFilter('CTe')}>CTe</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           
@@ -157,11 +169,11 @@ const FiscalEmissionPage = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem>Todos</DropdownMenuItem>
-              <DropdownMenuItem>Autorizada</DropdownMenuItem>
-              <DropdownMenuItem>Pendente</DropdownMenuItem>
-              <DropdownMenuItem>Cancelada</DropdownMenuItem>
-              <DropdownMenuItem>Rejeitada</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('all')}>Todos</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('Autorizada')}>Autorizada</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('Pendente')}>Pendente</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('Cancelada')}>Cancelada</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('Rejeitada')}>Rejeitada</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           
@@ -172,10 +184,10 @@ const FiscalEmissionPage = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem>Mais recentes</DropdownMenuItem>
-              <DropdownMenuItem>Mais antigas</DropdownMenuItem>
-              <DropdownMenuItem>Maior valor</DropdownMenuItem>
-              <DropdownMenuItem>Menor valor</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setOrderSort('recent')}>Mais recentes</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setOrderSort('oldest')}>Mais antigas</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setOrderSort('greater')}>Maior valor</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setOrderSort('less')}>Menor valor</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

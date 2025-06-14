@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,11 +37,12 @@ const VendorsPage = () => {
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [vendorToDelete, setVendorToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [orderSort, setOrderSort] = useState('az');
 
   const { vendors, loading, error, deleteVendor, refreshVendors } = useVendors();
 
   // Filter vendors based on search query
-  const filteredVendors = vendors.filter(vendor => {
+  const filteredVendorsInitial = vendors.filter(vendor => {
     const searchString = searchQuery.toLowerCase();
     return (
       (vendor.name && vendor.name.toLowerCase().includes(searchString)) ||
@@ -50,6 +50,14 @@ const VendorsPage = () => {
       (vendor.email && vendor.email.toLowerCase().includes(searchString)) ||
       (vendor.contact_person && vendor.contact_person.toLowerCase().includes(searchString))
     );
+  });
+
+  // Ordenação
+  const filteredVendors = [...filteredVendorsInitial].sort((a, b) => {
+    if (orderSort === 'az') return (a.name || '').localeCompare(b.name || '');
+    if (orderSort === 'za') return (b.name || '').localeCompare(a.name || '');
+    if (orderSort === 'created') return new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime();
+    return 0;
   });
 
   const handleVendorClick = (vendor: any) => {
@@ -135,9 +143,9 @@ const VendorsPage = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem>Nome (A-Z)</DropdownMenuItem>
-              <DropdownMenuItem>Nome (Z-A)</DropdownMenuItem>
-              <DropdownMenuItem>Data de Cadastro</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setOrderSort('az')}>Nome (A-Z)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setOrderSort('za')}>Nome (Z-A)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setOrderSort('created')}>Data de Cadastro</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { ApprovalModal } from '@/components/Modals/ApprovalModal';
@@ -18,6 +17,7 @@ const ProductionPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Production | null>(null);
   const [statusFilter, setStatusFilter] = useState('active');
+  const [orderSort, setOrderSort] = useState('recent'); // novo controle
   const [alerts, setAlerts] = useState<AlertType[]>([
     {
       id: 'alert-1',
@@ -35,7 +35,7 @@ const ProductionPage = () => {
 
   const { productions, loading, updateProductionStatus, refreshProductions } = useProduction();
   const productionSummary = useProductionSummary(productions);
-  const filteredItems = useProductionFilters(productions, searchQuery, statusFilter);
+  const filteredItems = useProductionFilters(productions, searchQuery, statusFilter, orderSort);
 
   const handleSendToPackaging = async (e: React.MouseEvent, item: Production) => {
     e.stopPropagation();
@@ -150,6 +150,8 @@ const ProductionPage = () => {
             setSearchQuery={setSearchQuery}
             statusFilter={statusFilter}
             setStatusFilter={setStatusFilter}
+            orderSort={orderSort}
+            setOrderSort={setOrderSort}
           />
           
           <ProductionTable

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +17,7 @@ const PackagingPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [statusFilter, setStatusFilter] = useState('active');
+  const [orderSort, setOrderSort] = useState('recent');
   const [alerts, setAlerts] = useState([
     {
       id: 'alert-1',
@@ -29,8 +29,8 @@ const PackagingPage = () => {
 
   const { packagings, loading, updatePackagingStatus, refreshPackagings } = usePackaging();
 
-  // Filter items based on search query and status filter
-  const filteredItems = usePackagingFilters(packagings, searchQuery, statusFilter);
+  // Filter items based on search query, status filter, and order sort
+  const filteredItems = usePackagingFilters(packagings, searchQuery, statusFilter, orderSort);
 
   // Get packaging summary
   const packagingSummary = usePackagingSummary(packagings);
@@ -153,6 +153,8 @@ const PackagingPage = () => {
             setSearchQuery={setSearchQuery}
             statusFilter={statusFilter}
             setStatusFilter={setStatusFilter}
+            orderSort={orderSort}
+            setOrderSort={setOrderSort}
           />
           
           <Card>

@@ -15,13 +15,17 @@ type PackagingFiltersProps = {
   setSearchQuery: (query: string) => void;
   statusFilter: string;
   setStatusFilter: (filter: string) => void;
+  orderSort: string;
+  setOrderSort: (sort: string) => void;
 };
 
 export const PackagingFilters = ({
   searchQuery,
   setSearchQuery,
   statusFilter,
-  setStatusFilter
+  setStatusFilter,
+  orderSort,
+  setOrderSort
 }: PackagingFiltersProps) => {
   return (
     <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
@@ -43,15 +47,9 @@ export const PackagingFilters = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem onClick={() => setStatusFilter('all')}>
-              Todos
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setStatusFilter('active')}>
-              Ativos
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setStatusFilter('completed')}>
-              Concluídos
-            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setStatusFilter('all')}>Todos</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setStatusFilter('active')}>Ativos</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setStatusFilter('completed')}>Concluídos</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
         
@@ -62,9 +60,9 @@ export const PackagingFilters = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem>Mais recentes</DropdownMenuItem>
-            <DropdownMenuItem>Mais antigos</DropdownMenuItem>
-            <DropdownMenuItem>Produto (A-Z)</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setOrderSort('recent')}>Mais recentes</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setOrderSort('oldest')}>Mais antigos</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setOrderSort('product_az')}>Produto (A-Z)</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
