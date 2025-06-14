@@ -1,12 +1,11 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { useVendorForm } from "./VendorModal/useVendorForm";
 
 interface VendorModalProps {
   isOpen: boolean;
@@ -15,112 +14,14 @@ interface VendorModalProps {
 }
 
 export const VendorModal = ({ isOpen, onClose, vendorData }: VendorModalProps) => {
-  const [formData, setFormData] = useState({
-    name: '',
-    cnpj: '',
-    email: '',
-    phone: '',
-    address: '',
-    city: '',
-    state: '',
-    zip: '',
-    contact_person: '',
-    notes: ''
-  });
-  const [loading, setLoading] = useState(false);
-
-  const isNewVendor = !vendorData?.id;
-  
-  useEffect(() => {
-    if (vendorData) {
-      setFormData({
-        name: vendorData.name || '',
-        cnpj: vendorData.cnpj || '',
-        email: vendorData.email || '',
-        phone: vendorData.phone || '',
-        address: vendorData.address || '',
-        city: vendorData.city || '',
-        state: vendorData.state || '',
-        zip: vendorData.zip || '',
-        contact_person: vendorData.contact_person || '',
-        notes: vendorData.notes || ''
-      });
-    } else {
-      resetForm();
-    }
-  }, [vendorData, isOpen]);
-
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      cnpj: '',
-      email: '',
-      phone: '',
-      address: '',
-      city: '',
-      state: '',
-      zip: '',
-      contact_person: '',
-      notes: ''
-    });
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.name.trim()) {
-      toast.error('Nome do fornecedor é obrigatório');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error('Usuário não autenticado');
-        return;
-      }
-
-      if (isNewVendor) {
-        // Criar novo fornecedor
-        const { error } = await supabase
-          .from('vendors')
-          .insert({
-            user_id: user.id,
-            ...formData
-          });
-
-        if (error) throw error;
-        
-        toast.success('Fornecedor cadastrado com sucesso!');
-      } else {
-        // Atualizar fornecedor existente
-        const { error } = await supabase
-          .from('vendors')
-          .update(formData)
-          .eq('id', vendorData.id);
-
-        if (error) throw error;
-        
-        toast.success('Fornecedor atualizado com sucesso!');
-      }
-      
-      onClose(true); // true indica que deve fazer refresh
-      resetForm();
-      
-    } catch (error: any) {
-      console.error('Erro ao salvar fornecedor:', error);
-      toast.error('Erro ao salvar fornecedor: ' + (error.message || 'Erro desconhecido'));
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    formData,
+    isSubmitting,
+    isNewVendor,
+    handleChange,
+    handleSubmit,
+    resetForm
+  } = useVendorForm(vendorData, onClose);
 
   const handleClose = () => {
     onClose();
@@ -133,7 +34,6 @@ export const VendorModal = ({ isOpen, onClose, vendorData }: VendorModalProps) =
         <DialogHeader>
           <DialogTitle>{isNewVendor ? 'Novo Fornecedor' : 'Editar Fornecedor'}</DialogTitle>
         </DialogHeader>
-        
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-2">
             <Label htmlFor="name">Razão Social *</Label>
@@ -239,17 +139,16 @@ export const VendorModal = ({ isOpen, onClose, vendorData }: VendorModalProps) =
               rows={3}
             />
           </div>
-          
           <DialogFooter>
             <Button type="button" variant="outline" onClick={handleClose}>
               Cancelar
             </Button>
-            <Button 
+            <Button
               type="submit"
-              disabled={loading}
+              disabled={isSubmitting}
               className="bg-erp-production hover:bg-erp-production/90"
             >
-              {loading ? 'Salvando...' : (isNewVendor ? 'Cadastrar' : 'Salvar')}
+              {isSubmitting ? 'Salvando...' : (isNewVendor ? 'Cadastrar' : 'Salvar')}
             </Button>
           </DialogFooter>
         </form>
