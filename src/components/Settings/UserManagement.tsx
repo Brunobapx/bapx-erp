@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -7,6 +6,7 @@ import { useAuth } from '@/components/Auth/AuthProvider';
 import InviteUserModal from './InviteUserModal';
 import UserInvitationsTable from './UserInvitationsTable';
 import ActiveUsersTable from './ActiveUsersTable';
+import RoleModulePermissions from './RoleModulePermissions';
 
 // Interface definitions
 interface UserInvitation {
@@ -186,6 +186,12 @@ export const UserManagement = () => {
           userRole={userRole}
         />
       </div>
+      {/* Mostra as permissões de módulos por perfil (SOMENTE MASTER) */}
+      {userRole === "master" && (
+        <div>
+          <RoleModulePermissions />
+        </div>
+      )}
       <UserInvitationsTable
         invitations={invitations}
         onDelete={handleDeleteInvitation}
