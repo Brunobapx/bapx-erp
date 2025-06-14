@@ -1,7 +1,5 @@
-
 import React, { useState, useMemo } from "react";
 import { SaasCompanyTable } from "./SaasCompanyTable";
-import { CompanyCreateModal } from "@/components/Saas/CompanyCreateModal";
 import { Input } from "@/components/ui/input";
 import { Building } from "lucide-react";
 
@@ -35,9 +33,8 @@ export const SaasCompaniesTab: React.FC<SaasCompaniesTabProps> = ({
           <Building className="h-6 w-6 text-primary" />
           <span className="text-xl font-semibold">Empresas</span>
         </div>
-        <CompanyCreateModal open={companySettingsOpen} setOpen={setCompanySettingsOpen} />
       </div>
-      {/* Barra de busca e botão adicionar */}
+      {/* Barra de busca */}
       <div className="flex items-center gap-3 mb-4">
         <Input
           placeholder="Localize"
@@ -45,13 +42,6 @@ export const SaasCompaniesTab: React.FC<SaasCompaniesTabProps> = ({
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
-        <button
-          className="ml-auto px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-semibold text-base flex items-center gap-2"
-          onClick={() => setCompanySettingsOpen(true)}
-          type="button"
-        >
-          + ADICIONAR
-        </button>
       </div>
       {/* Tabela de empresas */}
       <SaasCompanyTable
