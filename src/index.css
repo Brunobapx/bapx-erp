@@ -44,6 +44,9 @@
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 201 55% 80%;
     --sidebar-ring: 198 63% 68%;
+    --menu-background: 198 68% 32%;         /* azul escuro da logo: #195e80 */
+    --menu-hover: 195 56% 72%;              /* azul claro da logo: #93d3e7 */
+    --menu-foreground: 0 0% 100%;           /* texto branco */
   }
 
   .dark {
@@ -83,6 +86,9 @@
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 201 53% 38%;
     --sidebar-ring: 198 63% 68%;
+    --menu-background: 198 78% 18%;          /* azul escuro dark: #0d2b3a */
+    --menu-hover: 195 56% 72%;               /* azul claro da logo: #93d3e7 */
+    --menu-foreground: 0 0% 100%;            /* texto branco */
   }
 }
 
@@ -128,5 +134,15 @@
   
   .badge-alert {
     @apply bg-erp-alert/10 text-erp-alert;
+  }
+  
+  .menu-bg {
+    background-color: hsl(var(--menu-background)) !important;
+  }
+  .menu-hover {
+    background-color: hsl(var(--menu-hover)) !important;
+  }
+  .menu-text {
+    color: hsl(var(--menu-foreground)) !important;
   }
 }

@@ -37,8 +37,10 @@ const SidebarLink = ({
     <Link
       to={to}
       className={cn(
-        "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-all hover:bg-accent/50",
-        isActive ? "bg-accent/50 font-medium text-accent-foreground" : "text-muted-foreground"
+        // Cores do menu baseadas nas variáveis definidas no index.css
+        "flex items-center gap-3 rounded-md px-3 py-2 text-sm menu-bg menu-text transition-all",
+        "hover:menu-hover hover:menu-text",
+        isActive ? "menu-hover menu-text font-medium" : ""
       )}
     >
       <Icon className="h-4 w-4" />
