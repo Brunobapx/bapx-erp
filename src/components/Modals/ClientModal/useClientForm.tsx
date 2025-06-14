@@ -1,9 +1,11 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Client } from '@/hooks/useClients';
 import { validateClientForm } from "./useClientFormValidation";
 import { buildClientData } from "./buildClientData";
+import { useCompanies } from "@/hooks/useCompanies";
 
 interface FormData {
   id: string;
@@ -16,12 +18,12 @@ interface FormData {
   email: string;
   phone: string;
   address: string;
-  number: string;        // Novo campo
-  complement: string;    // Novo campo
+  number: string;        // Campo visual, não será enviado para insert
+  complement: string;    // Campo visual, não será enviado para insert
   city: string;
   state: string;
   zip: string;
-  bairro?: string; // opcional
+  bairro?: string; // Campo visual, não será enviado para insert
 }
 
 export const useClientForm = (clientData: Client | null, onClose: (refresh?: boolean) => void) => {
@@ -44,9 +46,10 @@ export const useClientForm = (clientData: Client | null, onClose: (refresh?: boo
     bairro: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { getUserCompanyId } = useCompanies();
 
   const isNewClient = !clientData?.id;
-  
+
   useEffect(() => {
     if (clientData) {
       setFormData({
@@ -117,7 +120,15 @@ export const useClientForm = (clientData: Client | null, onClose: (refresh?: boo
         return;
       }
 
-      const clientDataObj = buildClientData(formData, user.id);
+      // buscar o company_id antes do cadastro
+      const companyId = await getUserCompanyId();
+      if (!companyId) {
+        toast.error("Empresa não encontrada. Associe um perfil a uma empresa.");
+        return;
+      }
+
+      // construir dados apenas com os campos permitidos pela tabela
+      const clientDataObj = buildClientData(formData, user.id, companyId);
 
       if (isNewClient) {
         const { error } = await supabase

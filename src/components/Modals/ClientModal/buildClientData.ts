@@ -1,5 +1,5 @@
 
-export function buildClientData(formData: any, userId: string) {
+export function buildClientData(formData: any, userId: string, companyId: string) {
   return {
     name: formData.name,
     type: formData.type as 'Física' | 'Jurídica',
@@ -10,12 +10,10 @@ export function buildClientData(formData: any, userId: string) {
     email: formData.email || null,
     phone: formData.phone || null,
     address: formData.address || null,
-    number: formData.number || null,
-    complement: formData.complement || null,
     city: formData.city || null,
     state: formData.state || null,
     zip: formData.zip || null,
-    bairro: formData.bairro || null,
-    user_id: userId
+    user_id: userId,
+    company_id: companyId
   };
 }
