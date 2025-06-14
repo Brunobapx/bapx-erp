@@ -3,21 +3,11 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from '@/components/Auth/AuthProvider';
-import InviteUserModal from './InviteUserModal';
-import UserInvitationsTable from './UserInvitationsTable';
-import ActiveUsersTable from './ActiveUsersTable';
 import RoleModulePermissions from './RoleModulePermissions';
+import ActiveUsersTable from './ActiveUsersTable';
+import CreateUserModal from './CreateUserModal';
 
 // Interface definitions
-interface UserInvitation {
-  id: string;
-  email: string;
-  role: string;
-  status: string;
-  expires_at: string;
-  created_at: string;
-}
-
 interface UserProfile {
   id: string;
   first_name: string;
@@ -43,9 +33,8 @@ const availableRoles = [
 ];
 
 export const UserManagement = () => {
-  const [invitations, setInvitations] = useState<UserInvitation[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
-  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { userRole } = useAuth();
@@ -58,22 +47,6 @@ export const UserManagement = () => {
       </div>
     );
   }
-
-  // Fetch invitations
-  const loadInvitations = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('user_invitations')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      setInvitations(data || []);
-    } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Erro ao carregar convites:', error);
-      }
-    }
-  };
 
   // Fetch users
   const loadUsers = async () => {
@@ -102,25 +75,8 @@ export const UserManagement = () => {
   };
 
   useEffect(() => {
-    loadInvitations();
     loadUsers();
   }, []);
-
-  // User invitation deleted
-  const handleDeleteInvitation = async (invitationId: string) => {
-    if (!confirm('Tem certeza que deseja remover este convite?')) return;
-    try {
-      const { error } = await supabase
-        .from('user_invitations')
-        .delete()
-        .eq('id', invitationId);
-      if (error) throw error;
-      toast({ title: "Sucesso", description: "Convite removido com sucesso!" });
-      loadInvitations();
-    } catch {
-      toast({ title: "Erro", description: "Erro ao remover convite", variant: "destructive" });
-    }
-  };
 
   // Update user status
   const handleUpdateUserStatus = async (userId: string, isActive: boolean) => {
@@ -165,23 +121,23 @@ export const UserManagement = () => {
     }
   };
 
-  // Invite user modal handled
-  const handleInviteSent = () => {
-    setIsInviteModalOpen(false);
-    loadInvitations();
+  // Callback após criar usuário
+  const handleUserCreated = () => {
+    setIsCreateUserModalOpen(false);
+    loadUsers();
   };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Usuários do Sistema</h3>
-        <Button onClick={() => setIsInviteModalOpen(true)}>
-          Convidar Usuário
+        <Button onClick={() => setIsCreateUserModalOpen(true)}>
+          Novo Usuário
         </Button>
-        <InviteUserModal
-          open={isInviteModalOpen}
-          setOpen={setIsInviteModalOpen}
-          onSuccess={handleInviteSent}
+        <CreateUserModal
+          open={isCreateUserModalOpen}
+          setOpen={setIsCreateUserModalOpen}
+          onSuccess={handleUserCreated}
           availableRoles={availableRoles}
           userRole={userRole}
         />
@@ -192,10 +148,6 @@ export const UserManagement = () => {
           <RoleModulePermissions />
         </div>
       )}
-      <UserInvitationsTable
-        invitations={invitations}
-        onDelete={handleDeleteInvitation}
-      />
       <ActiveUsersTable
         users={users}
         availableRoles={availableRoles}
