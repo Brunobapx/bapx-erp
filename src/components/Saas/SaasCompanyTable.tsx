@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Table,
@@ -46,7 +45,7 @@ export const SaasCompanyTable: React.FC<{
     try {
       console.log('Tentando excluir empresa:', company);
       await deleteCompany(company.id);
-      toast({ title: "Empresa excluída!", description: `Empresa "${company.name}" foi removida.`, variant: "default" });
+      toast({ title: "Empresa excluída!", description: `Todos os dados da empresa "${company.name}" foram removidos de forma permanente.`, variant: "default" });
       setDeleteModal(null);
     } catch (e: any) {
       toast({ title: "Erro", description: "Não foi possível excluir a empresa.", variant: "destructive" });
@@ -179,14 +178,19 @@ export const SaasCompanyTable: React.FC<{
             <DialogHeader>
               <DialogTitle>Excluir Empresa</DialogTitle>
             </DialogHeader>
-            <div>
-              Tem certeza que deseja excluir a empresa <b>{deleteModal?.name}</b>?
-              {isDeleting && <div className="text-xs text-muted-foreground mt-2">Excluindo...</div>}
+            <div className="space-y-3">
+              <div>
+                <span className="font-bold text-destructive">Atenção!</span><br />
+                Essa ação <b>não pode ser desfeita</b>.<br />
+                Todos os dados da empresa e históricos relacionados serão <b>excluídos de forma definitiva!</b><br />
+                Tem certeza que deseja prosseguir com a exclusão da empresa <b>{deleteModal?.name}</b>?
+              </div>
+              {isDeleting && <div className="text-xs text-muted-foreground mt-2">Excluindo... Aguarde.</div>}
             </div>
             <div className="flex justify-end gap-2 mt-4">
               <Button variant="ghost" onClick={() => setDeleteModal(null)} disabled={isDeleting}>Cancelar</Button>
               <Button variant="destructive" onClick={() => handleDelete(deleteModal)} disabled={isDeleting}>
-                Excluir
+                Excluir definitivamente
               </Button>
             </div>
           </DialogContent>

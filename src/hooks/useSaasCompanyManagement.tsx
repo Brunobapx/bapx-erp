@@ -156,18 +156,17 @@ export const useSaasCompanyManagement = () => {
     }
   };
 
+  // Nova função deleteCompany usando a função SQL de cascade
   const deleteCompany = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('companies')
-        .delete()
-        .eq('id', id);
+      // Chama a função em cascade criada no SQL
+      const { error } = await supabase.rpc("delete_company_and_related", { _company_id: id });
 
       if (error) throw error;
 
       toast({
         title: "Sucesso",
-        description: "Empresa excluída com sucesso!",
+        description: "Empresa e todos os dados relacionados excluídos com sucesso!",
       });
 
       loadCompanies();

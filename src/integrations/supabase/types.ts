@@ -1732,6 +1732,10 @@ export type Database = {
         Args: { company_id_param: string; module_route: string }
         Returns: boolean
       }
+      delete_company_and_related: {
+        Args: { _company_id: string }
+        Returns: undefined
+      }
       generate_sequence_number: {
         Args: { prefix: string; table_name: string; user_id: string }
         Returns: string
