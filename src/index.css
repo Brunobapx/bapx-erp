@@ -37,11 +37,11 @@
     --radius: 0.5rem;
 
     --sidebar-background: 199 56% 78%;  /* tom pastel claro */
-    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 195 56% 72%;
     --sidebar-primary-foreground: 0 0% 98%;
     --sidebar-accent: 201 53% 85%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 201 55% 80%;
     --sidebar-ring: 198 63% 68%;
   }
@@ -76,11 +76,11 @@
     --ring: 201 73% 92%;
     
     --sidebar-background: 198 54% 24%;
-    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 195 56% 72%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 201 53% 33%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 201 53% 38%;
     --sidebar-ring: 198 63% 68%;
   }
