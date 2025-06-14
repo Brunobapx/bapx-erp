@@ -24,16 +24,18 @@ export function CompanyCreateModal({ open, setOpen }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isFormFilled = !!(
-    formData.name.trim() && formData.subdomain.trim()
-    && formData.plan_id.trim()
-    && formData.admin_email.trim() && formData.admin_password.trim()
-    && formData.admin_first_name.trim() && formData.admin_last_name.trim()
-  );
+  const isFormFilled =
+    formData.name.trim() !== '' &&
+    formData.subdomain.trim() !== '' &&
+    formData.plan_id.trim() !== '' &&
+    formData.admin_email.trim() !== '' &&
+    formData.admin_password.trim().length >= 6 &&
+    formData.admin_first_name.trim() !== '' &&
+    formData.admin_last_name.trim() !== '';
 
   const handleSubmit = async () => {
     if (!isFormFilled) {
-      setError("Preencha todos os campos obrigatórios!");
+      setError("Preencha todos os campos obrigatórios! A senha deve ter no mínimo 6 caracteres.");
       return;
     }
     setSaving(true);
@@ -151,7 +153,7 @@ export function CompanyCreateModal({ open, setOpen }: Props) {
                 type="password"
                 onChange={e => setFormData(s => ({ ...s, admin_password: e.target.value }))}
                 minLength={6}
-                placeholder="Senha"
+                placeholder="Senha (mínimo 6 caracteres)"
               />
             </div>
           </div>
@@ -159,7 +161,7 @@ export function CompanyCreateModal({ open, setOpen }: Props) {
           <Button
             className="w-full"
             onClick={handleSubmit}
-            disabled={saving || loading}
+            disabled={!isFormFilled || saving || loading}
             type="button"
           >
             {saving ? "Criando..." : "Criar Empresa"}
@@ -169,4 +171,3 @@ export function CompanyCreateModal({ open, setOpen }: Props) {
     </Dialog>
   );
 }
-
