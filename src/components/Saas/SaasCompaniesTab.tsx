@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Table,
@@ -15,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useDeleteCompany, useUpdateCompany } from "@/hooks/useCompanyMutations";
 import { CompanyCreateModal } from "./CompanyCreateModal";
 import { Company } from "@/types/saas";
+import { CompanyUsersModalContent } from "./CompanyUsersModalContent";
 
 // Helper para garantir que as infos principais estejam presentes
 const getCompanyPlanInfo = (company: Company) => {
@@ -35,7 +35,6 @@ export const SaasCompaniesTab: React.FC<{
   // Modals para ações
   const [viewModal, setViewModal] = useState<Company | null>(null);
   const [usersModal, setUsersModal] = useState<Company | null>(null);
-  const [planModal, setPlanModal] = useState<Company | null>(null);
   const [deleteModal, setDeleteModal] = useState<Company | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -111,7 +110,7 @@ export const SaasCompaniesTab: React.FC<{
                         <User className="text-blue-500" />
                       </Button>
                       {/* Plano */}
-                      <Button size="sm" variant="outline" title="Plano" onClick={() => setPlanModal(company)}>
+                      <Button size="sm" variant="outline" title="Plano e Configurações" onClick={() => onConfig(company)}>
                         <Calendar className="text-blue-500" />
                       </Button>
                       {/* Ativar/Desativar */}
@@ -158,25 +157,11 @@ export const SaasCompaniesTab: React.FC<{
 
         {/* Modal Usuários */}
         <Dialog open={!!usersModal} onOpenChange={v => !v && setUsersModal(null)}>
-          <DialogContent>
+          <DialogContent className="max-w-3xl">
             <DialogHeader>
-              <DialogTitle>Usuários da Empresa</DialogTitle>
+              <DialogTitle>Usuários da Empresa: {usersModal?.name}</DialogTitle>
             </DialogHeader>
-            <div>
-              <span className="text-muted-foreground">Funcionalidade de gestão de usuários em breve.</span>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Modal Plano */}
-        <Dialog open={!!planModal} onOpenChange={v => !v && setPlanModal(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Assinatura/Plano</DialogTitle>
-            </DialogHeader>
-            <div>
-              <span className="text-muted-foreground">Gestão de plano da empresa em breve.</span>
-            </div>
+            {usersModal && <CompanyUsersModalContent companyId={usersModal.id} />}
           </DialogContent>
         </Dialog>
 
