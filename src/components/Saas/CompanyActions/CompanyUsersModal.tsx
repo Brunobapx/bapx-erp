@@ -14,7 +14,7 @@ export const CompanyUsersModal: React.FC<CompanyUsersModalProps> = ({ company, o
 
   return (
     <Dialog open={!!company} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-3xl bg-white">
         <DialogHeader>
           <DialogTitle>Usuários da Empresa: {company.name}</DialogTitle>
         </DialogHeader>

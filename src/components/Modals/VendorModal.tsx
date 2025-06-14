@@ -16,7 +16,7 @@ import VendorModalForm from "./VendorModal/VendorModalForm";
 export const VendorModal = ({ isOpen, onClose, vendorData }: VendorModalProps) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto bg-white">
         <DialogHeader>
           <DialogTitle>{!vendorData?.id ? 'Novo Fornecedor' : 'Editar Fornecedor'}</DialogTitle>
         </DialogHeader>

@@ -62,7 +62,7 @@ export function CompanyCreateModal({ open, setOpen }: Props) {
       <DialogTrigger asChild>
         <Button>Nova Empresa</Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl bg-white">
         <DialogHeader>
           <DialogTitle>Criar Nova Empresa</DialogTitle>
         </DialogHeader>
