@@ -20,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { UserSection } from './UserSection';
 import { useAuth } from '@/components/Auth/AuthProvider';
+import { useModuleAccess } from '@/hooks/useModuleAccess';
 
 const SidebarLink = ({ 
   to, 
@@ -50,10 +51,10 @@ export const Sidebar = () => {
   const location = useLocation();
   const [collapsed, setCollapsed] = React.useState(false);
   const { userRole } = useAuth();
+  const { allowedRoutes } = useModuleAccess();
   
-  const navigationItems = [
+  const allNavigationItems = [
     { path: "/", text: "Dashboard", icon: ChartBar },
-    // Adicionar link SaaS apenas para usuários master
     ...(userRole === 'master' ? [{ path: "/saas", text: "SaaS", icon: Building2 }] : []),
     { path: "/clientes", text: "Clientes", icon: User },
     { path: "/produtos", text: "Produtos", icon: Package },
@@ -70,6 +71,17 @@ export const Sidebar = () => {
     { path: "/calendario", text: "Calendário", icon: Calendar },
     { path: "/configuracoes", text: "Configurações", icon: Settings },
   ];
+
+  const navigationItems = React.useMemo(() => {
+    return allNavigationItems.filter(item => {
+      // O Dashboard (/) é sempre visível.
+      if (item.path === '/') return true;
+      // A página SaaS é visível apenas para o 'master'.
+      if (item.path === '/saas') return userRole === 'master';
+      // Os outros itens dependem das permissões do plano.
+      return allowedRoutes.includes(item.path);
+    });
+  }, [allowedRoutes, userRole]);
 
   return (
     <aside className={`bg-background border-r border-border h-screen transition-all duration-300 flex flex-col ${collapsed ? 'w-16' : 'w-64'}`}>
