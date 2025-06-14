@@ -1,3 +1,4 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -29,6 +30,7 @@ export const useCreateCompany = () => {
       queryClient.invalidateQueries({ queryKey: ['companies'] });
     },
     onError: (err: any) => {
+      console.error("Error from useCreateCompany mutation:", err); // Detailed log
       let description = 'Ocorreu um erro ao criar a empresa.';
       
       // Tenta extrair a mensagem de erro do objeto de erro da função

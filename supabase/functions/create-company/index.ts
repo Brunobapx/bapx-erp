@@ -126,11 +126,24 @@ serve(async (req) => {
       throw new Error("A senha deve ter no mínimo 6 caracteres.");
     }
 
+    // Debugging logs
+    console.log("Checking environment variables...");
+    console.log("SUPABASE_URL available:", !!Deno.env.get('SUPABASE_URL'));
+    console.log("SUPABASE_SERVICE_ROLE_KEY available:", !!Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'));
+
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      { auth: { persistSession: false } }
+      { 
+        auth: { 
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false
+        } 
+      }
     );
+    
+    console.log("Supabase admin client initialized.");
     
     const orConditions = [`subdomain.eq.${subdomain}`];
     if (billing_email && billing_email.trim() !== '') {
@@ -150,7 +163,9 @@ serve(async (req) => {
         });
     }
 
+    console.log("No existing company found. Proceeding to create...");
     const company = await createCompanyInDB(supabaseAdmin, formData);
+    console.log("Company creation process finished successfully.");
     
     return new Response(JSON.stringify({ company }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -158,8 +173,8 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Unhandled error in create-company function:', error.message);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('Unhandled error in create-company function:', error);
+    return new Response(JSON.stringify({ error: error.message, stack: error.stack }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     })
