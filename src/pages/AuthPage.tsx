@@ -122,16 +122,19 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#eaf7fb] to-[#93d3e7] p-4">
       <div className="w-full max-w-md space-y-6">
         {/* Logo Section */}
         <div className="text-center space-y-4">
-          <div className="mx-auto w-24 h-24 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
-            <span className="text-white text-3xl font-bold">ERP</span>
-          </div>
+          <img
+            src="/lovable-uploads/a627e39d-287e-4e8b-96f3-d8c8f7b7d997.png"
+            alt="BAPX ERP logo"
+            className="mx-auto w-28 h-28 object-contain rounded-2xl shadow-lg bg-white"
+            style={{ background: '#eaf7fb', padding: '0.75rem' }}
+          />
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">ERP System</h1>
-            <p className="text-gray-600 mt-2">Sistema de Gestão Empresarial</p>
+            <h1 className="text-3xl font-bold text-gray-900">BAPX ERP</h1>
+            <p className="text-gray-600 mt-2">Solução em Segurança e TI</p>
           </div>
         </div>
 

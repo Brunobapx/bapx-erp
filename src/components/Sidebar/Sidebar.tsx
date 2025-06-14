@@ -87,9 +87,17 @@ export const Sidebar = () => {
     <aside className={`bg-background border-r border-border h-screen transition-all duration-300 flex flex-col ${collapsed ? 'w-16' : 'w-64'}`}>
       <div className="p-4 flex items-center justify-between">
         {!collapsed && (
-          <h2 className="text-xl font-bold text-primary">
-            ERP System
-          </h2>
+          <div className="flex items-center gap-2">
+            <img
+              src="/lovable-uploads/a627e39d-287e-4e8b-96f3-d8c8f7b7d997.png"
+              alt="BAPX ERP Logo"
+              className="w-10 h-10 object-contain bg-white rounded shadow"
+              style={{ background: '#eaf7fb' }}
+            />
+            <h2 className="text-xl font-bold text-primary ml-1">
+              BAPX ERP
+            </h2>
+          </div>
         )}
         <button 
           onClick={() => setCollapsed(!collapsed)}

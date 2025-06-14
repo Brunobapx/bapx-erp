@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -65,16 +64,16 @@ export default {
 				},
 				// ERP specific colors
 				erp: {
-					order: '#9B66FF',
-					production: '#4ECDC4',
-					packaging: '#FF8B64',
-					sales: '#649FFF',
-					finance: '#41B883',
-					route: '#FFC75F',
-					alert: '#FF6B6B',
-					background: '#F7F9FC',
-					card: '#FFFFFF',
-					accent: '#9b87f5',
+					order: '#86c5de',
+					production: '#93d3e7', // Azul principal da logo
+					packaging: '#93d3e7',
+					sales: '#49abd9',
+					finance: '#56b7d8',
+					route: '#69bbe1',
+					alert: '#ef656a',
+					background: '#eaf7fb',
+					card: '#ffffff',
+					accent: '#93d3e7',
 					muted: '#8E9196'
 				}
 			},
