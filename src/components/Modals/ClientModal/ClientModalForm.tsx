@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -21,12 +20,14 @@ interface ClientModalFormProps {
     city: string;
     state: string;
     zip: string;
+    bairro?: string;
   };
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onTypeChange: (value: string) => void;
+  handleAutoAddressChange: (fields: Partial<ClientModalFormProps["formData"]>) => void;
 }
 
-export const ClientModalForm = ({ formData, onChange, onTypeChange }: ClientModalFormProps) => {
+export const ClientModalForm = ({ formData, onChange, onTypeChange, handleAutoAddressChange }: ClientModalFormProps) => {
   return (
     <div className="grid gap-4 py-4">
       <PersonTypeSelector
@@ -68,9 +69,11 @@ export const ClientModalForm = ({ formData, onChange, onTypeChange }: ClientModa
           address: formData.address,
           city: formData.city,
           state: formData.state,
-          zip: formData.zip
+          zip: formData.zip,
+          bairro: formData.bairro
         }}
         onChange={onChange}
+        onAutoAddressChange={handleAutoAddressChange}
       />
     </div>
   );

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -89,6 +88,10 @@ export const useClientForm = (clientData: Client | null, onClose: (refresh?: boo
 
   const handleTypeChange = (value: string) => {
     setFormData(prev => ({ ...prev, type: value }));
+  };
+
+  const handleAutoAddressChange = (fields: Partial<FormData>) => {
+    setFormData(prev => ({ ...prev, ...fields }));
   };
 
   const validateForm = () => {
@@ -192,6 +195,7 @@ export const useClientForm = (clientData: Client | null, onClose: (refresh?: boo
     isNewClient,
     handleChange,
     handleTypeChange,
+    handleAutoAddressChange,
     handleSubmit
   };
 };
