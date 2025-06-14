@@ -15,7 +15,7 @@ interface Props {
 }
 
 export function CompanyCreateModal({ open, setOpen }: Props) {
-  const { createCompany, plans, loading } = useSaasCompanyManagement();
+  const { createCompany, plans, loading, loadCompanies } = useSaasCompanyManagement();
   const [formData, setFormData] = useState<CreateCompanyData>({
     name: '', subdomain: '', billing_email: '', plan_id: '',
     logo_url: '', primary_color: '', secondary_color: '',
@@ -24,7 +24,16 @@ export function CompanyCreateModal({ open, setOpen }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Botão e validação ao criar
   const handleSubmit = async () => {
+    if (
+      !formData.name || !formData.subdomain ||
+      !formData.admin_email || !formData.admin_password ||
+      !formData.plan_id || !formData.admin_first_name || !formData.admin_last_name
+    ) {
+      setError("Preencha todos os campos obrigatórios!");
+      return;
+    }
     setSaving(true);
     setError(null);
     const company = await createCompany(formData);
@@ -35,8 +44,9 @@ export function CompanyCreateModal({ open, setOpen }: Props) {
         logo_url: '', primary_color: '', secondary_color: '',
         admin_email: '', admin_password: '', admin_first_name: '', admin_last_name: '',
       });
+      await loadCompanies(); // Atualiza lista após novo cadastro
     } else {
-      setError('Não foi possível criar a empresa. Verifique se todos os campos obrigatórios estão preenchidos e se o subdomínio/email não está em uso.');
+      setError('Não foi possível criar a empresa. Verifique se todos os campos obrigatórios estão preenchidos e se o subdomínio ou email de cobrança já estão em uso.');
     }
     setSaving(false);
   };
