@@ -1,0 +1,167 @@
+
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { corsHeaders } from '../_shared/cors.ts'
+
+console.log(`Function "create-company" is up and running!`);
+
+async function createCompanyInDB(supabaseAdmin: SupabaseClient, formData: any) {
+  const { 
+    name, subdomain, billing_email, plan_id,
+    logo_url, primary_color, secondary_color,
+    admin_email, admin_password, admin_first_name, admin_last_name
+  } = formData;
+
+  // 1. Criar empresa
+  const { data: company, error: companyError } = await supabaseAdmin
+    .from('companies')
+    .insert({
+        name,
+        subdomain,
+        billing_email: billing_email || null,
+        logo_url,
+        primary_color,
+        secondary_color,
+        onboarded_at: new Date().toISOString(),
+        trial_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    })
+    .select()
+    .single();
+
+  if (companyError || !company) {
+      console.error('DB Error: Failed to create company row.', companyError);
+      throw companyError || new Error('Erro ao criar a empresa no banco de dados.');
+  }
+  console.log(`Company row created: ${company.id}`);
+
+  let createdAuthUserId: string | null = null;
+  try {
+    // 2. Criar usuário admin
+    console.log(`Attempting to create auth user for ${admin_email}`);
+    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email: admin_email,
+        password: admin_password,
+        email_confirm: true,
+        user_metadata: {
+            first_name: admin_first_name,
+            last_name: admin_last_name,
+        }
+    });
+    if (authError || !authUser?.user) {
+        console.error('Auth Error: Failed to create admin user.', authError);
+        throw authError || new Error('Erro ao criar o usuário administrador.');
+    }
+    createdAuthUserId = authUser.user.id;
+    console.log(`Auth user created: ${createdAuthUserId}`);
+    
+    // 3. Criar perfil
+    console.log(`Creating profile for user ${createdAuthUserId}`);
+    const { error: profileError } = await supabaseAdmin.from('profiles').insert({
+        id: createdAuthUserId,
+        first_name: admin_first_name,
+        last_name: admin_last_name,
+        company_id: company.id,
+        role: 'admin',
+    });
+    if (profileError) {
+        console.error('DB Error: Failed to create profile.', profileError);
+        throw profileError;
+    }
+    console.log(`Profile created for user ${createdAuthUserId}`);
+
+    // 4. Atribuir role de admin
+    console.log(`Assigning role 'admin' to user ${createdAuthUserId}`);
+    const { error: roleError } = await supabaseAdmin.from('user_roles').insert({
+        user_id: createdAuthUserId,
+        role: 'admin',
+        company_id: company.id,
+    });
+    if (roleError) {
+        console.error('DB Error: Failed to assign role.', roleError);
+        throw roleError;
+    }
+    console.log(`Role 'admin' assigned to user ${createdAuthUserId}`);
+
+    // 5. Ativar assinatura
+    console.log(`Creating subscription for company ${company.id}`);
+    const { error: subscriptionError } = await supabaseAdmin.from('company_subscriptions').insert({
+        company_id: company.id,
+        plan_id: plan_id,
+        status: 'active',
+        starts_at: new Date().toISOString(),
+    });
+    if (subscriptionError) {
+        console.error('DB Error: Failed to create subscription.', subscriptionError);
+        throw subscriptionError;
+    }
+    console.log(`Subscription created for company ${company.id}`);
+    
+    return company;
+
+  } catch (err) {
+      console.error(`Error during post-company creation. Initiating rollback for company ${company.id}.`, err);
+      if (createdAuthUserId) {
+          console.log(`Rolling back auth user: ${createdAuthUserId}`);
+          await supabaseAdmin.auth.admin.deleteUser(createdAuthUserId);
+      }
+      console.log(`Rolling back company row: ${company.id}`);
+      await supabaseAdmin.from('companies').delete().eq('id', company.id);
+      throw err;
+  }
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  try {
+    const { formData } = await req.json();
+    const { subdomain, billing_email, admin_email, admin_password, plan_id, name, admin_first_name, admin_last_name } = formData;
+
+    if (!name || !subdomain || !admin_email || !admin_password || !plan_id || !admin_first_name || !admin_last_name) {
+      throw new Error("Preencha todos os campos obrigatórios");
+    }
+    if (admin_password.length < 6) {
+      throw new Error("A senha deve ter no mínimo 6 caracteres.");
+    }
+
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      { auth: { persistSession: false } }
+    );
+    
+    const orConditions = [`subdomain.eq.${subdomain}`];
+    if (billing_email && billing_email.trim() !== '') {
+        orConditions.push(`billing_email.eq.${billing_email}`);
+    }
+    const { data: existing, error: existingError } = await supabaseAdmin
+        .from('companies')
+        .select('id')
+        .or(orConditions.join(','))
+        .maybeSingle();
+
+    if (existingError) throw existingError;
+    if (existing) {
+        return new Response(JSON.stringify({ error: 'Já existe uma empresa com esse subdomínio ou email de cobrança.' }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 409,
+        });
+    }
+
+    const company = await createCompanyInDB(supabaseAdmin, formData);
+    
+    return new Response(JSON.stringify({ company }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+    });
+
+  } catch (error) {
+    console.error('Unhandled error in create-company function:', error.message);
+    return new Response(JSON.stringify({ error: error.message }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500,
+    })
+  }
+})

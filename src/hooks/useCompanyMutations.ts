@@ -1,4 +1,3 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -6,86 +5,17 @@ import { CreateCompanyData } from '@/types/saas';
 
 // --- CREATE ---
 const createCompanyFn = async (formData: CreateCompanyData) => {
-    // Validação básica
-    if (!formData.name || !formData.subdomain || !formData.admin_email || !formData.admin_password || !formData.plan_id) {
-      throw new Error('Preencha todos os campos obrigatórios');
-    }
+    const { data, error } = await supabase.functions.invoke('create-company', {
+        body: { formData },
+    });
 
-    // Checar subdomínio/email duplicado
-    const orConditions = [`subdomain.eq.${formData.subdomain}`];
-    if (formData.billing_email && formData.billing_email.trim() !== '') {
-      orConditions.push(`billing_email.eq.${formData.billing_email}`);
+    if (error) {
+      // O erro da edge function será capturado aqui.
+      // Vamos lançá-lo para que o `onError` do `useMutation` possa lidar com ele.
+      throw error;
     }
     
-    const { data: existing, error: existingError } = await supabase
-      .from('companies')
-      .select('id')
-      .or(orConditions.join(','))
-      .maybeSingle();
-
-    if (existingError) throw existingError;
-
-    if (existing) {
-      throw new Error('Já existe uma empresa com esse subdomínio ou email de cobrança.');
-    }
-    // 1. Criar empresa
-    const { data: company, error: companyError } = await supabase
-      .from('companies')
-      .insert({
-        name: formData.name,
-        subdomain: formData.subdomain,
-        billing_email: formData.billing_email,
-        logo_url: formData.logo_url,
-        primary_color: formData.primary_color,
-        secondary_color: formData.secondary_color,
-        onboarded_at: new Date().toISOString(),
-        trial_expires_at: new Date(Date.now() + 30*24*60*60*1000).toISOString(),
-      })
-      .select()
-      .single();
-    if (companyError || !company) throw companyError || new Error('Erro ao criar empresa');
-    
-    try {
-      // 2. Criar usuário administrador
-      const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-        email: formData.admin_email,
-        password: formData.admin_password,
-        email_confirm: true,
-        user_metadata: {
-          first_name: formData.admin_first_name,
-          last_name: formData.admin_last_name,
-        }
-      });
-      if (authError || !authUser?.user) throw authError || new Error('Erro ao criar usuário');
-      
-      // 3. Criar perfil
-      await supabase.from('profiles').insert({
-        id: authUser.user.id,
-        first_name: formData.admin_first_name,
-        last_name: formData.admin_last_name,
-        company_id: company.id,
-        role: 'admin',
-      });
-      // 4. Atribuir role admin
-      await supabase.from('user_roles').insert({
-        user_id: authUser.user.id,
-        role: 'admin',
-        company_id: company.id,
-      });
-      // 5. Ativar assinatura
-      await supabase.from('company_subscriptions').insert({
-        company_id: company.id,
-        plan_id: formData.plan_id,
-        status: 'active',
-        starts_at: new Date().toISOString(),
-      });
-      
-      return company;
-    } catch(err) {
-      // Rollback company creation if any other step fails
-      await supabase.from('companies').delete().eq('id', company.id);
-      throw err;
-    }
+    return data.company;
 };
 
 export const useCreateCompany = () => {
@@ -99,7 +29,25 @@ export const useCreateCompany = () => {
       queryClient.invalidateQueries({ queryKey: ['companies'] });
     },
     onError: (err: any) => {
-      toast({ title: 'Erro', description: err.message || 'Ocorreu um erro ao criar a empresa', variant: 'destructive' });
+      let description = 'Ocorreu um erro ao criar a empresa.';
+      
+      // Tenta extrair a mensagem de erro do objeto de erro da função
+      if (err.context && err.context.error_message) {
+        description = err.context.error_message;
+      } else if (err.message) {
+        try {
+          const parsed = JSON.parse(err.message);
+          if (parsed.error) {
+            description = parsed.error;
+          } else {
+            description = err.message;
+          }
+        } catch (e) {
+          description = err.message;
+        }
+      }
+      
+      toast({ title: 'Erro', description, variant: 'destructive' });
     }
   });
 };
