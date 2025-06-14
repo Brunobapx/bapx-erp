@@ -47,6 +47,19 @@ export const UserManagement = () => {
   const { toast } = useToast();
   const { userRole } = useAuth();
 
+  // Lista de roles disponíveis
+  const availableRoles = [
+    { value: 'user', label: 'Usuário' },
+    { value: 'admin', label: 'Administrador' },
+    { value: 'master', label: 'Master', masterOnly: true },
+    { value: 'vendedor', label: 'Vendedor' },
+    { value: 'administrativo', label: 'Administrativo' },
+    { value: 'financeiro', label: 'Financeiro' },
+    { value: 'producao', label: 'Produção' },
+    { value: 'embalagem', label: 'Embalagem' },
+    { value: 'entrega', label: 'Entrega' }
+  ];
+
   // Security check - only admins and masters can access this component
   if (userRole !== 'admin' && userRole !== 'master') {
     return (
@@ -293,10 +306,12 @@ export const UserManagement = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="user">Usuário</SelectItem>
-                    <SelectItem value="admin">Administrador</SelectItem>
-                    {userRole === 'master' && (
-                      <SelectItem value="master">Master</SelectItem>
+                    {availableRoles.map(role =>
+                      role.value === 'master' && userRole !== 'master' ? null : (
+                        <SelectItem value={role.value} key={role.value}>
+                          {role.label}
+                        </SelectItem>
+                      )
                     )}
                   </SelectContent>
                 </Select>
@@ -372,7 +387,27 @@ export const UserManagement = () => {
                   {user.first_name} {user.last_name}
                 </TableCell>
                 <TableCell>{user.id}</TableCell>
-                <TableCell className="capitalize">{user.role}</TableCell>
+                <TableCell className="capitalize">
+                  {/* EDITAR ROLE EM DROP DOWN */}
+                  <Select
+                    value={user.role}
+                    disabled={userRole !== 'master' && user.role === 'master'}
+                    onValueChange={newRole => updateUserRole(user.id, newRole)}
+                  >
+                    <SelectTrigger className="capitalize w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableRoles.map(role =>
+                        role.value === 'master' && userRole !== 'master' ? null : (
+                          <SelectItem value={role.value} key={role.value}>
+                            {role.label}
+                          </SelectItem>
+                        )
+                      )}
+                    </SelectContent>
+                  </Select>
+                </TableCell>
                 <TableCell>{user.department || '-'}</TableCell>
                 <TableCell>
                   <Badge variant={user.is_active ? 'default' : 'secondary'}>
