@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Client } from '@/hooks/useClients';
+import { validateClientForm } from "./useClientFormValidation";
+import { buildClientData } from "./buildClientData";
 
 interface FormData {
   id: string;
@@ -47,7 +49,6 @@ export const useClientForm = (clientData: Client | null, onClose: (refresh?: boo
   
   useEffect(() => {
     if (clientData) {
-      console.log('ClientForm - Carregando dados do cliente:', clientData);
       setFormData({
         id: clientData.id || '',
         name: clientData.name || '',
@@ -59,7 +60,7 @@ export const useClientForm = (clientData: Client | null, onClose: (refresh?: boo
         email: clientData.email || '',
         phone: clientData.phone || '',
         address: clientData.address || '',
-        number: (clientData as any).number || '',         // garantir retrocompatibilidade
+        number: (clientData as any).number || '',
         complement: (clientData as any).complement || '',
         city: clientData.city || '',
         state: clientData.state || '',
@@ -67,7 +68,6 @@ export const useClientForm = (clientData: Client | null, onClose: (refresh?: boo
         bairro: (clientData as any).bairro || ''
       });
     } else {
-      console.log('ClientForm - Novo cliente, resetando formulário');
       resetForm();
     }
   }, [clientData]);
@@ -106,97 +106,37 @@ export const useClientForm = (clientData: Client | null, onClose: (refresh?: boo
     setFormData(prev => ({ ...prev, ...fields }));
   };
 
-  const validateForm = () => {
-    if (!formData.name.trim()) {
-      toast.error("Nome/Razão Social é obrigatório");
-      return false;
-    }
-
-    if (formData.type === 'Jurídica' && !formData.cnpj.trim()) {
-      toast.error("CNPJ é obrigatório para Pessoa Jurídica");
-      return false;
-    }
-
-    if (formData.type === 'Física' && !formData.cpf.trim()) {
-      toast.error("CPF é obrigatório para Pessoa Física");
-      return false;
-    }
-
-    return true;
-  };
-
   const handleSubmit = async () => {
-    if (!validateForm()) return;
+    if (!validateClientForm(formData)) return;
 
     try {
       setIsSubmitting(true);
-      
-      console.log('ClientForm - Iniciando salvamento do cliente...');
-      
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
       if (userError || !user) {
-        console.error('ClientForm - Usuário não autenticado:', userError);
         toast.error("Usuário não autenticado. Faça login para continuar.");
         return;
       }
 
-      console.log('ClientForm - Usuário autenticado:', user.id);
-      
-      const clientData = {
-        name: formData.name,
-        type: formData.type as 'Física' | 'Jurídica',
-        cnpj: formData.type === 'Jurídica' ? formData.cnpj : null,
-        ie: formData.type === 'Jurídica' ? formData.ie : null,
-        cpf: formData.type === 'Física' ? formData.cpf : null,
-        rg: formData.type === 'Física' ? formData.rg : null,
-        email: formData.email || null,
-        phone: formData.phone || null,
-        address: formData.address || null,
-        number: formData.number || null,
-        complement: formData.complement || null,
-        city: formData.city || null,
-        state: formData.state || null,
-        zip: formData.zip || null,
-        user_id: user.id
-      };
-      
-      console.log('ClientForm - Dados para salvar:', clientData);
-      
+      const clientDataObj = buildClientData(formData, user.id);
+
       if (isNewClient) {
-        console.log('ClientForm - Criando novo cliente...');
-        const { data: insertData, error } = await supabase
+        const { error } = await supabase
           .from('clients')
-          .insert([clientData])
+          .insert([clientDataObj])
           .select();
-          
-        if (error) {
-          console.error('ClientForm - Erro ao inserir:', error);
-          throw error;
-        }
-        
-        console.log('ClientForm - Cliente criado com sucesso:', insertData);
+        if (error) throw error;
         toast.success("Cliente adicionado com sucesso");
       } else {
-        console.log('ClientForm - Atualizando cliente existente...');
-        const { data: updateData, error } = await supabase
+        const { error } = await supabase
           .from('clients')
-          .update(clientData)
+          .update(clientDataObj)
           .eq('id', formData.id)
           .select();
-          
-        if (error) {
-          console.error('ClientForm - Erro ao atualizar:', error);
-          throw error;
-        }
-        
-        console.log('ClientForm - Cliente atualizado com sucesso:', updateData);
+        if (error) throw error;
         toast.success("Cliente atualizado com sucesso");
       }
-      
       onClose(true);
     } catch (error: any) {
-      console.error("ClientForm - Erro ao salvar cliente:", error);
       toast.error(`Erro ao ${isNewClient ? 'adicionar' : 'atualizar'} cliente: ${error.message}`);
     } finally {
       setIsSubmitting(false);
