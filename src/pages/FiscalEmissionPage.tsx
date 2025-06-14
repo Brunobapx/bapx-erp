@@ -1,23 +1,5 @@
-import React, { useState } from 'react';
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { FilePen, ChevronDown, Search, FileText, Printer } from 'lucide-react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { toast } from "@/hooks/use-toast";
+
+import React from 'react';
 import FiscalEmissionHeader from "@/components/FiscalEmission/FiscalEmissionHeader";
 import FiscalEmissionFilters from "@/components/FiscalEmission/FiscalEmissionFilters";
 import FiscalEmissionTableSection from "@/components/FiscalEmission/FiscalEmissionTableSection";

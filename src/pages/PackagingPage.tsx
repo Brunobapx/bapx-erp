@@ -1,23 +1,12 @@
-import React, { useState } from 'react';
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ApprovalModal } from '@/components/Modals/ApprovalModal';
-import { Package } from 'lucide-react';
+
+import React from 'react';
 import StageAlert from '@/components/Alerts/StageAlert';
-import { usePackaging } from '@/hooks/usePackaging';
-import { usePackagingFilters } from '@/hooks/usePackagingFilters';
-import { usePackagingSummary } from '@/hooks/usePackagingSummary';
-import { PackagingFilters } from '@/components/Packaging/PackagingFilters';
-import { PackagingTable } from '@/components/Packaging/PackagingTable';
-import { PackagingSummaryTable } from '@/components/Packaging/PackagingSummaryTable';
 import PackagingHeader from "@/components/Packaging/PackagingHeader";
 import PackagingTabs from "@/components/Packaging/PackagingTabs";
 import PackagingApprovalModal from "@/components/Packaging/PackagingApprovalModal";
 import usePackagingPageFilters from "@/hooks/usePackagingPageFilters";
 
 const PackagingPage = () => {
-  // use filtro unificado dedicado
   const {
     searchQuery,
     setSearchQuery,
@@ -33,7 +22,6 @@ const PackagingPage = () => {
     setAlerts,
     filteredItems,
     loading,
-    handleCreatePackaging,
     handleItemClick,
     handleViewItem,
     handleEditItem,
@@ -44,7 +32,8 @@ const PackagingPage = () => {
     handleModalClose,
     packagingSummary,
     formatDate,
-    getStatusBadgeClass
+    getStatusBadgeClass,
+    handleCreatePackaging
   } = usePackagingPageFilters();
 
   return (

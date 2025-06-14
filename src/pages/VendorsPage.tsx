@@ -1,38 +1,11 @@
-import React, { useState } from 'react';
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Users, ChevronDown, Search, FileText, Plus, Trash2 } from 'lucide-react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { VendorModal } from '@/components/Modals/VendorModal';
-import { useVendorsPageFilters } from '@/hooks/useVendorsPageFilters';
-import { toast } from "sonner";
+
+import React from 'react';
+import VendorsHeader from "@/components/Vendors/VendorsHeader";
+import VendorsTableSection from "@/components/Vendors/VendorsTableSection";
+import VendorsModalSection from "@/components/Vendors/VendorsModalSection";
+import useVendorsPageFilters from '@/hooks/useVendorsPageFilters';
 
 const VendorsPage = () => {
-  // filtro centralizado para search, sort, modais, exclusão
   const {
     searchQuery,
     setSearchQuery,
@@ -50,7 +23,6 @@ const VendorsPage = () => {
     orderSort,
     setOrderSort,
     handleModalClose,
-    refreshVendors
   } = useVendorsPageFilters();
 
   if (loading) {
@@ -76,7 +48,7 @@ const VendorsPage = () => {
   return (
     <div className="p-4 sm:p-6 space-y-6">
       <VendorsHeader onCreate={() => setShowModal(true)} orderSort={orderSort} setOrderSort={setOrderSort} />
-      <VendorsTableSection 
+      <VendorsTableSection
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         filteredVendors={filteredVendors}
