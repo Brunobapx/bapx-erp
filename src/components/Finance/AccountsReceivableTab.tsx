@@ -20,6 +20,9 @@ import { useActiveFinancialAccounts } from "@/hooks/useActiveFinancialAccounts";
 import { useFinancialCategories } from "@/hooks/useFinancialCategories";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { ChevronDown } from "lucide-react";
+import { AccountsReceivableSummaryCards } from "./AccountsReceivableSummaryCards";
+import { AccountsReceivableFilters } from "./AccountsReceivableFilters";
+import { AccountsReceivableTable } from "./AccountsReceivableTable";
 
 export const AccountsReceivableTab = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -199,134 +202,39 @@ export const AccountsReceivableTab = () => {
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold">Contas a Receber</h2>
         <Button onClick={() => setShowNewReceivableModal(true)}>
-          <Plus className="mr-2 h-4 w-4" /> Nova Cobrança
+          <span className="flex items-center"><Plus className="mr-2 h-4 w-4" /> Nova Cobrança</span>
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-l-4 border-l-green-500">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <div>
-                <p className="text-sm text-muted-foreground">Recebidas</p>
-                <p className="text-lg font-bold text-green-600">R$ {totalRecebido.toLocaleString('pt-BR')}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <AccountsReceivableSummaryCards
+        totalRecebido={totalRecebido}
+        totalPendente={totalPendente}
+        totalVencido={totalVencido}
+      />
 
-        <Card className="border-l-4 border-l-yellow-500">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-yellow-600" />
-              <div>
-                <p className="text-sm text-muted-foreground">Pendentes</p>
-                <p className="text-lg font-bold text-yellow-600">R$ {totalPendente.toLocaleString('pt-BR')}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-red-500">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-red-600" />
-              <div>
-                <p className="text-sm text-muted-foreground">Vencidas</p>
-                <p className="text-lg font-bold text-red-600">R$ {totalVencido.toLocaleString('pt-BR')}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* FILTROS EM LINHA */}
-      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
-        <div className="relative w-full max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar recebimentos..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8"
-          />
-        </div>
-        <div className="flex gap-2 items-center flex-wrap">
-          <DateRangeFilter range={period} onChange={setPeriod} label="Filtrar por período" />
-          <AccountSelect />
-          <CategorySelect />
-        </div>
-      </div>
+      <AccountsReceivableFilters
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        period={period}
+        setPeriod={setPeriod}
+        accountFilter={accountFilter}
+        setAccountFilter={setAccountFilter}
+        accounts={accounts}
+        accountsLoading={accountsLoading}
+        categoryFilter={categoryFilter}
+        setCategoryFilter={setCategoryFilter}
+        categories={categories}
+        categoriesLoading={categoriesLoading}
+      />
 
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Descrição</TableHead>
-                <TableHead>NF/Documento</TableHead>
-                <TableHead>Vencimento</TableHead>
-                <TableHead className="text-right">Valor</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredAccounts.map((account) => (
-                <TableRow key={account.id}>
-                  <TableCell className="font-medium">{account.entry_number}</TableCell>
-                  <TableCell>{account.client}</TableCell>
-                  <TableCell>{account.description}</TableCell>
-                  <TableCell>{account.invoice_number || '-'}</TableCell>
-                  <TableCell>{new Date(account.dueDate).toLocaleDateString('pt-BR')}</TableCell>
-                  <TableCell className="text-right font-medium">
-                    R$ {account.amount.toLocaleString('pt-BR')}
-                  </TableCell>
-                  <TableCell>
-                    <span className={`stage-badge ${
-                      account.status === 'recebido' ? 'badge-sales' : 
-                      account.status === 'pendente' ? 'badge-packaging' : 'badge-route'
-                    }`}>
-                      {account.status === 'recebido' ? 'Recebido' : 
-                       account.status === 'pendente' ? 'Pendente' : 'Vencido'}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      {account.status !== 'recebido' && (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => confirmReceivable(account.id)}
-                        >
-                          Confirmar
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEditReceivable(account)}
-                        aria-label="Editar"
-                      >
-                        <Pencil className="text-muted-foreground" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteReceivable(account)}
-                        aria-label="Excluir"
-                      >
-                        <Trash className="text-erp-alert" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <AccountsReceivableTable
+            accounts={filteredAccounts}
+            confirmReceivable={confirmReceivable}
+            onEdit={handleEditReceivable}
+            onDelete={handleDeleteReceivable}
+          />
           {filteredAccounts.length === 0 && (
             <div className="p-4 text-center text-muted-foreground">
               Nenhuma conta a receber encontrada.
