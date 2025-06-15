@@ -52,11 +52,19 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
 
   // Função utilitária para corrigir problema de fuso horário/ISO
   function formatDateToYYYYMMDD(date: Date): string {
-    // Pega os valores no horário local do usuário
     const year = date.getFullYear();
     const month = (date.getMonth() + 1).toString().padStart(2, "0");
     const day = date.getDate().toString().padStart(2, "0");
     return `${year}-${month}-${day}`;
+  }
+
+  // Função para parsing robusto de string "YYYY-MM-DD" para Date local
+  function parseLocalDateFromYYYYMMDD(dateString: string): Date | undefined {
+    if (!dateString) return undefined;
+    const [year, month, day] = dateString.split('-').map(Number);
+    if (!year || !month || !day) return undefined;
+    // new Date(year, monthIndex, day) => cria data local
+    return new Date(year, month - 1, day);
   }
 
   // Helper para datas de recorrência
@@ -229,7 +237,7 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
             <div>
               <Label htmlFor="due_date">Vencimento *</Label>
               <DatePicker
-                date={formData.due_date ? new Date(formData.due_date) : undefined}
+                date={parseLocalDateFromYYYYMMDD(formData.due_date)}
                 onDateChange={date =>
                   setFormData(f => ({
                     ...f,
