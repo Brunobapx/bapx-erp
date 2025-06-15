@@ -16,6 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useActiveFinancialAccounts } from "@/hooks/useActiveFinancialAccounts";
 
 interface NewReceivableModalProps {
   isOpen: boolean;
@@ -29,7 +30,8 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
     client: '',
     description: '',
     amount: '',
-    saleId: ''
+    saleId: '',
+    account: '', // novo campo
   });
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isDateOpen, setIsDateOpen] = useState(false);
@@ -39,6 +41,8 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
   const [recorrente, setRecorrente] = useState(false);
   const [frequencia, setFrequencia] = useState<Frequencia>("mensal");
   const [qtdRepeticoes, setQtdRepeticoes] = useState(1);
+
+  const { accounts, loading: loadingAccounts } = useActiveFinancialAccounts();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -67,6 +71,10 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
       toast.error('Preencha todos os campos obrigatórios');
       return;
     }
+    if (!formData.account) {
+      toast.error("Selecione uma conta bancária!");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -85,6 +93,7 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
         amount: parseFloat(formData.amount),
         due_date: date.toISOString().slice(0, 10),
         sale_id: formData.saleId || null,
+        account: formData.account,
         type: "receivable",
         payment_status: "pending",
       }));
@@ -108,7 +117,8 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
       client: '',
       description: '',
       amount: '',
-      saleId: ''
+      saleId: '',
+      account: ''
     });
     setSelectedDate(null);
     setRecorrente(false);
@@ -169,6 +179,32 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
                 placeholder="V-001"
               />
             </div>
+          </div>
+
+          {/* Campo de seleção de conta bancária */}
+          <div className="grid gap-2">
+            <Label htmlFor="account">Conta Bancária *</Label>
+            <Select
+              value={formData.account}
+              onValueChange={val => setFormData(f => ({ ...f, account: val }))}
+              disabled={loadingAccounts}
+            >
+              <SelectTrigger id="account">
+                <SelectValue placeholder={loadingAccounts ? "Carregando contas..." : "Selecione a conta bancária"} />
+              </SelectTrigger>
+              <SelectContent>
+                {accounts?.length === 0 && (
+                  <SelectItem value="" disabled>
+                    Nenhuma conta ativa encontrada
+                  </SelectItem>
+                )}
+                {accounts && accounts.map(acc => (
+                  <SelectItem key={acc.id} value={acc.name}>
+                    {acc.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid gap-2">
