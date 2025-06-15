@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import { NewPayableModal } from './NewPayableModal';
 import { EditPayableModal } from './EditPayableModal';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { DateRangeFilter } from "./DateRangeFilter";
 
 interface AccountPayable {
   id: string;
@@ -36,6 +37,9 @@ export const AccountsPayableTab = () => {
   const [accountsPayable, setAccountsPayable] = useState<AccountPayable[]>([]);
   const [loading, setLoading] = useState(true);
   const [editAccount, setEditAccount] = useState<AccountPayable | null>(null);
+  const [period, setPeriod] = useState<{ startDate: Date | null, endDate: Date | null }>({
+    startDate: null, endDate: null
+  });
 
   useEffect(() => {
     loadAccountsPayable();
@@ -112,11 +116,20 @@ export const AccountsPayableTab = () => {
     }
   };
 
-  const filteredAccounts = accountsPayable.filter(account =>
-    account.supplier_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    account.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    account.invoice_number?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredAccounts = useMemo(() => {
+    let accts = [...accountsPayable];
+    if (period.startDate && period.endDate) {
+      accts = accts.filter(account => {
+        const due = new Date(String(account.due_date));
+        return due >= period.startDate! && due <= period.endDate!;
+      });
+    }
+    return accts.filter(account =>
+      account.supplier_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      account.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      account.invoice_number?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [accountsPayable, searchQuery, period]);
 
   const totalVencido = accountsPayable
     .filter(account => account.status === 'overdue')
@@ -188,7 +201,7 @@ export const AccountsPayableTab = () => {
         </Card>
       </div>
 
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-center gap-2">
         <div className="relative w-full max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -197,6 +210,9 @@ export const AccountsPayableTab = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-8"
           />
+        </div>
+        <div>
+            <DateRangeFilter range={period} onChange={setPeriod} label="Filtrar por período" />
         </div>
       </div>
 

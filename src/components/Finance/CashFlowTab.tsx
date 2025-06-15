@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CalendarDays, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
@@ -12,9 +11,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useCashFlow } from '@/hooks/useCashFlow';
+import { DateRangeFilter } from "./DateRangeFilter";
 
 export const CashFlowTab = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('month');
+  const [dateRange, setDateRange] = useState<{ startDate: Date | null, endDate: Date | null }>({
+    startDate: null, endDate: null
+  });
   const { cashFlowData, loading, error } = useCashFlow();
 
   if (loading) {
@@ -39,22 +42,33 @@ export const CashFlowTab = () => {
     );
   }
 
-  const totalEntradas = cashFlowData
+  const filteredData = useMemo(() => {
+    if (dateRange.startDate && dateRange.endDate) {
+      return cashFlowData.filter(item => {
+        const dt = new Date(item.date);
+        return dt >= dateRange.startDate! && dt <= dateRange.endDate!;
+      });
+    }
+    return cashFlowData;
+  }, [cashFlowData, dateRange]);
+
+  const totalEntradas = filteredData
     .filter(item => item.type === 'entrada')
     .reduce((sum, item) => sum + item.amount, 0);
 
-  const totalSaidas = cashFlowData
+  const totalSaidas = filteredData
     .filter(item => item.type === 'saida')
     .reduce((sum, item) => sum + item.amount, 0);
 
-  const saldoFinal = cashFlowData.length > 0 ? cashFlowData[cashFlowData.length - 1].balance : 0;
+  const saldoFinal = filteredData.length > 0 ? filteredData[filteredData.length - 1].balance : 0;
   const saldoLiquido = totalEntradas - totalSaidas;
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-center gap-2">
         <h2 className="text-lg font-semibold">Fluxo de Caixa</h2>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap items-center">
+          <DateRangeFilter range={dateRange} onChange={setDateRange} label="Filtrar por período" />
           <Button 
             variant={selectedPeriod === 'week' ? 'default' : 'outline'} 
             size="sm"
@@ -147,7 +161,7 @@ export const CashFlowTab = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {cashFlowData.map((item) => (
+              {filteredData.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell>{new Date(item.date).toLocaleDateString('pt-BR')}</TableCell>
                   <TableCell>{item.description}</TableCell>
@@ -166,7 +180,7 @@ export const CashFlowTab = () => {
               ))}
             </TableBody>
           </Table>
-          {cashFlowData.length === 0 && (
+          {filteredData.length === 0 && (
             <div className="p-4 text-center text-muted-foreground">
               Nenhuma movimentação encontrada.
             </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,11 +15,15 @@ import { NewReceivableModal } from './NewReceivableModal';
 import { useAccountsReceivable } from '@/hooks/useAccountsReceivable';
 import { toast } from "sonner";
 import { EditReceivableModal } from './EditReceivableModal';
+import { DateRangeFilter } from "./DateRangeFilter";
 
 export const AccountsReceivableTab = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewReceivableModal, setShowNewReceivableModal] = useState(false);
   const [editAccount, setEditAccount] = useState<any>(null);
+  const [period, setPeriod] = useState<{ startDate: Date | null, endDate: Date | null }>({
+    startDate: null, endDate: null
+  });
   const { accountsReceivable, loading, error, confirmReceivable, refreshReceivables } = useAccountsReceivable();
 
   const handleEditReceivable = (account: any) => {
@@ -63,10 +67,20 @@ export const AccountsReceivableTab = () => {
     );
   }
 
-  const filteredAccounts = accountsReceivable.filter(account =>
-    account.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    account.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filtro aplicado por período (conversão str->Date para comparação)
+  const filteredAccounts = useMemo(() => {
+    let accts = [...accountsReceivable];
+    if (period.startDate && period.endDate) {
+      accts = accts.filter(account => {
+        const due = new Date(String(account.dueDate));
+        return due >= period.startDate! && due <= period.endDate!;
+      });
+    }
+    return accts.filter(account =>
+      account.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      account.description.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [accountsReceivable, searchQuery, period]);
 
   const totalRecebido = accountsReceivable
     .filter(account => account.status === 'recebido')
@@ -127,7 +141,7 @@ export const AccountsReceivableTab = () => {
         </Card>
       </div>
 
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-center gap-2">
         <div className="relative w-full max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -136,6 +150,9 @@ export const AccountsReceivableTab = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-8"
           />
+        </div>
+        <div>
+          <DateRangeFilter range={period} onChange={setPeriod} label="Filtrar por período" />
         </div>
       </div>
 
