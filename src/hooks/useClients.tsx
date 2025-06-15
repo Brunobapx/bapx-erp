@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+
+import { useCallback, useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export type Client = {
   id: string;
@@ -21,73 +23,59 @@ export type Client = {
   user_id?: string;
 };
 
+async function fetchClients() {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    throw new Error('Usuário não autenticado');
+  }
+
+  const { data, error } = await supabase
+    .from('clients')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('name', { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return Array.isArray(data) ? data as Client[] : [];
+}
+
 export const useClients = () => {
-  const [allClients, setAllClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const fetchClients = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-        if (userError) {
-          setError('Usuário não autenticado');
-          throw new Error('Usuário não autenticado');
-        }
-
-        if (!user) {
-          setError('Usuário não encontrado');
-          throw new Error('Usuário não encontrado');
-        }
-
-        const { data, error } = await supabase
-          .from('clients')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('name', { ascending: true });
-
-        if (error) {
-          throw error;
-        }
-
-        const clientsData = Array.isArray(data) ? data : [];
-        setAllClients(clientsData);
-
-      } catch (err: any) {
-        setError(err.message || 'Erro ao carregar clientes');
-        if (!err.message?.includes('não autenticado')) {
-          toast.error('Erro ao carregar clientes: ' + (err.message || 'Erro desconhecido'));
-        }
-        setAllClients([]);
-      } finally {
-        setLoading(false);
+  const {
+    data: allClients = [],
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery<Client[], Error>({
+    queryKey: ['clients'],
+    queryFn: fetchClients,
+    staleTime: 1000 * 60 * 10, // 10 min cache
+    onError: (err) => {
+      if (!err.message.includes('não autenticado')) {
+        toast.error('Erro ao carregar clientes: ' + (err.message || 'Erro desconhecido'));
       }
-    };
+    },
+  });
 
-    fetchClients();
-  }, [refreshTrigger]);
+  const refreshClients = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['clients'] });
+  }, [queryClient]);
 
-  const refreshClients = () => {
-    console.log('useClients - Atualizando lista de clientes...');
-    setRefreshTrigger(prev => prev + 1);
-  };
-
-  const getClientById = (clientId: string) => {
-    return allClients.find(client => client.id === clientId);
-  };
+  const getClientById = useCallback(
+    (clientId: string) => allClients.find(c => c.id === clientId),
+    [allClients]
+  );
 
   // Função para buscar clientes com termo de pesquisa
-  const searchClients = (searchTerm: string) => {
+  const searchClients = useCallback((searchTerm: string) => {
     if (!searchTerm || searchTerm.trim() === '') {
       return allClients;
     }
-    
     const searchString = searchTerm.toLowerCase();
     return allClients.filter(client => {
       return (
@@ -97,20 +85,19 @@ export const useClients = () => {
         (client.email && client.email.toLowerCase().includes(searchString))
       );
     });
-  };
+  }, [allClients]);
 
-  // Filter clients based on search query
-  const filteredClients = searchClients(searchQuery);
+  const filteredClients = useMemo(() => searchClients(searchQuery), [allClients, searchQuery, searchClients]);
 
   return {
     clients: filteredClients,
     allClients,
     loading,
-    error,
+    error: error ? error.message : null,
     searchQuery,
     setSearchQuery,
     refreshClients,
     getClientById,
-    searchClients
+    searchClients,
   };
 };
