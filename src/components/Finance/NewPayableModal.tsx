@@ -232,32 +232,30 @@ export const NewPayableModal = ({ isOpen, onClose, onSuccess }: NewPayableModalP
                 required
               />
             </div>
-          </div>
-
-          <div>
-            <Label htmlFor="category">Categoria *</Label>
-            <Select
-              value={formData.category}
-              onValueChange={(value) =>
-                setFormData({ ...formData, category: value })
-              }
-              disabled={categoriesLoading}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={categoriesLoading ? "Carregando categorias..." : "Selecione a categoria"} />
-              </SelectTrigger>
-              <SelectContent>
-                {/* Apenas categorias do tipo despesa e ativas */}
-                {financialCategories
-                  .filter(cat => cat.type === "despesa" && cat.is_active)
-                  .map(cat => (
-                    <SelectItem key={cat.id} value={cat.name}>
-                      {cat.name}
-                    </SelectItem>
-                  ))
+            <div>
+              <Label htmlFor="category">Categoria *</Label>
+              <Select
+                value={formData.category}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, category: value })
                 }
-              </SelectContent>
-            </Select>
+                disabled={categoriesLoading}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={categoriesLoading ? "Carregando categorias..." : "Selecione a categoria"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {financialCategories
+                    .filter(cat => cat.type === "despesa" && cat.is_active)
+                    .map(cat => (
+                      <SelectItem key={cat.id} value={cat.name}>
+                        {cat.name}
+                      </SelectItem>
+                    ))
+                  }
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div>
