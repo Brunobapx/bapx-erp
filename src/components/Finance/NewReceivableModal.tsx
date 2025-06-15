@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -17,6 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useActiveFinancialAccounts } from "@/hooks/useActiveFinancialAccounts";
+import ReceivableBankAccountSelect from "./ReceivableBankAccountSelect";
+import ReceivableRecurrenceFields from "./ReceivableRecurrenceFields";
 
 interface NewReceivableModalProps {
   isOpen: boolean;
@@ -134,6 +135,7 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
         </DialogHeader>
         
         <div className="grid gap-4 py-4">
+          {/* Cliente */}
           <div className="grid gap-2">
             <Label htmlFor="client">Cliente *</Label>
             <Input
@@ -145,6 +147,7 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
             />
           </div>
 
+          {/* Descrição */}
           <div className="grid gap-2">
             <Label htmlFor="description">Descrição *</Label>
             <Textarea
@@ -156,6 +159,7 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
             />
           </div>
 
+          {/* Valores */}
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="amount">Valor *</Label>
@@ -181,32 +185,13 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
             </div>
           </div>
 
-          {/* Campo de seleção de conta bancária */}
-          <div className="grid gap-2">
-            <Label htmlFor="account">Conta Bancária *</Label>
-            <Select
-              value={formData.account}
-              onValueChange={val => setFormData(f => ({ ...f, account: val }))}
-              disabled={loadingAccounts}
-            >
-              <SelectTrigger id="account">
-                <SelectValue placeholder={loadingAccounts ? "Carregando contas..." : "Selecione a conta bancária"} />
-              </SelectTrigger>
-              <SelectContent>
-                {accounts?.length === 0 && (
-                  <SelectItem value="" disabled>
-                    Nenhuma conta ativa encontrada
-                  </SelectItem>
-                )}
-                {accounts && accounts.map(acc => (
-                  <SelectItem key={acc.id} value={acc.name}>
-                    {acc.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Conta bancária */}
+          <ReceivableBankAccountSelect
+            value={formData.account}
+            onValueChange={val => setFormData(f => ({ ...f, account: val }))}
+          />
 
+          {/* Data de vencimento */}
           <div className="grid gap-2">
             <Label>Data de Vencimento *</Label>
             <DateSelector
@@ -218,44 +203,15 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
             />
           </div>
 
-          <div className="flex items-center gap-2 mt-2">
-            <Switch
-              checked={recorrente}
-              onCheckedChange={setRecorrente}
-              id="recorrente"
-            />
-            <Label htmlFor="recorrente">Cobrança Recorrente?</Label>
-          </div>
-
-          {recorrente && (
-            <div className="grid md:grid-cols-3 gap-3">
-              <div>
-                <Label htmlFor="freq">Frequência</Label>
-                <Select value={frequencia} onValueChange={v => setFrequencia(v as Frequencia)}>
-                  <SelectTrigger id="freq">
-                    <SelectValue placeholder="Frequência" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="mensal">Mensal</SelectItem>
-                    <SelectItem value="quinzenal">Quinzenal</SelectItem>
-                    <SelectItem value="anual">Anual</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="repeticoes">Nº de repetições</Label>
-                <Input
-                  id="repeticoes"
-                  type="number"
-                  min={1}
-                  value={qtdRepeticoes}
-                  onChange={e => setQtdRepeticoes(Number(e.target.value))}
-                  disabled={!recorrente}
-                />
-              </div>
-            </div>
-          )}
-
+          {/* Campos de recorrência */}
+          <ReceivableRecurrenceFields
+            recorrente={recorrente}
+            setRecorrente={setRecorrente}
+            frequencia={frequencia}
+            setFrequencia={setFrequencia}
+            qtdRepeticoes={qtdRepeticoes}
+            setQtdRepeticoes={setQtdRepeticoes}
+          />
         </div>
         
         <DialogFooter>
