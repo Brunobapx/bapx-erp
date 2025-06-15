@@ -12,12 +12,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DateSelector } from "@/components/Orders/DateSelector";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface NewReceivableModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
+
+type Frequencia = "mensal" | "quinzenal" | "anual";
 
 export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps) => {
   const [formData, setFormData] = useState({
@@ -30,10 +35,32 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
   const [isDateOpen, setIsDateOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Campos de recorrência
+  const [recorrente, setRecorrente] = useState(false);
+  const [frequencia, setFrequencia] = useState<Frequencia>("mensal");
+  const [qtdRepeticoes, setQtdRepeticoes] = useState(1);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
+
+  // Helper para calcular próxima data
+  function addPeriodo(date: Date, freq: Frequencia, times: number) {
+    const result = [];
+    let baseDate = new Date(date);
+    for (let i = 0; i < times; i++) {
+      result.push(new Date(baseDate));
+      if (freq === "mensal") {
+        baseDate.setMonth(baseDate.getMonth() + 1);
+      } else if (freq === "quinzenal") {
+        baseDate.setDate(baseDate.getDate() + 15);
+      } else if (freq === "anual") {
+        baseDate.setFullYear(baseDate.getFullYear() + 1);
+      }
+    }
+    return result;
+  }
 
   const handleSubmit = async () => {
     if (!formData.client || !formData.description || !formData.amount || !selectedDate) {
@@ -43,17 +70,32 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
 
     setIsSubmitting(true);
     try {
-      // Aqui seria feita a integração com o backend
-      console.log('Nova cobrança:', {
-        ...formData,
-        dueDate: selectedDate,
-        amount: parseFloat(formData.amount)
-      });
-      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
+
+      let datas: Date[] = [selectedDate];
+      if (recorrente && qtdRepeticoes > 1) {
+        datas = addPeriodo(selectedDate, frequencia, qtdRepeticoes);
+      }
+
+      const inserts = datas.map(date => ({
+        user_id: user.id,
+        client: formData.client,
+        description: formData.description,
+        amount: parseFloat(formData.amount),
+        due_date: date.toISOString().slice(0, 10),
+        sale_id: formData.saleId || null,
+        type: "receivable",
+        payment_status: "pending",
+      }));
+
+      const { error } = await supabase.from('financial_entries').insert(inserts);
+      if (error) throw error;
+
       toast.success('Cobrança criada com sucesso!');
       onClose();
       resetForm();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao criar cobrança:', error);
       toast.error('Erro ao criar cobrança');
     } finally {
@@ -69,6 +111,9 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
       saleId: ''
     });
     setSelectedDate(null);
+    setRecorrente(false);
+    setQtdRepeticoes(1);
+    setFrequencia("mensal");
   };
 
   return (
@@ -136,6 +181,45 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
               label="Selecione a data de vencimento"
             />
           </div>
+
+          <div className="flex items-center gap-2 mt-2">
+            <Switch
+              checked={recorrente}
+              onCheckedChange={setRecorrente}
+              id="recorrente"
+            />
+            <Label htmlFor="recorrente">Cobrança Recorrente?</Label>
+          </div>
+
+          {recorrente && (
+            <div className="grid md:grid-cols-3 gap-3">
+              <div>
+                <Label htmlFor="freq">Frequência</Label>
+                <Select value={frequencia} onValueChange={v => setFrequencia(v as Frequencia)}>
+                  <SelectTrigger id="freq">
+                    <SelectValue placeholder="Frequência" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mensal">Mensal</SelectItem>
+                    <SelectItem value="quinzenal">Quinzenal</SelectItem>
+                    <SelectItem value="anual">Anual</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="repeticoes">Nº de repetições</Label>
+                <Input
+                  id="repeticoes"
+                  type="number"
+                  min={1}
+                  value={qtdRepeticoes}
+                  onChange={e => setQtdRepeticoes(Number(e.target.value))}
+                  disabled={!recorrente}
+                />
+              </div>
+            </div>
+          )}
+
         </div>
         
         <DialogFooter>

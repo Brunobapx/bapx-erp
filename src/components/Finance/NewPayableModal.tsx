@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -19,6 +20,8 @@ interface NewPayableModalProps {
   onClose: () => void;
   onSuccess?: () => void;
 }
+
+type Frequencia = "mensal" | "quinzenal" | "anual";
 
 export const NewPayableModal = ({ isOpen, onClose, onSuccess }: NewPayableModalProps) => {
   const [formData, setFormData] = useState({
@@ -31,6 +34,27 @@ export const NewPayableModal = ({ isOpen, onClose, onSuccess }: NewPayableModalP
     notes: ''
   });
   const [loading, setLoading] = useState(false);
+
+  // Recorrência
+  const [recorrente, setRecorrente] = useState(false);
+  const [frequencia, setFrequencia] = useState<Frequencia>('mensal');
+  const [qtdRepeticoes, setQtdRepeticoes] = useState(1);
+
+  function addPeriodo(date: Date, freq: Frequencia, times: number) {
+    const result = [];
+    let baseDate = new Date(date);
+    for (let i = 0; i < times; i++) {
+      result.push(new Date(baseDate));
+      if (freq === "mensal") {
+        baseDate.setMonth(baseDate.getMonth() + 1);
+      } else if (freq === "quinzenal") {
+        baseDate.setDate(baseDate.getDate() + 15);
+      } else if (freq === "anual") {
+        baseDate.setFullYear(baseDate.getFullYear() + 1);
+      }
+    }
+    return result;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,20 +69,26 @@ export const NewPayableModal = ({ isOpen, onClose, onSuccess }: NewPayableModalP
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
+      let datas: Date[] = [new Date(formData.due_date)];
+      if (recorrente && qtdRepeticoes > 1) {
+        datas = addPeriodo(new Date(formData.due_date), frequencia, qtdRepeticoes);
+      }
+
+      const inserts = datas.map(date => ({
+        user_id: user.id,
+        supplier_name: formData.supplier_name,
+        description: formData.description,
+        amount: parseFloat(formData.amount),
+        due_date: date.toISOString().slice(0, 10),
+        category: formData.category,
+        invoice_number: formData.invoice_number || null,
+        notes: formData.notes || null,
+        status: 'pending'
+      }));
+
       const { error } = await supabase
         .from('accounts_payable')
-        .insert({
-          user_id: user.id,
-          supplier_name: formData.supplier_name,
-          description: formData.description,
-          amount: parseFloat(formData.amount),
-          due_date: formData.due_date,
-          category: formData.category,
-          invoice_number: formData.invoice_number || null,
-          notes: formData.notes || null,
-          status: 'pending'
-        });
-
+        .insert(inserts);
       if (error) throw error;
 
       toast.success('Conta a pagar criada com sucesso!');
@@ -73,6 +103,11 @@ export const NewPayableModal = ({ isOpen, onClose, onSuccess }: NewPayableModalP
       });
       onClose();
       if (onSuccess) onSuccess();
+
+      // Reset recorrência
+      setRecorrente(false);
+      setQtdRepeticoes(1);
+      setFrequencia('mensal');
     } catch (error: any) {
       console.error('Erro ao criar conta a pagar:', error);
       toast.error('Erro ao criar conta a pagar');
@@ -172,6 +207,40 @@ export const NewPayableModal = ({ isOpen, onClose, onSuccess }: NewPayableModalP
               rows={3}
             />
           </div>
+
+          <div className="flex items-center gap-2 mt-2">
+            <Switch checked={recorrente} onCheckedChange={setRecorrente} id="recorrente"/>
+            <Label htmlFor="recorrente">Conta Recorrente?</Label>
+          </div>
+
+          {recorrente && (
+            <div className="grid md:grid-cols-3 gap-3">
+              <div>
+                <Label htmlFor="freq">Frequência</Label>
+                <Select value={frequencia} onValueChange={v => setFrequencia(v as Frequencia)}>
+                  <SelectTrigger id="freq">
+                    <SelectValue placeholder="Frequência" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mensal">Mensal</SelectItem>
+                    <SelectItem value="quinzenal">Quinzenal</SelectItem>
+                    <SelectItem value="anual">Anual</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="repeticoes">Nº de repetições</Label>
+                <Input
+                  id="repeticoes"
+                  type="number"
+                  min={1}
+                  value={qtdRepeticoes}
+                  onChange={e => setQtdRepeticoes(Number(e.target.value))}
+                  disabled={!recorrente}
+                />
+              </div>
+            </div>
+          )}
 
           <div className="flex justify-end gap-3 pt-4">
             <Button type="button" variant="outline" onClick={onClose}>
