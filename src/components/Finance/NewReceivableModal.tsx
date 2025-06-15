@@ -49,7 +49,7 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div>
+            <div className="col-span-2 sm:col-span-1">
               <label className="block mb-1 font-medium">Cliente *</label>
               <ReceivableClientSelector
                 selectedClientId={formData.client_id}
@@ -57,8 +57,6 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
                 onSelect={handleClientSelect}
               />
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="invoice_number">Número NF/Documento</Label>
               <Input

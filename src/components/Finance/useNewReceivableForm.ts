@@ -79,7 +79,6 @@ export function useNewReceivableForm(onClose: () => void) {
       if (recorrente && qtdRepeticoes > 1) {
         datas = addPeriodo(new Date(formData.due_date), frequencia, qtdRepeticoes);
       }
-      // sale_id removido do insert
       const inserts = datas.map(date => ({
         user_id: user.id,
         client_id: formData.client_id,
