@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import VendorSelector from "./VendorSelector";
+import { useActiveFinancialAccounts } from "@/hooks/useActiveFinancialAccounts";
 
 interface NewPayableModalProps {
   isOpen: boolean;
@@ -31,7 +32,8 @@ export const NewPayableModal = ({ isOpen, onClose, onSuccess }: NewPayableModalP
     due_date: '',
     category: 'Compras',
     invoice_number: '',
-    notes: ''
+    notes: '',
+    account: '', // nova linha, campo account
   });
   const [loading, setLoading] = useState(false);
 
@@ -58,6 +60,9 @@ export const NewPayableModal = ({ isOpen, onClose, onSuccess }: NewPayableModalP
 
   const [selectedVendorId, setSelectedVendorId] = useState<string | undefined>(undefined);
   const [selectedVendorName, setSelectedVendorName] = useState<string>("");
+
+  // pega contas bancárias ativas
+  const { accounts, loading: accountsLoading } = useActiveFinancialAccounts();
 
   useEffect(() => {
     // Reset vendor selection when closing/creating
@@ -92,6 +97,11 @@ export const NewPayableModal = ({ isOpen, onClose, onSuccess }: NewPayableModalP
       return;
     }
 
+    if (!formData.account) {
+      toast.error('Selecione uma conta bancária');
+      return;
+    }
+
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
@@ -111,7 +121,8 @@ export const NewPayableModal = ({ isOpen, onClose, onSuccess }: NewPayableModalP
         category: formData.category,
         invoice_number: formData.invoice_number || null,
         notes: formData.notes || null,
-        status: 'pending'
+        status: 'pending',
+        account: formData.account, // novo campo
       }));
 
       const { error } = await supabase
@@ -127,7 +138,8 @@ export const NewPayableModal = ({ isOpen, onClose, onSuccess }: NewPayableModalP
         due_date: '',
         category: 'Compras',
         invoice_number: '',
-        notes: ''
+        notes: '',
+        account: '', // limpa conta também
       });
       onClose();
       if (onSuccess) onSuccess();
@@ -171,17 +183,6 @@ export const NewPayableModal = ({ isOpen, onClose, onSuccess }: NewPayableModalP
             </div>
           </div>
 
-          <div>
-            <Label htmlFor="description">Descrição *</Label>
-            <Input
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({...formData, description: e.target.value})}
-              placeholder="Descrição da conta"
-              required
-            />
-          </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="amount">Valor *</Label>
@@ -197,6 +198,39 @@ export const NewPayableModal = ({ isOpen, onClose, onSuccess }: NewPayableModalP
                 pattern="[0-9]*[.,]?[0-9]*"
               />
             </div>
+            <div>
+              <Label htmlFor="bank-account">Contas bancárias/Caixa *</Label>
+              <Select
+                value={formData.account}
+                onValueChange={val => setFormData(f => ({ ...f, account: val }))}
+                disabled={accountsLoading}
+              >
+                <SelectTrigger id="bank-account">
+                  <SelectValue placeholder={accountsLoading ? "Carregando contas..." : "Selecione a conta"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map(acc => (
+                    <SelectItem value={acc.name} key={acc.id}>
+                      {acc.name} {/* pode customizar: {acc.name} ({acc.bank || "sem banco"}) */}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="description">Descrição *</Label>
+            <Input
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({...formData, description: e.target.value})}
+              placeholder="Descrição da conta"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="due_date">Vencimento *</Label>
               <Input
