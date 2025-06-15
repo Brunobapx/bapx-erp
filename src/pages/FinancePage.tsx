@@ -132,7 +132,7 @@ const FinancePage = () => {
       <StageAlert alerts={alerts} onDismiss={handleDismissAlert} />
       
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="overview">Visão Geral</TabsTrigger>
           <TabsTrigger value="cash-flow">Fluxo de Caixa</TabsTrigger>
           <TabsTrigger value="accounts-payable">Contas a Pagar</TabsTrigger>
@@ -140,6 +140,7 @@ const FinancePage = () => {
           <TabsTrigger value="dre">DRE</TabsTrigger>
           <TabsTrigger value="reports">Relatórios</TabsTrigger>
           <TabsTrigger value="settings">Configurações</TabsTrigger>
+          <TabsTrigger value="conciliacao-bancaria">Conciliação Bancária</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
@@ -273,6 +274,17 @@ const FinancePage = () => {
 
         <TabsContent value="settings">
           <FinanceSettingsTab />
+        </TabsContent>
+
+        <TabsContent value="conciliacao-bancaria" className="mt-6">
+          <React.Suspense fallback={<div>Carregando...</div>}>
+            {typeof window !== "undefined" && (
+              <div>
+                {/* Nova aba de Conciliação Bancária */}
+                {React.createElement(require('@/components/Finance/ConciliacaoBancariaTab').default)}
+              </div>
+            )}
+          </React.Suspense>
         </TabsContent>
       </Tabs>
       

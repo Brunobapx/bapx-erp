@@ -372,6 +372,41 @@ export type Database = {
           },
         ]
       }
+      conciliacoes: {
+        Row: {
+          created_at: string
+          id: string
+          id_lancamento_interno: string
+          id_transacao_banco: string
+          metodo_conciliacao: string
+          tipo_lancamento: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          id_lancamento_interno: string
+          id_transacao_banco: string
+          metodo_conciliacao: string
+          tipo_lancamento: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          id_lancamento_interno?: string
+          id_transacao_banco?: string
+          metodo_conciliacao?: string
+          tipo_lancamento?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conciliacoes_id_transacao_banco_fkey"
+            columns: ["id_transacao_banco"]
+            isOneToOne: false
+            referencedRelation: "extrato_bancario_importado"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_routes: {
         Row: {
           client_id: string
@@ -463,6 +498,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      extrato_bancario_importado: {
+        Row: {
+          arquivo_origem: string | null
+          created_at: string
+          data: string
+          descricao: string
+          id: string
+          status: string
+          tipo: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          arquivo_origem?: string | null
+          created_at?: string
+          data: string
+          descricao: string
+          id?: string
+          status?: string
+          tipo: string
+          user_id: string
+          valor: number
+        }
+        Update: {
+          arquivo_origem?: string | null
+          created_at?: string
+          data?: string
+          descricao?: string
+          id?: string
+          status?: string
+          tipo?: string
+          user_id?: string
+          valor?: number
+        }
+        Relationships: []
       }
       financial_accounts: {
         Row: {
