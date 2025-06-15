@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -71,6 +70,7 @@ export const Sidebar = () => {
     { path: "/financeiro", text: "Financeiro", icon: DollarSign },
     { path: "/rotas", text: "Roteirização", icon: Truck },
     { path: "/calendario", text: "Calendário", icon: Calendar },
+    { path: "/ordens-servico", text: "Ordens de Serviço", icon: FilePen },
     { path: "/configuracoes", text: "Configurações", icon: Settings },
   ];
 
@@ -134,3 +134,5 @@ export const Sidebar = () => {
     </aside>
   );
 };
+
+export { Sidebar };
