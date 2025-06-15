@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+
+import { useState } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export type Product = {
   id: string;
@@ -15,7 +17,7 @@ export type Product = {
   cost?: number;
   stock?: number;
   is_manufactured?: boolean;
-  is_direct_sale?: boolean; // NOVO CAMPO
+  is_direct_sale?: boolean;
   tax_type?: string;
   icms?: string;
   ipi?: string;
@@ -26,67 +28,56 @@ export type Product = {
   user_id?: string;
 };
 
+async function fetchProducts() {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    throw new Error('Usuário não autenticado');
+  }
+
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('name', { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return Array.isArray(data) ? data as Product[] : [];
+}
+
 export const useProducts = () => {
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
-        if (userError || !user) {
-          throw new Error('Usuário não autenticado');
+  const {
+    data: allProducts = [],
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery<Product[], Error>({
+    queryKey: ['products'],
+    queryFn: fetchProducts,
+    staleTime: 1000 * 60 * 10,
+    meta: {
+      onError: (err: Error) => {
+        if (!err.message.includes('não autenticado')) {
+          toast.error('Erro ao carregar produtos: ' + (err.message || 'Erro desconhecido'));
         }
-
-        const { data, error } = await supabase
-          .from('products')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('name', { ascending: true });
-
-        if (error) {
-          throw error;
-        }
-
-        console.log("Products loaded:", data?.length || 0);
-        // Garantir que sempre temos um array válido
-        setAllProducts(Array.isArray(data) ? data : []);
-      } catch (err: any) {
-        console.error('Error fetching products:', err);
-        setError(err.message || 'Erro ao carregar produtos');
-        toast.error('Erro ao carregar produtos');
-        // Garantir array vazio em caso de erro
-        setAllProducts([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, [refreshTrigger]);
+      },
+    },
+  });
 
   const refreshProducts = () => {
-    setRefreshTrigger(prev => prev + 1);
+    queryClient.invalidateQueries({ queryKey: ['products'] });
   };
 
-  // Função para buscar produtos com termo de pesquisa
+  // Busca/filtragem em memória (memoizada)
   const searchProducts = (searchTerm: string) => {
-    // Garantir que allProducts sempre é um array válido
-    const safeProducts = Array.isArray(allProducts) ? allProducts : [];
-    
-    if (!searchTerm || searchTerm.trim() === '') {
-      return safeProducts;
-    }
-    
+    if (!searchTerm || searchTerm.trim() === '') return allProducts;
     const searchString = searchTerm.toLowerCase();
-    return safeProducts.filter(product => {
+    return allProducts.filter(product => {
       return (
         (product.name && product.name.toLowerCase().includes(searchString)) ||
         (product.code && product.code.toLowerCase().includes(searchString)) ||
@@ -97,16 +88,16 @@ export const useProducts = () => {
     });
   };
 
-  // Filter products based on search query - sempre retornar array válido
   const filteredProducts = searchProducts(searchQuery);
 
   return {
     products: Array.isArray(filteredProducts) ? filteredProducts : [],
     loading,
-    error,
+    error: error ? error.message : null,
     searchQuery,
     setSearchQuery,
     refreshProducts,
-    searchProducts
+    searchProducts,
+    refetch
   };
 };
