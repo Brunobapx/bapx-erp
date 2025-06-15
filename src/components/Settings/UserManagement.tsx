@@ -1,9 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from '@/components/Auth/AuthProvider';
-import RoleModulePermissions from './RoleModulePermissions';
 import ActiveUsersTable from './ActiveUsersTable';
 import CreateUserModal from './CreateUserModal';
 
@@ -142,12 +142,7 @@ export const UserManagement = () => {
           userRole={userRole}
         />
       </div>
-      {/* Mostra as permissões de módulos por perfil (SOMENTE MASTER) */}
-      {userRole === "master" && (
-        <div>
-          <RoleModulePermissions />
-        </div>
-      )}
+      {/* SESSÃO DE PERMISSÕES FOI REMOVIDA DAQUI */}
       <ActiveUsersTable
         users={users}
         availableRoles={availableRoles}

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,7 +8,8 @@ import { CompanySettings } from '@/components/Settings/CompanySettings';
 import { SecuritySettings } from '@/components/Settings/SecuritySettings';
 import { useAuth } from '@/components/Auth/AuthProvider';
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Settings, Users, User, Building, Shield } from 'lucide-react';
+import { ProfilesManagement } from '@/components/Settings/ProfilesManagement';
+import { Shield, Users, User, Building, Settings as SettingsIcon } from 'lucide-react';
 
 const SettingsPage = () => {
   const { userRole } = useAuth();
@@ -18,13 +18,13 @@ const SettingsPage = () => {
   const isMaster = userRole === 'master';
   const isAdmin = userRole === 'admin' || userRole === 'master';
 
-  // Definir número de colunas baseado no papel do usuário
-  const gridCols = isMaster ? 'grid-cols-5' : 'grid-cols-4';
+  // Mais uma coluna no grid para master devido à aba de Perfis
+  const gridCols = isMaster ? 'grid-cols-6' : 'grid-cols-5';
 
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center gap-3 mb-6">
-        <Settings className="h-8 w-8 text-primary" />
+        <SettingsIcon className="h-8 w-8 text-primary" />
         <h1 className="text-3xl font-bold">Configurações</h1>
       </div>
 
@@ -43,13 +43,20 @@ const SettingsPage = () => {
             Empresa
           </TabsTrigger>
           <TabsTrigger value="system" className="flex items-center gap-2" disabled={!isMaster}>
-            <Settings className="h-4 w-4" />
+            <SettingsIcon className="h-4 w-4" />
             Sistema
           </TabsTrigger>
           <TabsTrigger value="security" className="flex items-center gap-2" disabled={!isMaster}>
             <Shield className="h-4 w-4" />
             Segurança
           </TabsTrigger>
+          {/* Nova aba Perfis (apenas para master) */}
+          {isMaster && (
+            <TabsTrigger value="profiles" className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Perfis
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="profile">
@@ -103,6 +110,13 @@ const SettingsPage = () => {
             <SecuritySettings />
           )}
         </TabsContent>
+
+        {/* Aba nova de Perfis */}
+        {isMaster && (
+          <TabsContent value="profiles">
+            <ProfilesManagement />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
