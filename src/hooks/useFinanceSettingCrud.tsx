@@ -36,7 +36,7 @@ export function useFinanceSettingCrud<T extends BaseFinanceSetting>(
       if (error) throw error;
       setItems(data ?? []);
     } catch (err: any) {
-      setItems([]);
+      setItems([] as T[]); // Type cast fix for TS2345
       toast({ title: "Erro", description: err.message || String(err), variant: "destructive" });
     } finally {
       setLoading(false);
@@ -75,7 +75,7 @@ export function useFinanceSettingCrud<T extends BaseFinanceSetting>(
         if (error) throw error;
         record = data;
       }
-      toast({ title: "Salvo com sucesso", variant: "success" });
+      toast({ title: "Salvo com sucesso", variant: "default" }); // Use default instead of success
       await fetchItems();
       return record;
     } catch (err: any) {
@@ -91,7 +91,7 @@ export function useFinanceSettingCrud<T extends BaseFinanceSetting>(
     try {
       const { error } = await supabase.from(table).delete().eq("id", id);
       if (error) throw error;
-      toast({ title: "Removido com sucesso", variant: "success" });
+      toast({ title: "Removido com sucesso", variant: "default" }); // Use default instead of success
       await fetchItems();
     } catch (err: any) {
       toast({ title: "Erro", description: err.message || String(err), variant: "destructive" });
