@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { NewPayableModal } from './NewPayableModal';
+// FIXED: Use default import here
+import NewPayableModal from './NewPayableModal';
 import { EditPayableModal } from './EditPayableModal';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
