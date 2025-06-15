@@ -17,7 +17,7 @@ interface FormData {
   category: string;
   account: string;
   notes: string;
-  invoice_number: string; // NOVO campo
+  // invoice_number: string; // NOVO campo
 }
 
 export function useNewReceivableForm(onClose: () => void) {
@@ -30,7 +30,7 @@ export function useNewReceivableForm(onClose: () => void) {
     category: '',
     account: '',
     notes: '',
-    invoice_number: '',
+    // invoice_number: '', // Removido
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [recorrente, setRecorrente] = useState(false);
@@ -90,7 +90,7 @@ export function useNewReceivableForm(onClose: () => void) {
         notes: formData.notes || null,
         type: "receivable",
         payment_status: "pending",
-        invoice_number: formData.invoice_number || null,
+        // invoice_number: formData.invoice_number || null, // Removido
       }));
       const { error } = await supabase.from('financial_entries').insert(inserts);
       if (error) throw error;
@@ -115,7 +115,7 @@ export function useNewReceivableForm(onClose: () => void) {
       category: '',
       account: '',
       notes: '',
-      invoice_number: '',
+      // invoice_number: '', // Removido
     });
     setRecorrente(false);
     setQtdRepeticoes(1);

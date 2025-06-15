@@ -68,7 +68,7 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
               />
             </div>
           </div>
-          {/* Nova linha: Valor e Conta Bancária lado a lado */}
+          {/* Valor e Conta Bancária lado a lado */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="amount">Valor *</Label>
