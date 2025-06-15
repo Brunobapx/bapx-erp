@@ -1,65 +1,6 @@
 
 import { toast } from "sonner";
-
-// Função para validar CPF
-function validateCPF(cpf: string): boolean {
-  const cpfClean = cpf.replace(/[^\d]/g, '');
-  
-  if (cpfClean.length !== 11) return false;
-  
-  // Verificar sequências inválidas
-  if (/^(\d)\1{10}$/.test(cpfClean)) return false;
-  
-  // Calcular dígitos verificadores
-  let sum = 0;
-  for (let i = 0; i < 9; i++) {
-    sum += parseInt(cpfClean[i]) * (10 - i);
-  }
-  let digit1 = 11 - (sum % 11);
-  if (digit1 >= 10) digit1 = 0;
-  
-  sum = 0;
-  for (let i = 0; i < 10; i++) {
-    sum += parseInt(cpfClean[i]) * (11 - i);
-  }
-  let digit2 = 11 - (sum % 11);
-  if (digit2 >= 10) digit2 = 0;
-  
-  return (
-    parseInt(cpfClean[9]) === digit1 &&
-    parseInt(cpfClean[10]) === digit2
-  );
-}
-
-// Função para validar CNPJ
-function validateCNPJ(cnpj: string): boolean {
-  const cnpjClean = cnpj.replace(/[^\d]/g, '');
-  
-  if (cnpjClean.length !== 14) return false;
-  
-  // Calcular primeiro dígito verificador
-  const weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
-  let sum1 = 0;
-  for (let i = 0; i < 12; i++) {
-    sum1 += parseInt(cnpjClean[i]) * weights1[i];
-  }
-  let digit1 = sum1 % 11;
-  digit1 = digit1 < 2 ? 0 : 11 - digit1;
-  
-  // Calcular segundo dígito verificador
-  const weights2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
-  let sum2 = 0;
-  for (let i = 0; i < 13; i++) {
-    sum2 += parseInt(cnpjClean[i]) * weights2[i];
-  }
-  let digit2 = sum2 % 11;
-  digit2 = digit2 < 2 ? 0 : 11 - digit2;
-  
-  return (
-    parseInt(cnpjClean[12]) === digit1 &&
-    parseInt(cnpjClean[13]) === digit2
-  );
-}
+import { supabase } from "@/integrations/supabase/client";
 
 // Função para sanitizar entrada e prevenir XSS
 function sanitizeInput(input: string): string {
@@ -71,7 +12,37 @@ function sanitizeInput(input: string): string {
     .replace(/\//g, '&#x2F;');
 }
 
-export function validateClientForm(formData: any) {
+// Função para validar CPF usando a função do banco
+async function validateCPF(cpf: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.rpc('validate_cpf', { cpf });
+    if (error) {
+      console.error('Erro ao validar CPF:', error);
+      return false;
+    }
+    return data || false;
+  } catch (error) {
+    console.error('Erro ao validar CPF:', error);
+    return false;
+  }
+}
+
+// Função para validar CNPJ usando a função do banco
+async function validateCNPJ(cnpj: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.rpc('validate_cnpj', { cnpj });
+    if (error) {
+      console.error('Erro ao validar CNPJ:', error);
+      return false;
+    }
+    return data || false;
+  } catch (error) {
+    console.error('Erro ao validar CNPJ:', error);
+    return false;
+  }
+}
+
+export async function validateClientForm(formData: any) {
   // Sanitizar entradas de texto
   const sanitizedData = {
     ...formData,
@@ -99,7 +70,8 @@ export function validateClientForm(formData: any) {
       return false;
     }
     
-    if (!validateCNPJ(formData.cnpj)) {
+    const isValidCNPJ = await validateCNPJ(formData.cnpj);
+    if (!isValidCNPJ) {
       toast.error("CNPJ inválido. Verifique os dígitos informados.");
       return false;
     }
@@ -111,7 +83,8 @@ export function validateClientForm(formData: any) {
       return false;
     }
     
-    if (!validateCPF(formData.cpf)) {
+    const isValidCPF = await validateCPF(formData.cpf);
+    if (!isValidCPF) {
       toast.error("CPF inválido. Verifique os dígitos informados.");
       return false;
     }

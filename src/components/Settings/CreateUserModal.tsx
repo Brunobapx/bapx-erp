@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,9 +9,9 @@ import { RefreshCw } from 'lucide-react';
 import { z } from 'zod';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useSecuritySettings } from "@/hooks/useSecuritySettings";
 
 const emailSchema = z.string().email('Email inválido');
-const passwordSchema = z.string().min(6, 'Senha deve ter pelo menos 6 caracteres');
 
 interface CreateUserModalProps {
   open: boolean;
@@ -31,19 +32,23 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
   const [validationErrors, setValidationErrors] = useState<{ email?: string, password?: string }>({});
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { validatePassword } = useSecuritySettings();
 
   const validate = () => {
     const errors: { email?: string; password?: string } = {};
+    
     try {
       emailSchema.parse(form.email);
     } catch (err) {
       if (err instanceof z.ZodError) errors.email = err.errors[0]?.message;
     }
-    try {
-      passwordSchema.parse(form.password);
-    } catch (err) {
-      if (err instanceof z.ZodError) errors.password = err.errors[0]?.message;
+    
+    // Usar validação de senha das configurações de segurança
+    const passwordValidation = validatePassword(form.password);
+    if (!passwordValidation.isValid) {
+      errors.password = passwordValidation.errors[0];
     }
+    
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -65,6 +70,19 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
 
       console.log("Token obtido, chamando Edge Function...");
 
+      // Log tentativa de criação de usuário
+      await supabase.rpc('log_security_event', {
+        action_name: 'USER_CREATION_ATTEMPT',
+        table_name: 'auth.users',
+        record_id: null,
+        old_data: null,
+        new_data: { 
+          requester_role: userRole,
+          target_email: form.email,
+          target_role: form.role
+        }
+      });
+
       // Chamar Edge Function com token de autorização
       const { data, error } = await supabase.functions.invoke('create-user', {
         body: {
@@ -82,7 +100,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
 
       if (error) {
         console.error("Erro da Edge Function:", error);
-        throw error; // Lança o objeto de erro original para o catch
+        throw error;
       }
 
       if (data?.error) {
@@ -111,7 +129,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
       
       let errorMessage = "Erro desconhecido ao criar usuário";
       
-      if (err.context?.json) { // Trata erros de FunctionFetchError
+      if (err.context?.json) {
         try {
           const errorBody = await err.context.json();
           if (errorBody.error) {
@@ -129,7 +147,6 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
         errorMessage = err;
       }
       
-      // Mensagens genéricas para erros de rede
       if (errorMessage.includes("Failed to send") || errorMessage.includes("fetch")) {
         errorMessage = "Erro de comunicação com o servidor. Verifique sua conexão e tente novamente.";
       }
@@ -172,7 +189,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
               type="password"
               value={form.password}
               onChange={e => setForm(v => ({ ...v, password: e.target.value }))}
-              placeholder="Senha temporária"
+              placeholder="Senha segura"
               className={validationErrors.password ? 'border-red-500' : ''}
             />
             {validationErrors.password && (
