@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from 'react';
-import { z } from 'zod';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { validateSecuritySettings } from "./useSecuritySettingsValidation";
+import { loadSecuritySettingsFromDB } from "./loadSecuritySettings";
 
 export interface SecuritySetting {
   key: string;
@@ -12,10 +12,6 @@ export interface SecuritySetting {
   type: 'string' | 'number' | 'boolean' | 'select';
   options?: string[];
 }
-
-const sessionTimeoutSchema = z.number().min(5).max(1440);
-const passwordLengthSchema = z.number().min(6).max(128);
-const maxLoginAttemptsSchema = z.number().min(3).max(10);
 
 const defaultSecuritySettings: SecuritySetting[] = [
   {
@@ -117,33 +113,8 @@ export const useSecuritySettings = () => {
   }, []);
 
   const loadSecuritySettings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('system_settings')
-        .select('*')
-        .eq('category', 'security');
-
-      if (error) throw error;
-
-      if (data && data.length > 0) {
-        const loadedSettings = data.map(item => {
-          const defaultSetting = defaultSecuritySettings.find(ds => ds.key === item.key);
-          return {
-            ...defaultSetting,
-            key: item.key,
-            value: typeof item.value === 'string' ? JSON.parse(item.value) : item.value,
-            description: item.description || defaultSetting?.description || item.key
-          } as SecuritySetting;
-        });
-        setSecuritySettings(loadedSettings);
-      } else {
-        setSecuritySettings(defaultSecuritySettings);
-        await initializeDefaultSettings();
-      }
-    } catch (error) {
-      console.error('Erro ao carregar configurações de segurança:', error);
-      setSecuritySettings(defaultSecuritySettings);
-    }
+    const loadedSettings = await loadSecuritySettingsFromDB(defaultSecuritySettings);
+    setSecuritySettings(loadedSettings);
   };
 
   const initializeDefaultSettings = async () => {
@@ -170,35 +141,7 @@ export const useSecuritySettings = () => {
   };
 
   const validateSettings = () => {
-    const errors: { [key: string]: string } = {};
-    
-    const sessionTimeout = securitySettings.find(s => s.key === 'session_timeout');
-    if (sessionTimeout) {
-      try {
-        sessionTimeoutSchema.parse(sessionTimeout.value);
-      } catch (error) {
-        errors.session_timeout = 'Timeout deve estar entre 5 e 1440 minutos';
-      }
-    }
-
-    const passwordLength = securitySettings.find(s => s.key === 'password_min_length');
-    if (passwordLength) {
-      try {
-        passwordLengthSchema.parse(passwordLength.value);
-      } catch (error) {
-        errors.password_min_length = 'Comprimento deve estar entre 6 e 128 caracteres';
-      }
-    }
-
-    const maxAttempts = securitySettings.find(s => s.key === 'max_login_attempts');
-    if (maxAttempts) {
-      try {
-        maxLoginAttemptsSchema.parse(maxAttempts.value);
-      } catch (error) {
-        errors.max_login_attempts = 'Tentativas devem estar entre 3 e 10';
-      }
-    }
-
+    const errors = validateSecuritySettings(securitySettings);
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
