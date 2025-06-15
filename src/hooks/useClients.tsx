@@ -46,8 +46,9 @@ export const useClients = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const queryClient = useQueryClient();
 
+  // O onError precisa ir dentro do meta
   const {
-    data: allClients = [],
+    data,
     isLoading: loading,
     error,
     refetch,
@@ -55,12 +56,17 @@ export const useClients = () => {
     queryKey: ['clients'],
     queryFn: fetchClients,
     staleTime: 1000 * 60 * 10, // 10 min cache
-    onError: (err) => {
-      if (!err.message.includes('não autenticado')) {
-        toast.error('Erro ao carregar clientes: ' + (err.message || 'Erro desconhecido'));
-      }
+    meta: {
+      onError: (err: Error) => {
+        if (!err.message.includes('não autenticado')) {
+          toast.error('Erro ao carregar clientes: ' + (err.message || 'Erro desconhecido'));
+        }
+      },
     },
   });
+
+  // Forçar allClients a ser array sempre
+  const allClients: Client[] = data ?? [];
 
   const refreshClients = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['clients'] });
@@ -87,7 +93,7 @@ export const useClients = () => {
     });
   }, [allClients]);
 
-  const filteredClients = useMemo(() => searchClients(searchQuery), [allClients, searchQuery, searchClients]);
+  const filteredClients: Client[] = useMemo(() => searchClients(searchQuery), [allClients, searchQuery, searchClients]);
 
   return {
     clients: filteredClients,
