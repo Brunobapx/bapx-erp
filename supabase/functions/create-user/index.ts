@@ -134,17 +134,7 @@ serve(async (req) => {
     });
 
     if (createUserError || !newUserData.user) {
-      console.error("Erro ao criar usuário:", createUserError);
-      
-      // Mensagem customizada para erro de email existente
-      if (createUserError && (createUserError.message.includes("already be registered") || createUserError.message.includes("email_exists"))) {
-        return new Response(JSON.stringify({ 
-          error: "Já existe um usuário cadastrado com este e-mail." 
-        }), {
-          status: 409, // Conflict
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+      console.error("Erro detalhado ao criar usuário:", JSON.stringify(createUserError, null, 2));
       
       return new Response(JSON.stringify({ 
         error: createUserError?.message || "Erro ao criar usuário na autenticação" 
