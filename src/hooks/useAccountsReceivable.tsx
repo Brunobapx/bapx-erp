@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,7 +14,9 @@ export type AccountReceivable = {
   entry_number: string;
   client_id?: string;
   payment_date?: string;
-  invoice_number?: string; // Adicionado
+  invoice_number?: string;
+  account?: string;
+  category?: string;
 };
 
 export const useAccountsReceivable = () => {
@@ -50,7 +51,9 @@ export const useAccountsReceivable = () => {
           entry_number: entry.entry_number,
           client_id: entry.client_id,
           payment_date: entry.payment_date,
-          invoice_number: entry.invoice_number || '', // Puxa do banco
+          invoice_number: entry.invoice_number || '',
+          account: entry.account || '',
+          category: entry.category || '',
         };
       });
     } catch (err: any) {

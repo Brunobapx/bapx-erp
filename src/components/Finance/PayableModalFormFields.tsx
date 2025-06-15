@@ -1,4 +1,3 @@
-
 import React from 'react';
 import VendorSelector from "./VendorSelector";
 import { Button } from "@/components/ui/button";
@@ -21,8 +20,8 @@ type Props = {
   categoriesLoading: boolean;
   recorrente: boolean;
   setRecorrente: (v: boolean) => void;
-  frequencia: string;
-  setFrequencia: (v: any) => void;
+  frequencia: Frequencia;
+  setFrequencia: (v: Frequencia) => void;
   qtdRepeticoes: number;
   setQtdRepeticoes: (v: number) => void;
 };

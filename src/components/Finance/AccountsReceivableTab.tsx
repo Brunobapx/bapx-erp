@@ -110,6 +110,42 @@ export const AccountsReceivableTab = () => {
     );
   }
 
+  const AccountSelect = () => (
+    <div className="w-full min-w-[130px]">
+      <label className="block mb-1 text-xs text-muted-foreground">Conta bancária/Caixa</label>
+      <select
+        value={accountFilter}
+        disabled={accountsLoading}
+        onChange={(e) => setAccountFilter(e.target.value)}
+        className="w-full border rounded px-2 py-1 text-sm bg-white"
+      >
+        <option value="">Todas</option>
+        {accounts?.map(acc =>
+          <option value={acc.name} key={acc.id}>{acc.name}</option>
+        )}
+      </select>
+    </div>
+  );
+
+  const CategorySelect = () => (
+    <div className="w-full min-w-[130px]">
+      <label className="block mb-1 text-xs text-muted-foreground">Categoria</label>
+      <select
+        value={categoryFilter}
+        disabled={categoriesLoading}
+        onChange={(e) => setCategoryFilter(e.target.value)}
+        className="w-full border rounded px-2 py-1 text-sm bg-white"
+      >
+        <option value="">Todas</option>
+        {categories
+          ?.filter(cat => cat.type === "receita" && cat.is_active)
+          .map(cat =>
+            <option value={cat.name} key={cat.id}>{cat.name}</option>
+          )}
+      </select>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -265,43 +301,3 @@ export const AccountsReceivableTab = () => {
     </div>
   );
 };
-
-function AccountSelect() {
-  return (
-    <div className="w-full min-w-[130px]">
-      <label className="block mb-1 text-xs text-muted-foreground">Conta bancária/Caixa</label>
-      <select
-        value={accountFilter}
-        disabled={accountsLoading}
-        onChange={(e) => setAccountFilter(e.target.value)}
-        className="w-full border rounded px-2 py-1 text-sm bg-white"
-      >
-        <option value="">Todas</option>
-        {accounts?.map(acc =>
-          <option value={acc.name} key={acc.id}>{acc.name}</option>
-        )}
-      </select>
-    </div>
-  );
-}
-
-function CategorySelect() {
-  return (
-    <div className="w-full min-w-[130px]">
-      <label className="block mb-1 text-xs text-muted-foreground">Categoria</label>
-      <select
-        value={categoryFilter}
-        disabled={categoriesLoading}
-        onChange={(e) => setCategoryFilter(e.target.value)}
-        className="w-full border rounded px-2 py-1 text-sm bg-white"
-      >
-        <option value="">Todas</option>
-        {categories
-          ?.filter(cat => cat.type === "receita" && cat.is_active)
-          .map(cat =>
-            <option value={cat.name} key={cat.id}>{cat.name}</option>
-          )}
-      </select>
-    </div>
-  );
-}
