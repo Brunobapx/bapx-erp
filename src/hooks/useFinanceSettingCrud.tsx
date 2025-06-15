@@ -28,14 +28,14 @@ export function useFinanceSettingCrud<T extends BaseFinanceSetting>(
         .maybeSingle();
       if (!profile?.company_id) throw new Error("Empresa não encontrada.");
       const { data, error } = await supabase
-        .from(table)
+        .from<T>(table)
         .select(selectFields)
         .eq("company_id", profile.company_id)
         .order("created_at", { ascending: true });
       if (error) throw error;
-      setItems(data ?? []);
+      setItems((data ?? []) as T[]);
     } catch (err: any) {
-      setItems([] as T[]); // Corrigido: casting explícito
+      setItems([] as T[]);
       toast({ title: "Erro", description: err.message || String(err), variant: "destructive" });
     } finally {
       setLoading(false);
