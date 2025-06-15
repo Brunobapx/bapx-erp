@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, AlertTriangle, Clock, Trash, Pencil } from 'lucide-react';
+import { Search, Plus, AlertTriangle, Clock, Trash, Pencil, ChevronDown } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -12,7 +12,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-// FIXED: Use default import here
 import NewPayableModal from './NewPayableModal';
 import { EditPayableModal } from './EditPayableModal';
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +19,9 @@ import { toast } from "sonner";
 import { DateRangeFilter } from "./DateRangeFilter";
 import { AccountsPayableCards } from "./AccountsPayableCards";
 import { AccountsPayableTable } from "./AccountsPayableTable";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { useActiveFinancialAccounts } from "@/hooks/useActiveFinancialAccounts";
+import { useFinancialCategories } from "@/hooks/useFinancialCategories";
 
 interface AccountPayable {
   id: string;
@@ -33,6 +35,7 @@ interface AccountPayable {
   payment_date?: string;
   payment_method?: string;
   notes?: string;
+  account?: string;
 }
 
 export const AccountsPayableTab = () => {
@@ -44,6 +47,12 @@ export const AccountsPayableTab = () => {
   const [period, setPeriod] = useState<{ startDate: Date | null, endDate: Date | null }>({
     startDate: null, endDate: null
   });
+
+  // Novos filtros
+  const [accountFilter, setAccountFilter] = useState<string>('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('');
+  const { accounts: bankAccounts, loading: accountsLoading } = useActiveFinancialAccounts();
+  const { items: categories, loading: categoriesLoading } = useFinancialCategories();
 
   useEffect(() => {
     loadAccountsPayable();
@@ -120,6 +129,7 @@ export const AccountsPayableTab = () => {
     }
   };
 
+  // FILTRO
   const filteredAccounts = useMemo(() => {
     let accts = [...accountsPayable];
     if (period.startDate && period.endDate) {
@@ -128,12 +138,18 @@ export const AccountsPayableTab = () => {
         return due >= period.startDate! && due <= period.endDate!;
       });
     }
+    if (accountFilter) {
+      accts = accts.filter(account => account.account === accountFilter);
+    }
+    if (categoryFilter) {
+      accts = accts.filter(account => account.category === categoryFilter);
+    }
     return accts.filter(account =>
       account.supplier_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       account.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       account.invoice_number?.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [accountsPayable, searchQuery, period]);
+  }, [accountsPayable, searchQuery, period, accountFilter, categoryFilter]);
 
   const totalVencido = accountsPayable
     .filter(account => account.status === 'overdue')
@@ -158,6 +174,100 @@ export const AccountsPayableTab = () => {
     );
   }
 
+  // NOVOS FILTROS VISUAIS (linha com período, conta, categoria)
+  const FiltersRow = () => (
+    <div className="flex flex-col md:flex-row justify-between items-center gap-2">
+      <div className="relative w-full max-w-sm">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar contas..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-8"
+        />
+      </div>
+      <div className="flex gap-2 flex-wrap items-center">
+        <DateRangeFilter range={period} onChange={setPeriod} label="Filtrar por período" />
+        {/* Conta Bancária Filter */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="min-w-[135px] flex justify-between">
+              <span>{accountFilter ? accountFilter : "Conta bancária/Caixa"}</span>
+              <ChevronDown className="ml-2 h-4 w-4 text-muted-foreground" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-44 p-0">
+            <ul>
+              <li>
+                <Button
+                  size="sm"
+                  variant={!accountFilter ? "secondary" : "ghost"}
+                  className="w-full justify-start rounded-none"
+                  onClick={() => setAccountFilter("")}
+                  disabled={accountsLoading}
+                >
+                  Todas
+                </Button>
+              </li>
+              {bankAccounts.map(acc => (
+                <li key={acc.id}>
+                  <Button
+                    size="sm"
+                    variant={accountFilter === acc.name ? "secondary" : "ghost"}
+                    className="w-full justify-start rounded-none"
+                    onClick={() => setAccountFilter(acc.name)}
+                    disabled={accountsLoading}
+                  >
+                    {acc.name}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </PopoverContent>
+        </Popover>
+        {/* Categoria Filter */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="min-w-[120px] flex justify-between">
+              <span>{categoryFilter ? categoryFilter : "Categoria"}</span>
+              <ChevronDown className="ml-2 h-4 w-4 text-muted-foreground" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-44 p-0">
+            <ul>
+              <li>
+                <Button
+                  size="sm"
+                  variant={!categoryFilter ? "secondary" : "ghost"}
+                  className="w-full justify-start rounded-none"
+                  onClick={() => setCategoryFilter("")}
+                  disabled={categoriesLoading}
+                >
+                  Todas
+                </Button>
+              </li>
+              {categories
+                ?.filter(cat => cat.type === "despesa" && cat.is_active)
+                .map(cat => (
+                  <li key={cat.id}>
+                    <Button
+                      size="sm"
+                      variant={categoryFilter === cat.name ? "secondary" : "ghost"}
+                      className="w-full justify-start rounded-none"
+                      onClick={() => setCategoryFilter(cat.name)}
+                      disabled={categoriesLoading}
+                    >
+                      {cat.name}
+                    </Button>
+                  </li>
+                ))}
+            </ul>
+          </PopoverContent>
+        </Popover>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -173,20 +283,7 @@ export const AccountsPayableTab = () => {
         totalPago={totalPago}
       />
 
-      <div className="flex flex-col md:flex-row justify-between items-center gap-2">
-        <div className="relative w-full max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar contas..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8"
-          />
-        </div>
-        <div>
-            <DateRangeFilter range={period} onChange={setPeriod} label="Filtrar por período" />
-        </div>
-      </div>
+      <FiltersRow />
 
       <Card>
         <CardContent className="p-0">
