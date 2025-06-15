@@ -20,6 +20,27 @@ export const CashFlowTab = () => {
   });
   const { cashFlowData, loading, error } = useCashFlow();
 
+  const filteredData = useMemo(() => {
+    if (dateRange.startDate && dateRange.endDate) {
+      return cashFlowData.filter(item => {
+        const dt = new Date(item.date);
+        return dt >= dateRange.startDate! && dt <= dateRange.endDate!;
+      });
+    }
+    return cashFlowData;
+  }, [cashFlowData, dateRange]);
+
+  const totalEntradas = filteredData
+    .filter(item => item.type === 'entrada')
+    .reduce((sum, item) => sum + item.amount, 0);
+
+  const totalSaidas = filteredData
+    .filter(item => item.type === 'saida')
+    .reduce((sum, item) => sum + item.amount, 0);
+
+  const saldoFinal = filteredData.length > 0 ? filteredData[filteredData.length - 1].balance : 0;
+  const saldoLiquido = totalEntradas - totalSaidas;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -41,27 +62,6 @@ export const CashFlowTab = () => {
       </div>
     );
   }
-
-  const filteredData = useMemo(() => {
-    if (dateRange.startDate && dateRange.endDate) {
-      return cashFlowData.filter(item => {
-        const dt = new Date(item.date);
-        return dt >= dateRange.startDate! && dt <= dateRange.endDate!;
-      });
-    }
-    return cashFlowData;
-  }, [cashFlowData, dateRange]);
-
-  const totalEntradas = filteredData
-    .filter(item => item.type === 'entrada')
-    .reduce((sum, item) => sum + item.amount, 0);
-
-  const totalSaidas = filteredData
-    .filter(item => item.type === 'saida')
-    .reduce((sum, item) => sum + item.amount, 0);
-
-  const saldoFinal = filteredData.length > 0 ? filteredData[filteredData.length - 1].balance : 0;
-  const saldoLiquido = totalEntradas - totalSaidas;
 
   return (
     <div className="space-y-6">
