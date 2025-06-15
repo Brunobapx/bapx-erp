@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Dialog,
@@ -58,19 +57,8 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
                 onSelect={handleClientSelect}
               />
             </div>
-            <div>
-              <Label htmlFor="saleId">ID da Venda</Label>
-              <Input
-                id="saleId"
-                name="saleId"
-                value={formData.saleId}
-                onChange={handleChange}
-                placeholder="V-001"
-              />
-            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            {/* NOVO campo: Número NF/Documento */}
             <div>
               <Label htmlFor="invoice_number">Número NF/Documento</Label>
               <Input
@@ -184,4 +172,3 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
     </Dialog>
   );
 };
-

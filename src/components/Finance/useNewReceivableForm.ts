@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,7 +15,6 @@ interface FormData {
   amount: string;
   due_date: string;
   category: string;
-  saleId: string;
   account: string;
   notes: string;
   invoice_number: string; // NOVO campo
@@ -30,10 +28,9 @@ export function useNewReceivableForm(onClose: () => void) {
     amount: '',
     due_date: '',
     category: '',
-    saleId: '',
     account: '',
     notes: '',
-    invoice_number: '', // NOVO campo
+    invoice_number: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [recorrente, setRecorrente] = useState(false);
@@ -82,19 +79,19 @@ export function useNewReceivableForm(onClose: () => void) {
       if (recorrente && qtdRepeticoes > 1) {
         datas = addPeriodo(new Date(formData.due_date), frequencia, qtdRepeticoes);
       }
+      // sale_id removido do insert
       const inserts = datas.map(date => ({
         user_id: user.id,
         client_id: formData.client_id,
         description: formData.description,
         amount: parseFloat(formData.amount),
         due_date: formatDateToYYYYMMDD(date),
-        sale_id: formData.saleId || null,
         account: formData.account,
         category: formData.category,
         notes: formData.notes || null,
         type: "receivable",
         payment_status: "pending",
-        invoice_number: formData.invoice_number || null, // NOVO campo
+        invoice_number: formData.invoice_number || null,
       }));
       const { error } = await supabase.from('financial_entries').insert(inserts);
       if (error) throw error;
@@ -117,10 +114,9 @@ export function useNewReceivableForm(onClose: () => void) {
       amount: '',
       due_date: '',
       category: '',
-      saleId: '',
       account: '',
       notes: '',
-      invoice_number: '', // NOVO campo
+      invoice_number: '',
     });
     setRecorrente(false);
     setQtdRepeticoes(1);
