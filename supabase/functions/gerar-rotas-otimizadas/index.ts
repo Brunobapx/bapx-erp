@@ -1,4 +1,3 @@
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 
@@ -57,10 +56,54 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
+
+    if (!supabaseUrl || !serviceRoleKey || !anonKey) {
+      return new Response(
+        JSON.stringify({ error: 'Configuração do servidor inválida' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Validar autenticação JWT
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Token de autorização não fornecido' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const supabaseUser = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    // Validar o usuário autenticado
+    const { data: userData, error: userError } = await supabaseUser.auth.getUser();
+    if (userError || !userData.user) {
+      return new Response(
+        JSON.stringify({ error: 'Usuário não autenticado' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const supabase = createClient(supabaseUrl, serviceRoleKey)
+
+    // Verificar se o usuário tem acesso ao módulo de rotas
+    const { data: userProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('company_id')
+      .eq('id', userData.user.id)
+      .single()
+
+    if (profileError || !userProfile) {
+      return new Response(
+        JSON.stringify({ error: 'Perfil de usuário não encontrado' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
     const { origem, pedidos }: { origem: string; pedidos: Pedido[] } = await req.json()
 
@@ -71,11 +114,20 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Buscar veículos do banco
+    // Validar entrada para prevenir ataques
+    if (origem.length > 500 || pedidos.length > 100) {
+      return new Response(
+        JSON.stringify({ error: 'Parâmetros excederam limites permitidos' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Buscar veículos do banco apenas da empresa do usuário
     const { data: veiculos, error: veiculosError } = await supabase
       .from('vehicles')
       .select('id, license_plate, capacity, notes')
       .eq('status', 'active')
+      .eq('company_id', userProfile.company_id)
 
     if (veiculosError) {
       console.error('Erro ao buscar veículos:', veiculosError)
@@ -84,6 +136,20 @@ Deno.serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    // Log da operação para auditoria
+    await supabase.rpc('log_security_event', {
+      action_name: 'ROUTE_OPTIMIZATION_REQUEST',
+      table_name: 'delivery_routes',
+      record_id: null,
+      old_data: null,
+      new_data: { 
+        user_id: userData.user.id,
+        company_id: userProfile.company_id,
+        origin: origem,
+        orders_count: pedidos.length 
+      }
+    });
 
     // Mapear veículos para o formato esperado
     // Por enquanto, vamos usar as notes para definir a região atendida

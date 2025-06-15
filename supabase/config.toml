@@ -1,3 +1,4 @@
+
 project_id = "gtqmwlxzszttzriswoxj"
 
 [api]
@@ -12,12 +13,12 @@ enabled = true
 port = 54322
 site_url = "http://localhost:3000"
 additional_redirect_urls = ["https://localhost:3000"]
-jwt_expiry = 3600
+jwt_expiry = 1800
 enable_signup = true
-enable_confirmations = false
+enable_confirmations = true
 
 [functions.gerar-rotas-otimizadas]
-verify_jwt = false
+verify_jwt = true
 
 [functions.create-user]
-verify_jwt = false
+verify_jwt = true
