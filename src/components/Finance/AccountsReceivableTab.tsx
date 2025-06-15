@@ -45,28 +45,7 @@ export const AccountsReceivableTab = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando contas a receber...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">Erro ao carregar contas a receber</p>
-          <p className="text-gray-600">{error}</p>
-        </div>
-      </div>
-    );
-  }
-
+  // Mover useMemo ANTES dos returns condicionais!
   // Filtro aplicado por período (conversão str->Date para comparação)
   const filteredAccounts = useMemo(() => {
     let accts = [...accountsReceivable];
@@ -93,6 +72,28 @@ export const AccountsReceivableTab = () => {
   const totalVencido = accountsReceivable
     .filter(account => account.status === 'vencido')
     .reduce((sum, account) => sum + account.amount, 0);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando contas a receber...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Erro ao carregar contas a receber</p>
+          <p className="text-gray-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
