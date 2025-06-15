@@ -341,7 +341,9 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
     { value: 'KG', label: 'Quilograma' },
     { value: 'L', label: 'Litro' },
     { value: 'M', label: 'Metro' },
-    { value: 'CX', label: 'Caixa' }
+    { value: 'CX', label: 'Caixa' },
+    { value: 'G', label: 'Grama' },
+    { value: 'PCT', label: 'Pacote' }
   ];
 
   const taxTypeOptions = [
