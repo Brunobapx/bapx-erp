@@ -11,6 +11,7 @@ export type CashFlowEntry = {
   amount: number;
   balance: number;
   category?: string;
+  account?: string;
   reference_id?: string;
   reference_type?: string;
 };
@@ -57,6 +58,7 @@ export const useCashFlow = () => {
             amount: Number(entry.amount),
             balance: runningBalance,
             category: entry.category || 'Vendas',
+            account: entry.account || undefined,
             reference_id: entry.sale_id,
             reference_type: 'sale'
           });
@@ -73,6 +75,7 @@ export const useCashFlow = () => {
             amount: Number(payable.amount),
             balance: runningBalance,
             category: payable.category || 'Compras',
+            account: payable.account || undefined,
             reference_id: payable.purchase_id,
             reference_type: 'purchase'
           });
