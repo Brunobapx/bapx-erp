@@ -197,6 +197,11 @@ const ProductsPage = () => {
                         <TableCell className="font-medium flex items-center gap-2">
                           <Barcode className="h-4 w-4 text-muted-foreground" />
                           {product.code}
+                          {product.is_direct_sale && (
+                            <span className="ml-2 bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded border border-green-400">
+                              Venda Direta
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell>{product.name}</TableCell>
                         <TableCell>{product.ncm}</TableCell>

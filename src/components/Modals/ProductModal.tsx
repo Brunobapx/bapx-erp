@@ -34,7 +34,8 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
     ipi: '5',
     pis: '1.65',
     cofins: '7.6',
-    is_manufactured: false
+    is_manufactured: false,
+    is_direct_sale: false
   });
 
   const [recipeItems, setRecipeItems] = useState<Array<{id: string, productId: string, quantity: string}>>([]);
@@ -64,7 +65,8 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
         ipi: productData.ipi || '5',
         pis: productData.pis || '1.65',
         cofins: productData.cofins || '7.6',
-        is_manufactured: productData.is_manufactured || false
+        is_manufactured: productData.is_manufactured || false,
+        is_direct_sale: productData.is_direct_sale || false
       });
       
       // Carregar receita existente se for produto fabricado
@@ -169,7 +171,8 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
       ipi: '5',
       pis: '1.65',
       cofins: '7.6',
-      is_manufactured: false
+      is_manufactured: false,
+      is_direct_sale: false
     });
     setRecipeItems([]);
   };
@@ -184,9 +187,20 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
   };
 
   const handleSwitchChange = (name: string, checked: boolean) => {
-    setFormData(prev => ({ ...prev, [name]: checked }));
+    setFormData(prev => {
+      if (name === 'is_manufactured' && checked) {
+        return { ...prev, is_manufactured: true, is_direct_sale: false };
+      }
+      if (name === 'is_direct_sale' && checked) {
+        return { ...prev, is_direct_sale: true, is_manufactured: false };
+      }
+      return { ...prev, [name]: checked };
+    });
     if (name === 'is_manufactured' && checked) {
       setIsRecipeOpen(true);
+    }
+    if (name === 'is_manufactured' && !checked) {
+      setIsRecipeOpen(false);
     }
   };
 
@@ -244,7 +258,8 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
         ipi: formData.ipi,
         pis: formData.pis,
         cofins: formData.cofins,
-        is_manufactured: formData.is_manufactured
+        is_manufactured: formData.is_manufactured,
+        is_direct_sale: formData.is_direct_sale
       };
       
       let productId;
@@ -447,18 +462,30 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
             </div>
           </div>
           
-          {/* Manufacturing Option */}
-          <div className="flex items-center space-x-2 pt-2 border-t">
-            <Switch
-              id="manufacturing"
-              checked={formData.is_manufactured}
-              onCheckedChange={(checked) => handleSwitchChange('is_manufactured', checked)}
-            />
-            <Label htmlFor="manufacturing" className="font-medium">Produto Fabricado</Label>
+          {/* Opções Venda Direta e Fabricado juntos */}
+          <div className="flex gap-4 items-center space-x-4 pt-2 border-t">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="directSale"
+                checked={formData.is_direct_sale}
+                onCheckedChange={(checked) => handleSwitchChange('is_direct_sale', checked)}
+                disabled={formData.is_manufactured}
+              />
+              <Label htmlFor="directSale" className="font-medium">Venda Direta</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="manufacturing"
+                checked={formData.is_manufactured}
+                onCheckedChange={(checked) => handleSwitchChange('is_manufactured', checked)}
+                disabled={formData.is_direct_sale}
+              />
+              <Label htmlFor="manufacturing" className="font-medium">Produto Fabricado</Label>
+            </div>
           </div>
           
-          {/* Recipe Management */}
-          {formData.is_manufactured && (
+          {/* Receita de Fabricação */}
+          {(formData.is_manufactured && !formData.is_direct_sale) && (
             <Collapsible open={isRecipeOpen} onOpenChange={setIsRecipeOpen} className="border rounded-md p-2">
               <CollapsibleTrigger className="flex items-center justify-between w-full p-2 font-medium">
                 Receita de Fabricação

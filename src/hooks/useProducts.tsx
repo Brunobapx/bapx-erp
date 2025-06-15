@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +15,7 @@ export type Product = {
   cost?: number;
   stock?: number;
   is_manufactured?: boolean;
+  is_direct_sale?: boolean; // NOVO CAMPO
   tax_type?: string;
   icms?: string;
   ipi?: string;

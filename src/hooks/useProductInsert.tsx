@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +15,7 @@ export type ProductFormData = {
   stock?: number;
   weight?: number;
   is_manufactured?: boolean;
+  is_direct_sale?: boolean;
   ncm?: string;
   tax_type?: string;
   icms?: string;
