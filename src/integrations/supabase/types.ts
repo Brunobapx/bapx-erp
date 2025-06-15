@@ -1976,6 +1976,161 @@ export type Database = {
         }
         Relationships: []
       }
+      service_order_attachments: {
+        Row: {
+          file_name: string | null
+          file_url: string
+          id: string
+          service_order_id: string
+          uploaded_at: string
+        }
+        Insert: {
+          file_name?: string | null
+          file_url: string
+          id?: string
+          service_order_id: string
+          uploaded_at?: string
+        }
+        Update: {
+          file_name?: string | null
+          file_url?: string
+          id?: string
+          service_order_id?: string
+          uploaded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_order_attachments_service_order_id_fkey"
+            columns: ["service_order_id"]
+            isOneToOne: false
+            referencedRelation: "service_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_order_materials: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string
+          quantity: number
+          service_order_id: string
+          subtotal: number | null
+          unit_value: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id: string
+          quantity: number
+          service_order_id: string
+          subtotal?: number | null
+          unit_value?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string
+          quantity?: number
+          service_order_id?: string
+          subtotal?: number | null
+          unit_value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_order_materials_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_order_materials_service_order_id_fkey"
+            columns: ["service_order_id"]
+            isOneToOne: false
+            referencedRelation: "service_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_orders: {
+        Row: {
+          client_id: string
+          company_id: string
+          contract_service: boolean
+          created_at: string
+          description: string | null
+          id: string
+          notes: string | null
+          opened_at: string
+          os_number: string
+          priority: string
+          receivable_id: string | null
+          service_type: string
+          service_value: number | null
+          status: string
+          technician_id: string
+          total_value: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          company_id?: string
+          contract_service?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          os_number: string
+          priority: string
+          receivable_id?: string | null
+          service_type: string
+          service_value?: number | null
+          status?: string
+          technician_id: string
+          total_value?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          company_id?: string
+          contract_service?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          os_number?: string
+          priority?: string
+          receivable_id?: string | null
+          service_type?: string
+          service_value?: number | null
+          status?: string
+          technician_id?: string
+          total_value?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_orders_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_settings: {
         Row: {
           category: string
