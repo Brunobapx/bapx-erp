@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -14,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import VendorSelector from "./VendorSelector";
 
 interface NewPayableModalProps {
   isOpen: boolean;
@@ -56,11 +56,33 @@ export const NewPayableModal = ({ isOpen, onClose, onSuccess }: NewPayableModalP
     return result;
   }
 
+  const [selectedVendorId, setSelectedVendorId] = useState<string | undefined>(undefined);
+  const [selectedVendorName, setSelectedVendorName] = useState<string>("");
+
+  useEffect(() => {
+    // Reset vendor selection when closing/creating
+    if (!isOpen) {
+      setSelectedVendorId(undefined);
+      setSelectedVendorName("");
+    }
+  }, [isOpen]);
+
+  const handleVendorSelect = (id: string, name: string) => {
+    setSelectedVendorId(id);
+    setSelectedVendorName(name);
+    setFormData((prev) => ({ ...prev, supplier_name: name }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.supplier_name || !formData.description || !formData.amount || !formData.due_date) {
       toast.error('Preencha todos os campos obrigatórios');
+      return;
+    }
+
+    if (!selectedVendorId) {
+      toast.error('Selecione um fornecedor');
       return;
     }
 
@@ -76,7 +98,7 @@ export const NewPayableModal = ({ isOpen, onClose, onSuccess }: NewPayableModalP
 
       const inserts = datas.map(date => ({
         user_id: user.id,
-        supplier_name: formData.supplier_name,
+        supplier_name: selectedVendorName, // always store selected name
         description: formData.description,
         amount: parseFloat(formData.amount),
         due_date: date.toISOString().slice(0, 10),
@@ -126,12 +148,10 @@ export const NewPayableModal = ({ isOpen, onClose, onSuccess }: NewPayableModalP
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="supplier">Fornecedor *</Label>
-              <Input
-                id="supplier"
-                value={formData.supplier_name}
-                onChange={(e) => setFormData({...formData, supplier_name: e.target.value})}
-                placeholder="Nome do fornecedor"
-                required
+              <VendorSelector
+                selectedVendorId={selectedVendorId}
+                selectedVendorName={selectedVendorName}
+                onSelect={handleVendorSelect}
               />
             </div>
             <div>
