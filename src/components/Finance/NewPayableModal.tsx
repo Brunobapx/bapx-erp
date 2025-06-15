@@ -155,12 +155,12 @@ export const NewPayableModal = ({ isOpen, onClose, onSuccess }: NewPayableModalP
               />
             </div>
             <div>
-              <Label htmlFor="invoice">Número da NF</Label>
+              <Label htmlFor="invoice">Número da NF/Documento</Label>
               <Input
                 id="invoice"
                 value={formData.invoice_number}
                 onChange={(e) => setFormData({...formData, invoice_number: e.target.value})}
-                placeholder="Número da nota fiscal"
+                placeholder="Número da NF/Documento"
               />
             </div>
           </div>
