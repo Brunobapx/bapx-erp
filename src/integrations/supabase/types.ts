@@ -11,6 +11,7 @@ export type Database = {
     Tables: {
       accounts_payable: {
         Row: {
+          account: string | null
           amount: number
           category: string | null
           company_id: string
@@ -29,6 +30,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          account?: string | null
           amount: number
           category?: string | null
           company_id?: string
@@ -47,6 +49,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          account?: string | null
           amount?: number
           category?: string | null
           company_id?: string
