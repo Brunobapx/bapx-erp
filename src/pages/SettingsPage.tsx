@@ -8,7 +8,7 @@ import { CompanySettings } from '@/components/Settings/CompanySettings';
 import { SecuritySettings } from '@/components/Settings/SecuritySettings';
 import { useAuth } from '@/components/Auth/AuthProvider';
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ProfilesManagement } from '@/components/Settings/ProfilesManagement';
+import ProfilesManagement from '@/components/Settings/ProfilesManagement';
 import { Shield, Users, User, Building, Settings as SettingsIcon } from 'lucide-react';
 
 const SettingsPage = () => {
