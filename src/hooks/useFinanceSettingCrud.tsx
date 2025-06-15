@@ -35,7 +35,7 @@ export function useFinanceSettingCrud<T extends BaseFinanceSetting>(
       if (error) throw error;
       setItems(data ?? []);
     } catch (err: any) {
-      setItems([] as T[]); // Explicitly cast to T[] to satisfy TypeScript
+      setItems([]); // Just set to empty array of type T[]
       toast({ title: "Erro", description: err.message || String(err), variant: "destructive" });
     } finally {
       setLoading(false);
