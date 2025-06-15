@@ -50,6 +50,15 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
   const { accounts, loading: loadingAccounts } = useActiveFinancialAccounts();
   const { items: categories, loading: categoriesLoading } = useFinancialCategories();
 
+  // Função utilitária para corrigir problema de fuso horário/ISO
+  function formatDateToYYYYMMDD(date: Date): string {
+    // Pega os valores no horário local do usuário
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const day = date.getDate().toString().padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
   // Helper para datas de recorrência
   function addPeriodo(date: Date, freq: Frequencia, times: number) {
     const result = [];
@@ -97,6 +106,7 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
+      // Garante que todas as datas sejam formatadas no local
       let datas: Date[] = [new Date(formData.due_date)];
       if (recorrente && qtdRepeticoes > 1) {
         datas = addPeriodo(new Date(formData.due_date), frequencia, qtdRepeticoes);
@@ -107,7 +117,7 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
         client_id: formData.client_id,
         description: formData.description,
         amount: parseFloat(formData.amount),
-        due_date: date.toISOString().slice(0, 10),
+        due_date: formatDateToYYYYMMDD(date),
         sale_id: formData.saleId || null,
         account: formData.account,
         category: formData.category,
@@ -220,7 +230,12 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
               <Label htmlFor="due_date">Vencimento *</Label>
               <DatePicker
                 date={formData.due_date ? new Date(formData.due_date) : undefined}
-                onDateChange={date => setFormData(f => ({ ...f, due_date: date ? date.toISOString().slice(0, 10) : '' }))}
+                onDateChange={date =>
+                  setFormData(f => ({
+                    ...f,
+                    due_date: date ? formatDateToYYYYMMDD(date) : ''
+                  }))
+                }
                 placeholder="Selecione a data"
                 disabled={isSubmitting}
               />
