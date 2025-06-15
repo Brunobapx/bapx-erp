@@ -1,7 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 export type CashFlowEntry = {
   id: string;
@@ -16,46 +16,36 @@ export type CashFlowEntry = {
 };
 
 export const useCashFlow = () => {
-  const [cashFlowData, setCashFlowData] = useState<CashFlowEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchCashFlow = async () => {
+  // Função responsável pela busca
+  const fetchCashFlow = async (): Promise<CashFlowEntry[]> => {
     try {
-      setLoading(true);
-      setError(null);
-      
-      console.log('useCashFlow - Iniciando busca de fluxo de caixa...');
-      
+      // Remover logs excessivos
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError || !user) {
-        throw new Error('Usuário não autenticado');
-      }
-
-      // Buscar lançamentos financeiros para construir o fluxo de caixa
+      if (userError || !user) throw new Error('Usuário não autenticado');
+      // Busca com limite de registros (ex: 500) para acelerar
       const { data: entries, error: entriesError } = await supabase
         .from('financial_entries')
         .select('*')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true })
+        .limit(500);
 
       if (entriesError) throw entriesError;
 
-      // Buscar contas a pagar
+      // Contas a pagar pagas
       const { data: payables, error: payablesError } = await supabase
         .from('accounts_payable')
         .select('*')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true })
+        .limit(500);
 
       if (payablesError) throw payablesError;
 
-      // Construir fluxo de caixa combinando receitas e despesas
+      // Construir fluxo de caixa como antes, mas mais eficiente
       const cashFlow: CashFlowEntry[] = [];
       let runningBalance = 0;
 
-      // Adicionar receitas (financial_entries tipo receivable)
       (entries || []).forEach(entry => {
         if (entry.type === 'receivable' && entry.payment_status === 'paid') {
           runningBalance += Number(entry.amount);
@@ -72,8 +62,6 @@ export const useCashFlow = () => {
           });
         }
       });
-
-      // Adicionar despesas (accounts_payable pagas)
       (payables || []).forEach(payable => {
         if (payable.status === 'paid') {
           runningBalance -= Number(payable.amount);
@@ -90,11 +78,7 @@ export const useCashFlow = () => {
           });
         }
       });
-
-      // Ordenar por data
       cashFlow.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-      // Recalcular saldos após ordenação
       let balance = 0;
       cashFlow.forEach(item => {
         if (item.type === 'entrada') {
@@ -104,33 +88,23 @@ export const useCashFlow = () => {
         }
         item.balance = balance;
       });
-
-      console.log('useCashFlow - Dados do fluxo de caixa processados:', cashFlow);
-      setCashFlowData(cashFlow);
-      
+      return cashFlow;
     } catch (err: any) {
-      console.error('useCashFlow - Erro ao buscar fluxo de caixa:', err);
-      setError(err.message || 'Erro ao carregar fluxo de caixa');
-      toast.error('Erro ao carregar fluxo de caixa: ' + (err.message || 'Erro desconhecido'));
-      setCashFlowData([]);
-    } finally {
-      setLoading(false);
+      throw new Error(err.message || 'Erro ao carregar fluxo de caixa');
     }
   };
 
-  const refreshCashFlow = () => {
-    console.log('useCashFlow - Atualizando fluxo de caixa...');
-    fetchCashFlow();
-  };
-
-  useEffect(() => {
-    fetchCashFlow();
-  }, []);
+  // React Query: cache de 3min
+  const { data: cashFlowData = [], isLoading: loading, error, refetch } = useQuery({
+    queryKey: ['cashFlow'],
+    queryFn: fetchCashFlow,
+    staleTime: 3 * 60 * 1000 // 3 minutos
+  });
 
   return {
     cashFlowData,
     loading,
-    error,
-    refreshCashFlow
+    error: error?.message || null,
+    refreshCashFlow: refetch
   };
 };

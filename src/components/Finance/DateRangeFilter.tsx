@@ -20,22 +20,16 @@ interface DateRangeFilterProps {
 }
 
 export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({ range, onChange, label = "Período", disabled }) => {
-  // Log para depuração
-  console.log("[DateRangeFilter] render - range:", range);
+  // const logs removidos para produção
 
-  // Proteção extra: garantir que se passar nulls, não quebre seleção do Calendar
   const selectedFrom = range.startDate ?? undefined;
   const selectedTo = range.endDate ?? undefined;
 
-  // Lógica de onSelect compatível com o Calendar de shadcn/ui
-  // E previne caso 'range' chegue undefined
   const handleSelect = (v: any) => {
-    console.log("[DateRangeFilter] handleSelect:", v);
     if (!v) {
       onChange({ startDate: null, endDate: null });
       return;
     }
-    // Compatível tanto com { from, to } quanto apenas um Date
     if (typeof v === "object" && (v.from || v.to)) {
       onChange({ startDate: v.from ?? null, endDate: v.to ?? null });
     } else if (v instanceof Date) {

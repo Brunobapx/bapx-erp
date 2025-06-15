@@ -14,16 +14,11 @@ import { useCashFlow } from '@/hooks/useCashFlow';
 import { DateRangeFilter } from "./DateRangeFilter";
 
 export const CashFlowTab = () => {
-  console.log("[CashFlowTab] renderizou");
-
   const [selectedPeriod, setSelectedPeriod] = useState('month');
   const [dateRange, setDateRange] = useState<{ startDate: Date | null, endDate: Date | null }>({
     startDate: null, endDate: null
   });
   const { cashFlowData, loading, error } = useCashFlow();
-
-  // Novo log:
-  console.log("[CashFlowTab] dateRange:", dateRange);
 
   if (loading) {
     return (

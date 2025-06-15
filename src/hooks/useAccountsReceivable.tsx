@@ -1,7 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 export type AccountReceivable = {
   id: string;
@@ -17,23 +17,10 @@ export type AccountReceivable = {
 };
 
 export const useAccountsReceivable = () => {
-  const [accountsReceivable, setAccountsReceivable] = useState<AccountReceivable[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchAccountsReceivable = async () => {
+  const fetchAccountsReceivable = async (): Promise<AccountReceivable[]> => {
     try {
-      setLoading(true);
-      setError(null);
-      
-      console.log('useAccountsReceivable - Iniciando busca de contas a receber...');
-      
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError || !user) {
-        throw new Error('Usuário não autenticado');
-      }
-
+      if (userError || !user) throw new Error('Usuário não autenticado');
       const { data, error } = await supabase
         .from('financial_entries')
         .select(`
@@ -42,21 +29,14 @@ export const useAccountsReceivable = () => {
         `)
         .eq('user_id', user.id)
         .eq('type', 'receivable')
-        .order('due_date', { ascending: true });
-
+        .order('due_date', { ascending: true })
+        .limit(500);
       if (error) throw error;
-
       const today = new Date().toISOString().split('T')[0];
-      
-      const receivables: AccountReceivable[] = (data || []).map(entry => {
+      return (data || []).map(entry => {
         let status: 'pendente' | 'recebido' | 'vencido' = 'pendente';
-        
-        if (entry.payment_status === 'paid') {
-          status = 'recebido';
-        } else if (entry.due_date < today) {
-          status = 'vencido';
-        }
-
+        if (entry.payment_status === 'paid') status = 'recebido';
+        else if (entry.due_date < today) status = 'vencido';
         return {
           id: entry.id,
           client: (entry.clients as any)?.name || 'Cliente não informado',
@@ -70,19 +50,16 @@ export const useAccountsReceivable = () => {
           payment_date: entry.payment_date
         };
       });
-
-      console.log('useAccountsReceivable - Contas a receber processadas:', receivables);
-      setAccountsReceivable(receivables);
-      
     } catch (err: any) {
-      console.error('useAccountsReceivable - Erro ao buscar contas a receber:', err);
-      setError(err.message || 'Erro ao carregar contas a receber');
-      toast.error('Erro ao carregar contas a receber: ' + (err.message || 'Erro desconhecido'));
-      setAccountsReceivable([]);
-    } finally {
-      setLoading(false);
+      throw new Error(err.message || 'Erro ao carregar contas a receber');
     }
   };
+
+  const { data: accountsReceivable = [], isLoading: loading, error, refetch } = useQuery({
+    queryKey: ['accountsReceivable'],
+    queryFn: fetchAccountsReceivable,
+    staleTime: 3 * 60 * 1000 // 3 minutos
+  });
 
   const confirmReceivable = async (receivableId: string) => {
     try {
@@ -98,27 +75,18 @@ export const useAccountsReceivable = () => {
       if (error) throw error;
 
       toast.success('Recebimento confirmado!');
-      fetchAccountsReceivable();
+      refetch();
     } catch (error: any) {
       console.error('Erro ao confirmar recebimento:', error);
       toast.error('Erro ao confirmar recebimento');
     }
   };
 
-  const refreshReceivables = () => {
-    console.log('useAccountsReceivable - Atualizando contas a receber...');
-    fetchAccountsReceivable();
-  };
-
-  useEffect(() => {
-    fetchAccountsReceivable();
-  }, []);
-
   return {
     accountsReceivable,
     loading,
-    error,
+    error: error?.message || null,
     confirmReceivable,
-    refreshReceivables
+    refreshReceivables: refetch
   };
 };
