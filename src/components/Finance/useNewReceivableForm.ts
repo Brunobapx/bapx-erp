@@ -8,6 +8,7 @@ import { useFinancialCategories } from "@/hooks/useFinancialCategories";
 
 type Frequencia = "mensal" | "quinzenal" | "anual";
 
+// ATUALIZADO: incluído invoice_number no FormData
 interface FormData {
   client: string;
   client_id: string; // id do cliente
@@ -18,6 +19,7 @@ interface FormData {
   saleId: string;
   account: string;
   notes: string;
+  invoice_number: string; // NOVO campo
 }
 
 export function useNewReceivableForm(onClose: () => void) {
@@ -31,6 +33,7 @@ export function useNewReceivableForm(onClose: () => void) {
     saleId: '',
     account: '',
     notes: '',
+    invoice_number: '', // NOVO campo
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [recorrente, setRecorrente] = useState(false);
@@ -91,6 +94,7 @@ export function useNewReceivableForm(onClose: () => void) {
         notes: formData.notes || null,
         type: "receivable",
         payment_status: "pending",
+        invoice_number: formData.invoice_number || null, // NOVO campo
       }));
       const { error } = await supabase.from('financial_entries').insert(inserts);
       if (error) throw error;
@@ -116,6 +120,7 @@ export function useNewReceivableForm(onClose: () => void) {
       saleId: '',
       account: '',
       notes: '',
+      invoice_number: '', // NOVO campo
     });
     setRecorrente(false);
     setQtdRepeticoes(1);

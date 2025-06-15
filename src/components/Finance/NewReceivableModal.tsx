@@ -70,6 +70,17 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
+            {/* NOVO campo: Número NF/Documento */}
+            <div>
+              <Label htmlFor="invoice_number">Número NF/Documento</Label>
+              <Input
+                id="invoice_number"
+                name="invoice_number"
+                value={formData.invoice_number}
+                onChange={handleChange}
+                placeholder="Exemplo: 00001234"
+              />
+            </div>
             <div>
               <Label htmlFor="amount">Valor *</Label>
               <Input
@@ -85,6 +96,8 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
                 pattern="[0-9]*[.,]?[0-9]*"
               />
             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
             <ReceivableBankAccountSelect
               value={formData.account}
               onValueChange={val => setFormData(f => ({ ...f, account: val }))}
@@ -171,3 +184,4 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
     </Dialog>
   );
 };
+
