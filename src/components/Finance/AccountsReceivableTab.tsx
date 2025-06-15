@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +16,8 @@ import { useAccountsReceivable } from '@/hooks/useAccountsReceivable';
 import { toast } from "sonner";
 import { EditReceivableModal } from './EditReceivableModal';
 import { DateRangeFilter } from "./DateRangeFilter";
+import { useActiveFinancialAccounts } from "@/hooks/useActiveFinancialAccounts";
+import { useFinancialCategories } from "@/hooks/useFinancialCategories";
 
 export const AccountsReceivableTab = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -25,6 +26,13 @@ export const AccountsReceivableTab = () => {
   const [period, setPeriod] = useState<{ startDate: Date | null, endDate: Date | null }>({
     startDate: null, endDate: null
   });
+  // filtros novos
+  const [accountFilter, setAccountFilter] = useState<string>('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('');
+
+  const { accounts, loading: accountsLoading } = useActiveFinancialAccounts();
+  const { items: categories, loading: categoriesLoading } = useFinancialCategories();
+
   const { accountsReceivable, loading, error, confirmReceivable, refreshReceivables } = useAccountsReceivable();
 
   const handleEditReceivable = (account: any) => {
@@ -56,11 +64,17 @@ export const AccountsReceivableTab = () => {
         return due >= period.startDate! && due <= period.endDate!;
       });
     }
+    if (accountFilter) {
+      accts = accts.filter(account => account.account === accountFilter);
+    }
+    if (categoryFilter) {
+      accts = accts.filter(account => account.category === categoryFilter);
+    }
     return accts.filter(account =>
       account.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
       account.description.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [accountsReceivable, searchQuery, period]);
+  }, [accountsReceivable, searchQuery, period, accountFilter, categoryFilter]);
 
   const totalRecebido = accountsReceivable
     .filter(account => account.status === 'recebido')
@@ -153,8 +167,10 @@ export const AccountsReceivableTab = () => {
             className="pl-8"
           />
         </div>
-        <div>
+        <div className="flex flex-wrap gap-2 items-center">
           <DateRangeFilter range={period} onChange={setPeriod} label="Filtrar por período" />
+          <AccountSelect />
+          <CategorySelect />
         </div>
       </div>
 
@@ -249,3 +265,43 @@ export const AccountsReceivableTab = () => {
     </div>
   );
 };
+
+function AccountSelect() {
+  return (
+    <div className="w-full min-w-[130px]">
+      <label className="block mb-1 text-xs text-muted-foreground">Conta bancária/Caixa</label>
+      <select
+        value={accountFilter}
+        disabled={accountsLoading}
+        onChange={(e) => setAccountFilter(e.target.value)}
+        className="w-full border rounded px-2 py-1 text-sm bg-white"
+      >
+        <option value="">Todas</option>
+        {accounts?.map(acc =>
+          <option value={acc.name} key={acc.id}>{acc.name}</option>
+        )}
+      </select>
+    </div>
+  );
+}
+
+function CategorySelect() {
+  return (
+    <div className="w-full min-w-[130px]">
+      <label className="block mb-1 text-xs text-muted-foreground">Categoria</label>
+      <select
+        value={categoryFilter}
+        disabled={categoriesLoading}
+        onChange={(e) => setCategoryFilter(e.target.value)}
+        className="w-full border rounded px-2 py-1 text-sm bg-white"
+      >
+        <option value="">Todas</option>
+        {categories
+          ?.filter(cat => cat.type === "receita" && cat.is_active)
+          .map(cat =>
+            <option value={cat.name} key={cat.id}>{cat.name}</option>
+          )}
+      </select>
+    </div>
+  );
+}
