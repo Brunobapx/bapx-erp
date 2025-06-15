@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -36,9 +37,9 @@ export function useFinanceSettingCrud<T extends BaseFinanceSetting>(
 
       if (error) throw error;
 
-      setItems((data ?? []) as T[]);
+      setItems((data ?? []) as unknown as T[]);
     } catch (err: any) {
-      setItems([] as T[]);
+      setItems([] as unknown as T[]);
       toast({ title: "Erro", description: err.message || String(err), variant: "destructive" });
     } finally {
       setLoading(false);
