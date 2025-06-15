@@ -14,15 +14,16 @@ import {
 import { NewReceivableModal } from './NewReceivableModal';
 import { useAccountsReceivable } from '@/hooks/useAccountsReceivable';
 import { toast } from "sonner";
+import { EditReceivableModal } from './EditReceivableModal';
 
 export const AccountsReceivableTab = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewReceivableModal, setShowNewReceivableModal] = useState(false);
+  const [editAccount, setEditAccount] = useState<any>(null);
   const { accountsReceivable, loading, error, confirmReceivable, refreshReceivables } = useAccountsReceivable();
 
   const handleEditReceivable = (account: any) => {
-    toast.info(`Editar recebível: ${account.description} (ID: ${account.id})`);
-    // Aqui pode chamar uma modal de edição futuramente
+    setEditAccount(account);
   };
 
   const handleDeleteReceivable = async (account: any) => {
@@ -218,6 +219,14 @@ export const AccountsReceivableTab = () => {
         isOpen={showNewReceivableModal}
         onClose={() => setShowNewReceivableModal(false)}
       />
+      {editAccount && (
+        <EditReceivableModal
+          open={!!editAccount}
+          onClose={() => setEditAccount(null)}
+          account={editAccount}
+          onSaved={refreshReceivables}
+        />
+      )}
     </div>
   );
 };

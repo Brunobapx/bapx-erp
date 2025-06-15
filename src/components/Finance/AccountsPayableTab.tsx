@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { NewPayableModal } from './NewPayableModal';
+import { EditPayableModal } from './EditPayableModal';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -34,6 +35,7 @@ export const AccountsPayableTab = () => {
   const [showNewPayableModal, setShowNewPayableModal] = useState(false);
   const [accountsPayable, setAccountsPayable] = useState<AccountPayable[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editAccount, setEditAccount] = useState<AccountPayable | null>(null);
 
   useEffect(() => {
     loadAccountsPayable();
@@ -90,8 +92,7 @@ export const AccountsPayableTab = () => {
   };
 
   const handleEditAccount = (account: AccountPayable) => {
-    toast.info(`Editar lançamento: ${account.description} (ID: ${account.id})`);
-    // Aqui pode chamar uma modal de edição futuramente
+    setEditAccount(account);
   };
 
   const handleDeleteAccount = async (account: AccountPayable) => {
@@ -282,6 +283,14 @@ export const AccountsPayableTab = () => {
         onClose={() => setShowNewPayableModal(false)}
         onSuccess={loadAccountsPayable}
       />
+      {editAccount && (
+        <EditPayableModal
+          open={!!editAccount}
+          onClose={() => setEditAccount(null)}
+          account={editAccount}
+          onSaved={loadAccountsPayable}
+        />
+      )}
     </div>
   );
 };
