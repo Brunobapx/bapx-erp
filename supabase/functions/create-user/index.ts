@@ -8,6 +8,105 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+// --- Funções auxiliares ---
+function buildErrorResponse(message: string, status = 400) {
+  return new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function buildSuccessResponse(data: Record<string, unknown>) {
+  return new Response(JSON.stringify(data), {
+    status: 200,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+async function getRequesterContext(req: Request, supabaseUrl: string, anonKey: string, supabaseServiceRole: any) {
+  // Retorna userId e companyId do solicitante autenticado
+  const authHeader = req.headers.get("authorization");
+  if (!authHeader) return { error: buildErrorResponse("Token de autorização não fornecido", 401) };
+
+  // Cliente Supabase com token do usuário
+  const supabaseUser = createClient(supabaseUrl, anonKey, {
+    global: {
+      headers: {
+        Authorization: authHeader,
+      },
+    },
+  });
+
+  // Buscar userId do solicitante autenticado
+  const { data: userData, error: userError } = await supabaseUser.auth.getUser();
+  if (userError || !userData.user) {
+    return { error: buildErrorResponse("Usuário não autenticado", 401) };
+  }
+
+  const requesterId = userData.user.id;
+
+  // Buscar company_id do solicitante
+  const { data: requesterProfile, error: profileError } = await supabaseServiceRole
+    .from('profiles')
+    .select('company_id')
+    .eq('id', requesterId)
+    .single();
+
+  if (profileError || !requesterProfile?.company_id) {
+    return { error: buildErrorResponse("Não foi possível obter dados da empresa do usuário solicitante") };
+  }
+
+  const companyId = requesterProfile.company_id;
+  if (!companyId) {
+    return { error: buildErrorResponse("Impossível associar usuário sem empresa definida. Entre em contato com o suporte.") };
+  }
+
+  return { requesterId, companyId };
+}
+
+async function createSupabaseUser(supabaseServiceRole: any, email: string, password: string) {
+  const { data: newUserData, error: createUserError } = await supabaseServiceRole.auth.admin.createUser({
+    email: email.trim(),
+    password,
+    email_confirm: true,
+  });
+
+  if (createUserError || !newUserData.user) {
+    return { error: buildErrorResponse(createUserError?.message || "Erro ao criar usuário na autenticação") };
+  }
+
+  return { user: newUserData.user };
+}
+
+async function upsertUserProfile(supabaseServiceRole: any, userId: string, companyId: string) {
+  const { error } = await supabaseServiceRole
+    .from('profiles')
+    .upsert({ 
+      id: userId, 
+      company_id: companyId,
+      is_active: true,
+      first_name: '',
+      last_name: ''
+    });
+  return error;
+}
+
+async function insertUserRole(supabaseServiceRole: any, userId: string, role: string, companyId: string) {
+  const { error } = await supabaseServiceRole
+    .from('user_roles')
+    .insert({ 
+      user_id: userId, 
+      role,
+      company_id: companyId
+    });
+  return error;
+}
+
+async function deleteSupabaseUser(supabaseServiceRole: any, userId: string) {
+  await supabaseServiceRole.auth.admin.deleteUser(userId);
+}
+
+// --- Handler principal ---
 serve(async (req) => {
   console.log(`Método: ${req.method}, URL: ${req.url}`);
   
@@ -16,214 +115,81 @@ serve(async (req) => {
   }
 
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Método não permitido" }), {
-      status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return buildErrorResponse("Método não permitido", 405);
   }
 
   try {
     console.log("Iniciando criação de usuário...");
-    
-    const requestData = await req.json();
-    console.log("Dados recebidos:", JSON.stringify(requestData, null, 2));
-    
-    const { email, password, role } = requestData;
 
-    if (!email || !password || !role) {
-      return new Response(JSON.stringify({ error: "Email, senha e função são obrigatórios" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Verificar permissão
-    const requesterRole = req.headers.get("x-requester-role");
-    console.log("Role do solicitante:", requesterRole);
-    
-    if (requesterRole !== "admin" && requesterRole !== "master") {
-      return new Response(JSON.stringify({ error: "Permissão negada. Apenas admin/master podem criar usuários." }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
+    // Checagem rápida de variáveis de ambiente
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
-    if (!supabaseUrl || !serviceRoleKey) {
-      console.error("Variáveis de ambiente não configuradas");
-      return new Response(JSON.stringify({ error: "Configuração do servidor inválida" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    console.log("Configuração Supabase OK");
-
-    const supabaseServiceRole = createClient(supabaseUrl, serviceRoleKey);
-    
-    console.log("Prosseguindo com a tentativa de criação do usuário.");
-
-    // Obter o company_id do usuário solicitante usando o token de autorização
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Token de autorização não fornecido" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Criar cliente com token do usuário para obter dados do solicitante
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-    if (!anonKey) {
-      console.error("SUPABASE_ANON_KEY não configurada");
-      return new Response(JSON.stringify({ error: "Configuração do servidor inválida" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (!supabaseUrl || !serviceRoleKey || !anonKey) {
+      console.error("Variáveis de ambiente faltando");
+      return buildErrorResponse("Configuração do servidor inválida", 500);
     }
 
-    const supabaseUser = createClient(supabaseUrl, anonKey, {
-      global: {
-        headers: {
-          Authorization: authHeader,
-        },
-      },
-    });
-
-    // Obter dados do usuário atual
-    console.log("Obtendo dados do usuário solicitante...");
-    const { data: userData, error: userError } = await supabaseUser.auth.getUser();
-    
-    if (userError || !userData.user) {
-      console.error("Erro ao obter usuário:", userError);
-      return new Response(JSON.stringify({ error: "Usuário não autenticado" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Parse e validação básica dos dados
+    const requestData = await req.json();
+    console.log("Dados recebidos:", JSON.stringify(requestData, null, 2));
+    const { email, password, role } = requestData;
+    if (!email || !password || !role) {
+      return buildErrorResponse("Email, senha e função são obrigatórios", 400);
     }
 
-    const requesterId = userData.user.id;
-    console.log("ID do usuário solicitante:", requesterId);
-
-    // Obter company_id do usuário solicitante
-    console.log("Obtendo company_id do usuário solicitante...");
-    const { data: requesterProfile, error: profileError } = await supabaseServiceRole
-      .from('profiles')
-      .select('company_id')
-      .eq('id', requesterId)
-      .single();
-
-    if (profileError || !requesterProfile?.company_id) {
-      console.error("Erro ao obter company_id do solicitante:", profileError);
-      return new Response(JSON.stringify({ error: "Não foi possível obter dados da empresa do usuário" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Checa permissão do solicitante
+    const requesterRole = req.headers.get("x-requester-role");
+    console.log("Role do solicitante:", requesterRole);
+    if (requesterRole !== "admin" && requesterRole !== "master") {
+      return buildErrorResponse("Permissão negada. Apenas admin/master podem criar usuários.", 403);
     }
 
-    const companyId = requesterProfile.company_id;
-    console.log("Company ID obtido para associação do novo usuário:", companyId);
+    // Inicialização do Supabase service role client
+    const supabaseServiceRole = createClient(supabaseUrl, serviceRoleKey);
 
-    // Garantir que o company_id está correto para próxima etapa
-    if (!companyId) {
-      console.error("company_id do solicitante está vazio ou nulo! Abortar criação.");
-      return new Response(JSON.stringify({ 
-        error: "Impossível associar usuário sem empresa definida. Entre em contato com o suporte."
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Buscar contexto do solicitante (userId e companyId)
+    const requesterContext = await getRequesterContext(req, supabaseUrl, anonKey, supabaseServiceRole);
+    if ("error" in requesterContext) {
+      return requesterContext.error;
     }
+    const { requesterId, companyId } = requesterContext;
+    console.log("ID do usuário solicitante:", requesterId, "| company_id:", companyId);
 
-    // Criar usuário via Auth API
-    console.log("Criando usuário...");
-    const { data: newUserData, error: createUserError } = await supabaseServiceRole.auth.admin.createUser({
-      email: email.trim(),
-      password,
-      email_confirm: true,
-    });
-
-    if (createUserError || !newUserData.user) {
-      console.error("Erro detalhado ao criar usuário:", JSON.stringify(createUserError, null, 2));
-      
-      return new Response(JSON.stringify({ 
-        error: createUserError?.message || "Erro ao criar usuário na autenticação" 
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Criação do novo usuário no Auth
+    const newUserResult = await createSupabaseUser(supabaseServiceRole, email, password);
+    if ("error" in newUserResult) {
+      return newUserResult.error;
     }
-
-    const newUserId = newUserData.user.id;
+    const newUserId = newUserResult.user.id;
     console.log("Usuário criado com ID:", newUserId);
 
-    // Criar perfil com o company_id correto (agora nunca sobrescreve)
-    console.log("Criando perfil com company_id:", companyId);
-    const { error: profileCreateError } = await supabaseServiceRole
-      .from('profiles')
-      .upsert({ 
-        id: newUserId, 
-        company_id: companyId,
-        is_active: true,
-        first_name: '',
-        last_name: ''
-      });
-
+    // Criar perfil associado à empresa correta
+    const profileCreateError = await upsertUserProfile(supabaseServiceRole, newUserId, companyId);
     if (profileCreateError) {
       console.error("Erro ao criar perfil:", profileCreateError);
-      // Tentativa de limpar o usuário criado na autenticação para evitar órfãos
-      await supabaseServiceRole.auth.admin.deleteUser(newUserId);
-      return new Response(JSON.stringify({ 
-        error: "Erro ao criar perfil do usuário: " + profileCreateError.message 
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      await deleteSupabaseUser(supabaseServiceRole, newUserId);
+      return buildErrorResponse("Erro ao criar perfil do usuário: " + profileCreateError.message, 500);
     }
 
-    // Criar role com o company_id correto
-    console.log("Definindo role com company_id:", companyId);
-    const { error: roleCreateError } = await supabaseServiceRole
-      .from('user_roles')
-      .insert({ 
-        user_id: newUserId, 
-        role: role,
-        company_id: companyId
-      });
-
+    // Criar role na empresa
+    const roleCreateError = await insertUserRole(supabaseServiceRole, newUserId, role, companyId);
     if (roleCreateError) {
       console.error("Erro ao definir role:", roleCreateError);
-      // Tentativa de limpar o usuário criado na autenticação para evitar órfãos
-      await supabaseServiceRole.auth.admin.deleteUser(newUserId);
-      return new Response(JSON.stringify({ 
-        error: "Erro ao definir função do usuário: " + roleCreateError.message 
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      await deleteSupabaseUser(supabaseServiceRole, newUserId);
+      return buildErrorResponse("Erro ao definir função do usuário: " + roleCreateError.message, 500);
     }
 
     console.log("Usuário criado e associado corretamente ao company_id:", companyId);
-
-    return new Response(JSON.stringify({ 
+    return buildSuccessResponse({ 
       success: true, 
-      user: newUserData.user,
+      user: newUserResult.user,
       company_id: companyId,
-      message: "Usuário criado com sucesso e associado à empresa!" 
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      message: "Usuário criado com sucesso e associado à empresa!"
     });
 
   } catch (error) {
     console.error("Erro geral:", error);
-    return new Response(JSON.stringify({ 
-      error: "Erro interno do servidor: " + (error?.message || "Erro desconhecido") 
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return buildErrorResponse("Erro interno do servidor: " + (error?.message || "Erro desconhecido"), 500);
   }
 });
