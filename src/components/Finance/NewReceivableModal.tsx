@@ -67,6 +67,9 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
                 placeholder="Exemplo: 00001234"
               />
             </div>
+          </div>
+          {/* Nova linha: Valor e Conta Bancária lado a lado */}
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="amount">Valor *</Label>
               <Input
@@ -82,8 +85,6 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
                 pattern="[0-9]*[.,]?[0-9]*"
               />
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
             <ReceivableBankAccountSelect
               value={formData.account}
               onValueChange={val => setFormData(f => ({ ...f, account: val }))}
