@@ -114,22 +114,30 @@ export const NewPayableModal = ({ isOpen, onClose, onSuccess }: NewPayableModalP
       if (!user) throw new Error('Usuário não autenticado');
 
       let datas: Date[] = [new Date(formData.due_date)];
+      let totalParcelas = 1;
+
       if (recorrente && qtdRepeticoes > 1) {
         datas = addPeriodo(new Date(formData.due_date), frequencia, qtdRepeticoes);
+        totalParcelas = qtdRepeticoes;
       }
 
-      const inserts = datas.map(date => ({
-        user_id: user.id,
-        supplier_name: selectedVendorName, // always store selected name
-        description: formData.description,
-        amount: parseFloat(formData.amount),
-        due_date: date.toISOString().slice(0, 10),
-        category: formData.category,
-        invoice_number: formData.invoice_number || null,
-        notes: formData.notes || null,
-        status: 'pending',
-        account: formData.account, // novo campo
-      }));
+      const inserts = datas.map((date, idx) => {
+        const parcelaLabel = totalParcelas > 1 
+          ? ` - Parcela ${idx + 1}/${totalParcelas}` 
+          : '';
+        return {
+          user_id: user.id,
+          supplier_name: selectedVendorName,
+          description: formData.description + parcelaLabel,
+          amount: parseFloat(formData.amount),
+          due_date: date.toISOString().slice(0, 10),
+          category: formData.category,
+          invoice_number: formData.invoice_number || null,
+          notes: formData.notes || null,
+          status: 'pending',
+          account: formData.account,
+        };
+      });
 
       const { error } = await supabase
         .from('accounts_payable')
