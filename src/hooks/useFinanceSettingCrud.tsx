@@ -28,9 +28,9 @@ export function useFinanceSettingCrud<T extends BaseFinanceSetting>(
         .maybeSingle();
       if (!profile?.company_id) throw new Error("Empresa não encontrada.");
 
-      // FIXED: pass column as string literal; no generics or casts needed here
+      // FIX: use only one type parameter for .from(), so .order() column can be string
       const { data, error } = await supabase
-        .from<T, T>(table)
+        .from<T>(table)
         .select(selectFields)
         .eq("company_id", profile.company_id)
         .order("created_at", { ascending: true });
