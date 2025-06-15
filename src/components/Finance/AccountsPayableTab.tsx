@@ -32,6 +32,9 @@ interface AccountPayable {
 }
 
 export const AccountsPayableTab = () => {
+  // LOG: debug render
+  console.log("[AccountsPayableTab] renderizou");
+
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewPayableModal, setShowNewPayableModal] = useState(false);
   const [accountsPayable, setAccountsPayable] = useState<AccountPayable[]>([]);
@@ -40,6 +43,9 @@ export const AccountsPayableTab = () => {
   const [period, setPeriod] = useState<{ startDate: Date | null, endDate: Date | null }>({
     startDate: null, endDate: null
   });
+
+  // Novo log:
+  console.log("[AccountsPayableTab] period:", period);
 
   useEffect(() => {
     loadAccountsPayable();

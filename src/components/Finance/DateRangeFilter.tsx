@@ -20,20 +20,28 @@ interface DateRangeFilterProps {
 }
 
 export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({ range, onChange, label = "Período", disabled }) => {
-  const handleDaySelect = (date: Date) => {
-    // Alternar entre definir data de início ou término
-    if (!range.startDate || (range.startDate && range.endDate)) {
-      onChange({ startDate: date, endDate: null });
-    } else if (range.startDate && !range.endDate) {
-      if (date >= range.startDate) {
-        onChange({ startDate: range.startDate, endDate: date });
-      } else {
-        onChange({ startDate: date, endDate: range.startDate });
-      }
+  // Log para depuração
+  console.log("[DateRangeFilter] render - range:", range);
+
+  // Proteção extra: garantir que se passar nulls, não quebre seleção do Calendar
+  const selectedFrom = range.startDate ?? undefined;
+  const selectedTo = range.endDate ?? undefined;
+
+  // Lógica de onSelect compatível com o Calendar de shadcn/ui
+  // E previne caso 'range' chegue undefined
+  const handleSelect = (v: any) => {
+    console.log("[DateRangeFilter] handleSelect:", v);
+    if (!v) {
+      onChange({ startDate: null, endDate: null });
+      return;
+    }
+    // Compatível tanto com { from, to } quanto apenas um Date
+    if (typeof v === "object" && (v.from || v.to)) {
+      onChange({ startDate: v.from ?? null, endDate: v.to ?? null });
+    } else if (v instanceof Date) {
+      onChange({ startDate: v, endDate: null });
     }
   };
-
-  const selectedDays = [range.startDate, range.endDate].filter(Boolean);
 
   return (
     <Popover>
@@ -48,11 +56,8 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({ range, onChang
       <PopoverContent className="w-auto p-0 z-50">
         <Calendar
           mode="range"
-          selected={{
-            from: range.startDate ?? undefined, 
-            to: range.endDate ?? undefined
-          }}
-          onSelect={({ from, to }) => onChange({ startDate: from ?? null, endDate: to ?? null })}
+          selected={{ from: selectedFrom, to: selectedTo }}
+          onSelect={handleSelect}
           numberOfMonths={2}
           locale={ptBR}
           initialFocus
