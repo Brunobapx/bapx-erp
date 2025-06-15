@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -20,6 +19,7 @@ import ReceivableBankAccountSelect from "./ReceivableBankAccountSelect";
 import ReceivableRecurrenceFields from "./ReceivableRecurrenceFields";
 import { useFinancialCategories } from "@/hooks/useFinancialCategories";
 import { DatePicker } from "@/components/ui/date-picker";
+import ReceivableClientSelector from "./ReceivableClientSelector";
 
 interface NewReceivableModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ type Frequencia = "mensal" | "quinzenal" | "anual";
 export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps) => {
   const [formData, setFormData] = useState({
     client: '',
+    client_id: '', // novo campo para armazenar o id selecionado do cliente
     description: '',
     amount: '',
     due_date: '',
@@ -104,6 +105,7 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
       const inserts = datas.map(date => ({
         user_id: user.id,
         client: formData.client,
+        client_id: formData.client_id,
         description: formData.description,
         amount: parseFloat(formData.amount),
         due_date: date.toISOString().slice(0, 10),
@@ -132,6 +134,7 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
   const resetForm = () => {
     setFormData({
       client: '',
+      client_id: '',
       description: '',
       amount: '',
       due_date: '',
@@ -145,6 +148,15 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
     setFrequencia("mensal");
   };
 
+  // Atualização ao selecionar cliente
+  const handleClientSelect = (id: string, name: string) => {
+    setFormData(prev => ({
+      ...prev,
+      client: name,
+      client_id: id,
+    }));
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px]">
@@ -154,14 +166,11 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="client">Cliente *</Label>
-              <Input
-                id="client"
-                name="client"
-                value={formData.client}
-                onChange={handleChange}
-                placeholder="Nome do cliente"
-                required
+              <label className="block mb-1 font-medium">Cliente *</label>
+              <ReceivableClientSelector
+                selectedClientId={formData.client_id}
+                selectedClientName={formData.client}
+                onSelect={handleClientSelect}
               />
             </div>
             <div>
