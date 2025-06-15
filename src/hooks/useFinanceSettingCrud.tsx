@@ -2,11 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-
-export interface BaseFinanceSetting {
-  id?: string;
-  company_id: string;
-}
+import { BaseFinanceSetting } from "@/types/financeSetting";
 
 export function useFinanceSettingCrud<T extends BaseFinanceSetting>(
   table: string,
