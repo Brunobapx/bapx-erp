@@ -75,7 +75,7 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
-    if (!formData.client || !formData.description || !formData.amount || !formData.due_date) {
+    if (!formData.client_id || !formData.description || !formData.amount || !formData.due_date) {
       toast.error('Preencha todos os campos obrigatórios');
       return;
     }
@@ -104,7 +104,6 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
 
       const inserts = datas.map(date => ({
         user_id: user.id,
-        client: formData.client,
         client_id: formData.client_id,
         description: formData.description,
         amount: parseFloat(formData.amount),
