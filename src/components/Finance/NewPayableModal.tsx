@@ -81,6 +81,12 @@ export const NewPayableModal = ({ isOpen, onClose, onSuccess }: NewPayableModalP
       return;
     }
 
+    // Validação simples para garantir campo valor é numérico
+    if (isNaN(Number(formData.amount))) {
+      toast.error('Digite um valor numérico válido');
+      return;
+    }
+
     if (!selectedVendorId) {
       toast.error('Selecione um fornecedor');
       return;
@@ -181,12 +187,14 @@ export const NewPayableModal = ({ isOpen, onClose, onSuccess }: NewPayableModalP
               <Label htmlFor="amount">Valor *</Label>
               <Input
                 id="amount"
-                type="number"
-                step="0.01"
+                type="text"
+                inputMode="decimal"
                 value={formData.amount}
-                onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                onChange={(e) => setFormData({...formData, amount: e.target.value.replace(',', '.')})}
                 placeholder="0,00"
                 required
+                autoComplete="off"
+                pattern="[0-9]*[.,]?[0-9]*"
               />
             </div>
             <div>
