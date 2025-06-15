@@ -158,6 +158,24 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
             qtdRepeticoes={qtdRepeticoes}
             setQtdRepeticoes={setQtdRepeticoes}
           />
+
+          {/* Preview das parcelas, só se recorrente e qtdRepeticoes > 1 */}
+          {recorrente && qtdRepeticoes > 1 && (
+            <div className="mt-2 text-xs text-muted-foreground border rounded bg-gray-50 p-2">
+              <b>As cobranças serão lançadas assim:</b>
+              <ul className="list-disc ml-6 mt-1">
+                {Array.from({ length: qtdRepeticoes }).map((_, idx) => (
+                  <li key={idx}>
+                    {formData.description || "Descrição"} - Parcela {idx + 1}/{qtdRepeticoes}
+                    {formData.invoice_number && (
+                      <> {'| NF: '}{formData.invoice_number}-{idx + 1}/{qtdRepeticoes}</>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div className="flex justify-end gap-3 pt-4">
             <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
               Cancelar

@@ -76,22 +76,37 @@ export function useNewReceivableForm(onClose: () => void) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
       let datas: Date[] = [new Date(formData.due_date)];
+      let totalParcelas = 1;
+
       if (recorrente && qtdRepeticoes > 1) {
         datas = addPeriodo(new Date(formData.due_date), frequencia, qtdRepeticoes);
+        totalParcelas = qtdRepeticoes;
       }
-      const inserts = datas.map(date => ({
-        user_id: user.id,
-        client_id: formData.client_id,
-        description: formData.description,
-        amount: parseFloat(formData.amount),
-        due_date: formatDateToYYYYMMDD(date),
-        account: formData.account,
-        category: formData.category,
-        notes: formData.notes || null,
-        type: "receivable",
-        payment_status: "pending",
-        invoice_number: formData.invoice_number || null // Adicionado
-      }));
+
+      const inserts = datas.map((date, idx) => {
+        // Parcela X/Y
+        const parcelaLabel = totalParcelas > 1 ? ` - Parcela ${idx + 1}/${totalParcelas}` : '';
+        const invoiceSuffix = totalParcelas > 1 && formData.invoice_number
+          ? `-${idx + 1}/${totalParcelas}`
+          : '';
+
+        return {
+          user_id: user.id,
+          client_id: formData.client_id,
+          description: formData.description + parcelaLabel,
+          amount: parseFloat(formData.amount),
+          due_date: formatDateToYYYYMMDD(date),
+          account: formData.account,
+          category: formData.category,
+          notes: formData.notes || null,
+          type: "receivable",
+          payment_status: "pending",
+          invoice_number: formData.invoice_number
+            ? (formData.invoice_number + invoiceSuffix)
+            : null
+        };
+      });
+
       const { error } = await supabase.from('financial_entries').insert(inserts);
       if (error) throw error;
       toast.success('Cobrança criada com sucesso!');
