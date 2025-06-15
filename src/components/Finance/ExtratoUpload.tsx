@@ -88,7 +88,7 @@ export default function ExtratoUpload({ onFinish }: ExtratoUploadProps) {
       <Button
         type="button"
         onClick={() => fileRef.current?.click()}
-        loading={loading}
+        disabled={loading}
       >
         {loading ? "Importando..." : "Importar Extrato (.CSV)"}
       </Button>

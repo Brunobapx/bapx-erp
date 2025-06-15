@@ -27,6 +27,7 @@ import { DRETab } from '@/components/Finance/DRETab';
 import { ReportsTab } from '@/components/Finance/ReportsTab';
 import { FinanceSettingsTab } from "@/components/Finance/FinanceSettingsTab";
 import { useFinancialEntries } from '@/hooks/useFinancialEntries';
+import ConciliacaoBancariaTab from "@/components/Finance/ConciliacaoBancariaTab";
 
 const FinancePage = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -278,12 +279,7 @@ const FinancePage = () => {
 
         <TabsContent value="conciliacao-bancaria" className="mt-6">
           <React.Suspense fallback={<div>Carregando...</div>}>
-            {typeof window !== "undefined" && (
-              <div>
-                {/* Nova aba de Conciliação Bancária */}
-                {React.createElement(require('@/components/Finance/ConciliacaoBancariaTab').default)}
-              </div>
-            )}
+            <ConciliacaoBancariaTab />
           </React.Suspense>
         </TabsContent>
       </Tabs>

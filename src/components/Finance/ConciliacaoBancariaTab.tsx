@@ -95,7 +95,7 @@ export default function ConciliacaoBancariaTab() {
                   <Button
                     type="button"
                     size="sm"
-                    loading={criandoLancamento}
+                    disabled={criandoLancamento}
                     onClick={() => conciliarManual(t)}
                   >
                     Marcar Conciliado / Vincular
