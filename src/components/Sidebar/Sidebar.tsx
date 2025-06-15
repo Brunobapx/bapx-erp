@@ -134,5 +134,3 @@ export const Sidebar = () => {
     </aside>
   );
 };
-
-export { Sidebar };
