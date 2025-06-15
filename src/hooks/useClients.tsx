@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,22 +33,18 @@ export const useClients = () => {
       try {
         setLoading(true);
         setError(null);
-        
-        console.log('useClients - Iniciando busca de clientes...');
-        
+
         const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
+
         if (userError) {
-          console.error('useClients - Erro de autenticação:', userError);
+          setError('Usuário não autenticado');
           throw new Error('Usuário não autenticado');
         }
-        
+
         if (!user) {
-          console.error('useClients - Usuário não encontrado');
+          setError('Usuário não encontrado');
           throw new Error('Usuário não encontrado');
         }
-        
-        console.log('useClients - Usuário autenticado:', user.id);
 
         const { data, error } = await supabase
           .from('clients')
@@ -58,26 +53,17 @@ export const useClients = () => {
           .order('name', { ascending: true });
 
         if (error) {
-          console.error('useClients - Erro do Supabase:', error);
           throw error;
         }
 
-        console.log('useClients - Dados recebidos do banco:', data);
-        
         const clientsData = Array.isArray(data) ? data : [];
-        console.log('useClients - Total de clientes carregados:', clientsData.length);
-        
         setAllClients(clientsData);
-        
+
       } catch (err: any) {
-        console.error('useClients - Erro ao buscar clientes:', err);
         setError(err.message || 'Erro ao carregar clientes');
-        
-        // Só mostrar toast de erro se não for problema de autenticação
         if (!err.message?.includes('não autenticado')) {
           toast.error('Erro ao carregar clientes: ' + (err.message || 'Erro desconhecido'));
         }
-        
         setAllClients([]);
       } finally {
         setLoading(false);
