@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,7 @@ const ClientsPage = () => {
   const { 
     clients: filteredClients, 
     allClients,
-    loading, 
+    isLoading, 
     error, 
     searchQuery, 
     setSearchQuery, 
@@ -34,7 +35,7 @@ const ClientsPage = () => {
   } = useClients();
 
   console.log('ClientsPage - Estado atual:', {
-    loading,
+    isLoading,
     error,
     filteredClientsCount: filteredClients?.length || 0,
     allClientsCount: allClients?.length || 0,
@@ -139,7 +140,7 @@ const ClientsPage = () => {
       
       {/* Debug info - remove in production */}
       <div className="text-xs text-gray-500 p-2 bg-gray-50 rounded">
-        Debug: Loading: {loading ? 'Sim' : 'Não'} | 
+        Debug: Loading: {isLoading ? 'Sim' : 'Não'} | 
         Erro: {error || 'Nenhum'} | 
         Total clientes: {allClients?.length || 0} | 
         Filtrados: {safeFilteredClients.length}
@@ -147,7 +148,7 @@ const ClientsPage = () => {
       
       <Card>
         <CardContent className="p-0">
-          {loading ? (
+          {isLoading ? (
             <div className="flex justify-center items-center p-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               <span className="ml-2">Carregando clientes...</span>
@@ -203,7 +204,7 @@ const ClientsPage = () => {
               </TableBody>
             </Table>
           )}
-          {!loading && !error && safeFilteredClients.length === 0 && (
+          {!isLoading && !error && safeFilteredClients.length === 0 && (
             <div className="p-8 text-center">
               <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-600 font-medium">Nenhum cliente encontrado</p>

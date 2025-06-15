@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -19,7 +18,7 @@ export const OrderClientSection: React.FC<OrderClientSectionProps> = ({
   openClientCombobox,
   setOpenClientCombobox
 }) => {
-  const { clients, loading, error } = useClients();
+  const { clients, isLoading, error } = useClients();
 
   const handleClientSelect = (clientId: string, clientName: string) => {
     onUpdateFormData({ client_id: clientId, client_name: clientName });
@@ -43,10 +42,10 @@ export const OrderClientSection: React.FC<OrderClientSectionProps> = ({
             variant="outline"
             size="sm"
             onClick={handleRefresh}
-            disabled={loading}
+            disabled={isLoading}
             title="Atualizar lista de clientes"
           >
-            <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-3 w-3 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
           <Button
             type="button"
@@ -66,7 +65,7 @@ export const OrderClientSection: React.FC<OrderClientSectionProps> = ({
         </div>
       )}
       
-      {loading && (
+      {isLoading && (
         <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
           Carregando clientes...
         </div>
@@ -81,7 +80,7 @@ export const OrderClientSection: React.FC<OrderClientSectionProps> = ({
         setOpen={setOpenClientCombobox}
       />
       
-      {!loading && !error && clients.length === 0 && (
+      {!isLoading && !error && clients.length === 0 && (
         <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded">
           Nenhum cliente cadastrado. <Button variant="link" className="p-0 h-auto text-amber-600" onClick={handleAddClient}>Clique aqui para cadastrar o primeiro cliente.</Button>
         </div>
