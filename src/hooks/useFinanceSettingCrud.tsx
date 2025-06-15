@@ -27,15 +27,19 @@ export function useFinanceSettingCrud<T extends BaseFinanceSetting>(
         .eq("id", user.id)
         .maybeSingle();
       if (!profile?.company_id) throw new Error("Empresa não encontrada.");
+
+      // <T, unknown> necessário para resolver TS2558
       const { data, error } = await supabase
-        .from<T>(table)
+        .from<T, T>(table)
         .select(selectFields)
         .eq("company_id", profile.company_id)
         .order("created_at", { ascending: true });
       if (error) throw error;
-      setItems((data ?? []) as T[]);
+
+      // Conversão sugerida pelo erro TS2352
+      setItems(((data ?? []) as unknown) as T[]);
     } catch (err: any) {
-      setItems([] as T[]);
+      setItems(([] as unknown) as T[]);
       toast({ title: "Erro", description: err.message || String(err), variant: "destructive" });
     } finally {
       setLoading(false);
