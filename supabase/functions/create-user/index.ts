@@ -61,8 +61,31 @@ serve(async (req) => {
 
     console.log("Configuração Supabase OK");
 
-    // Criar cliente Supabase com service role
     const supabaseServiceRole = createClient(supabaseUrl, serviceRoleKey);
+    
+    // VERIFICAR SE O USUÁRIO JÁ EXISTE
+    console.log("Verificando se o usuário já existe:", email.trim());
+    const { data: { users: existingUsers }, error: listUsersError } = await supabaseServiceRole.auth.admin.listUsers({
+      email: email.trim(),
+    });
+
+    if (listUsersError) {
+      console.error("Erro ao verificar existência do usuário:", listUsersError);
+      return new Response(JSON.stringify({ error: "Erro ao verificar se o usuário existe." }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (existingUsers.length > 0) {
+      console.log("Tentativa de criar usuário que já existe:", email.trim());
+      return new Response(JSON.stringify({ error: "Já existe um usuário cadastrado com este e-mail." }), {
+        status: 409, // Conflict
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    console.log("Usuário não existente, prosseguindo com a criação.");
+
 
     // Obter o company_id do usuário solicitante usando o token de autorização
     const authHeader = req.headers.get("authorization");

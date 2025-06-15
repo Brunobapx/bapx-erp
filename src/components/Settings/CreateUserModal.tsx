@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -83,7 +82,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
 
       if (error) {
         console.error("Erro da Edge Function:", error);
-        throw new Error(`Erro na comunicação: ${error.message}`);
+        throw error; // Lança o objeto de erro original para o catch
       }
 
       if (data?.error) {
@@ -112,17 +111,27 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
       
       let errorMessage = "Erro desconhecido ao criar usuário";
       
-      if (err?.message) {
+      if (err.context?.json) { // Trata erros de FunctionFetchError
+        try {
+          const errorBody = await err.context.json();
+          if (errorBody.error) {
+            errorMessage = errorBody.error;
+          } else {
+            errorMessage = err.message;
+          }
+        } catch (parseError) {
+          console.error("Erro ao parsear corpo do erro:", parseError);
+          errorMessage = "Erro de comunicação. Não foi possível ler a resposta do servidor.";
+        }
+      } else if (err?.message) {
         errorMessage = err.message;
       } else if (typeof err === 'string') {
         errorMessage = err;
       }
       
-      // Mensagens mais específicas baseadas no tipo de erro
-      if (errorMessage.includes("Failed to send")) {
-        errorMessage = "Erro de comunicação com o servidor. Verifique sua conexão.";
-      } else if (errorMessage.includes("fetch")) {
-        errorMessage = "Erro de rede. Tente novamente em alguns instantes.";
+      // Mensagens genéricas para erros de rede
+      if (errorMessage.includes("Failed to send") || errorMessage.includes("fetch")) {
+        errorMessage = "Erro de comunicação com o servidor. Verifique sua conexão e tente novamente.";
       }
       
       toast({
