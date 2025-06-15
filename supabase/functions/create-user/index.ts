@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -123,7 +124,18 @@ serve(async (req) => {
     }
 
     const companyId = requesterProfile.company_id;
-    console.log("Company ID obtido:", companyId);
+    console.log("Company ID obtido para associação do novo usuário:", companyId);
+
+    // Garantir que o company_id está correto para próxima etapa
+    if (!companyId) {
+      console.error("company_id do solicitante está vazio ou nulo! Abortar criação.");
+      return new Response(JSON.stringify({ 
+        error: "Impossível associar usuário sem empresa definida. Entre em contato com o suporte."
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Criar usuário via Auth API
     console.log("Criando usuário...");
@@ -147,7 +159,7 @@ serve(async (req) => {
     const newUserId = newUserData.user.id;
     console.log("Usuário criado com ID:", newUserId);
 
-    // Criar perfil com o company_id correto
+    // Criar perfil com o company_id correto (agora nunca sobrescreve)
     console.log("Criando perfil com company_id:", companyId);
     const { error: profileCreateError } = await supabaseServiceRole
       .from('profiles')
@@ -193,7 +205,7 @@ serve(async (req) => {
       });
     }
 
-    console.log("Usuário criado com sucesso na empresa:", companyId);
+    console.log("Usuário criado e associado corretamente ao company_id:", companyId);
 
     return new Response(JSON.stringify({ 
       success: true, 
