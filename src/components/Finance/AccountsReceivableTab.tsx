@@ -18,6 +18,8 @@ import { EditReceivableModal } from './EditReceivableModal';
 import { DateRangeFilter } from "./DateRangeFilter";
 import { useActiveFinancialAccounts } from "@/hooks/useActiveFinancialAccounts";
 import { useFinancialCategories } from "@/hooks/useFinancialCategories";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { ChevronDown } from "lucide-react";
 
 export const AccountsReceivableTab = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -110,40 +112,86 @@ export const AccountsReceivableTab = () => {
     );
   }
 
+  // AccountSelect Popover Menu
   const AccountSelect = () => (
-    <div className="w-full min-w-[130px]">
-      <label className="block mb-1 text-xs text-muted-foreground">Conta bancária/Caixa</label>
-      <select
-        value={accountFilter}
-        disabled={accountsLoading}
-        onChange={(e) => setAccountFilter(e.target.value)}
-        className="w-full border rounded px-2 py-1 text-sm bg-white"
-      >
-        <option value="">Todas</option>
-        {accounts?.map(acc =>
-          <option value={acc.name} key={acc.id}>{acc.name}</option>
-        )}
-      </select>
-    </div>
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="min-w-[140px] flex justify-between">
+          <span>{accountFilter ? accountFilter : "Conta bancária/Caixa"}</span>
+          <ChevronDown className="ml-2 h-4 w-4 text-muted-foreground" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-44 p-0">
+        <ul>
+          <li>
+            <Button
+              size="sm"
+              variant={!accountFilter ? "secondary" : "ghost"}
+              className="w-full justify-start rounded-none"
+              onClick={() => setAccountFilter("")}
+              disabled={accountsLoading}
+            >
+              Todas
+            </Button>
+          </li>
+          {accounts?.map(acc => (
+            <li key={acc.id}>
+              <Button
+                size="sm"
+                variant={accountFilter === acc.name ? "secondary" : "ghost"}
+                className="w-full justify-start rounded-none"
+                onClick={() => setAccountFilter(acc.name)}
+                disabled={accountsLoading}
+              >
+                {acc.name}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      </PopoverContent>
+    </Popover>
   );
 
+  // CategorySelect Popover Menu
   const CategorySelect = () => (
-    <div className="w-full min-w-[130px]">
-      <label className="block mb-1 text-xs text-muted-foreground">Categoria</label>
-      <select
-        value={categoryFilter}
-        disabled={categoriesLoading}
-        onChange={(e) => setCategoryFilter(e.target.value)}
-        className="w-full border rounded px-2 py-1 text-sm bg-white"
-      >
-        <option value="">Todas</option>
-        {categories
-          ?.filter(cat => cat.type === "receita" && cat.is_active)
-          .map(cat =>
-            <option value={cat.name} key={cat.id}>{cat.name}</option>
-          )}
-      </select>
-    </div>
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="min-w-[120px] flex justify-between">
+          <span>{categoryFilter ? categoryFilter : "Categoria"}</span>
+          <ChevronDown className="ml-2 h-4 w-4 text-muted-foreground" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-44 p-0">
+        <ul>
+          <li>
+            <Button
+              size="sm"
+              variant={!categoryFilter ? "secondary" : "ghost"}
+              className="w-full justify-start rounded-none"
+              onClick={() => setCategoryFilter("")}
+              disabled={categoriesLoading}
+            >
+              Todas
+            </Button>
+          </li>
+          {categories
+            ?.filter(cat => cat.type === "receita" && cat.is_active)
+            .map(cat => (
+              <li key={cat.id}>
+                <Button
+                  size="sm"
+                  variant={categoryFilter === cat.name ? "secondary" : "ghost"}
+                  className="w-full justify-start rounded-none"
+                  onClick={() => setCategoryFilter(cat.name)}
+                  disabled={categoriesLoading}
+                >
+                  {cat.name}
+                </Button>
+              </li>
+            ))}
+        </ul>
+      </PopoverContent>
+    </Popover>
   );
 
   return (
@@ -193,7 +241,8 @@ export const AccountsReceivableTab = () => {
         </Card>
       </div>
 
-      <div className="flex flex-col md:flex-row justify-between items-center gap-2">
+      {/* FILTROS EM LINHA */}
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
         <div className="relative w-full max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -203,7 +252,7 @@ export const AccountsReceivableTab = () => {
             className="pl-8"
           />
         </div>
-        <div className="flex flex-wrap gap-2 items-center">
+        <div className="flex gap-2 items-center flex-wrap">
           <DateRangeFilter range={period} onChange={setPeriod} label="Filtrar por período" />
           <AccountSelect />
           <CategorySelect />
