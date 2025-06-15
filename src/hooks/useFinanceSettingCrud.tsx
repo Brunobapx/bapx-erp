@@ -28,12 +28,12 @@ export function useFinanceSettingCrud<T extends BaseFinanceSetting>(
         .maybeSingle();
       if (!profile?.company_id) throw new Error("Empresa não encontrada.");
 
-      // Corrige o erro TS2344 fazendo cast para string
+      // FIXED: pass column as string literal; no generics or casts needed here
       const { data, error } = await supabase
         .from<T, T>(table)
         .select(selectFields)
         .eq("company_id", profile.company_id)
-        .order("created_at" as string, { ascending: true });
+        .order("created_at", { ascending: true });
       if (error) throw error;
 
       setItems(((data ?? []) as unknown) as T[]);
