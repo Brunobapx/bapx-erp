@@ -26,40 +26,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [sessionTimeout, setSessionTimeout] = useState<NodeJS.Timeout | null>(null);
-
-  // Função para configurar timeout da sessão
-  const setupSessionTimeout = () => {
-    if (sessionTimeout) {
-      clearTimeout(sessionTimeout);
-    }
-    
-    // Timeout de 30 minutos (1800 segundos)
-    const timeout = setTimeout(async () => {
-      console.log('Sessão expirada por inatividade');
-      await signOut();
-    }, 30 * 60 * 1000);
-    
-    setSessionTimeout(timeout);
-  };
-
-  // Função para resetar timeout em atividade do usuário
-  const resetSessionTimeout = () => {
-    if (session?.user) {
-      setupSessionTimeout();
-    }
-  };
 
   useEffect(() => {
-    // Configurar listeners de atividade do usuário
-    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
-    
-    const resetTimeout = () => resetSessionTimeout();
-    
-    events.forEach(event => {
-      document.addEventListener(event, resetTimeout, true);
-    });
-
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -67,22 +35,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Log evento de login para auditoria
-          await supabase.rpc('log_security_event', {
-            action_name: 'USER_LOGIN',
-            table_name: 'auth.users',
-            record_id: session.user.id,
-            old_data: null,
-            new_data: { 
-              event: event,
-              user_agent: navigator.userAgent,
-              timestamp: new Date().toISOString()
-            }
-          });
-
-          // Configurar timeout da sessão
-          setupSessionTimeout();
-
           // Fetch user role
           setTimeout(async () => {
             try {
@@ -98,10 +50,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }, 0);
         } else {
           setUserRole(null);
-          if (sessionTimeout) {
-            clearTimeout(sessionTimeout);
-            setSessionTimeout(null);
-          }
         }
         
         setLoading(false);
@@ -112,43 +60,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.user) {
-        setupSessionTimeout();
-      }
       setLoading(false);
     });
 
-    return () => {
-      subscription.unsubscribe();
-      events.forEach(event => {
-        document.removeEventListener(event, resetTimeout, true);
-      });
-      if (sessionTimeout) {
-        clearTimeout(sessionTimeout);
-      }
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   const signOut = async () => {
-    if (sessionTimeout) {
-      clearTimeout(sessionTimeout);
-      setSessionTimeout(null);
-    }
-
-    // Log evento de logout para auditoria
-    if (user) {
-      await supabase.rpc('log_security_event', {
-        action_name: 'USER_LOGOUT',
-        table_name: 'auth.users',
-        record_id: user.id,
-        old_data: null,
-        new_data: { 
-          timestamp: new Date().toISOString(),
-          user_agent: navigator.userAgent
-        }
-      });
-    }
-
     const { error } = await supabase.auth.signOut();
     if (error && process.env.NODE_ENV === 'development') {
       console.error('Error signing out:', error);

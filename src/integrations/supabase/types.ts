@@ -1689,45 +1689,6 @@ export type Database = {
           },
         ]
       }
-      security_audit_log: {
-        Row: {
-          action: string
-          created_at: string | null
-          id: string
-          ip_address: unknown | null
-          new_values: Json | null
-          old_values: Json | null
-          record_id: string | null
-          table_name: string
-          user_agent: string | null
-          user_id: string | null
-        }
-        Insert: {
-          action: string
-          created_at?: string | null
-          id?: string
-          ip_address?: unknown | null
-          new_values?: Json | null
-          old_values?: Json | null
-          record_id?: string | null
-          table_name: string
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          action?: string
-          created_at?: string | null
-          id?: string
-          ip_address?: unknown | null
-          new_values?: Json | null
-          old_values?: Json | null
-          record_id?: string | null
-          table_name?: string
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       system_settings: {
         Row: {
           category: string
@@ -2025,29 +1986,11 @@ export type Database = {
         }
         Returns: boolean
       }
-      log_security_event: {
-        Args: {
-          action_name: string
-          table_name: string
-          record_id?: string
-          old_data?: Json
-          new_data?: Json
-        }
-        Returns: undefined
-      }
       role_has_module_access: {
         Args: {
           role_param: Database["public"]["Enums"]["app_role"]
           module_route: string
         }
-        Returns: boolean
-      }
-      validate_cnpj: {
-        Args: { cnpj: string }
-        Returns: boolean
-      }
-      validate_cpf: {
-        Args: { cpf: string }
         Returns: boolean
       }
     }
