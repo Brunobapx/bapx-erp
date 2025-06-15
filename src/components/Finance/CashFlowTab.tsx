@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/table";
 import { useCashFlow } from '@/hooks/useCashFlow';
 import { DateRangeFilter } from "./DateRangeFilter";
+import { CashFlowCards } from "./CashFlowCards";
+import { CashFlowTable } from "./CashFlowTable";
 
 export const CashFlowTab = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('month');
@@ -93,93 +95,19 @@ export const CashFlowTab = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-green-600" />
-              <div>
-                <p className="text-sm text-muted-foreground">Total Entradas</p>
-                <p className="text-lg font-bold text-green-600">R$ {totalEntradas.toLocaleString('pt-BR')}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <TrendingDown className="h-4 w-4 text-red-600" />
-              <div>
-                <p className="text-sm text-muted-foreground">Total Saídas</p>
-                <p className="text-lg font-bold text-red-600">R$ {totalSaidas.toLocaleString('pt-BR')}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-blue-600" />
-              <div>
-                <p className="text-sm text-muted-foreground">Saldo Líquido</p>
-                <p className={`text-lg font-bold ${saldoLiquido >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  R$ {saldoLiquido.toLocaleString('pt-BR')}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <CalendarDays className="h-4 w-4 text-purple-600" />
-              <div>
-                <p className="text-sm text-muted-foreground">Saldo Final</p>
-                <p className="text-lg font-bold text-purple-600">R$ {saldoFinal.toLocaleString('pt-BR')}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <CashFlowCards
+        totalEntradas={totalEntradas}
+        totalSaidas={totalSaidas}
+        saldoLiquido={saldoLiquido}
+        saldoFinal={saldoFinal}
+      />
 
       <Card>
         <CardHeader>
           <CardTitle>Movimentações</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Data</TableHead>
-                <TableHead>Descrição</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead className="text-right">Valor</TableHead>
-                <TableHead className="text-right">Saldo</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredData.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>{new Date(item.date).toLocaleDateString('pt-BR')}</TableCell>
-                  <TableCell>{item.description}</TableCell>
-                  <TableCell>
-                    <span className={`stage-badge ${item.type === 'entrada' ? 'badge-sales' : 'badge-route'}`}>
-                      {item.type === 'entrada' ? 'Entrada' : 'Saída'}
-                    </span>
-                  </TableCell>
-                  <TableCell className={`text-right font-medium ${item.type === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
-                    {item.type === 'entrada' ? '+' : '-'} R$ {item.amount.toLocaleString('pt-BR')}
-                  </TableCell>
-                  <TableCell className="text-right font-medium">
-                    R$ {item.balance.toLocaleString('pt-BR')}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <CashFlowTable data={filteredData} />
           {filteredData.length === 0 && (
             <div className="p-4 text-center text-muted-foreground">
               Nenhuma movimentação encontrada.
