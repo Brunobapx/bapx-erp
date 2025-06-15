@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -28,6 +27,7 @@ const StockPage = lazy(() => import("./pages/StockPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const AuthPage = lazy(() => import("./pages/AuthPage"));
 const SaasPage = lazy(() => import("./pages/SaasPage"));
+const ServiceOrdersPage = lazy(() => import("./pages/ServiceOrdersPage"));
 
 const queryClient = new QueryClient();
 
@@ -63,6 +63,7 @@ const App = () => (
                         <Route path="/rotas" element={<ModuleProtectedRoute requiredRoute="/rotas"><RoutesPage /></ModuleProtectedRoute>} />
                         <Route path="/calendario" element={<ModuleProtectedRoute requiredRoute="/calendario"><CalendarPage /></ModuleProtectedRoute>} />
                         <Route path="/estoque" element={<ModuleProtectedRoute requiredRoute="/estoque"><StockPage /></ModuleProtectedRoute>} />
+                        <Route path="/ordens-servico" element={<ModuleProtectedRoute requiredRoute="/ordens-servico"><ServiceOrdersPage /></ModuleProtectedRoute>} />
                         <Route path="/configuracoes" element={<ModuleProtectedRoute requiredRoute="/configuracoes"><SettingsPage /></ModuleProtectedRoute>} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
