@@ -54,31 +54,40 @@ export const EditReceivableModal: React.FC<EditReceivableModalProps> = ({ open, 
           <DialogTitle>Editar Conta a Receber</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <Input
-            label="Descrição"
-            placeholder="Descrição"
-            value={description}
-            onChange={e => setDescription(e.target.value)}
-          />
-          <Input
-            label="Valor"
-            type="number"
-            value={amount}
-            onChange={e => setAmount(Number(e.target.value))}
-          />
-          <Input
-            label="Vencimento"
-            type="date"
-            value={dueDate ? dueDate.substring(0, 10) : ""}
-            onChange={e => setDueDate(e.target.value)}
-          />
+          <div>
+            <label className="block text-sm mb-1" htmlFor="receivable-desc">Descrição</label>
+            <Input
+              id="receivable-desc"
+              placeholder="Descrição"
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm mb-1" htmlFor="receivable-valor">Valor</label>
+            <Input
+              id="receivable-valor"
+              type="number"
+              value={amount}
+              onChange={e => setAmount(Number(e.target.value))}
+            />
+          </div>
+          <div>
+            <label className="block text-sm mb-1" htmlFor="receivable-venc">Vencimento</label>
+            <Input
+              id="receivable-venc"
+              type="date"
+              value={dueDate ? dueDate.substring(0, 10) : ""}
+              onChange={e => setDueDate(e.target.value)}
+            />
+          </div>
         </div>
         <DialogFooter>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose} disabled={loading}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} loading={loading.toString()}>
-            Salvar
+          <Button onClick={handleSave} disabled={loading}>
+            {loading ? "Salvando..." : "Salvar"}
           </Button>
         </DialogFooter>
       </DialogContent>
