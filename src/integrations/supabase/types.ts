@@ -553,6 +553,36 @@ export type Database = {
           },
         ]
       }
+      markup_settings: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          default_profit_margin: number
+          fixed_expenses_percentage: number
+          id: string
+          updated_at: string | null
+          variable_expenses_percentage: number
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          default_profit_margin?: number
+          fixed_expenses_percentage?: number
+          id?: string
+          updated_at?: string | null
+          variable_expenses_percentage?: number
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          default_profit_margin?: number
+          fixed_expenses_percentage?: number
+          id?: string
+          updated_at?: string | null
+          variable_expenses_percentage?: number
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           company_id: string

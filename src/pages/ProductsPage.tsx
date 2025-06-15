@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ProductModal } from '@/components/Modals/ProductModal';
 import { CategoriesTab } from '@/components/Products/CategoriesTab';
+import { MarkupTab } from '@/components/Products/MarkupTab';
 import { useProducts } from '@/hooks/useProducts';
 import { supabase } from "@/integrations/supabase/client";
 
@@ -93,7 +94,7 @@ const ProductsPage = () => {
       </div>
 
       <Tabs defaultValue="products" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="products" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
             Produtos
@@ -101,6 +102,10 @@ const ProductsPage = () => {
           <TabsTrigger value="categories" className="flex items-center gap-2">
             <Box className="h-4 w-4" />
             Categorias
+          </TabsTrigger>
+          <TabsTrigger value="markup" className="flex items-center gap-2">
+            <span className="inline-flex items-center"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M20 7V17M4 7V17M7 10V14M17 10V14M9 12V12.01M15 12V12.01" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
+            Markup
           </TabsTrigger>
         </TabsList>
 
@@ -237,6 +242,9 @@ const ProductsPage = () => {
 
         <TabsContent value="categories">
           <CategoriesTab />
+        </TabsContent>
+        <TabsContent value="markup">
+          <MarkupTab />
         </TabsContent>
       </Tabs>
       
