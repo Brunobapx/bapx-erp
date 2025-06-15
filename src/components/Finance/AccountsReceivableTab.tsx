@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -165,7 +166,7 @@ export const AccountsReceivableTab = () => {
                 <TableHead>ID</TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Descrição</TableHead>
-                <TableHead>ID Venda</TableHead>
+                <TableHead>NF/Documento</TableHead>
                 <TableHead>Vencimento</TableHead>
                 <TableHead className="text-right">Valor</TableHead>
                 <TableHead>Status</TableHead>
@@ -178,7 +179,7 @@ export const AccountsReceivableTab = () => {
                   <TableCell className="font-medium">{account.entry_number}</TableCell>
                   <TableCell>{account.client}</TableCell>
                   <TableCell>{account.description}</TableCell>
-                  <TableCell>{account.saleId || '-'}</TableCell>
+                  <TableCell>{account.invoice_number || '-'}</TableCell>
                   <TableCell>{new Date(account.dueDate).toLocaleDateString('pt-BR')}</TableCell>
                   <TableCell className="text-right font-medium">
                     R$ {account.amount.toLocaleString('pt-BR')}

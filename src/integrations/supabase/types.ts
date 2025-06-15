@@ -551,6 +551,7 @@ export type Database = {
           due_date: string
           entry_number: string
           id: string
+          invoice_number: string | null
           notes: string | null
           order_id: string | null
           payment_date: string | null
@@ -571,6 +572,7 @@ export type Database = {
           due_date: string
           entry_number: string
           id?: string
+          invoice_number?: string | null
           notes?: string | null
           order_id?: string | null
           payment_date?: string | null
@@ -591,6 +593,7 @@ export type Database = {
           due_date?: string
           entry_number?: string
           id?: string
+          invoice_number?: string | null
           notes?: string | null
           order_id?: string | null
           payment_date?: string | null

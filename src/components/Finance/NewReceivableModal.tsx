@@ -57,6 +57,16 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
                 onSelect={handleClientSelect}
               />
             </div>
+            <div>
+              <Label htmlFor="invoice_number">Número NF/Documento</Label>
+              <Input
+                id="invoice_number"
+                name="invoice_number"
+                value={formData.invoice_number}
+                onChange={handleChange}
+                placeholder="Exemplo: 00001234"
+              />
+            </div>
           </div>
           {/* Valor e Conta Bancária lado a lado */}
           <div className="grid grid-cols-2 gap-4">
