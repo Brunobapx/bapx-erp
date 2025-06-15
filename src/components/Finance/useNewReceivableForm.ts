@@ -1,0 +1,144 @@
+
+import { useState } from "react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { addPeriodo, formatDateToYYYYMMDD } from "./dateUtils";
+import { useActiveFinancialAccounts } from "@/hooks/useActiveFinancialAccounts";
+import { useFinancialCategories } from "@/hooks/useFinancialCategories";
+
+type Frequencia = "mensal" | "quinzenal" | "anual";
+
+interface FormData {
+  client: string;
+  client_id: string; // id do cliente
+  description: string;
+  amount: string;
+  due_date: string;
+  category: string;
+  saleId: string;
+  account: string;
+  notes: string;
+}
+
+export function useNewReceivableForm(onClose: () => void) {
+  const [formData, setFormData] = useState<FormData>({
+    client: '',
+    client_id: '',
+    description: '',
+    amount: '',
+    due_date: '',
+    category: '',
+    saleId: '',
+    account: '',
+    notes: '',
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [recorrente, setRecorrente] = useState(false);
+  const [frequencia, setFrequencia] = useState<Frequencia>("mensal");
+  const [qtdRepeticoes, setQtdRepeticoes] = useState(1);
+
+  const { accounts, loading: loadingAccounts } = useActiveFinancialAccounts();
+  const { items: categories, loading: categoriesLoading } = useFinancialCategories();
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleClientSelect = (id: string, name: string) => {
+    setFormData(prev => ({
+      ...prev,
+      client: name,
+      client_id: id,
+    }));
+  };
+
+  async function handleSubmit(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    if (!formData.client_id || !formData.description || !formData.amount || !formData.due_date) {
+      toast.error('Preencha todos os campos obrigatórios');
+      return;
+    }
+    if (!formData.account) {
+      toast.error("Selecione uma conta bancária!");
+      return;
+    }
+    if (!formData.category) {
+      toast.error("Selecione uma categoria!");
+      return;
+    }
+    if (isNaN(Number(formData.amount))) {
+      toast.error("Digite um valor numérico válido");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
+      let datas: Date[] = [new Date(formData.due_date)];
+      if (recorrente && qtdRepeticoes > 1) {
+        datas = addPeriodo(new Date(formData.due_date), frequencia, qtdRepeticoes);
+      }
+      const inserts = datas.map(date => ({
+        user_id: user.id,
+        client_id: formData.client_id,
+        description: formData.description,
+        amount: parseFloat(formData.amount),
+        due_date: formatDateToYYYYMMDD(date),
+        sale_id: formData.saleId || null,
+        account: formData.account,
+        category: formData.category,
+        notes: formData.notes || null,
+        type: "receivable",
+        payment_status: "pending",
+      }));
+      const { error } = await supabase.from('financial_entries').insert(inserts);
+      if (error) throw error;
+      toast.success('Cobrança criada com sucesso!');
+      onClose();
+      resetForm();
+    } catch (error: any) {
+      console.error('Erro ao criar cobrança:', error);
+      toast.error('Erro ao criar cobrança');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  function resetForm() {
+    setFormData({
+      client: '',
+      client_id: '',
+      description: '',
+      amount: '',
+      due_date: '',
+      category: '',
+      saleId: '',
+      account: '',
+      notes: '',
+    });
+    setRecorrente(false);
+    setQtdRepeticoes(1);
+    setFrequencia("mensal");
+  }
+
+  return {
+    formData,
+    setFormData,
+    isSubmitting,
+    handleChange,
+    handleSubmit,
+    handleClientSelect,
+    resetForm,
+    recorrente,
+    setRecorrente,
+    frequencia,
+    setFrequencia,
+    qtdRepeticoes,
+    setQtdRepeticoes,
+    accounts,
+    loadingAccounts,
+    categories,
+    categoriesLoading,
+  };
+}

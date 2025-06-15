@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,169 +11,36 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { useActiveFinancialAccounts } from "@/hooks/useActiveFinancialAccounts";
 import ReceivableBankAccountSelect from "./ReceivableBankAccountSelect";
 import ReceivableRecurrenceFields from "./ReceivableRecurrenceFields";
-import { useFinancialCategories } from "@/hooks/useFinancialCategories";
 import { DatePicker } from "@/components/ui/date-picker";
 import ReceivableClientSelector from "./ReceivableClientSelector";
+import { useNewReceivableForm } from "./useNewReceivableForm";
+import { parseLocalDateFromYYYYMMDD } from "./dateUtils";
 
 interface NewReceivableModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-type Frequencia = "mensal" | "quinzenal" | "anual";
-
 export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps) => {
-  const [formData, setFormData] = useState({
-    client: '',
-    client_id: '', // novo campo para armazenar o id selecionado do cliente
-    description: '',
-    amount: '',
-    due_date: '',
-    category: '',
-    saleId: '',
-    account: '',
-    notes: '',
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Recorrência
-  const [recorrente, setRecorrente] = useState(false);
-  const [frequencia, setFrequencia] = useState<Frequencia>("mensal");
-  const [qtdRepeticoes, setQtdRepeticoes] = useState(1);
-
-  const { accounts, loading: loadingAccounts } = useActiveFinancialAccounts();
-  const { items: categories, loading: categoriesLoading } = useFinancialCategories();
-
-  // Função utilitária para corrigir problema de fuso horário/ISO
-  function formatDateToYYYYMMDD(date: Date): string {
-    const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const day = date.getDate().toString().padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  }
-
-  // Função para parsing robusto de string "YYYY-MM-DD" para Date local
-  function parseLocalDateFromYYYYMMDD(dateString: string): Date | undefined {
-    if (!dateString) return undefined;
-    const [year, month, day] = dateString.split('-').map(Number);
-    if (!year || !month || !day) return undefined;
-    // new Date(year, monthIndex, day) => cria data local
-    return new Date(year, month - 1, day);
-  }
-
-  // Helper para datas de recorrência
-  function addPeriodo(date: Date, freq: Frequencia, times: number) {
-    const result = [];
-    let baseDate = new Date(date);
-    for (let i = 0; i < times; i++) {
-      result.push(new Date(baseDate));
-      if (freq === "mensal") {
-        baseDate.setMonth(baseDate.getMonth() + 1);
-      } else if (freq === "quinzenal") {
-        baseDate.setDate(baseDate.getDate() + 15);
-      } else if (freq === "anual") {
-        baseDate.setFullYear(baseDate.getFullYear() + 1);
-      }
-    }
-    return result;
-  }
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-
-    if (!formData.client_id || !formData.description || !formData.amount || !formData.due_date) {
-      toast.error('Preencha todos os campos obrigatórios');
-      return;
-    }
-    if (!formData.account) {
-      toast.error("Selecione uma conta bancária!");
-      return;
-    }
-    if (!formData.category) {
-      toast.error("Selecione uma categoria!");
-      return;
-    }
-    if (isNaN(Number(formData.amount))) {
-      toast.error("Digite um valor numérico válido");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado');
-
-      // Garante que todas as datas sejam formatadas no local
-      let datas: Date[] = [new Date(formData.due_date)];
-      if (recorrente && qtdRepeticoes > 1) {
-        datas = addPeriodo(new Date(formData.due_date), frequencia, qtdRepeticoes);
-      }
-
-      const inserts = datas.map(date => ({
-        user_id: user.id,
-        client_id: formData.client_id,
-        description: formData.description,
-        amount: parseFloat(formData.amount),
-        due_date: formatDateToYYYYMMDD(date),
-        sale_id: formData.saleId || null,
-        account: formData.account,
-        category: formData.category,
-        notes: formData.notes || null,
-        type: "receivable",
-        payment_status: "pending",
-      }));
-
-      const { error } = await supabase.from('financial_entries').insert(inserts);
-      if (error) throw error;
-
-      toast.success('Cobrança criada com sucesso!');
-      onClose();
-      resetForm();
-    } catch (error: any) {
-      console.error('Erro ao criar cobrança:', error);
-      toast.error('Erro ao criar cobrança');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      client: '',
-      client_id: '',
-      description: '',
-      amount: '',
-      due_date: '',
-      category: '',
-      saleId: '',
-      account: '',
-      notes: '',
-    });
-    setRecorrente(false);
-    setQtdRepeticoes(1);
-    setFrequencia("mensal");
-  };
-
-  // Atualização ao selecionar cliente
-  const handleClientSelect = (id: string, name: string) => {
-    setFormData(prev => ({
-      ...prev,
-      client: name,
-      client_id: id,
-    }));
-  };
+  const {
+    formData,
+    setFormData,
+    isSubmitting,
+    handleChange,
+    handleSubmit,
+    handleClientSelect,
+    recorrente,
+    setRecorrente,
+    frequencia,
+    setFrequencia,
+    qtdRepeticoes,
+    setQtdRepeticoes,
+    categories,
+    categoriesLoading
+  } = useNewReceivableForm(onClose);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -241,7 +109,7 @@ export const NewReceivableModal = ({ isOpen, onClose }: NewReceivableModalProps)
                 onDateChange={date =>
                   setFormData(f => ({
                     ...f,
-                    due_date: date ? formatDateToYYYYMMDD(date) : ''
+                    due_date: date ? date.toISOString().slice(0, 10) : ''
                   }))
                 }
                 placeholder="Selecione a data"
