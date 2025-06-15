@@ -25,6 +25,7 @@ import { AccountsPayableTab } from '@/components/Finance/AccountsPayableTab';
 import { AccountsReceivableTab } from '@/components/Finance/AccountsReceivableTab';
 import { DRETab } from '@/components/Finance/DRETab';
 import { ReportsTab } from '@/components/Finance/ReportsTab';
+import { FinanceSettingsTab } from "@/components/Finance/FinanceSettingsTab";
 import { useFinancialEntries } from '@/hooks/useFinancialEntries';
 
 const FinancePage = () => {
@@ -131,13 +132,14 @@ const FinancePage = () => {
       <StageAlert alerts={alerts} onDismiss={handleDismissAlert} />
       
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="overview">Visão Geral</TabsTrigger>
           <TabsTrigger value="cash-flow">Fluxo de Caixa</TabsTrigger>
           <TabsTrigger value="accounts-payable">Contas a Pagar</TabsTrigger>
           <TabsTrigger value="accounts-receivable">Contas a Receber</TabsTrigger>
           <TabsTrigger value="dre">DRE</TabsTrigger>
           <TabsTrigger value="reports">Relatórios</TabsTrigger>
+          <TabsTrigger value="settings">Configurações</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
@@ -267,6 +269,10 @@ const FinancePage = () => {
 
         <TabsContent value="reports">
           <ReportsTab />
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <FinanceSettingsTab />
         </TabsContent>
       </Tabs>
       
