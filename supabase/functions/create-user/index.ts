@@ -158,6 +158,17 @@ serve(async (req) => {
 
     if (createUserError || !newUserData.user) {
       console.error("Erro ao criar usuário:", createUserError);
+      
+      // Mensagem customizada para erro de email existente
+      if (createUserError && (createUserError.message.includes("already be registered") || createUserError.message.includes("email_exists"))) {
+        return new Response(JSON.stringify({ 
+          error: "Já existe um usuário cadastrado com este e-mail." 
+        }), {
+          status: 409, // Conflict
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      
       return new Response(JSON.stringify({ 
         error: createUserError?.message || "Erro ao criar usuário na autenticação" 
       }), {
@@ -183,6 +194,8 @@ serve(async (req) => {
 
     if (profileCreateError) {
       console.error("Erro ao criar perfil:", profileCreateError);
+      // Tentativa de limpar o usuário criado na autenticação para evitar órfãos
+      await supabaseServiceRole.auth.admin.deleteUser(newUserId);
       return new Response(JSON.stringify({ 
         error: "Erro ao criar perfil do usuário: " + profileCreateError.message 
       }), {
@@ -203,6 +216,8 @@ serve(async (req) => {
 
     if (roleCreateError) {
       console.error("Erro ao definir role:", roleCreateError);
+      // Tentativa de limpar o usuário criado na autenticação para evitar órfãos
+      await supabaseServiceRole.auth.admin.deleteUser(newUserId);
       return new Response(JSON.stringify({ 
         error: "Erro ao definir função do usuário: " + roleCreateError.message 
       }), {
