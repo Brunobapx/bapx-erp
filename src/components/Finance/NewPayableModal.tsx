@@ -15,6 +15,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import VendorSelector from "./VendorSelector";
 import { useActiveFinancialAccounts } from "@/hooks/useActiveFinancialAccounts";
+import PayableRecurrenceFields from "./PayableRecurrenceFields";
+import PayableBankAccountSelect from "./PayableBankAccountSelect";
 
 interface NewPayableModalProps {
   isOpen: boolean;
@@ -198,25 +200,10 @@ export const NewPayableModal = ({ isOpen, onClose, onSuccess }: NewPayableModalP
                 pattern="[0-9]*[.,]?[0-9]*"
               />
             </div>
-            <div>
-              <Label htmlFor="bank-account">Contas bancárias/Caixa *</Label>
-              <Select
-                value={formData.account}
-                onValueChange={val => setFormData(f => ({ ...f, account: val }))}
-                disabled={accountsLoading}
-              >
-                <SelectTrigger id="bank-account">
-                  <SelectValue placeholder={accountsLoading ? "Carregando contas..." : "Selecione a conta"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {accounts.map(acc => (
-                    <SelectItem value={acc.name} key={acc.id}>
-                      {acc.name} {/* pode customizar: {acc.name} ({acc.bank || "sem banco"}) */}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <PayableBankAccountSelect
+              value={formData.account}
+              onValueChange={val => setFormData(f => ({ ...f, account: val }))}
+            />
           </div>
 
           <div>
@@ -270,39 +257,14 @@ export const NewPayableModal = ({ isOpen, onClose, onSuccess }: NewPayableModalP
             />
           </div>
 
-          <div className="flex items-center gap-2 mt-2">
-            <Switch checked={recorrente} onCheckedChange={setRecorrente} id="recorrente"/>
-            <Label htmlFor="recorrente">Conta Recorrente?</Label>
-          </div>
-
-          {recorrente && (
-            <div className="grid md:grid-cols-3 gap-3">
-              <div>
-                <Label htmlFor="freq">Frequência</Label>
-                <Select value={frequencia} onValueChange={v => setFrequencia(v as Frequencia)}>
-                  <SelectTrigger id="freq">
-                    <SelectValue placeholder="Frequência" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="mensal">Mensal</SelectItem>
-                    <SelectItem value="quinzenal">Quinzenal</SelectItem>
-                    <SelectItem value="anual">Anual</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="repeticoes">Nº de repetições</Label>
-                <Input
-                  id="repeticoes"
-                  type="number"
-                  min={1}
-                  value={qtdRepeticoes}
-                  onChange={e => setQtdRepeticoes(Number(e.target.value))}
-                  disabled={!recorrente}
-                />
-              </div>
-            </div>
-          )}
+          <PayableRecurrenceFields
+            recorrente={recorrente}
+            setRecorrente={setRecorrente}
+            frequencia={frequencia}
+            setFrequencia={setFrequencia}
+            qtdRepeticoes={qtdRepeticoes}
+            setQtdRepeticoes={setQtdRepeticoes}
+          />
 
           <div className="flex justify-end gap-3 pt-4">
             <Button type="button" variant="outline" onClick={onClose}>
