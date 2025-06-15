@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState } from "react";
 import { useServiceOrders, ServiceOrder } from "@/hooks/useServiceOrders";
 import { Button } from "@/components/ui/button";
@@ -87,7 +86,7 @@ export const ServiceOrderList: React.FC<{
               ))}
             </SelectContent>
           </Select>
-          <Button size="icon" variant="outline" onClick={refetch}>
+          <Button size="icon" variant="outline" onClick={() => refetch()}>
             <RefreshCw />
           </Button>
         </div>
