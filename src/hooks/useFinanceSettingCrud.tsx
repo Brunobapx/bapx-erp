@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -17,7 +16,6 @@ export function useFinanceSettingCrud<T extends BaseFinanceSetting>(
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado.");
-      // Buscar o company_id do perfil
       const { data: profile } = await supabase
         .from("profiles")
         .select("company_id")
@@ -30,9 +28,7 @@ export function useFinanceSettingCrud<T extends BaseFinanceSetting>(
         .select(selectFields)
         .eq("company_id", profile.company_id)
         .order("created_at", { ascending: true });
-
       if (error) throw error;
-
       setItems((data ?? []) as unknown as T[]);
     } catch (err: any) {
       setItems([] as unknown as T[]);
@@ -47,7 +43,6 @@ export function useFinanceSettingCrud<T extends BaseFinanceSetting>(
     try {
       let record;
       if (id) {
-        // Editar
         const { data, error } = await supabase
           .from(table)
           .update({ ...fields, updated_at: new Date().toISOString() })
@@ -57,7 +52,6 @@ export function useFinanceSettingCrud<T extends BaseFinanceSetting>(
         if (error) throw error;
         record = data;
       } else {
-        // Criar
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("Usuário não autenticado.");
         const { data: profile } = await supabase
@@ -90,7 +84,7 @@ export function useFinanceSettingCrud<T extends BaseFinanceSetting>(
     try {
       const { error } = await supabase.from(table).delete().eq("id", id);
       if (error) throw error;
-      toast({ title: "Removido com sucesso", variant: "default" }); 
+      toast({ title: "Removido com sucesso", variant: "default" });
       await fetchItems();
     } catch (err: any) {
       toast({ title: "Erro", description: err.message || String(err), variant: "destructive" });
@@ -101,5 +95,5 @@ export function useFinanceSettingCrud<T extends BaseFinanceSetting>(
 
   useEffect(() => { fetchItems(); }, [table]);
 
-  return { items, loading, upsertItem, deleteItem, fetchItems };
+  return { items, loading, error: null, upsertItem, deleteItem, fetchItems };
 }

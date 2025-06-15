@@ -1,4 +1,3 @@
-
 import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -46,16 +45,16 @@ export const useClients = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const queryClient = useQueryClient();
 
-  // O onError precisa ir dentro do meta
+  // Padronização do retorno do hook do React Query
   const {
-    data,
-    isLoading: loading,
+    data: queryData,
+    isLoading,
     error,
-    refetch,
+    refetch
   } = useQuery<Client[], Error>({
     queryKey: ['clients'],
     queryFn: fetchClients,
-    staleTime: 1000 * 60 * 10, // 10 min cache
+    staleTime: 1000 * 60 * 10,
     meta: {
       onError: (err: Error) => {
         if (!err.message.includes('não autenticado')) {
@@ -65,8 +64,8 @@ export const useClients = () => {
     },
   });
 
-  // Forçar allClients a ser array sempre
-  const allClients: Client[] = data ?? [];
+  // Sempre garantir array
+  const allClients: Client[] = queryData ?? [];
 
   const refreshClients = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['clients'] });
@@ -77,11 +76,8 @@ export const useClients = () => {
     [allClients]
   );
 
-  // Função para buscar clientes com termo de pesquisa
   const searchClients = useCallback((searchTerm: string) => {
-    if (!searchTerm || searchTerm.trim() === '') {
-      return allClients;
-    }
+    if (!searchTerm?.trim()) return allClients;
     const searchString = searchTerm.toLowerCase();
     return allClients.filter(client => {
       return (
@@ -93,17 +89,18 @@ export const useClients = () => {
     });
   }, [allClients]);
 
-  const filteredClients: Client[] = useMemo(() => searchClients(searchQuery), [allClients, searchQuery, searchClients]);
+  const filteredClients: Client[] = searchClients(searchQuery);
 
   return {
     clients: filteredClients,
     allClients,
-    loading,
+    isLoading,
     error: error ? error.message : null,
     searchQuery,
     setSearchQuery,
     refreshClients,
     getClientById,
     searchClients,
+    refetch,
   };
 };

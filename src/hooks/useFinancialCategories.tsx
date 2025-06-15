@@ -11,5 +11,6 @@ export interface FinancialCategory {
   updated_at?: string;
 }
 export function useFinancialCategories() {
-  return useFinanceSettingCrud<FinancialCategory>("financial_categories");
+  const { items, loading, error, upsertItem, deleteItem, fetchItems } = useFinanceSettingCrud<FinancialCategory>("financial_categories");
+  return { items, loading, error, upsertItem, deleteItem, fetchItems };
 }

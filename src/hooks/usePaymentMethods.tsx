@@ -10,5 +10,6 @@ export interface PaymentMethod {
   updated_at?: string;
 }
 export function usePaymentMethods() {
-  return useFinanceSettingCrud<PaymentMethod>("payment_methods");
+  const { items, loading, error, upsertItem, deleteItem, fetchItems } = useFinanceSettingCrud<PaymentMethod>("payment_methods");
+  return { items, loading, error, upsertItem, deleteItem, fetchItems };
 }

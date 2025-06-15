@@ -14,5 +14,6 @@ export interface FinancialAccount {
   updated_at?: string;
 }
 export function useFinancialAccounts() {
-  return useFinanceSettingCrud<FinancialAccount>("financial_accounts");
+  const { items, loading, error, upsertItem, deleteItem, fetchItems } = useFinanceSettingCrud<FinancialAccount>("financial_accounts");
+  return { items, loading, error, upsertItem, deleteItem, fetchItems };
 }
