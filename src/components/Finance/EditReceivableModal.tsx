@@ -2,9 +2,9 @@
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { ReceivableFormFields } from "./ReceivableFormFields";
 
 // Define the type for Receivable props
 type EditReceivableModalProps = {
@@ -53,35 +53,14 @@ export const EditReceivableModal: React.FC<EditReceivableModalProps> = ({ open, 
         <DialogHeader>
           <DialogTitle>Editar Conta a Receber</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm mb-1" htmlFor="receivable-desc">Descrição</label>
-            <Input
-              id="receivable-desc"
-              placeholder="Descrição"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="block text-sm mb-1" htmlFor="receivable-valor">Valor</label>
-            <Input
-              id="receivable-valor"
-              type="number"
-              value={amount}
-              onChange={e => setAmount(Number(e.target.value))}
-            />
-          </div>
-          <div>
-            <label className="block text-sm mb-1" htmlFor="receivable-venc">Vencimento</label>
-            <Input
-              id="receivable-venc"
-              type="date"
-              value={dueDate ? dueDate.substring(0, 10) : ""}
-              onChange={e => setDueDate(e.target.value)}
-            />
-          </div>
-        </div>
+        <ReceivableFormFields
+          description={description}
+          amount={amount}
+          dueDate={dueDate}
+          onDescriptionChange={setDescription}
+          onAmountChange={setAmount}
+          onDueDateChange={setDueDate}
+        />
         <DialogFooter>
           <Button variant="secondary" onClick={onClose} disabled={loading}>
             Cancelar
