@@ -17,6 +17,7 @@ import VendorSelector from "./VendorSelector";
 import { useActiveFinancialAccounts } from "@/hooks/useActiveFinancialAccounts";
 import PayableRecurrenceFields from "./PayableRecurrenceFields";
 import PayableBankAccountSelect from "./PayableBankAccountSelect";
+import { useFinancialCategories } from "@/hooks/useFinancialCategories";
 
 interface NewPayableModalProps {
   isOpen: boolean;
@@ -32,7 +33,7 @@ export const NewPayableModal = ({ isOpen, onClose, onSuccess }: NewPayableModalP
     description: '',
     amount: '',
     due_date: '',
-    category: 'Compras',
+    category: '', // inicia agora como string vazia
     invoice_number: '',
     notes: '',
     account: '', // nova linha, campo account
@@ -79,6 +80,9 @@ export const NewPayableModal = ({ isOpen, onClose, onSuccess }: NewPayableModalP
     setSelectedVendorName(name);
     setFormData((prev) => ({ ...prev, supplier_name: name }));
   };
+
+  // Buscar categorias financeiras
+  const { items: financialCategories, loading: categoriesLoading } = useFinancialCategories();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -231,17 +235,27 @@ export const NewPayableModal = ({ isOpen, onClose, onSuccess }: NewPayableModalP
           </div>
 
           <div>
-            <Label htmlFor="category">Categoria</Label>
-            <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
+            <Label htmlFor="category">Categoria *</Label>
+            <Select
+              value={formData.category}
+              onValueChange={(value) =>
+                setFormData({ ...formData, category: value })
+              }
+              disabled={categoriesLoading}
+            >
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder={categoriesLoading ? "Carregando categorias..." : "Selecione a categoria"} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Compras">Compras</SelectItem>
-                <SelectItem value="Logística">Logística</SelectItem>
-                <SelectItem value="Utilidades">Utilidades</SelectItem>
-                <SelectItem value="Financiamento">Financiamento</SelectItem>
-                <SelectItem value="Outros">Outros</SelectItem>
+                {/* Apenas categorias do tipo despesa e ativas */}
+                {financialCategories
+                  .filter(cat => cat.type === "despesa" && cat.is_active)
+                  .map(cat => (
+                    <SelectItem key={cat.id} value={cat.name}>
+                      {cat.name}
+                    </SelectItem>
+                  ))
+                }
               </SelectContent>
             </Select>
           </div>
