@@ -28,17 +28,17 @@ export function useFinanceSettingCrud<T extends BaseFinanceSetting>(
         .maybeSingle();
       if (!profile?.company_id) throw new Error("Empresa não encontrada.");
 
-      // FIX: use only one type parameter for .from(), so .order() column can be string
       const { data, error } = await supabase
-        .from<T>(table)
+        .from(table)
         .select(selectFields)
         .eq("company_id", profile.company_id)
         .order("created_at", { ascending: true });
+
       if (error) throw error;
 
-      setItems(((data ?? []) as unknown) as T[]);
+      setItems((data ?? []) as T[]);
     } catch (err: any) {
-      setItems(([] as unknown) as T[]);
+      setItems([] as T[]);
       toast({ title: "Erro", description: err.message || String(err), variant: "destructive" });
     } finally {
       setLoading(false);
@@ -77,7 +77,7 @@ export function useFinanceSettingCrud<T extends BaseFinanceSetting>(
         if (error) throw error;
         record = data;
       }
-      toast({ title: "Salvo com sucesso", variant: "default" }); // Use default instead of success
+      toast({ title: "Salvo com sucesso", variant: "default" });
       await fetchItems();
       return record;
     } catch (err: any) {
@@ -93,7 +93,7 @@ export function useFinanceSettingCrud<T extends BaseFinanceSetting>(
     try {
       const { error } = await supabase.from(table).delete().eq("id", id);
       if (error) throw error;
-      toast({ title: "Removido com sucesso", variant: "default" }); // Use default instead of success
+      toast({ title: "Removido com sucesso", variant: "default" }); 
       await fetchItems();
     } catch (err: any) {
       toast({ title: "Erro", description: err.message || String(err), variant: "destructive" });
