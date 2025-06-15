@@ -7,9 +7,10 @@ import { CompanyUsersModalContent } from "../CompanyUsersModalContent";
 interface CompanyUsersModalProps {
   company: Company | null;
   onOpenChange: (open: boolean) => void;
+  onUserCreated?: () => void;
 }
 
-export const CompanyUsersModal: React.FC<CompanyUsersModalProps> = ({ company, onOpenChange }) => {
+export const CompanyUsersModal: React.FC<CompanyUsersModalProps> = ({ company, onOpenChange, onUserCreated }) => {
   if (!company) return null;
 
   return (
@@ -18,7 +19,10 @@ export const CompanyUsersModal: React.FC<CompanyUsersModalProps> = ({ company, o
         <DialogHeader>
           <DialogTitle>Usuários da Empresa: {company.name}</DialogTitle>
         </DialogHeader>
-        <CompanyUsersModalContent companyId={company.id} />
+        <CompanyUsersModalContent
+          companyId={company.id}
+          onUserCreated={onUserCreated}
+        />
       </DialogContent>
     </Dialog>
   );

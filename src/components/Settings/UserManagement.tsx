@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -76,6 +75,10 @@ export const UserManagement = () => {
 
   useEffect(() => {
     loadUsers();
+    // Novo: ouve evento global de novo usuário criado
+    const handler = () => loadUsers();
+    window.addEventListener('user-system-created', handler);
+    return () => window.removeEventListener('user-system-created', handler);
   }, []);
 
   // Update user status

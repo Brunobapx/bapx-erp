@@ -15,6 +15,8 @@ import { SaasSubscriptionsManagement } from "@/components/Saas/SaasSubscriptions
 import { SaasAnalytics } from "@/components/Saas/SaasAnalytics";
 import { SaasModulesManagement } from "@/components/Saas/SaasModulesManagement";
 import { SaasPaymentsManagement } from "@/components/Saas/SaasPaymentsManagement";
+import { CompanyUsersModal } from "@/components/Saas/CompanyActions/CompanyUsersModal";
+import { useQueryClient } from '@tanstack/react-query';
 
 const SaasPage = () => {
   const { userRole } = useAuth();
@@ -22,10 +24,19 @@ const SaasPage = () => {
   const { data: companies, isLoading: loading, refetch: loadCompanies } = useSaasCompanies();
   const [companySettingsOpen, setCompanySettingsOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<any>(null);
+  const [companyUsersModalCompany, setCompanyUsersModalCompany] = useState<any>(null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     loadCompanies();
   }, []);
+
+  const handleUserCreated = () => {
+    // Invalida a query global de usuários do sistema (caso react-query usado na listagem)
+    queryClient.invalidateQueries({ queryKey: ['users-system'] });
+    // Envia um evento global para avisar outros componentes (caso listagem usa efeito global)
+    window.dispatchEvent(new Event('user-system-created'));
+  };
 
   if (userRole !== 'master') {
     return (
@@ -90,6 +101,12 @@ const SaasPage = () => {
             <div>Selecione uma empresa em "Empresas" para editar as configurações.</div>
           )}
         </TabsContent>
+        {/* Modal de Usuários da Empresa */}
+        <CompanyUsersModal
+          company={companyUsersModalCompany}
+          onOpenChange={(open) => setCompanyUsersModalCompany(open ? companyUsersModalCompany : null)}
+          onUserCreated={handleUserCreated}
+        />
         {/* Gestão de Planos */}
         <TabsContent value="plans">
           <SaasPlansManagement />
