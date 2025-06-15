@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, CheckCircle, Clock } from 'lucide-react';
+import { Search, Plus, CheckCircle, Clock, Trash, Pencil } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -13,11 +13,32 @@ import {
 } from "@/components/ui/table";
 import { NewReceivableModal } from './NewReceivableModal';
 import { useAccountsReceivable } from '@/hooks/useAccountsReceivable';
+import { toast } from "sonner";
 
 export const AccountsReceivableTab = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewReceivableModal, setShowNewReceivableModal] = useState(false);
-  const { accountsReceivable, loading, error, confirmReceivable } = useAccountsReceivable();
+  const { accountsReceivable, loading, error, confirmReceivable, refreshReceivables } = useAccountsReceivable();
+
+  const handleEditReceivable = (account: any) => {
+    toast.info(`Editar recebível: ${account.description} (ID: ${account.id})`);
+    // Aqui pode chamar uma modal de edição futuramente
+  };
+
+  const handleDeleteReceivable = async (account: any) => {
+    if (!window.confirm("Tem certeza que deseja excluir este lançamento?")) return;
+    try {
+      const { error } = await import('@/integrations/supabase/client').then(({ supabase }) =>
+        supabase.from('financial_entries').delete().eq('id', account.id)
+      );
+      if (error) throw error;
+      toast.success('Recebível excluído com sucesso!');
+      refreshReceivables();
+    } catch (error: any) {
+      toast.error('Erro ao excluir recebível');
+      console.error(error);
+    }
+  };
 
   if (loading) {
     return (
@@ -153,15 +174,33 @@ export const AccountsReceivableTab = () => {
                     </span>
                   </TableCell>
                   <TableCell>
-                    {account.status !== 'recebido' && (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => confirmReceivable(account.id)}
+                    <div className="flex gap-1">
+                      {account.status !== 'recebido' && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => confirmReceivable(account.id)}
+                        >
+                          Confirmar
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEditReceivable(account)}
+                        aria-label="Editar"
                       >
-                        Confirmar
+                        <Pencil className="text-muted-foreground" />
                       </Button>
-                    )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteReceivable(account)}
+                        aria-label="Excluir"
+                      >
+                        <Trash className="text-erp-alert" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

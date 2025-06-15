@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, AlertTriangle, Clock } from 'lucide-react';
+import { Search, Plus, AlertTriangle, Clock, Trash, Pencil } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -87,6 +86,28 @@ export const AccountsPayableTab = () => {
     } catch (error: any) {
       console.error('Erro ao pagar conta:', error);
       toast.error('Erro ao pagar conta');
+    }
+  };
+
+  const handleEditAccount = (account: AccountPayable) => {
+    toast.info(`Editar lançamento: ${account.description} (ID: ${account.id})`);
+    // Aqui pode chamar uma modal de edição futuramente
+  };
+
+  const handleDeleteAccount = async (account: AccountPayable) => {
+    if (!window.confirm("Tem certeza que deseja excluir este lançamento?")) return;
+    try {
+      const { error } = await supabase
+        .from('accounts_payable')
+        .delete()
+        .eq('id', account.id);
+
+      if (error) throw error;
+      toast.success('Conta excluída com sucesso!');
+      loadAccountsPayable();
+    } catch (error: any) {
+      toast.error('Erro ao excluir conta');
+      console.error(error);
     }
   };
 
@@ -216,19 +237,33 @@ export const AccountsPayableTab = () => {
                     </span>
                   </TableCell>
                   <TableCell>
-                    {account.status === 'pending' || account.status === 'overdue' ? (
+                    <div className="flex gap-1">
+                      {(account.status === 'pending' || account.status === 'overdue') && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handlePayAccount(account.id)}
+                        >
+                          Pagar
+                        </Button>
+                      )}
                       <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handlePayAccount(account.id)}
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => handleEditAccount(account)}
+                        aria-label="Editar"
                       >
-                        Pagar
+                        <Pencil className="text-muted-foreground" />
                       </Button>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">
-                        {account.payment_date ? `Pago em ${new Date(account.payment_date).toLocaleDateString('pt-BR')}` : '-'}
-                      </span>
-                    )}
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => handleDeleteAccount(account)}
+                        aria-label="Excluir"
+                      >
+                        <Trash className="text-erp-alert" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
