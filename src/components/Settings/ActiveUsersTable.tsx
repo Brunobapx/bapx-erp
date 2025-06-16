@@ -3,6 +3,7 @@ import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Edit } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -30,76 +31,100 @@ interface Props {
   userRole: string;
   onStatusChange: (userId: string, isActive: boolean) => void;
   onRoleChange: (userId: string, newRole: string) => void;
+  loading?: boolean;
 }
 
 const ActiveUsersTable: React.FC<Props> = ({
-  users, availableRoles, userRole, onStatusChange, onRoleChange
-}) => (
-  <div className="space-y-4">
-    <h4 className="text-md font-medium">Usuários Ativos</h4>
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Nome</TableHead>
-          <TableHead>Email</TableHead>
-          <TableHead>Função</TableHead>
-          <TableHead>Departamento</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Ações</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {users.map((user) => (
-          <TableRow key={user.id}>
-            <TableCell>
-              {user.first_name} {user.last_name}
-            </TableCell>
-            <TableCell>{user.id}</TableCell>
-            <TableCell className="capitalize">
-              <Select
-                value={user.role}
-                disabled={userRole !== 'master' && user.role === 'master'}
-                onValueChange={newRole => onRoleChange(user.id, newRole)}
-              >
-                <SelectTrigger className="capitalize w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableRoles.map(role =>
-                    role.value === 'master' && userRole !== 'master' ? null : (
-                      <SelectItem value={role.value} key={role.value}>
-                        {role.label}
-                      </SelectItem>
-                    )
-                  )}
-                </SelectContent>
-              </Select>
-            </TableCell>
-            <TableCell>{user.department || '-'}</TableCell>
-            <TableCell>
-              <Badge variant={user.is_active ? 'default' : 'secondary'}>
-                {user.is_active ? 'Ativo' : 'Inativo'}
-              </Badge>
-            </TableCell>
-            <TableCell>
-              <div className="flex gap-2">
-                <Button variant="ghost" size="sm">
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onStatusChange(user.id, !user.is_active)}
-                >
-                  {user.is_active ? 'Desativar' : 'Ativar'}
-                </Button>
-              </div>
-            </TableCell>
+  users, availableRoles, userRole, onStatusChange, onRoleChange, loading = false
+}) => {
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <h4 className="text-md font-medium">Usuários Ativos</h4>
+        <div className="space-y-2">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <h4 className="text-md font-medium">Usuários Ativos</h4>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Nome</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Função</TableHead>
+            <TableHead>Departamento</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Ações</TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  </div>
-);
+        </TableHeader>
+        <TableBody>
+          {users.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={6} className="text-center text-gray-500">
+                Nenhum usuário ativo encontrado
+              </TableCell>
+            </TableRow>
+          ) : (
+            users.map((user) => (
+              <TableRow key={user.id}>
+                <TableCell>
+                  {user.first_name} {user.last_name}
+                </TableCell>
+                <TableCell>{user.id}</TableCell>
+                <TableCell className="capitalize">
+                  <Select
+                    value={user.role}
+                    disabled={userRole !== 'master' && user.role === 'master'}
+                    onValueChange={newRole => onRoleChange(user.id, newRole)}
+                  >
+                    <SelectTrigger className="capitalize w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableRoles.map(role =>
+                        role.value === 'master' && userRole !== 'master' ? null : (
+                          <SelectItem value={role.value} key={role.value}>
+                            {role.label}
+                          </SelectItem>
+                        )
+                      )}
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+                <TableCell>{user.department || '-'}</TableCell>
+                <TableCell>
+                  <Badge variant={user.is_active ? 'default' : 'secondary'}>
+                    {user.is_active ? 'Ativo' : 'Inativo'}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="sm">
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onStatusChange(user.id, !user.is_active)}
+                    >
+                      {user.is_active ? 'Desativar' : 'Ativar'}
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  );
+};
 
 export default ActiveUsersTable;

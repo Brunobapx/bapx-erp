@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -50,6 +51,7 @@ export const UserManagement = () => {
   // Fetch users
   const loadUsers = async () => {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('profiles')
         .select(`
@@ -70,15 +72,13 @@ export const UserManagement = () => {
       if (process.env.NODE_ENV === 'development') {
         console.error('Erro ao carregar usuários:', error);
       }
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     loadUsers();
-    // Novo: ouve evento global de novo usuário criado
-    const handler = () => loadUsers();
-    window.addEventListener('user-system-created', handler);
-    return () => window.removeEventListener('user-system-created', handler);
   }, []);
 
   // Update user status
@@ -124,9 +124,14 @@ export const UserManagement = () => {
     }
   };
 
-  // Callback após criar usuário
+  // Callback após criar usuário - recarrega a lista imediatamente
   const handleUserCreated = () => {
     setIsCreateUserModalOpen(false);
+    toast({
+      title: "Sucesso",
+      description: "Usuário criado com sucesso!",
+    });
+    // Recarrega a lista de usuários imediatamente
     loadUsers();
   };
 
@@ -137,21 +142,23 @@ export const UserManagement = () => {
         <Button onClick={() => setIsCreateUserModalOpen(true)}>
           Novo Usuário
         </Button>
-        <CreateUserModal
-          open={isCreateUserModalOpen}
-          setOpen={setIsCreateUserModalOpen}
-          onSuccess={handleUserCreated}
-          availableRoles={availableRoles}
-          userRole={userRole}
-        />
       </div>
-      {/* SESSÃO DE PERMISSÕES FOI REMOVIDA DAQUI */}
+      
+      <CreateUserModal
+        open={isCreateUserModalOpen}
+        setOpen={setIsCreateUserModalOpen}
+        onSuccess={handleUserCreated}
+        availableRoles={availableRoles}
+        userRole={userRole}
+      />
+      
       <ActiveUsersTable
         users={users}
         availableRoles={availableRoles}
         userRole={userRole}
         onStatusChange={handleUpdateUserStatus}
         onRoleChange={handleUpdateUserRole}
+        loading={loading}
       />
     </div>
   );
