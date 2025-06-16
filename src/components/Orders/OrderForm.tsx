@@ -68,6 +68,26 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
     }
   }, [orderData, initializeFormData]);
 
+  const checkIfHasDirectSaleProducts = async (orderItems: any[]) => {
+    try {
+      const productIds = orderItems.map(item => item.product_id);
+      const { data: products, error } = await supabase
+        .from('products')
+        .select('id, is_direct_sale')
+        .in('id', productIds);
+
+      if (error) {
+        console.error('Erro ao verificar produtos de venda direta:', error);
+        return false;
+      }
+
+      return products?.some(product => product.is_direct_sale) || false;
+    } catch (error) {
+      console.error('Erro ao verificar produtos de venda direta:', error);
+      return false;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
@@ -77,10 +97,16 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
       const orderId = await handleFormSubmit();
       
       if (orderId) {
-        // Se é um novo pedido (não edição), verificar estoque automaticamente
+        // Se é um novo pedido (não edição), verificar se tem produtos de venda direta
         if (!orderData) {
-          console.log('Novo pedido criado, verificando estoque automaticamente...');
-          await checkStockAndSendToProduction(orderId);
+          const hasDirectSaleProducts = await checkIfHasDirectSaleProducts(items);
+          
+          // Se não tem produtos de venda direta, verificar estoque normalmente
+          if (!hasDirectSaleProducts) {
+            console.log('Novo pedido criado, verificando estoque automaticamente...');
+            await checkStockAndSendToProduction(orderId);
+          }
+          // Se tem produtos de venda direta, a lógica de criação de venda já foi executada no hook
         }
         
         onClose(true);

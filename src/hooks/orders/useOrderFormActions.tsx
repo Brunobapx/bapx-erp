@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { OrderFormState, OrderFormItem } from './useOrderFormState';
+import { useNavigate } from 'react-router-dom';
 
 interface UseOrderFormActionsProps {
   formData: OrderFormState;
@@ -22,6 +23,7 @@ export const useOrderFormActions = ({
   items
 }: UseOrderFormActionsProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -59,6 +61,75 @@ export const useOrderFormActions = ({
     }
 
     return true;
+  };
+
+  const checkDirectSaleProducts = async (orderItems: OrderFormItem[]) => {
+    try {
+      const productIds = orderItems.map(item => item.product_id);
+      const { data: products, error } = await supabase
+        .from('products')
+        .select('id, is_direct_sale')
+        .in('id', productIds);
+
+      if (error) {
+        console.error('Erro ao verificar produtos de venda direta:', error);
+        return false;
+      }
+
+      return products?.some(product => product.is_direct_sale) || false;
+    } catch (error) {
+      console.error('Erro ao verificar produtos de venda direta:', error);
+      return false;
+    }
+  };
+
+  const createSaleFromOrder = async (orderId: string) => {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      // Criar a venda baseada no pedido
+      const saleData = {
+        user_id: user.id,
+        order_id: orderId,
+        client_id: formData.client_id,
+        client_name: formData.client_name,
+        total_amount: formData.total_amount,
+        status: 'pending'
+      };
+
+      const { data: sale, error: saleError } = await supabase
+        .from('sales')
+        .insert([saleData])
+        .select()
+        .single();
+
+      if (saleError) throw saleError;
+
+      // Atualizar status do pedido para "released_for_sale"
+      const { error: orderUpdateError } = await supabase
+        .from('orders')
+        .update({ status: 'released_for_sale' })
+        .eq('id', orderId);
+
+      if (orderUpdateError) throw orderUpdateError;
+
+      toast.success("Pedido criado e enviado para vendas automaticamente");
+      
+      // Navegar para a página de vendas
+      setTimeout(() => {
+        navigate('/vendas');
+      }, 1500);
+
+      return sale.id;
+    } catch (error: any) {
+      console.error('Erro ao criar venda automática:', error);
+      toast.error('Erro ao processar venda automática: ' + error.message);
+      throw error;
+    }
   };
 
   const handleSubmit = async () => {
@@ -114,7 +185,16 @@ export const useOrderFormActions = ({
           
         if (itemsError) throw itemsError;
         
-        toast.success("Pedido criado com sucesso");
+        // Verificar se algum produto é de venda direta
+        const hasDirectSaleProducts = await checkDirectSaleProducts(items);
+        
+        if (hasDirectSaleProducts) {
+          console.log('Produto de venda direta detectado, criando venda automaticamente...');
+          await createSaleFromOrder(insertedOrder.id);
+        } else {
+          toast.success("Pedido criado com sucesso");
+        }
+        
         return insertedOrder.id;
       } else {
         // Atualizar pedido existente
