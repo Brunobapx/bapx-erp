@@ -2401,6 +2401,16 @@ export type Database = {
         Args: { prefix: string; table_name: string; user_id: string }
         Returns: string
       }
+      get_company_users: {
+        Args: { company_id_param: string }
+        Returns: {
+          id: string
+          first_name: string
+          last_name: string
+          email: string
+          role: string
+        }[]
+      }
       get_current_user_company_id: {
         Args: Record<PropertyKey, never>
         Returns: string
