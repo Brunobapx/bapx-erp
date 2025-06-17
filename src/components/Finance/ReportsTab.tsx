@@ -255,6 +255,68 @@ export const ReportsTab = () => {
           </Table>
         );
 
+      case 'tax-report':
+        return (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Período</TableHead>
+                <TableHead className="text-right">Base de Cálculo</TableHead>
+                <TableHead className="text-right">ICMS</TableHead>
+                <TableHead className="text-right">IPI</TableHead>
+                <TableHead className="text-right">PIS</TableHead>
+                <TableHead className="text-right">COFINS</TableHead>
+                <TableHead className="text-right">Total Impostos</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {reportData.map((item: any, index: number) => (
+                <TableRow key={index}>
+                  <TableCell className="font-medium">{new Date(item.period + '-01').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</TableCell>
+                  <TableCell className="text-right">R$ {item.tax_base.toLocaleString('pt-BR')}</TableCell>
+                  <TableCell className="text-right">R$ {item.icms.toLocaleString('pt-BR')}</TableCell>
+                  <TableCell className="text-right">R$ {item.ipi.toLocaleString('pt-BR')}</TableCell>
+                  <TableCell className="text-right">R$ {item.pis.toLocaleString('pt-BR')}</TableCell>
+                  <TableCell className="text-right">R$ {item.cofins.toLocaleString('pt-BR')}</TableCell>
+                  <TableCell className="text-right font-bold">R$ {item.total_taxes.toLocaleString('pt-BR')}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        );
+
+      case 'budget-variance':
+        return (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Categoria</TableHead>
+                <TableHead className="text-right">Orçado</TableHead>
+                <TableHead className="text-right">Realizado</TableHead>
+                <TableHead className="text-right">Variação</TableHead>
+                <TableHead className="text-right">Variação %</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {reportData.map((item: any, index: number) => (
+                <TableRow key={index}>
+                  <TableCell className="font-medium">{item.category}</TableCell>
+                  <TableCell className="text-right">R$ {item.budgeted.toLocaleString('pt-BR')}</TableCell>
+                  <TableCell className="text-right">R$ {item.actual.toLocaleString('pt-BR')}</TableCell>
+                  <TableCell className={`text-right ${item.variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    R$ {item.variance.toLocaleString('pt-BR')}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Badge variant={Math.abs(item.variance_percent) <= 10 ? 'default' : Math.abs(item.variance_percent) <= 25 ? 'secondary' : 'destructive'}>
+                      {item.variance_percent.toFixed(1)}%
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        );
+
       default:
         return (
           <div className="text-center py-8 text-muted-foreground">
@@ -273,9 +335,14 @@ export const ReportsTab = () => {
             <Calendar className="mr-2 h-4 w-4" /> Agendar Relatório
           </Button>
           {reportData && (
-            <Button onClick={() => exportToExcel(reportData, selectedReport as string)}>
-              <Download className="mr-2 h-4 w-4" /> Exportar Dados
-            </Button>
+            <>
+              <Button onClick={() => exportToPDF(reportData, selectedReport as string)}>
+                <FileText className="mr-2 h-4 w-4" /> Exportar PDF
+              </Button>
+              <Button onClick={() => exportToExcel(reportData, selectedReport as string)} variant="outline">
+                <Download className="mr-2 h-4 w-4" /> Exportar Excel
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -318,12 +385,12 @@ export const ReportsTab = () => {
                   disabled={loading}
                 >
                   <FileText className="mr-2 h-4 w-4" /> 
-                  {loading ? 'Gerando...' : 'Gerar'}
+                  {loading && selectedReport === report.id ? 'Gerando...' : 'Gerar'}
                 </Button>
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => reportData && exportToPDF(reportData, report.id)}
+                  onClick={() => reportData && selectedReport === report.id && exportToPDF(reportData, report.id)}
                   disabled={!reportData || selectedReport !== report.id}
                 >
                   <Download className="h-4 w-4" />

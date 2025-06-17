@@ -1,7 +1,7 @@
-
 import { useState } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { exportToPDF, exportToExcel } from "@/utils/reportExportUtils";
 
 export type ReportType = 'cash-flow' | 'dre' | 'accounts-aging' | 'profit-analysis' | 'tax-report' | 'budget-variance';
 
@@ -43,6 +43,25 @@ export interface ProfitAnalysisReport {
   profit: number;
   margin: number;
   orders_count: number;
+}
+
+export interface TaxReport {
+  period: string;
+  icms: number;
+  ipi: number;
+  pis: number;
+  cofins: number;
+  iss: number;
+  total_taxes: number;
+  tax_base: number;
+}
+
+export interface BudgetVarianceReport {
+  category: string;
+  budgeted: number;
+  actual: number;
+  variance: number;
+  variance_percent: number;
 }
 
 export const useFinancialReports = () => {
@@ -296,6 +315,126 @@ export const useFinancialReports = () => {
     }
   };
 
+  const generateTaxReport = async (): Promise<TaxReport[]> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
+
+      // Buscar vendas confirmadas para calcular impostos
+      const { data: sales, error: salesError } = await supabase
+        .from('sales')
+        .select(`
+          *,
+          order_items(*)
+        `)
+        .eq('user_id', user.id)
+        .eq('status', 'confirmed');
+
+      if (salesError) throw salesError;
+
+      const monthlyTaxes = new Map();
+
+      (sales || []).forEach(sale => {
+        const month = new Date(sale.created_at).toISOString().slice(0, 7);
+        if (!monthlyTaxes.has(month)) {
+          monthlyTaxes.set(month, {
+            period: month,
+            icms: 0,
+            ipi: 0,
+            pis: 0,
+            cofins: 0,
+            iss: 0,
+            total_taxes: 0,
+            tax_base: 0
+          });
+        }
+
+        const monthData = monthlyTaxes.get(month);
+        const saleAmount = Number(sale.total_amount);
+        
+        // Cálculo simplificado de impostos (18% ICMS, 5% IPI, 1.65% PIS, 7.6% COFINS)
+        monthData.icms += saleAmount * 0.18;
+        monthData.ipi += saleAmount * 0.05;
+        monthData.pis += saleAmount * 0.0165;
+        monthData.cofins += saleAmount * 0.076;
+        monthData.tax_base += saleAmount;
+        monthData.total_taxes = monthData.icms + monthData.ipi + monthData.pis + monthData.cofins + monthData.iss;
+      });
+
+      return Array.from(monthlyTaxes.values()).sort((a, b) => b.period.localeCompare(a.period));
+    } catch (error: any) {
+      console.error('Erro ao gerar relatório fiscal:', error);
+      throw error;
+    }
+  };
+
+  const generateBudgetVarianceReport = async (): Promise<BudgetVarianceReport[]> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
+
+      // Orçamento fictício baseado em categorias
+      const budgetData = [
+        { category: 'Vendas', budgeted: 200000 },
+        { category: 'Matéria Prima', budgeted: 60000 },
+        { category: 'Despesas Administrativas', budgeted: 25000 },
+        { category: 'Marketing', budgeted: 15000 },
+        { category: 'Despesas Operacionais', budgeted: 20000 }
+      ];
+
+      // Buscar dados reais
+      const { data: revenues, error: revenuesError } = await supabase
+        .from('financial_entries')
+        .select('amount, category')
+        .eq('user_id', user.id)
+        .eq('type', 'receivable')
+        .eq('payment_status', 'paid');
+
+      if (revenuesError) throw revenuesError;
+
+      const { data: expenses, error: expensesError } = await supabase
+        .from('accounts_payable')
+        .select('amount, category')
+        .eq('user_id', user.id)
+        .eq('status', 'paid');
+
+      if (expensesError) throw expensesError;
+
+      // Calcular valores reais por categoria
+      const actualData = new Map();
+      
+      // Receitas
+      (revenues || []).forEach(item => {
+        const category = item.category || 'Vendas';
+        actualData.set(category, (actualData.get(category) || 0) + Number(item.amount));
+      });
+
+      // Despesas
+      (expenses || []).forEach(item => {
+        const category = item.category || 'Despesas Operacionais';
+        actualData.set(category, (actualData.get(category) || 0) + Number(item.amount));
+      });
+
+      // Gerar relatório de variação
+      return budgetData.map(budget => {
+        const actual = actualData.get(budget.category) || 0;
+        const variance = actual - budget.budgeted;
+        const variance_percent = budget.budgeted > 0 ? (variance / budget.budgeted) * 100 : 0;
+
+        return {
+          category: budget.category,
+          budgeted: budget.budgeted,
+          actual,
+          variance,
+          variance_percent
+        };
+      });
+    } catch (error: any) {
+      console.error('Erro ao gerar relatório de orçado vs realizado:', error);
+      throw error;
+    }
+  };
+
   const generateReport = async (reportType: ReportType) => {
     setLoading(true);
     setError(null);
@@ -316,12 +455,10 @@ export const useFinancialReports = () => {
           data = await generateProfitAnalysisReport();
           break;
         case 'tax-report':
-          // Relatório fiscal - implementação básica
-          data = await generateDREReport(); // Usando DRE como base
+          data = await generateTaxReport();
           break;
         case 'budget-variance':
-          // Orçado vs Realizado - implementação básica
-          data = await generateCashFlowReport(); // Usando fluxo de caixa como base
+          data = await generateBudgetVarianceReport();
           break;
         default:
           throw new Error('Tipo de relatório não suportado');
@@ -339,20 +476,55 @@ export const useFinancialReports = () => {
     }
   };
 
-  const exportToPDF = (data: any, reportType: string) => {
-    // Implementação básica para exportação
-    toast.success(`Relatório ${reportType} exportado!`);
+  const handleExportToPDF = (data: any, reportType: string) => {
+    try {
+      const reportNames: Record<string, string> = {
+        'cash-flow': 'Relatório de Fluxo de Caixa',
+        'dre': 'Demonstração do Resultado',
+        'accounts-aging': 'Relatório de Aging',
+        'profit-analysis': 'Análise de Rentabilidade',
+        'tax-report': 'Relatório Fiscal',
+        'budget-variance': 'Orçado vs Realizado'
+      };
+
+      exportToPDF(data, reportType, {
+        title: reportNames[reportType] || 'Relatório Financeiro',
+        subtitle: `Período: ${new Date().toLocaleDateString('pt-BR')}`
+      });
+      
+      toast.success('Relatório PDF exportado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao exportar PDF:', error);
+      toast.error('Erro ao exportar relatório em PDF');
+    }
   };
 
-  const exportToExcel = (data: any, reportType: string) => {
-    // Implementação básica para exportação
-    toast.success(`Relatório ${reportType} exportado para Excel!`);
+  const handleExportToExcel = (data: any, reportType: string) => {
+    try {
+      const reportNames: Record<string, string> = {
+        'cash-flow': 'Relatório de Fluxo de Caixa',
+        'dre': 'Demonstração do Resultado',
+        'accounts-aging': 'Relatório de Aging',
+        'profit-analysis': 'Análise de Rentabilidade',
+        'tax-report': 'Relatório Fiscal',
+        'budget-variance': 'Orçado vs Realizado'
+      };
+
+      exportToExcel(data, reportType, {
+        title: reportNames[reportType] || 'Relatório Financeiro'
+      });
+      
+      toast.success('Relatório Excel exportado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao exportar Excel:', error);
+      toast.error('Erro ao exportar relatório em Excel');
+    }
   };
 
   return {
     generateReport,
-    exportToPDF,
-    exportToExcel,
+    exportToPDF: handleExportToPDF,
+    exportToExcel: handleExportToExcel,
     loading,
     error
   };
