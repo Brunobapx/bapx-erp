@@ -9,7 +9,7 @@ export interface ExportOptions {
   subtitle?: string;
 }
 
-export const exportToPDF = (data: any[], reportType: string, options: ExportOptions = {}) => {
+export const exportToPDF = (data: any, reportType: string, options: ExportOptions = {}) => {
   const doc = new jsPDF();
   const { filename = `relatorio_${reportType}_${new Date().toISOString().split('T')[0]}.pdf`, title = 'Relatório Financeiro', subtitle } = options;
 
@@ -33,7 +33,7 @@ export const exportToPDF = (data: any[], reportType: string, options: ExportOpti
       autoTable(doc, {
         startY,
         head: [['Data', 'Descrição', 'Tipo', 'Valor', 'Saldo']],
-        body: data.map(item => [
+        body: data.map((item: any) => [
           new Date(item.date).toLocaleDateString('pt-BR'),
           item.description,
           item.type === 'entrada' ? 'Entrada' : 'Saída',
@@ -61,7 +61,7 @@ export const exportToPDF = (data: any[], reportType: string, options: ExportOpti
       autoTable(doc, {
         startY,
         head: [['Tipo', 'Descrição', 'Cliente/Fornecedor', 'Valor', 'Vencimento', 'Dias Atraso', 'Status']],
-        body: data.map(item => [
+        body: data.map((item: any) => [
           item.type === 'receivable' ? 'A Receber' : 'A Pagar',
           item.description,
           item.client_name,
@@ -77,7 +77,7 @@ export const exportToPDF = (data: any[], reportType: string, options: ExportOpti
       autoTable(doc, {
         startY,
         head: [['Cliente', 'Total Vendas', 'Total Custos', 'Lucro', 'Margem %', 'Pedidos']],
-        body: data.map(item => [
+        body: data.map((item: any) => [
           item.client_name,
           `R$ ${item.total_sales.toLocaleString('pt-BR')}`,
           `R$ ${item.total_cost.toLocaleString('pt-BR')}`,
@@ -88,13 +88,43 @@ export const exportToPDF = (data: any[], reportType: string, options: ExportOpti
       });
       break;
 
+    case 'tax-report':
+      autoTable(doc, {
+        startY,
+        head: [['Período', 'Base de Cálculo', 'ICMS', 'IPI', 'PIS', 'COFINS', 'Total Impostos']],
+        body: data.map((item: any) => [
+          new Date(item.period + '-01').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }),
+          `R$ ${item.tax_base.toLocaleString('pt-BR')}`,
+          `R$ ${item.icms.toLocaleString('pt-BR')}`,
+          `R$ ${item.ipi.toLocaleString('pt-BR')}`,
+          `R$ ${item.pis.toLocaleString('pt-BR')}`,
+          `R$ ${item.cofins.toLocaleString('pt-BR')}`,
+          `R$ ${item.total_taxes.toLocaleString('pt-BR')}`
+        ]),
+      });
+      break;
+
+    case 'budget-variance':
+      autoTable(doc, {
+        startY,
+        head: [['Categoria', 'Orçado', 'Realizado', 'Variação', 'Variação %']],
+        body: data.map((item: any) => [
+          item.category,
+          `R$ ${item.budgeted.toLocaleString('pt-BR')}`,
+          `R$ ${item.actual.toLocaleString('pt-BR')}`,
+          `R$ ${item.variance.toLocaleString('pt-BR')}`,
+          `${item.variance_percent.toFixed(1)}%`
+        ]),
+      });
+      break;
+
     default:
       if (Array.isArray(data) && data.length > 0) {
         const headers = Object.keys(data[0]);
         autoTable(doc, {
           startY,
           head: [headers],
-          body: data.map(item => headers.map(header => String(item[header] || ''))),
+          body: data.map((item: any) => headers.map(header => String(item[header] || ''))),
         });
       }
   }
@@ -102,7 +132,7 @@ export const exportToPDF = (data: any[], reportType: string, options: ExportOpti
   doc.save(filename);
 };
 
-export const exportToExcel = (data: any[], reportType: string, options: ExportOptions = {}) => {
+export const exportToExcel = (data: any, reportType: string, options: ExportOptions = {}) => {
   const { filename = `relatorio_${reportType}_${new Date().toISOString().split('T')[0]}.xlsx`, title = 'Relatório Financeiro' } = options;
 
   let worksheetData: any[][] = [];
@@ -114,7 +144,7 @@ export const exportToExcel = (data: any[], reportType: string, options: ExportOp
         [`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`],
         [],
         ['Data', 'Descrição', 'Tipo', 'Valor', 'Saldo'],
-        ...data.map(item => [
+        ...data.map((item: any) => [
           new Date(item.date).toLocaleDateString('pt-BR'),
           item.description,
           item.type === 'entrada' ? 'Entrada' : 'Saída',
@@ -144,7 +174,7 @@ export const exportToExcel = (data: any[], reportType: string, options: ExportOp
         [`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`],
         [],
         ['Tipo', 'Descrição', 'Cliente/Fornecedor', 'Valor', 'Vencimento', 'Dias Atraso', 'Status'],
-        ...data.map(item => [
+        ...data.map((item: any) => [
           item.type === 'receivable' ? 'A Receber' : 'A Pagar',
           item.description,
           item.client_name,
@@ -162,13 +192,47 @@ export const exportToExcel = (data: any[], reportType: string, options: ExportOp
         [`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`],
         [],
         ['Cliente', 'Total Vendas', 'Total Custos', 'Lucro', 'Margem %', 'Pedidos'],
-        ...data.map(item => [
+        ...data.map((item: any) => [
           item.client_name,
           item.total_sales,
           item.total_cost,
           item.profit,
           item.margin,
           item.orders_count
+        ])
+      ];
+      break;
+
+    case 'tax-report':
+      worksheetData = [
+        [title],
+        [`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`],
+        [],
+        ['Período', 'Base de Cálculo', 'ICMS', 'IPI', 'PIS', 'COFINS', 'Total Impostos'],
+        ...data.map((item: any) => [
+          new Date(item.period + '-01').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }),
+          item.tax_base,
+          item.icms,
+          item.ipi,
+          item.pis,
+          item.cofins,
+          item.total_taxes
+        ])
+      ];
+      break;
+
+    case 'budget-variance':
+      worksheetData = [
+        [title],
+        [`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`],
+        [],
+        ['Categoria', 'Orçado', 'Realizado', 'Variação', 'Variação %'],
+        ...data.map((item: any) => [
+          item.category,
+          item.budgeted,
+          item.actual,
+          item.variance,
+          item.variance_percent
         ])
       ];
       break;
@@ -181,7 +245,7 @@ export const exportToExcel = (data: any[], reportType: string, options: ExportOp
           [`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`],
           [],
           headers,
-          ...data.map(item => headers.map(header => item[header] || ''))
+          ...data.map((item: any) => headers.map(header => item[header] || ''))
         ];
       }
   }
