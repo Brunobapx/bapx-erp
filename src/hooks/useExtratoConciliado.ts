@@ -9,6 +9,10 @@ export type ExtratoTransacao = {
   valor: number,
   tipo: string,
   status: string,
+  user_id: string,
+  company_id?: string,
+  arquivo_origem?: string,
+  created_at: string,
 };
 
 export function useExtratoConciliado() {
@@ -22,14 +26,24 @@ export function useExtratoConciliado() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
+      
+      console.log('Buscando transações do extrato para usuário:', user.id);
+      
       const { data, error } = await supabase
         .from("extrato_bancario_importado")
         .select("*")
         .eq("user_id", user.id)
         .order("data", { ascending: false });
-      if (error) throw error;
+      
+      if (error) {
+        console.error('Erro ao buscar transações:', error);
+        throw error;
+      }
+      
+      console.log('Transações encontradas:', data?.length || 0);
       setTransacoes(data || []);
     } catch (err: any) {
+      console.error('Erro no fetchTransacoes:', err);
       setError(err.message);
       setTransacoes([]);
     } finally {
@@ -37,7 +51,9 @@ export function useExtratoConciliado() {
     }
   };
 
-  useEffect(() => { fetchTransacoes(); }, []);
+  useEffect(() => { 
+    fetchTransacoes(); 
+  }, []);
 
   return {
     transacoes,
