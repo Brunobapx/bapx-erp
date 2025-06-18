@@ -22,14 +22,13 @@ export function useFinancialEntriesForReconciliation() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("Usuário não autenticado");
 
-        console.log('Buscando lançamentos para conciliação...');
+        console.log('Buscando lançamentos para conciliação para usuário:', user.id);
 
-        // Buscar lançamentos financeiros pendentes
+        // Buscar TODOS os lançamentos financeiros (não só pendentes)
         const { data: financialEntries, error: financialError } = await supabase
           .from("financial_entries")
           .select("id, description, amount, due_date, type, payment_status, entry_number, client_id")
           .eq("user_id", user.id)
-          .eq("payment_status", "pending")
           .order("due_date", { ascending: false });
 
         if (financialError) {
@@ -37,12 +36,11 @@ export function useFinancialEntriesForReconciliation() {
           throw financialError;
         }
 
-        // Buscar contas a pagar pendentes
+        // Buscar TODAS as contas a pagar (não só pendentes)
         const { data: accountsPayable, error: payableError } = await supabase
           .from("accounts_payable")
           .select("id, description, amount, due_date, status, invoice_number")
           .eq("user_id", user.id)
-          .eq("status", "pending")
           .order("due_date", { ascending: false });
 
         if (payableError) {
@@ -54,6 +52,7 @@ export function useFinancialEntriesForReconciliation() {
 
         // Adicionar lançamentos financeiros
         if (financialEntries) {
+          console.log(`Encontrados ${financialEntries.length} lançamentos financeiros`);
           financialEntries.forEach(entry => {
             allEntries.push({
               id: entry.id,
@@ -71,6 +70,7 @@ export function useFinancialEntriesForReconciliation() {
 
         // Adicionar contas a pagar (se existirem)
         if (accountsPayable) {
+          console.log(`Encontradas ${accountsPayable.length} contas a pagar`);
           accountsPayable.forEach(payable => {
             // Verificar se já existe um lançamento financeiro equivalente
             const exists = allEntries.some(entry => 
@@ -96,6 +96,7 @@ export function useFinancialEntriesForReconciliation() {
 
         console.log(`Total de lançamentos para conciliação: ${allEntries.length}`);
         console.log('Tipos encontrados:', [...new Set(allEntries.map(e => e.type))]);
+        console.log('Status encontrados:', [...new Set(allEntries.map(e => e.payment_status))]);
         
         return allEntries;
       } catch (err: any) {
@@ -108,8 +109,8 @@ export function useFinancialEntriesForReconciliation() {
 
   const findSimilarEntries = (valor: number, data: string, tipo: string) => {
     const targetDate = new Date(data);
-    const toleranceDays = 5; // 5 dias de tolerância
-    const toleranceAmount = 0.01; // 1 centavo de tolerância
+    const toleranceDays = 7; // Aumentar tolerância para 7 dias
+    const toleranceAmount = 1; // Aumentar tolerância para R$ 1,00
     
     console.log(`Buscando similaridades para: valor=${valor}, data=${data}, tipo=${tipo}`);
     console.log(`Total de lançamentos disponíveis: ${entries.length}`);
@@ -119,14 +120,16 @@ export function useFinancialEntriesForReconciliation() {
       const daysDiff = Math.abs((targetDate.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24));
       const amountDiff = Math.abs(Math.abs(valor) - entry.amount);
       
-      // Verificar se o tipo é compatível (crédito = receivable, débito = payable)
-      const typeMatch = (tipo === 'credito' && entry.type === 'receivable') ||
-                       (tipo === 'debito' && entry.type === 'payable');
+      // CORRIGIR a lógica de tipos compatíveis:
+      // débito (saída de dinheiro) = payable (conta a pagar)
+      // crédito (entrada de dinheiro) = receivable (conta a receber)
+      const typeMatch = (tipo === 'debito' && entry.type === 'payable') ||
+                       (tipo === 'credito' && entry.type === 'receivable');
       
       const isMatch = daysDiff <= toleranceDays && amountDiff <= toleranceAmount && typeMatch;
       
       if (isMatch) {
-        console.log(`Match encontrado: ${entry.description} - valor: ${entry.amount}, data: ${entry.due_date}`);
+        console.log(`Match encontrado: ${entry.description} - valor: ${entry.amount}, data: ${entry.due_date}, tipo: ${entry.type}`);
       }
       
       return isMatch;

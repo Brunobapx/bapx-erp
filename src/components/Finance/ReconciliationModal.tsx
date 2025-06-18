@@ -29,7 +29,7 @@ export default function ReconciliationModal({
   loading
 }: ReconciliationModalProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const { entries, findSimilarEntries } = useFinancialEntriesForReconciliation();
+  const { entries, loading: entriesLoading, findSimilarEntries } = useFinancialEntriesForReconciliation();
   const [selectedEntry, setSelectedEntry] = useState<string | null>(null);
 
   if (!transaction) return null;
@@ -65,8 +65,12 @@ export default function ReconciliationModal({
               <div>
                 <span className="text-sm text-gray-600">Valor:</span>
                 <p className={transaction.valor > 0 ? "text-green-600" : "text-red-600"}>
-                  R$ {Math.abs(transaction.valor).toLocaleString("pt-BR")}
+                  R$ {Math.abs(transaction.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                 </p>
+              </div>
+              <div>
+                <span className="text-sm text-gray-600">Tipo:</span>
+                <p>{transaction.tipo === 'credito' ? 'Entrada (Crédito)' : 'Saída (Débito)'}</p>
               </div>
               <div className="col-span-2">
                 <span className="text-sm text-gray-600">Descrição:</span>
@@ -75,8 +79,16 @@ export default function ReconciliationModal({
             </div>
           </div>
 
+          {/* Loading state */}
+          {entriesLoading && (
+            <div className="text-center py-4">
+              <div className="w-6 h-6 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-2"></div>
+              <p className="text-gray-600">Carregando lançamentos...</p>
+            </div>
+          )}
+
           {/* Sugestões automáticas */}
-          {similarEntries.length > 0 && (
+          {!entriesLoading && similarEntries.length > 0 && (
             <div>
               <h3 className="font-semibold mb-2">
                 Sugestões Automáticas 
@@ -95,15 +107,32 @@ export default function ReconciliationModal({
                       <div>
                         <p className="font-medium">{entry.description}</p>
                         <p className="text-sm text-gray-600">#{entry.entry_number}</p>
+                        <div className="flex gap-2 mt-1">
+                          <Badge variant={entry.type === 'receivable' ? 'default' : 'secondary'} className="text-xs">
+                            {entry.type === 'receivable' ? 'Receber' : 'Pagar'}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {entry.payment_status === 'paid' ? 'Pago' : 'Pendente'}
+                          </Badge>
+                        </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium">R$ {entry.amount.toLocaleString("pt-BR")}</p>
+                        <p className="font-medium">R$ {entry.amount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
                         <p className="text-sm text-gray-600">{new Date(entry.due_date).toLocaleDateString()}</p>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Aviso se não há sugestões */}
+          {!entriesLoading && similarEntries.length === 0 && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="text-yellow-800 text-sm">
+                Nenhuma sugestão automática encontrada. Use a busca abaixo para encontrar o lançamento manualmente.
+              </p>
             </div>
           )}
 
@@ -126,24 +155,40 @@ export default function ReconciliationModal({
                     <TableHead>Valor</TableHead>
                     <TableHead>Vencimento</TableHead>
                     <TableHead>Tipo</TableHead>
+                    <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredEntries.slice(0, 10).map((entry) => (
+                  {!entriesLoading && filteredEntries.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-4 text-muted-foreground">
+                        {entries.length === 0 
+                          ? "Nenhum lançamento encontrado. Crie alguns lançamentos primeiro."
+                          : "Nenhum resultado para a busca."
+                        }
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {filteredEntries.slice(0, 20).map((entry) => (
                     <TableRow
                       key={entry.id}
-                      className={`cursor-pointer ${
+                      className={`cursor-pointer hover:bg-gray-50 ${
                         selectedEntry === entry.id ? "bg-blue-50" : ""
                       }`}
                       onClick={() => setSelectedEntry(entry.id)}
                     >
                       <TableCell>{entry.entry_number}</TableCell>
                       <TableCell>{entry.description}</TableCell>
-                      <TableCell>R$ {entry.amount.toLocaleString("pt-BR")}</TableCell>
+                      <TableCell>R$ {entry.amount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
                       <TableCell>{new Date(entry.due_date).toLocaleDateString()}</TableCell>
                       <TableCell>
                         <Badge variant={entry.type === 'receivable' ? 'default' : 'secondary'}>
                           {entry.type === 'receivable' ? 'Receber' : 'Pagar'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={entry.payment_status === 'paid' ? 'default' : 'outline'}>
+                          {entry.payment_status === 'paid' ? 'Pago' : 'Pendente'}
                         </Badge>
                       </TableCell>
                     </TableRow>
