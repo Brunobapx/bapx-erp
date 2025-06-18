@@ -3,10 +3,10 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ApprovalModal } from '@/components/Modals/ApprovalModal';
+import { EditSaleModal } from '@/components/Modals/EditSaleModal';
 import { InvoiceModal } from '@/components/Modals/InvoiceModal';
 import { DeliverySlipModal } from '@/components/Modals/DeliverySlipModal';
-import { DollarSign, ChevronDown, Search, TrendingUp, FileText, Truck, Eye } from 'lucide-react';
+import { DollarSign, ChevronDown, Search, TrendingUp, FileText, Truck, Eye, Edit, Check } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -30,7 +30,7 @@ import { useRotasOtimizadas } from '@/hooks/useRotasOtimizadas';
 const SalesPage = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
-  const [showModal, setShowModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [showDeliverySlipModal, setShowDeliverySlipModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -43,7 +43,7 @@ const SalesPage = () => {
     }
   ]);
 
-  const { sales, loading, error, updateSaleStatus } = useSales();
+  const { sales, loading, error, updateSaleStatus, approveSale } = useSales();
   const { adicionarPedidoParaRoterizacao } = useRotasOtimizadas();
 
   // Filter items based on search query
@@ -57,9 +57,13 @@ const SalesPage = () => {
     );
   });
 
-  const handleItemClick = (item) => {
+  const handleEditClick = (item) => {
     setSelectedItem(item);
-    setShowModal(true);
+    setShowEditModal(true);
+  };
+
+  const handleApproveClick = async (item) => {
+    await approveSale(item.id);
   };
 
   const handleInvoiceClick = (item) => {
@@ -72,7 +76,7 @@ const SalesPage = () => {
     setShowDeliverySlipModal(true);
   };
 
-  const handleRomaneioClick = (item) => {
+  const handleDeliveryClick = (item) => {
     // Adicionar o pedido à lista de roteirização
     adicionarPedidoParaRoterizacao({
       order_id: item.order_id,
@@ -102,16 +106,6 @@ const SalesPage = () => {
     return total;
   }, 0);
 
-  const handleApproveSale = async (data) => {
-    await updateSaleStatus(data.id, 'confirmed');
-    return Promise.resolve();
-  };
-
-  const handleNextStage = async (data) => {
-    await updateSaleStatus(data.id, 'invoiced');
-    return Promise.resolve();
-  };
-
   const handleEmitInvoice = async (data) => {
     await updateSaleStatus(data.id, 'invoiced', data.invoice_number);
     return Promise.resolve();
@@ -121,11 +115,11 @@ const SalesPage = () => {
     toast.info("Para criar uma venda, primeiro complete o processo de embalagem");
   };
 
-  const handleModalClose = (refresh = false) => {
-    setShowModal(false);
+  const handleEditModalClose = (refresh = false) => {
+    setShowEditModal(false);
     
     if (refresh) {
-      toast.success("Lista de vendas atualizada");
+      toast.success("Venda atualizada com sucesso");
     }
   };
 
@@ -274,8 +268,7 @@ const SalesPage = () => {
               {filteredItems.map((item) => (
                 <TableRow 
                   key={item.id}
-                  className="cursor-pointer hover:bg-accent/5"
-                  onClick={() => handleItemClick(item)}
+                  className="hover:bg-accent/5"
                 >
                   <TableCell className="font-medium">{item.sale_number}</TableCell>
                   <TableCell>{item.order_number}</TableCell>
@@ -289,13 +282,32 @@ const SalesPage = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
+                      {item.status === 'pending' && (
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleApproveClick(item)}
+                          title="Aprovar Venda"
+                        >
+                          <Check className="mr-1 h-3 w-3" />
+                          Aprovar
+                        </Button>
+                      )}
+                      {(item.status === 'pending' || item.status === 'confirmed') && (
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleEditClick(item)}
+                          title="Editar Venda"
+                        >
+                          <Edit className="mr-1 h-3 w-3" />
+                          Editar
+                        </Button>
+                      )}
                       <Button 
                         size="sm" 
                         variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleViewDeliverySlip(item);
-                        }}
+                        onClick={() => handleViewDeliverySlip(item)}
                         title="Visualizar Romaneio"
                       >
                         <Eye className="mr-1 h-3 w-3" />
@@ -305,10 +317,7 @@ const SalesPage = () => {
                         <Button 
                           size="sm" 
                           variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleInvoiceClick(item);
-                          }}
+                          onClick={() => handleInvoiceClick(item)}
                         >
                           <FileText className="mr-1 h-3 w-3" />
                           NF
@@ -318,13 +327,10 @@ const SalesPage = () => {
                         <Button 
                           size="sm" 
                           variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRomaneioClick(item);
-                          }}
+                          onClick={() => handleDeliveryClick(item)}
                         >
                           <Truck className="mr-1 h-3 w-3" />
-                          Romaneio
+                          Entrega
                         </Button>
                       )}
                     </div>
@@ -341,18 +347,10 @@ const SalesPage = () => {
         </CardContent>
       </Card>
       
-      <ApprovalModal
-        isOpen={showModal}
-        onClose={handleModalClose}
-        stage="sales"
-        orderData={selectedItem || {
-          id: 'NOVO', 
-          product: '', 
-          quantity: 1, 
-          customer: ''
-        }}
-        onApprove={handleApproveSale}
-        onNextStage={handleNextStage}
+      <EditSaleModal
+        isOpen={showEditModal}
+        onClose={handleEditModalClose}
+        saleData={selectedItem}
       />
       
       <InvoiceModal

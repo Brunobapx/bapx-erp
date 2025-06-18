@@ -120,6 +120,72 @@ export const useSales = () => {
     }
   };
 
+  const approveSale = async (saleId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
+
+      // Buscar dados da venda
+      const { data: sale, error: saleError } = await supabase
+        .from('sales')
+        .select('*')
+        .eq('id', saleId)
+        .single();
+
+      if (saleError) throw saleError;
+      if (!sale) throw new Error('Venda não encontrada');
+
+      // Calcular data de vencimento baseada no prazo
+      let dueDate = new Date();
+      if (sale.payment_term) {
+        const days = parseInt(sale.payment_term.match(/\d+/)?.[0] || '30');
+        dueDate.setDate(dueDate.getDate() + days);
+      } else {
+        dueDate.setDate(dueDate.getDate() + 30); // Padrão 30 dias
+      }
+
+      // Atualizar status da venda
+      const { error: updateError } = await supabase
+        .from('sales')
+        .update({
+          status: 'confirmed',
+          confirmed_at: new Date().toISOString(),
+          confirmed_by: user.email || 'Sistema',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', saleId);
+
+      if (updateError) throw updateError;
+
+      // Criar lançamento em contas a receber
+      const { error: financialError } = await supabase
+        .from('financial_entries')
+        .insert({
+          user_id: user.id,
+          sale_id: saleId,
+          order_id: sale.order_id,
+          client_id: sale.client_id,
+          type: 'receivable',
+          description: `Venda confirmada - ${sale.sale_number} - ${sale.client_name}`,
+          amount: sale.total_amount,
+          due_date: dueDate.toISOString().split('T')[0],
+          payment_status: 'pending',
+          account: sale.payment_method || '',
+          notes: sale.notes || ''
+        });
+
+      if (financialError) throw financialError;
+
+      toast.success('Venda aprovada e lançamento criado em contas a receber');
+      refreshSales();
+      return true;
+    } catch (error: any) {
+      console.error('Erro ao aprovar venda:', error);
+      toast.error('Erro ao aprovar venda: ' + error.message);
+      return false;
+    }
+  };
+
   const createSaleFromPackaging = async (packagingData: any) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -186,6 +252,7 @@ export const useSales = () => {
     error,
     refreshSales,
     updateSaleStatus,
+    approveSale,
     createSaleFromPackaging
   };
 };
