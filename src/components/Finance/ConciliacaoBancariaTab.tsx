@@ -4,6 +4,7 @@ import ExtratoUpload from "./ExtratoUpload";
 import ReconciliationModal from "./ReconciliationModal";
 import { useExtratoConciliado, ExtratoTransacao } from "@/hooks/useExtratoConciliado";
 import { useConciliacoes } from "@/hooks/useConciliacoes";
+import { useFinancialContext } from "@/contexts/FinancialContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -31,6 +32,7 @@ export default function ConciliacaoBancariaTab() {
   
   const { transacoes, loading, error, refreshExtrato } = useExtratoConciliado();
   const { conciliarComLancamento, conciliarCriandoLancamento, desconciliar, criandoLancamento } = useConciliacoes();
+  const { refreshReconciliation } = useFinancialContext();
 
   // Aplicar filtros
   const filtered = transacoes.filter(t =>
@@ -40,13 +42,19 @@ export default function ConciliacaoBancariaTab() {
   );
 
   const handleOpenModal = (transaction: ExtratoTransacao) => {
+    console.log('Abrindo modal para transação:', transaction);
     setSelectedTransaction(transaction);
     setModalOpen(true);
   };
 
   const handleReconcile = async (transactionId: string, entryId: string | null, createNew: boolean) => {
+    console.log('Iniciando conciliação:', { transactionId, entryId, createNew });
+    
     const transaction = transacoes.find(t => t.id === transactionId);
-    if (!transaction) return;
+    if (!transaction) {
+      console.error('Transação não encontrada:', transactionId);
+      return;
+    }
 
     if (createNew) {
       await conciliarCriandoLancamento(transaction);
@@ -54,12 +62,22 @@ export default function ConciliacaoBancariaTab() {
       await conciliarComLancamento(transactionId, entryId);
     }
     
+    // Refresh both extrato and reconciliation data
     refreshExtrato();
+    refreshReconciliation();
   };
 
   const handleDesconciliar = async (transactionId: string) => {
+    console.log('Desconciliando transação:', transactionId);
     await desconciliar(transactionId);
     refreshExtrato();
+    refreshReconciliation();
+  };
+
+  const handleFinishUpload = () => {
+    console.log('Upload finalizado, atualizando dados...');
+    refreshExtrato();
+    refreshReconciliation();
   };
 
   // Estatísticas
@@ -77,7 +95,7 @@ export default function ConciliacaoBancariaTab() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold">Conciliação Bancária</h2>
-        <ExtratoUpload onFinish={refreshExtrato} />
+        <ExtratoUpload onFinish={handleFinishUpload} />
       </div>
 
       {/* Estatísticas */}
@@ -124,7 +142,10 @@ export default function ConciliacaoBancariaTab() {
         >
           {tipoOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
-        <Button type="button" variant="outline" onClick={refreshExtrato}>
+        <Button type="button" variant="outline" onClick={() => {
+          refreshExtrato();
+          refreshReconciliation();
+        }}>
           Atualizar
         </Button>
       </div>
@@ -195,6 +216,7 @@ export default function ConciliacaoBancariaTab() {
                         size="sm"
                         variant="outline"
                         onClick={() => handleDesconciliar(t.id)}
+                        disabled={criandoLancamento}
                       >
                         Desconciliar
                       </Button>
@@ -204,7 +226,7 @@ export default function ConciliacaoBancariaTab() {
                         disabled={criandoLancamento}
                         onClick={() => handleOpenModal(t)}
                       >
-                        Conciliar
+                        {criandoLancamento ? 'Processando...' : 'Conciliar'}
                       </Button>
                     )}
                   </div>

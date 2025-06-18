@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useCashFlow } from '@/hooks/useCashFlow';
+import { useFinancialContext } from "@/contexts/FinancialContext";
 import { DateRangeFilter } from "./DateRangeFilter";
 import { CashFlowCards } from "./CashFlowCards";
 import { CashFlowTable } from "./CashFlowTable";
@@ -31,7 +32,14 @@ export const CashFlowTab = () => {
   const { accounts: bankAccounts, loading: accountsLoading } = useActiveFinancialAccounts();
   const { items: categories, loading: categoriesLoading } = useFinancialCategories();
 
-  const { cashFlowData, loading, error } = useCashFlow();
+  const { cashFlowData, loading, error, refreshCashFlow } = useCashFlow();
+  const { refreshCashFlow: contextRefresh } = useFinancialContext();
+
+  // Sincronizar refresh com contexto
+  const handleRefresh = () => {
+    refreshCashFlow();
+    contextRefresh();
+  };
 
   // Aplicar filtros
   const filteredData = useMemo(() => {
@@ -79,16 +87,20 @@ export const CashFlowTab = () => {
         <div className="text-center">
           <p className="text-red-600 mb-4">Erro ao carregar fluxo de caixa</p>
           <p className="text-gray-600">{error}</p>
+          <Button onClick={handleRefresh} className="mt-4">
+            Tentar Novamente
+          </Button>
         </div>
       </div>
     );
   }
 
-  // NOVOS filtros visuais (linha com período, conta, categoria, e botões semana/mês/ano)
+  // Filtros visuais
   const FiltersRow = () => (
     <div className="flex flex-wrap md:flex-row gap-2 items-center justify-between">
       <div className="flex gap-2 flex-wrap items-center">
         <DateRangeFilter range={dateRange} onChange={setDateRange} label="Filtrar por período" />
+        
         {/* Conta Bancária Filter */}
         <Popover>
           <PopoverTrigger asChild>
@@ -126,6 +138,7 @@ export const CashFlowTab = () => {
             </ul>
           </PopoverContent>
         </Popover>
+        
         {/* Categoria Filter */}
         <Popover>
           <PopoverTrigger asChild>
@@ -166,6 +179,7 @@ export const CashFlowTab = () => {
           </PopoverContent>
         </Popover>
       </div>
+      
       <div className="flex gap-2 items-center flex-wrap mt-2 md:mt-0">
         <Button 
           variant={selectedPeriod === 'week' ? 'default' : 'outline'} 
@@ -188,6 +202,9 @@ export const CashFlowTab = () => {
         >
           Ano
         </Button>
+        <Button onClick={handleRefresh} variant="outline" size="sm">
+          Atualizar
+        </Button>
       </div>
     </div>
   );
@@ -195,7 +212,7 @@ export const CashFlowTab = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-center gap-2">
-        <h2 className="text-lg font-semibold">Fluxo de Caixa</h2>
+        <h2 className="text-lg font-semibold">Fluxo de Caixa Unificado</h2>
       </div>
 
       <CashFlowCards
@@ -209,13 +226,13 @@ export const CashFlowTab = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Movimentações</CardTitle>
+          <CardTitle>Movimentações ({filteredData.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <CashFlowTable data={filteredData} />
           {filteredData.length === 0 && (
             <div className="p-4 text-center text-muted-foreground">
-              Nenhuma movimentação encontrada.
+              Nenhuma movimentação encontrada. {!dateRange.startDate && !dateRange.endDate && "Certifique-se de ter lançamentos financeiros com status 'pago'."}
             </div>
           )}
         </CardContent>

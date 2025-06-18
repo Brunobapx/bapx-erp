@@ -1,8 +1,9 @@
+
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, CheckCircle, Clock, Trash, Pencil } from 'lucide-react';
+import { Search, Plus, CheckCircle, Clock, Trash, Pencil, RefreshCw } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { NewReceivableModal } from './NewReceivableModal';
 import { useAccountsReceivable } from '@/hooks/useAccountsReceivable';
+import { useFinancialContext } from "@/contexts/FinancialContext";
 import { toast } from "sonner";
 import { EditReceivableModal } from './EditReceivableModal';
 import { DateRangeFilter } from "./DateRangeFilter";
@@ -39,6 +41,13 @@ export const AccountsReceivableTab = () => {
   const { items: categories, loading: categoriesLoading } = useFinancialCategories();
 
   const { accountsReceivable, loading, error, confirmReceivable, refreshReceivables } = useAccountsReceivable();
+  const { refreshAccountsReceivable } = useFinancialContext();
+
+  // Sincronizar refresh com contexto
+  const handleRefresh = () => {
+    refreshReceivables();
+    refreshAccountsReceivable();
+  };
 
   const handleEditReceivable = (account: any) => {
     setEditAccount(account);
@@ -52,15 +61,13 @@ export const AccountsReceivableTab = () => {
       );
       if (error) throw error;
       toast.success('Recebível excluído com sucesso!');
-      refreshReceivables();
+      handleRefresh();
     } catch (error: any) {
       toast.error('Erro ao excluir recebível');
       console.error(error);
     }
   };
 
-  // Mover useMemo ANTES dos returns condicionais!
-  // Filtro aplicado por período (conversão str->Date para comparação)
   const filteredAccounts = useMemo(() => {
     let accts = [...accountsReceivable];
     if (period.startDate && period.endDate) {
@@ -110,100 +117,28 @@ export const AccountsReceivableTab = () => {
         <div className="text-center">
           <p className="text-red-600 mb-4">Erro ao carregar contas a receber</p>
           <p className="text-gray-600">{error}</p>
+          <Button onClick={handleRefresh} className="mt-4">
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Tentar Novamente
+          </Button>
         </div>
       </div>
     );
   }
 
-  // AccountSelect Popover Menu
-  const AccountSelect = () => (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="outline" className="min-w-[140px] flex justify-between">
-          <span>{accountFilter ? accountFilter : "Conta bancária/Caixa"}</span>
-          <ChevronDown className="ml-2 h-4 w-4 text-muted-foreground" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-44 p-0">
-        <ul>
-          <li>
-            <Button
-              size="sm"
-              variant={!accountFilter ? "secondary" : "ghost"}
-              className="w-full justify-start rounded-none"
-              onClick={() => setAccountFilter("")}
-              disabled={accountsLoading}
-            >
-              Todas
-            </Button>
-          </li>
-          {accounts?.map(acc => (
-            <li key={acc.id}>
-              <Button
-                size="sm"
-                variant={accountFilter === acc.name ? "secondary" : "ghost"}
-                className="w-full justify-start rounded-none"
-                onClick={() => setAccountFilter(acc.name)}
-                disabled={accountsLoading}
-              >
-                {acc.name}
-              </Button>
-            </li>
-          ))}
-        </ul>
-      </PopoverContent>
-    </Popover>
-  );
-
-  // CategorySelect Popover Menu
-  const CategorySelect = () => (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="outline" className="min-w-[120px] flex justify-between">
-          <span>{categoryFilter ? categoryFilter : "Categoria"}</span>
-          <ChevronDown className="ml-2 h-4 w-4 text-muted-foreground" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-44 p-0">
-        <ul>
-          <li>
-            <Button
-              size="sm"
-              variant={!categoryFilter ? "secondary" : "ghost"}
-              className="w-full justify-start rounded-none"
-              onClick={() => setCategoryFilter("")}
-              disabled={categoriesLoading}
-            >
-              Todas
-            </Button>
-          </li>
-          {categories
-            ?.filter(cat => cat.type === "receita" && cat.is_active)
-            .map(cat => (
-              <li key={cat.id}>
-                <Button
-                  size="sm"
-                  variant={categoryFilter === cat.name ? "secondary" : "ghost"}
-                  className="w-full justify-start rounded-none"
-                  onClick={() => setCategoryFilter(cat.name)}
-                  disabled={categoriesLoading}
-                >
-                  {cat.name}
-                </Button>
-              </li>
-            ))}
-        </ul>
-      </PopoverContent>
-    </Popover>
-  );
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold">Contas a Receber</h2>
-        <Button onClick={() => setShowNewReceivableModal(true)}>
-          <span className="flex items-center"><Plus className="mr-2 h-4 w-4" /> Nova Cobrança</span>
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={handleRefresh} variant="outline" size="sm">
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Atualizar
+          </Button>
+          <Button onClick={() => setShowNewReceivableModal(true)}>
+            <span className="flex items-center"><Plus className="mr-2 h-4 w-4" /> Nova Cobrança</span>
+          </Button>
+        </div>
       </div>
 
       <AccountsReceivableSummaryCards
@@ -245,14 +180,17 @@ export const AccountsReceivableTab = () => {
 
       <NewReceivableModal
         isOpen={showNewReceivableModal}
-        onClose={() => setShowNewReceivableModal(false)}
+        onClose={() => {
+          setShowNewReceivableModal(false);
+          handleRefresh();
+        }}
       />
       {editAccount && (
         <EditReceivableModal
           open={!!editAccount}
           onClose={() => setEditAccount(null)}
           account={editAccount}
-          onSaved={refreshReceivables}
+          onSaved={handleRefresh}
         />
       )}
     </div>
