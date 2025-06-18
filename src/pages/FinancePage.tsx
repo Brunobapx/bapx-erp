@@ -90,7 +90,7 @@ const FinancePage = () => {
             <TabsTrigger value="reports">Relatórios</TabsTrigger>
             <TabsTrigger value="settings">Configurações</TabsTrigger>
             <TabsTrigger value="conciliacao-bancaria">Conciliação Bancária</TabsTrigger>
-          </Tabs>
+          </TabsList>
 
           <TabsContent value="overview" className="mt-6">
             <div className="space-y-6">
