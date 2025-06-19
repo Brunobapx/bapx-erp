@@ -55,6 +55,9 @@ export const Sidebar = () => {
   const { userRole } = useAuth();
   const { hasPermission, loading: permissionsLoading } = usePermissoes();
   
+  console.log('[Sidebar] Current user role:', userRole);
+  console.log('[Sidebar] Permissions loading:', permissionsLoading);
+  
   const allNavigationItems = [
     { path: "/", text: "Dashboard", icon: ChartBar },
     ...(userRole === 'master' ? [{ path: "/saas", text: "SaaS", icon: Building2 }] : []),
@@ -80,23 +83,38 @@ export const Sidebar = () => {
     
     return allNavigationItems.filter(item => {
       // O Dashboard (/) é sempre visível.
-      if (item.path === '/') return true;
+      if (item.path === '/') {
+        console.log('[Sidebar] Dashboard always visible');
+        return true;
+      }
       
       // A página SaaS é visível apenas para usuários 'master'.
       if (item.path === '/saas') {
-        console.log('Checking SaaS access for user role:', userRole);
-        return userRole === 'master';
+        const isMaster = userRole === 'master';
+        console.log('[Sidebar] SaaS access check - userRole:', userRole, 'isMaster:', isMaster);
+        return isMaster;
+      }
+      
+      // Configurações é sempre visível para usuários logados
+      if (item.path === '/configuracoes') {
+        console.log('[Sidebar] Configurações always visible for authenticated users');
+        return true;
+      }
+      
+      // Para usuários master, dar acesso total a todos os módulos
+      if (userRole === 'master') {
+        console.log('[Sidebar] Master user has access to all modules including:', item.path);
+        return true;
       }
       
       // Os outros itens dependem das permissões do usuário.
       const hasAccess = hasPermission(item.path, 'pode_ver');
-      console.log(`Permission check for ${item.path}:`, hasAccess);
+      console.log('[Sidebar] Permission check for', item.path, ':', hasAccess);
       return hasAccess;
     });
   }, [hasPermission, permissionsLoading, userRole]);
 
-  console.log('Current user role:', userRole);
-  console.log('Navigation items:', navigationItems);
+  console.log('[Sidebar] Final navigation items:', navigationItems.map(item => item.path));
 
   if (permissionsLoading) {
     return (

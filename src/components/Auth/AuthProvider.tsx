@@ -40,6 +40,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('[AuthProvider] Auth state changed:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -47,7 +48,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           // Buscar informações do usuário e empresa
           setTimeout(async () => {
             try {
-              const { data: profileData } = await supabase
+              console.log('[AuthProvider] Fetching user data for:', session.user.email);
+              
+              const { data: profileData, error: profileError } = await supabase
                 .from('profiles')
                 .select(`
                   company_id,
@@ -66,8 +69,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 .eq('id', session.user.id)
                 .single();
 
+              if (profileError) {
+                console.error('[AuthProvider] Error fetching profile:', profileError);
+              }
+
               if (profileData?.companies) {
                 const company = Array.isArray(profileData.companies) ? profileData.companies[0] : profileData.companies;
+                console.log('[AuthProvider] Company info:', company);
                 setCompanyInfo({
                   id: company.id,
                   name: company.name,
@@ -76,33 +84,47 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 });
               }
 
+              let determinedRole = 'user';
+
               if (profileData?.perfis) {
                 const perfil = Array.isArray(profileData.perfis) ? profileData.perfis[0] : profileData.perfis;
+                console.log('[AuthProvider] User perfil:', perfil);
                 
                 // Determinar role baseado no perfil
                 if (perfil?.nome === 'Master') {
-                  setUserRole('master');
+                  determinedRole = 'master';
+                  console.log('[AuthProvider] User is MASTER');
                 } else if (perfil?.is_admin) {
-                  setUserRole('admin');
+                  determinedRole = 'admin';
+                  console.log('[AuthProvider] User is ADMIN');
                 } else {
-                  setUserRole('user');
+                  determinedRole = 'user';
+                  console.log('[AuthProvider] User is USER');
                 }
               } else {
                 // Fallback para o sistema antigo de user_roles
+                console.log('[AuthProvider] No perfil found, checking user_roles fallback');
                 const { data: roleData } = await supabase
                   .from('user_roles')
                   .select('role')
                   .eq('user_id', session.user.id)
                   .single();
                 
-                setUserRole(roleData?.role || 'user');
+                if (roleData?.role) {
+                  determinedRole = roleData.role;
+                  console.log('[AuthProvider] Fallback role from user_roles:', determinedRole);
+                }
               }
+
+              console.log('[AuthProvider] Final determined role:', determinedRole);
+              setUserRole(determinedRole);
             } catch (error) {
-              console.error('Error fetching user data:', error);
+              console.error('[AuthProvider] Error fetching user data:', error);
               setUserRole('user');
             }
           }, 0);
         } else {
+          console.log('[AuthProvider] No user, clearing state');
           setUserRole(null);
           setCompanyInfo(null);
         }
@@ -113,6 +135,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('[AuthProvider] Initial session check:', session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);

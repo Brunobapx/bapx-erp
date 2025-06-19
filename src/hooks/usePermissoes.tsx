@@ -31,8 +31,10 @@ export const usePermissoes = () => {
     }
 
     try {
+      console.log('[usePermissoes] Loading profile for user:', user.email);
+      
       // Buscar perfil do usuário
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select(`
           perfil_id,
@@ -47,8 +49,14 @@ export const usePermissoes = () => {
         .eq('id', user.id)
         .single();
 
+      if (profileError) {
+        console.error('[usePermissoes] Error loading profile:', profileError);
+      }
+
       if (profileData?.perfis) {
         const perfil = Array.isArray(profileData.perfis) ? profileData.perfis[0] : profileData.perfis;
+        console.log('[usePermissoes] Loaded perfil:', perfil);
+        
         setPerfil({
           id: perfil.id,
           nome: perfil.nome,
@@ -58,7 +66,7 @@ export const usePermissoes = () => {
         });
 
         // Buscar permissões do perfil
-        const { data: permissoesData } = await supabase
+        const { data: permissoesData, error: permissoesError } = await supabase
           .from('permissoes')
           .select(`
             module_id,
@@ -68,6 +76,10 @@ export const usePermissoes = () => {
             saas_modules!inner(route_path)
           `)
           .eq('perfil_id', perfil.id);
+
+        if (permissoesError) {
+          console.error('[usePermissoes] Error loading permissions:', permissoesError);
+        }
 
         // Organizar permissões por rota do módulo
         const permissoesMap: Record<string, Permissao> = {};
@@ -81,10 +93,11 @@ export const usePermissoes = () => {
           };
         });
 
+        console.log('[usePermissoes] Loaded permissions map:', permissoesMap);
         setPermissoes(permissoesMap);
       }
     } catch (error) {
-      console.error('Erro ao carregar perfil e permissões:', error);
+      console.error('[usePermissoes] Erro ao carregar perfil e permissões:', error);
     } finally {
       setLoading(false);
     }
@@ -95,21 +108,27 @@ export const usePermissoes = () => {
   }, [loadUserProfile]);
 
   const hasPermission = useCallback((routePath: string, tipo: 'pode_ver' | 'pode_editar' | 'pode_excluir' = 'pode_ver') => {
-    // Admin/Master tem acesso total
-    if (perfil?.is_admin || userRole === 'master') {
-      console.log(`User has admin/master access to ${routePath}`);
+    // Master tem acesso total a tudo
+    if (userRole === 'master') {
+      console.log('[usePermissoes] Master user has full access to:', routePath);
+      return true;
+    }
+    
+    // Admin/Administrador tem acesso total
+    if (perfil?.is_admin) {
+      console.log('[usePermissoes] Admin user has full access to:', routePath);
       return true;
     }
     
     // Verificar permissão específica
     const permissao = permissoes[routePath];
     if (!permissao) {
-      console.log(`No permission found for ${routePath}`);
+      console.log('[usePermissoes] No permission found for:', routePath);
       return false;
     }
     
     const hasAccess = permissao[tipo];
-    console.log(`Permission check for ${routePath} (${tipo}):`, hasAccess);
+    console.log('[usePermissoes] Permission check for', routePath, '(', tipo, '):', hasAccess);
     return hasAccess;
   }, [perfil, permissoes, userRole]);
 
