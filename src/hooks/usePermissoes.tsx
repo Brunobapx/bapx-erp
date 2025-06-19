@@ -48,12 +48,13 @@ export const usePermissoes = () => {
         .single();
 
       if (profileData?.perfis) {
+        const perfil = Array.isArray(profileData.perfis) ? profileData.perfis[0] : profileData.perfis;
         setPerfil({
-          id: profileData.perfis.id,
-          nome: profileData.perfis.nome,
-          empresa_id: profileData.perfis.empresa_id,
-          descricao: profileData.perfis.descricao,
-          is_admin: profileData.perfis.is_admin
+          id: perfil.id,
+          nome: perfil.nome,
+          empresa_id: perfil.empresa_id,
+          descricao: perfil.descricao,
+          is_admin: perfil.is_admin
         });
 
         // Buscar permissões do perfil
@@ -66,7 +67,7 @@ export const usePermissoes = () => {
             pode_excluir,
             saas_modules!inner(route_path)
           `)
-          .eq('perfil_id', profileData.perfis.id);
+          .eq('perfil_id', perfil.id);
 
         // Organizar permissões por rota do módulo
         const permissoesMap: Record<string, Permissao> = {};

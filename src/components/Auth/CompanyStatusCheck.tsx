@@ -45,11 +45,12 @@ export const CompanyStatusCheck = ({ children }: CompanyStatusCheckProps) => {
           .single();
 
         if (profile?.companies) {
+          const company = Array.isArray(profile.companies) ? profile.companies[0] : profile.companies;
           setCompanyInfo({
-            name: profile.companies.name,
-            status: profile.companies.status,
-            vencimento: profile.companies.vencimento,
-            plano_id: profile.companies.plano_id
+            name: company.name,
+            status: company.status,
+            vencimento: company.vencimento,
+            plano_id: company.plano_id
           });
         }
       } catch (error) {

@@ -67,16 +67,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 .single();
 
               if (profileData?.companies) {
+                const company = Array.isArray(profileData.companies) ? profileData.companies[0] : profileData.companies;
                 setCompanyInfo({
-                  id: profileData.companies.id,
-                  name: profileData.companies.name,
-                  status: profileData.companies.status,
-                  vencimento: profileData.companies.vencimento
+                  id: company.id,
+                  name: company.name,
+                  status: company.status,
+                  vencimento: company.vencimento
                 });
               }
 
               if (profileData?.perfis) {
-                setUserRole(profileData.perfis.is_admin ? 'admin' : 'user');
+                const perfil = Array.isArray(profileData.perfis) ? profileData.perfis[0] : profileData.perfis;
+                setUserRole(perfil?.is_admin ? 'admin' : 'user');
               } else {
                 // Fallback para o sistema antigo
                 const { data: roleData } = await supabase
