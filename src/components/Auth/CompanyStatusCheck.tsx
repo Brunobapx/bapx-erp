@@ -45,7 +45,12 @@ export const CompanyStatusCheck = ({ children }: CompanyStatusCheckProps) => {
           .single();
 
         if (profile?.companies) {
-          setCompanyInfo(profile.companies as CompanyInfo);
+          setCompanyInfo({
+            name: profile.companies.name,
+            status: profile.companies.status,
+            vencimento: profile.companies.vencimento,
+            plano_id: profile.companies.plano_id
+          });
         }
       } catch (error) {
         console.error('Erro ao verificar status da empresa:', error);

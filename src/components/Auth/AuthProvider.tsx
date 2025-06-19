@@ -67,7 +67,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 .single();
 
               if (profileData?.companies) {
-                setCompanyInfo(profileData.companies as CompanyInfo);
+                setCompanyInfo({
+                  id: profileData.companies.id,
+                  name: profileData.companies.name,
+                  status: profileData.companies.status,
+                  vencimento: profileData.companies.vencimento
+                });
               }
 
               if (profileData?.perfis) {

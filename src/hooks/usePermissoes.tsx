@@ -48,7 +48,13 @@ export const usePermissoes = () => {
         .single();
 
       if (profileData?.perfis) {
-        setPerfil(profileData.perfis as Perfil);
+        setPerfil({
+          id: profileData.perfis.id,
+          nome: profileData.perfis.nome,
+          empresa_id: profileData.perfis.empresa_id,
+          descricao: profileData.perfis.descricao,
+          is_admin: profileData.perfis.is_admin
+        });
 
         // Buscar permissões do perfil
         const { data: permissoesData } = await supabase
