@@ -1,15 +1,15 @@
 
 import React from "react";
-import RoleModulePermissions from "./RoleModulePermissions";
+import { PerfisPermissoes } from "./PerfisPermissoes";
 
 const ProfilesManagement = () => {
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold">Permissões dos Perfis</h3>
+      <h3 className="text-lg font-semibold">Gestão de Perfis e Permissões</h3>
       <p className="text-muted-foreground mb-4">
-        Gerencie quais perfis (roles) têm acesso a quais módulos do sistema.
+        Gerencie quais perfis têm acesso a quais módulos do sistema e defina permissões específicas.
       </p>
-      <RoleModulePermissions />
+      <PerfisPermissoes />
     </div>
   );
 };

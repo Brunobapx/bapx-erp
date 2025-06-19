@@ -12,20 +12,12 @@ export const useModuleAccess = () => {
     if (!user) return false;
 
     try {
-      // Buscar company_id do usuário
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('company_id')
-        .eq('id', user.id)
-        .single();
-
-      if (!profile?.company_id) return false;
-
-      // Verificar acesso usando a função SQL
+      // Usar a função SQL para verificar acesso
       const { data, error } = await supabase
-        .rpc('company_has_module_access', {
-          company_id_param: profile.company_id,
-          module_route: route
+        .rpc('user_has_permission', {
+          _user_id: user.id,
+          _module_route: route,
+          _permission_type: 'pode_ver'
         });
 
       if (error) {

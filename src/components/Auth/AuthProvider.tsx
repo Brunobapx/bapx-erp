@@ -3,12 +3,20 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from "@/integrations/supabase/client";
 
+interface CompanyInfo {
+  id: string;
+  name: string;
+  status: string;
+  vencimento?: string;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
   signOut: () => Promise<void>;
   userRole: string | null;
+  companyInfo: CompanyInfo | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,6 +34,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
 
   useEffect(() => {
     // Set up auth state listener
@@ -35,21 +44,50 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch user role
+          // Buscar informações do usuário e empresa
           setTimeout(async () => {
             try {
-              const { data: roleData } = await supabase
-                .rpc('get_current_user_role');
-              setUserRole(roleData || 'user');
+              const { data: profileData } = await supabase
+                .from('profiles')
+                .select(`
+                  company_id,
+                  perfil_id,
+                  companies!inner(
+                    id,
+                    name,
+                    status,
+                    vencimento
+                  ),
+                  perfis(
+                    nome,
+                    is_admin
+                  )
+                `)
+                .eq('id', session.user.id)
+                .single();
+
+              if (profileData?.companies) {
+                setCompanyInfo(profileData.companies as CompanyInfo);
+              }
+
+              if (profileData?.perfis) {
+                setUserRole(profileData.perfis.is_admin ? 'admin' : 'user');
+              } else {
+                // Fallback para o sistema antigo
+                const { data: roleData } = await supabase
+                  .rpc('get_current_user_role');
+                setUserRole(roleData || 'user');
+              }
             } catch (error) {
               if (process.env.NODE_ENV === 'development') {
-                console.error('Error fetching user role:', error);
+                console.error('Error fetching user data:', error);
               }
               setUserRole('user');
             }
           }, 0);
         } else {
           setUserRole(null);
+          setCompanyInfo(null);
         }
         
         setLoading(false);
@@ -79,6 +117,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     loading,
     signOut,
     userRole,
+    companyInfo,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

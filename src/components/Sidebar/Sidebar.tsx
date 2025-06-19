@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -19,7 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { UserSection } from './UserSection';
 import { useAuth } from '@/components/Auth/AuthProvider';
-import { useModuleAccess } from '@/hooks/useModuleAccess';
+import { usePermissoes } from '@/hooks/usePermissoes';
 
 const SidebarLink = ({ 
   to, 
@@ -52,7 +53,7 @@ export const Sidebar = () => {
   const location = useLocation();
   const [collapsed, setCollapsed] = React.useState(false);
   const { userRole } = useAuth();
-  const { allowedRoutes } = useModuleAccess();
+  const { hasPermission, loading: permissionsLoading } = usePermissoes();
   
   const allNavigationItems = [
     { path: "/", text: "Dashboard", icon: ChartBar },
@@ -75,15 +76,28 @@ export const Sidebar = () => {
   ];
 
   const navigationItems = React.useMemo(() => {
+    if (permissionsLoading) return [];
+    
     return allNavigationItems.filter(item => {
       // O Dashboard (/) é sempre visível.
       if (item.path === '/') return true;
       // A página SaaS é visível apenas para o 'master'.
       if (item.path === '/saas') return userRole === 'master';
-      // Os outros itens dependem das permissões do plano.
-      return allowedRoutes.includes(item.path);
+      // Os outros itens dependem das permissões do usuário.
+      return hasPermission(item.path, 'pode_ver');
     });
-  }, [allowedRoutes, userRole]);
+  }, [hasPermission, permissionsLoading, userRole]);
+
+  if (permissionsLoading) {
+    return (
+      <aside className="w-64 bg-background border-r border-border h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-6 h-6 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto"></div>
+          <p className="text-xs text-muted-foreground">Carregando permissões...</p>
+        </div>
+      </aside>
+    );
+  }
 
   return (
     <aside className={`bg-background border-r border-border h-screen transition-all duration-300 flex flex-col ${collapsed ? 'w-16' : 'w-64'}`}>
