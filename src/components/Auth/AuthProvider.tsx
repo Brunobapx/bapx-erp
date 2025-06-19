@@ -78,17 +78,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
               if (profileData?.perfis) {
                 const perfil = Array.isArray(profileData.perfis) ? profileData.perfis[0] : profileData.perfis;
-                setUserRole(perfil?.is_admin ? 'admin' : 'user');
+                
+                // Determinar role baseado no perfil
+                if (perfil?.nome === 'Master') {
+                  setUserRole('master');
+                } else if (perfil?.is_admin) {
+                  setUserRole('admin');
+                } else {
+                  setUserRole('user');
+                }
               } else {
-                // Fallback para o sistema antigo
+                // Fallback para o sistema antigo de user_roles
                 const { data: roleData } = await supabase
-                  .rpc('get_current_user_role');
-                setUserRole(roleData || 'user');
+                  .from('user_roles')
+                  .select('role')
+                  .eq('user_id', session.user.id)
+                  .single();
+                
+                setUserRole(roleData?.role || 'user');
               }
             } catch (error) {
-              if (process.env.NODE_ENV === 'development') {
-                console.error('Error fetching user data:', error);
-              }
+              console.error('Error fetching user data:', error);
               setUserRole('user');
             }
           }, 0);

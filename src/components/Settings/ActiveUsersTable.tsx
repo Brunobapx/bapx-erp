@@ -17,6 +17,8 @@ interface UserProfile {
   is_active: boolean;
   last_login: string;
   role: string;
+  email?: string;
+  perfil_nome?: string;
 }
 
 interface AvailableRole {
@@ -58,6 +60,7 @@ const ActiveUsersTable: React.FC<Props> = ({
           <TableRow>
             <TableHead>Nome</TableHead>
             <TableHead>Email</TableHead>
+            <TableHead>Perfil</TableHead>
             <TableHead>Função</TableHead>
             <TableHead>Departamento</TableHead>
             <TableHead>Status</TableHead>
@@ -67,7 +70,7 @@ const ActiveUsersTable: React.FC<Props> = ({
         <TableBody>
           {users.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="text-center text-gray-500">
+              <TableCell colSpan={7} className="text-center text-gray-500">
                 Nenhum usuário ativo encontrado
               </TableCell>
             </TableRow>
@@ -75,9 +78,17 @@ const ActiveUsersTable: React.FC<Props> = ({
             users.map((user) => (
               <TableRow key={user.id}>
                 <TableCell>
-                  {user.first_name} {user.last_name}
+                  {user.first_name || user.last_name ? 
+                    `${user.first_name} ${user.last_name}`.trim() : 
+                    'Nome não informado'
+                  }
                 </TableCell>
-                <TableCell>{user.id}</TableCell>
+                <TableCell>{user.email || 'Email não disponível'}</TableCell>
+                <TableCell>
+                  <Badge variant="outline">
+                    {user.perfil_nome || 'Usuário'}
+                  </Badge>
+                </TableCell>
                 <TableCell className="capitalize">
                   <Select
                     value={user.role}

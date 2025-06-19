@@ -81,12 +81,22 @@ export const Sidebar = () => {
     return allNavigationItems.filter(item => {
       // O Dashboard (/) é sempre visível.
       if (item.path === '/') return true;
-      // A página SaaS é visível apenas para o 'master'.
-      if (item.path === '/saas') return userRole === 'master';
+      
+      // A página SaaS é visível apenas para usuários 'master'.
+      if (item.path === '/saas') {
+        console.log('Checking SaaS access for user role:', userRole);
+        return userRole === 'master';
+      }
+      
       // Os outros itens dependem das permissões do usuário.
-      return hasPermission(item.path, 'pode_ver');
+      const hasAccess = hasPermission(item.path, 'pode_ver');
+      console.log(`Permission check for ${item.path}:`, hasAccess);
+      return hasAccess;
     });
   }, [hasPermission, permissionsLoading, userRole]);
+
+  console.log('Current user role:', userRole);
+  console.log('Navigation items:', navigationItems);
 
   if (permissionsLoading) {
     return (

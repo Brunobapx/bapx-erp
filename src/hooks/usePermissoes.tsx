@@ -22,7 +22,7 @@ export const usePermissoes = () => {
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [permissoes, setPermissoes] = useState<Record<string, Permissao>>({});
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
 
   const loadUserProfile = useCallback(async () => {
     if (!user) {
@@ -95,15 +95,23 @@ export const usePermissoes = () => {
   }, [loadUserProfile]);
 
   const hasPermission = useCallback((routePath: string, tipo: 'pode_ver' | 'pode_editar' | 'pode_excluir' = 'pode_ver') => {
-    // Admin tem acesso total
-    if (perfil?.is_admin) return true;
+    // Admin/Master tem acesso total
+    if (perfil?.is_admin || userRole === 'master') {
+      console.log(`User has admin/master access to ${routePath}`);
+      return true;
+    }
     
     // Verificar permissão específica
     const permissao = permissoes[routePath];
-    if (!permissao) return false;
+    if (!permissao) {
+      console.log(`No permission found for ${routePath}`);
+      return false;
+    }
     
-    return permissao[tipo];
-  }, [perfil, permissoes]);
+    const hasAccess = permissao[tipo];
+    console.log(`Permission check for ${routePath} (${tipo}):`, hasAccess);
+    return hasAccess;
+  }, [perfil, permissoes, userRole]);
 
   return {
     perfil,

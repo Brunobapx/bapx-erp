@@ -18,6 +18,8 @@ interface UserProfile {
   is_active: boolean;
   last_login: string;
   role: string;
+  email?: string;
+  perfil_nome?: string;
 }
 
 const availableRoles = [
@@ -37,7 +39,7 @@ export const UserManagement = () => {
   const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const { userRole } = useAuth();
+  const { userRole, companyInfo } = useAuth();
 
   // Security check - only admins and masters can access
   if (userRole !== 'admin' && userRole !== 'master') {
@@ -52,34 +54,89 @@ export const UserManagement = () => {
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      console.log('Loading users for company:', companyInfo?.id);
+      
+      // Buscar usuários da empresa atual usando o novo sistema de perfis
+      const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select(`
-          *,
-          user_roles!inner(role)
+          id,
+          first_name,
+          last_name,
+          phone,
+          department,
+          position,
+          is_active,
+          last_login,
+          perfil_id,
+          perfis (
+            nome,
+            is_admin
+          )
         `)
+        .eq('company_id', companyInfo?.id)
         .eq('is_active', true);
 
-      if (error) throw error;
+      if (profilesError) throw profilesError;
 
-      const usersWithRoles = data?.map(user => ({
-        ...user,
-        role: user.user_roles?.[0]?.role || 'user'
-      })) || [];
+      // Buscar emails dos usuários na tabela auth.users via RPC ou usando auth metadata
+      const usersWithRoles = await Promise.all(
+        (profilesData || []).map(async (profile) => {
+          // Buscar email do usuário
+          const { data: authData } = await supabase.auth.admin.getUserById(profile.id);
+          
+          // Determinar role baseado no perfil
+          let role = 'user';
+          let perfil_nome = 'Usuário';
+          
+          if (profile.perfis) {
+            const perfil = Array.isArray(profile.perfis) ? profile.perfis[0] : profile.perfis;
+            perfil_nome = perfil.nome;
+            
+            if (perfil.nome === 'Master') {
+              role = 'master';
+            } else if (perfil.is_admin) {
+              role = 'admin';
+            }
+          } else {
+            // Fallback para sistema antigo
+            const { data: roleData } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', profile.id)
+              .single();
+            
+            role = roleData?.role || 'user';
+          }
 
+          return {
+            ...profile,
+            email: authData?.user?.email || '',
+            role,
+            perfil_nome
+          };
+        })
+      );
+
+      console.log('Loaded users:', usersWithRoles);
       setUsers(usersWithRoles);
     } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Erro ao carregar usuários:', error);
-      }
+      console.error('Erro ao carregar usuários:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar usuários",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadUsers();
-  }, []);
+    if (companyInfo?.id) {
+      loadUsers();
+    }
+  }, [companyInfo?.id]);
 
   // Update user status
   const handleUpdateUserStatus = async (userId: string, isActive: boolean) => {
@@ -95,12 +152,13 @@ export const UserManagement = () => {
         description: `Usuário ${isActive ? 'ativado' : 'desativado'} com sucesso!`,
       });
       loadUsers();
-    } catch {
+    } catch (error) {
+      console.error('Error updating user status:', error);
       toast({ title: "Erro", description: "Erro ao atualizar usuário", variant: "destructive" });
     }
   };
 
-  // Update user role
+  // Update user role - agora usa o sistema de perfis
   const handleUpdateUserRole = async (userId: string, newRole: string) => {
     if (newRole === 'master' && userRole !== 'master') {
       toast({
@@ -110,16 +168,68 @@ export const UserManagement = () => {
       });
       return;
     }
+    
     if (!confirm('Tem certeza que deseja alterar a função deste usuário?')) return;
+    
     try {
-      const { error } = await supabase
+      // Buscar o perfil adequado baseado no role
+      let targetPerfilId: string | null = null;
+      
+      if (newRole === 'master') {
+        const { data: masterPerfil } = await supabase
+          .from('perfis')
+          .select('id')
+          .eq('empresa_id', companyInfo?.id)
+          .eq('nome', 'Master')
+          .single();
+        targetPerfilId = masterPerfil?.id;
+      } else if (newRole === 'admin') {
+        const { data: adminPerfil } = await supabase
+          .from('perfis')
+          .select('id')
+          .eq('empresa_id', companyInfo?.id)
+          .eq('is_admin', true)
+          .eq('nome', 'Administrador')
+          .single();
+        targetPerfilId = adminPerfil?.id;
+      } else {
+        // Para outros roles, criar ou buscar perfil específico
+        const { data: userPerfil } = await supabase
+          .from('perfis')
+          .select('id')
+          .eq('empresa_id', companyInfo?.id)
+          .eq('nome', availableRoles.find(r => r.value === newRole)?.label || 'Usuário')
+          .single();
+        targetPerfilId = userPerfil?.id;
+      }
+
+      if (targetPerfilId) {
+        // Atualizar perfil do usuário
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ perfil_id: targetPerfilId })
+          .eq('id', userId);
+
+        if (profileError) throw profileError;
+      }
+
+      // Manter compatibilidade com sistema antigo
+      const { error: roleError } = await supabase
         .from('user_roles')
-        .update({ role: newRole })
-        .eq('user_id', userId);
-      if (error) throw error;
+        .upsert({ 
+          user_id: userId, 
+          role: newRole,
+          company_id: companyInfo?.id 
+        });
+
+      if (roleError && !roleError.message.includes('duplicate')) {
+        throw roleError;
+      }
+
       toast({ title: "Sucesso", description: "Função do usuário atualizada com sucesso!" });
       loadUsers();
-    } catch {
+    } catch (error) {
+      console.error('Error updating user role:', error);
       toast({ title: "Erro", description: "Erro ao atualizar função", variant: "destructive" });
     }
   };
