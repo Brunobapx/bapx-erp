@@ -19,7 +19,6 @@ interface UserProfile {
   last_login: string;
   role: string;
   email?: string;
-  perfil_nome?: string;
 }
 
 const availableRoles = [
@@ -56,7 +55,7 @@ export const UserManagement = () => {
       setLoading(true);
       console.log('Loading users for company:', companyInfo?.id);
       
-      // Buscar usuários da empresa atual usando o novo sistema de perfis
+      // Buscar usuários da empresa atual
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select(`
@@ -67,53 +66,30 @@ export const UserManagement = () => {
           department,
           position,
           is_active,
-          last_login,
-          perfil_id,
-          perfis (
-            nome,
-            is_admin
-          )
+          last_login
         `)
         .eq('company_id', companyInfo?.id)
         .eq('is_active', true);
 
       if (profilesError) throw profilesError;
 
-      // Buscar emails dos usuários na tabela auth.users via RPC ou usando auth metadata
+      // Buscar emails e roles dos usuários
       const usersWithRoles = await Promise.all(
         (profilesData || []).map(async (profile) => {
           // Buscar email do usuário
           const { data: authData } = await supabase.auth.admin.getUserById(profile.id);
           
-          // Determinar role baseado no perfil
-          let role = 'user';
-          let perfil_nome = 'Usuário';
-          
-          if (profile.perfis) {
-            const perfil = Array.isArray(profile.perfis) ? profile.perfis[0] : profile.perfis;
-            perfil_nome = perfil.nome;
-            
-            if (perfil.nome === 'Master') {
-              role = 'master';
-            } else if (perfil.is_admin) {
-              role = 'admin';
-            }
-          } else {
-            // Fallback para sistema antigo
-            const { data: roleData } = await supabase
-              .from('user_roles')
-              .select('role')
-              .eq('user_id', profile.id)
-              .single();
-            
-            role = roleData?.role || 'user';
-          }
+          // Buscar role do usuário
+          const { data: roleData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', profile.id)
+            .single();
 
           return {
             ...profile,
             email: authData?.user?.email || '',
-            role,
-            perfil_nome
+            role: roleData?.role || 'user'
           };
         })
       );
@@ -158,7 +134,7 @@ export const UserManagement = () => {
     }
   };
 
-  // Update user role - agora usa o sistema de perfis
+  // Update user role
   const handleUpdateUserRole = async (userId: string, newRole: string) => {
     if (newRole === 'master' && userRole !== 'master') {
       toast({
@@ -172,48 +148,7 @@ export const UserManagement = () => {
     if (!confirm('Tem certeza que deseja alterar a função deste usuário?')) return;
     
     try {
-      // Buscar o perfil adequado baseado no role
-      let targetPerfilId: string | null = null;
-      
-      if (newRole === 'master') {
-        const { data: masterPerfil } = await supabase
-          .from('perfis')
-          .select('id')
-          .eq('empresa_id', companyInfo?.id)
-          .eq('nome', 'Master')
-          .single();
-        targetPerfilId = masterPerfil?.id;
-      } else if (newRole === 'admin') {
-        const { data: adminPerfil } = await supabase
-          .from('perfis')
-          .select('id')
-          .eq('empresa_id', companyInfo?.id)
-          .eq('is_admin', true)
-          .eq('nome', 'Administrador')
-          .single();
-        targetPerfilId = adminPerfil?.id;
-      } else {
-        // Para outros roles, criar ou buscar perfil específico
-        const { data: userPerfil } = await supabase
-          .from('perfis')
-          .select('id')
-          .eq('empresa_id', companyInfo?.id)
-          .eq('nome', availableRoles.find(r => r.value === newRole)?.label || 'Usuário')
-          .single();
-        targetPerfilId = userPerfil?.id;
-      }
-
-      if (targetPerfilId) {
-        // Atualizar perfil do usuário
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({ perfil_id: targetPerfilId })
-          .eq('id', userId);
-
-        if (profileError) throw profileError;
-      }
-
-      // Manter compatibilidade com sistema antigo
+      // Atualizar role do usuário
       const { error: roleError } = await supabase
         .from('user_roles')
         .upsert({ 

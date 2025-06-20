@@ -41,64 +41,6 @@ export const useCompanies = () => {
     }
   };
 
-  const createCompany = async (companyData: Partial<Company>) => {
-    try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError || !user) {
-        throw new Error('Usuário não autenticado');
-      }
-
-      const { data, error } = await supabase
-        .from('companies')
-        .insert(companyData)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: "Empresa criada com sucesso!",
-      });
-
-      loadCompanies();
-      return data;
-    } catch (error: any) {
-      toast({
-        title: "Erro",
-        description: error.message || "Erro ao criar empresa",
-        variant: "destructive",
-      });
-      throw error;
-    }
-  };
-
-  const updateCompany = async (id: string, companyData: Partial<Company>) => {
-    try {
-      const { error } = await supabase
-        .from('companies')
-        .update(companyData)
-        .eq('id', id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: "Empresa atualizada com sucesso!",
-      });
-
-      loadCompanies();
-    } catch (error: any) {
-      toast({
-        title: "Erro",
-        description: error.message || "Erro ao atualizar empresa",
-        variant: "destructive",
-      });
-      throw error;
-    }
-  };
-
   const getUserCompanyId = async (): Promise<string | null> => {
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -129,8 +71,6 @@ export const useCompanies = () => {
     companies,
     loading,
     loadCompanies,
-    createCompany,
-    updateCompany,
     getUserCompanyId,
   };
 };

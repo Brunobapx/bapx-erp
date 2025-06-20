@@ -1,33 +1,32 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./components/Auth/AuthProvider";
-import { ProtectedRoute } from "./components/Auth/ProtectedRoute";
-import { ModuleProtectedRoute } from "./components/Auth/ModuleProtectedRoute";
-import { Sidebar } from "./components/Sidebar/Sidebar";
-import React, { Suspense, lazy } from "react";
-const Index = lazy(() => import("./pages/Index"));
-const OrdersPage = lazy(() => import("./pages/OrdersPage"));
-const OrderFormPage = lazy(() => import("./pages/OrderFormPage"));
-const ProductionPage = lazy(() => import("./pages/ProductionPage"));
-const PackagingPage = lazy(() => import("./pages/PackagingPage"));
-const SalesPage = lazy(() => import("./pages/SalesPage"));
-const FinancePage = lazy(() => import("./pages/FinancePage"));
-const RoutesPage = lazy(() => import("./pages/RoutesPage"));
-const CalendarPage = lazy(() => import("./pages/CalendarPage"));
-const ClientsPage = lazy(() => import("./pages/ClientsPage"));
-const ProductsPage = lazy(() => import("./pages/ProductsPage"));
-const VendorsPage = lazy(() => import("./pages/VendorsPage"));
-const PurchasesPage = lazy(() => import("./pages/PurchasesPage"));
-const FiscalEmissionPage = lazy(() => import("./pages/FiscalEmissionPage"));
-const SettingsPage = lazy(() => import("./pages/SettingsPage"));
-const StockPage = lazy(() => import("./pages/StockPage"));
-const NotFound = lazy(() => import("./pages/NotFound"));
-const AuthPage = lazy(() => import("./pages/AuthPage"));
-const SaasPage = lazy(() => import("./pages/SaasPage"));
-const ServiceOrdersPage = lazy(() => import("./pages/ServiceOrdersPage"));
+import { AuthProvider } from "@/components/Auth/AuthProvider";
+import { ProtectedRoute } from "@/components/Auth/ProtectedRoute";
+import { Sidebar } from "@/components/Sidebar/Sidebar";
+import Index from "./pages/Index";
+import AuthPage from "./pages/AuthPage";
+import OrdersPage from "./pages/OrdersPage";
+import OrderFormPage from "./pages/OrderFormPage";
+import ProductsPage from "./pages/ProductsPage";
+import ClientsPage from "./pages/ClientsPage";
+import ProductionPage from "./pages/ProductionPage";
+import PackagingPage from "./pages/PackagingPage";
+import SalesPage from "./pages/SalesPage";
+import FinancePage from "./pages/FinancePage";
+import RoutesPage from "./pages/RoutesPage";
+import CalendarPage from "./pages/CalendarPage";
+import SettingsPage from "./pages/SettingsPage";
+import VendorsPage from "./pages/VendorsPage";
+import PurchasesPage from "./pages/PurchasesPage";
+import StockPage from "./pages/StockPage";
+import FiscalEmissionPage from "./pages/FiscalEmissionPage";
+import ServiceOrdersPage from "./pages/ServiceOrdersPage";
+import NotFound from "./pages/NotFound";
+import { FinancialProvider } from "./contexts/FinancialContext";
 
 const queryClient = new QueryClient();
 
@@ -38,41 +37,43 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Suspense fallback={<div className="flex justify-center items-center h-screen">Carregando...</div>}>
+          <FinancialProvider>
             <Routes>
               <Route path="/auth" element={<AuthPage />} />
-              <Route path="/*" element={
-                <ProtectedRoute>
-                  <div className="flex h-screen overflow-hidden">
-                    <Sidebar />
-                    <div className="flex-1 overflow-auto">
-                      <Routes>
-                        <Route path="/" element={<Index />} />
-                        <Route path="/saas" element={<SaasPage />} />
-                        <Route path="/clientes" element={<ModuleProtectedRoute requiredRoute="/clientes"><ClientsPage /></ModuleProtectedRoute>} />
-                        <Route path="/produtos" element={<ModuleProtectedRoute requiredRoute="/produtos"><ProductsPage /></ModuleProtectedRoute>} />
-                        <Route path="/fornecedores" element={<ModuleProtectedRoute requiredRoute="/fornecedores"><VendorsPage /></ModuleProtectedRoute>} />
-                        <Route path="/compras" element={<ModuleProtectedRoute requiredRoute="/compras"><PurchasesPage /></ModuleProtectedRoute>} />
-                        <Route path="/pedidos" element={<ModuleProtectedRoute requiredRoute="/pedidos"><OrdersPage /></ModuleProtectedRoute>} />
-                        <Route path="/pedidos/:id" element={<ModuleProtectedRoute requiredRoute="/pedidos"><OrderFormPage /></ModuleProtectedRoute>} />
-                        <Route path="/producao" element={<ModuleProtectedRoute requiredRoute="/producao"><ProductionPage /></ModuleProtectedRoute>} />
-                        <Route path="/embalagem" element={<ModuleProtectedRoute requiredRoute="/embalagem"><PackagingPage /></ModuleProtectedRoute>} />
-                        <Route path="/vendas" element={<ModuleProtectedRoute requiredRoute="/vendas"><SalesPage /></ModuleProtectedRoute>} />
-                        <Route path="/emissao-fiscal" element={<ModuleProtectedRoute requiredRoute="/emissao-fiscal"><FiscalEmissionPage /></ModuleProtectedRoute>} />
-                        <Route path="/financeiro" element={<ModuleProtectedRoute requiredRoute="/financeiro"><FinancePage /></ModuleProtectedRoute>} />
-                        <Route path="/rotas" element={<ModuleProtectedRoute requiredRoute="/rotas"><RoutesPage /></ModuleProtectedRoute>} />
-                        <Route path="/calendario" element={<ModuleProtectedRoute requiredRoute="/calendario"><CalendarPage /></ModuleProtectedRoute>} />
-                        <Route path="/estoque" element={<ModuleProtectedRoute requiredRoute="/estoque"><StockPage /></ModuleProtectedRoute>} />
-                        <Route path="/ordens-servico" element={<ModuleProtectedRoute requiredRoute="/ordens-servico"><ServiceOrdersPage /></ModuleProtectedRoute>} />
-                        <Route path="/configuracoes" element={<ModuleProtectedRoute requiredRoute="/configuracoes"><SettingsPage /></ModuleProtectedRoute>} />
-                        <Route path="*" element={<NotFound />} />
-                      </Routes>
+              <Route
+                path="/*"
+                element={
+                  <ProtectedRoute>
+                    <div className="flex h-screen bg-gray-50">
+                      <Sidebar />
+                      <main className="flex-1 overflow-auto">
+                        <Routes>
+                          <Route path="/" element={<Index />} />
+                          <Route path="/pedidos" element={<OrdersPage />} />
+                          <Route path="/pedidos/novo" element={<OrderFormPage />} />
+                          <Route path="/produtos" element={<ProductsPage />} />
+                          <Route path="/clientes" element={<ClientsPage />} />
+                          <Route path="/producao" element={<ProductionPage />} />
+                          <Route path="/embalagem" element={<PackagingPage />} />
+                          <Route path="/vendas" element={<SalesPage />} />
+                          <Route path="/financeiro" element={<FinancePage />} />
+                          <Route path="/rotas" element={<RoutesPage />} />
+                          <Route path="/calendario" element={<CalendarPage />} />
+                          <Route path="/configuracoes" element={<SettingsPage />} />
+                          <Route path="/fornecedores" element={<VendorsPage />} />
+                          <Route path="/compras" element={<PurchasesPage />} />
+                          <Route path="/estoque" element={<StockPage />} />
+                          <Route path="/emissao-fiscal" element={<FiscalEmissionPage />} />
+                          <Route path="/ordens-servico" element={<ServiceOrdersPage />} />
+                          <Route path="*" element={<NotFound />} />
+                        </Routes>
+                      </main>
                     </div>
-                  </div>
-                </ProtectedRoute>
-              } />
+                  </ProtectedRoute>
+                }
+              />
             </Routes>
-          </Suspense>
+          </FinancialProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

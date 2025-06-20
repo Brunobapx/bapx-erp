@@ -2,7 +2,6 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from './AuthProvider';
-import { CompanyStatusCheck } from './CompanyStatusCheck';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -26,9 +25,5 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     return <Navigate to="/auth" replace />;
   }
 
-  return (
-    <CompanyStatusCheck>
-      {children}
-    </CompanyStatusCheck>
-  );
+  return <>{children}</>;
 };

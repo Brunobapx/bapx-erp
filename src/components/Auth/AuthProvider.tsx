@@ -7,7 +7,6 @@ interface CompanyInfo {
   id: string;
   name: string;
   status: string;
-  vencimento?: string;
 }
 
 interface AuthContextType {
@@ -54,16 +53,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 .from('profiles')
                 .select(`
                   company_id,
-                  perfil_id,
                   companies!inner(
                     id,
                     name,
-                    status,
-                    vencimento
-                  ),
-                  perfis(
-                    nome,
-                    is_admin
+                    status
                   )
                 `)
                 .eq('id', session.user.id)
@@ -79,45 +72,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 setCompanyInfo({
                   id: company.id,
                   name: company.name,
-                  status: company.status,
-                  vencimento: company.vencimento
+                  status: company.status
                 });
               }
 
-              let determinedRole = 'user';
-
-              if (profileData?.perfis) {
-                const perfil = Array.isArray(profileData.perfis) ? profileData.perfis[0] : profileData.perfis;
-                console.log('[AuthProvider] User perfil:', perfil);
-                
-                // Determinar role baseado no perfil
-                if (perfil?.nome === 'Master') {
-                  determinedRole = 'master';
-                  console.log('[AuthProvider] User is MASTER');
-                } else if (perfil?.is_admin) {
-                  determinedRole = 'admin';
-                  console.log('[AuthProvider] User is ADMIN');
-                } else {
-                  determinedRole = 'user';
-                  console.log('[AuthProvider] User is USER');
-                }
+              // Buscar role do usuário
+              const { data: roleData, error: roleError } = await supabase
+                .from('user_roles')
+                .select('role')
+                .eq('user_id', session.user.id)
+                .single();
+              
+              if (roleError) {
+                console.error('[AuthProvider] Error fetching role:', roleError);
+                setUserRole('user');
               } else {
-                // Fallback para o sistema antigo de user_roles
-                console.log('[AuthProvider] No perfil found, checking user_roles fallback');
-                const { data: roleData } = await supabase
-                  .from('user_roles')
-                  .select('role')
-                  .eq('user_id', session.user.id)
-                  .single();
-                
-                if (roleData?.role) {
-                  determinedRole = roleData.role;
-                  console.log('[AuthProvider] Fallback role from user_roles:', determinedRole);
-                }
+                const role = roleData?.role || 'user';
+                console.log('[AuthProvider] User role:', role);
+                setUserRole(role);
               }
-
-              console.log('[AuthProvider] Final determined role:', determinedRole);
-              setUserRole(determinedRole);
             } catch (error) {
               console.error('[AuthProvider] Error fetching user data:', error);
               setUserRole('user');

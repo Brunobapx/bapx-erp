@@ -84,47 +84,6 @@ export type Database = {
           },
         ]
       }
-      activity_logs: {
-        Row: {
-          action: string
-          created_at: string | null
-          description: string | null
-          empresa_id: string
-          id: string
-          ip_address: unknown | null
-          module_name: string
-          user_id: string
-        }
-        Insert: {
-          action: string
-          created_at?: string | null
-          description?: string | null
-          empresa_id: string
-          id?: string
-          ip_address?: unknown | null
-          module_name: string
-          user_id: string
-        }
-        Update: {
-          action?: string
-          created_at?: string | null
-          description?: string | null
-          empresa_id?: string
-          id?: string
-          ip_address?: unknown | null
-          module_name?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "activity_logs_empresa_id_fkey"
-            columns: ["empresa_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       clients: {
         Row: {
           address: string | null
@@ -275,15 +234,12 @@ export type Database = {
       companies: {
         Row: {
           billing_email: string | null
-          cnpj: string | null
           created_at: string
           id: string
           is_active: boolean | null
           logo_url: string | null
-          max_usuarios: number | null
           name: string
           onboarded_at: string | null
-          plano_id: string | null
           primary_color: string | null
           secondary_color: string | null
           settings: Json | null
@@ -291,20 +247,15 @@ export type Database = {
           subdomain: string
           trial_expires_at: string | null
           updated_at: string
-          vencimento: string | null
-          whatsapp: string | null
         }
         Insert: {
           billing_email?: string | null
-          cnpj?: string | null
           created_at?: string
           id?: string
           is_active?: boolean | null
           logo_url?: string | null
-          max_usuarios?: number | null
           name: string
           onboarded_at?: string | null
-          plano_id?: string | null
           primary_color?: string | null
           secondary_color?: string | null
           settings?: Json | null
@@ -312,20 +263,15 @@ export type Database = {
           subdomain: string
           trial_expires_at?: string | null
           updated_at?: string
-          vencimento?: string | null
-          whatsapp?: string | null
         }
         Update: {
           billing_email?: string | null
-          cnpj?: string | null
           created_at?: string
           id?: string
           is_active?: boolean | null
           logo_url?: string | null
-          max_usuarios?: number | null
           name?: string
           onboarded_at?: string | null
-          plano_id?: string | null
           primary_color?: string | null
           secondary_color?: string | null
           settings?: Json | null
@@ -333,111 +279,8 @@ export type Database = {
           subdomain?: string
           trial_expires_at?: string | null
           updated_at?: string
-          vencimento?: string | null
-          whatsapp?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "companies_plano_id_fkey"
-            columns: ["plano_id"]
-            isOneToOne: false
-            referencedRelation: "saas_plans"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      company_modules: {
-        Row: {
-          company_id: string | null
-          created_at: string
-          enabled: boolean | null
-          id: string
-          module_id: string | null
-          updated_at: string
-        }
-        Insert: {
-          company_id?: string | null
-          created_at?: string
-          enabled?: boolean | null
-          id?: string
-          module_id?: string | null
-          updated_at?: string
-        }
-        Update: {
-          company_id?: string | null
-          created_at?: string
-          enabled?: boolean | null
-          id?: string
-          module_id?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "company_modules_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "company_modules_module_id_fkey"
-            columns: ["module_id"]
-            isOneToOne: false
-            referencedRelation: "saas_modules"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      company_subscriptions: {
-        Row: {
-          auto_renew: boolean | null
-          company_id: string | null
-          created_at: string
-          expires_at: string | null
-          id: string
-          plan_id: string | null
-          starts_at: string
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          auto_renew?: boolean | null
-          company_id?: string | null
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          plan_id?: string | null
-          starts_at?: string
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          auto_renew?: boolean | null
-          company_id?: string | null
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          plan_id?: string | null
-          starts_at?: string
-          status?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "company_subscriptions_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "company_subscriptions_plan_id_fkey"
-            columns: ["plan_id"]
-            isOneToOne: false
-            referencedRelation: "saas_plans"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       conciliacoes: {
         Row: {
@@ -1102,89 +945,6 @@ export type Database = {
         }
         Relationships: []
       }
-      perfis: {
-        Row: {
-          created_at: string | null
-          descricao: string | null
-          empresa_id: string
-          id: string
-          is_admin: boolean | null
-          nome: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          descricao?: string | null
-          empresa_id: string
-          id?: string
-          is_admin?: boolean | null
-          nome: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          descricao?: string | null
-          empresa_id?: string
-          id?: string
-          is_admin?: boolean | null
-          nome?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "perfis_empresa_id_fkey"
-            columns: ["empresa_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      permissoes: {
-        Row: {
-          created_at: string | null
-          id: string
-          module_id: string
-          perfil_id: string
-          pode_editar: boolean | null
-          pode_excluir: boolean | null
-          pode_ver: boolean | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          module_id: string
-          perfil_id: string
-          pode_editar?: boolean | null
-          pode_excluir?: boolean | null
-          pode_ver?: boolean | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          module_id?: string
-          perfil_id?: string
-          pode_editar?: boolean | null
-          pode_excluir?: boolean | null
-          pode_ver?: boolean | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "permissoes_module_id_fkey"
-            columns: ["module_id"]
-            isOneToOne: false
-            referencedRelation: "saas_modules"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "permissoes_perfil_id_fkey"
-            columns: ["perfil_id"]
-            isOneToOne: false
-            referencedRelation: "perfis"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       product_categories: {
         Row: {
           company_id: string
@@ -1498,7 +1258,6 @@ export type Database = {
           is_active: boolean | null
           last_login: string | null
           last_name: string | null
-          perfil_id: string | null
           phone: string | null
           position: string | null
           role: string | null
@@ -1514,7 +1273,6 @@ export type Database = {
           is_active?: boolean | null
           last_login?: string | null
           last_name?: string | null
-          perfil_id?: string | null
           phone?: string | null
           position?: string | null
           role?: string | null
@@ -1530,7 +1288,6 @@ export type Database = {
           is_active?: boolean | null
           last_login?: string | null
           last_name?: string | null
-          perfil_id?: string | null
           phone?: string | null
           position?: string | null
           role?: string | null
@@ -1542,13 +1299,6 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "profiles_perfil_id_fkey"
-            columns: ["perfil_id"]
-            isOneToOne: false
-            referencedRelation: "perfis"
             referencedColumns: ["id"]
           },
         ]
@@ -1814,155 +1564,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      saas_analytics: {
-        Row: {
-          action: string
-          company_id: string | null
-          created_at: string
-          id: string
-          metadata: Json | null
-          module_name: string
-        }
-        Insert: {
-          action: string
-          company_id?: string | null
-          created_at?: string
-          id?: string
-          metadata?: Json | null
-          module_name: string
-        }
-        Update: {
-          action?: string
-          company_id?: string | null
-          created_at?: string
-          id?: string
-          metadata?: Json | null
-          module_name?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "saas_analytics_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      saas_modules: {
-        Row: {
-          category: string
-          created_at: string
-          description: string | null
-          icon: string | null
-          id: string
-          is_core: boolean | null
-          name: string
-          route_path: string | null
-          updated_at: string
-        }
-        Insert: {
-          category: string
-          created_at?: string
-          description?: string | null
-          icon?: string | null
-          id?: string
-          is_core?: boolean | null
-          name: string
-          route_path?: string | null
-          updated_at?: string
-        }
-        Update: {
-          category?: string
-          created_at?: string
-          description?: string | null
-          icon?: string | null
-          id?: string
-          is_core?: boolean | null
-          name?: string
-          route_path?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      saas_plan_modules: {
-        Row: {
-          created_at: string
-          id: string
-          module_id: string | null
-          plan_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          module_id?: string | null
-          plan_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          module_id?: string | null
-          plan_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "saas_plan_modules_module_id_fkey"
-            columns: ["module_id"]
-            isOneToOne: false
-            referencedRelation: "saas_modules"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "saas_plan_modules_plan_id_fkey"
-            columns: ["plan_id"]
-            isOneToOne: false
-            referencedRelation: "saas_plans"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      saas_plans: {
-        Row: {
-          billing_cycle: string
-          created_at: string
-          description: string | null
-          features: Json | null
-          id: string
-          is_active: boolean | null
-          max_users: number | null
-          name: string
-          price: number
-          qtd_max_usuarios: number | null
-          updated_at: string
-        }
-        Insert: {
-          billing_cycle?: string
-          created_at?: string
-          description?: string | null
-          features?: Json | null
-          id?: string
-          is_active?: boolean | null
-          max_users?: number | null
-          name: string
-          price?: number
-          qtd_max_usuarios?: number | null
-          updated_at?: string
-        }
-        Update: {
-          billing_cycle?: string
-          created_at?: string
-          description?: string | null
-          features?: Json | null
-          id?: string
-          is_active?: boolean | null
-          max_users?: number | null
-          name?: string
-          price?: number
-          qtd_max_usuarios?: number | null
-          updated_at?: string
-        }
-        Relationships: []
       }
       sales: {
         Row: {
@@ -2368,41 +1969,6 @@ export type Database = {
           },
         ]
       }
-      user_role_permissions: {
-        Row: {
-          can_access: boolean
-          created_at: string
-          id: string
-          module_id: string
-          role: Database["public"]["Enums"]["app_role"]
-          updated_at: string
-        }
-        Insert: {
-          can_access?: boolean
-          created_at?: string
-          id?: string
-          module_id: string
-          role: Database["public"]["Enums"]["app_role"]
-          updated_at?: string
-        }
-        Update: {
-          can_access?: boolean
-          created_at?: string
-          id?: string
-          module_id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_role_permissions_module_id_fkey"
-            columns: ["module_id"]
-            isOneToOne: false
-            referencedRelation: "saas_modules"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       user_roles: {
         Row: {
           company_id: string
@@ -2552,18 +2118,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      company_has_module_access: {
-        Args: { company_id_param: string; module_route: string }
-        Returns: boolean
-      }
-      company_is_active: {
-        Args: { _company_id: string }
-        Returns: boolean
-      }
-      delete_company_and_related: {
-        Args: { _company_id: string }
-        Returns: undefined
-      }
       generate_sequence_number: {
         Args: { prefix: string; table_name: string; user_id: string }
         Returns: string
@@ -2619,19 +2173,12 @@ export type Database = {
         }
         Returns: undefined
       }
-      role_has_module_access: {
-        Args: {
-          role_param: Database["public"]["Enums"]["app_role"]
-          module_route: string
-        }
+      user_is_admin: {
+        Args: { _user_id: string }
         Returns: boolean
       }
-      user_has_permission: {
-        Args: {
-          _user_id: string
-          _module_route: string
-          _permission_type?: string
-        }
+      user_is_master: {
+        Args: { _user_id: string }
         Returns: boolean
       }
       validate_cnpj: {

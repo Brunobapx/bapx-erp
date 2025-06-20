@@ -14,13 +14,11 @@ import {
   Users,
   FilePen,
   Warehouse,
-  ShoppingCart,
-  Building2
+  ShoppingCart
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { UserSection } from './UserSection';
 import { useAuth } from '@/components/Auth/AuthProvider';
-import { usePermissoes } from '@/hooks/usePermissoes';
 
 const SidebarLink = ({ 
   to, 
@@ -53,14 +51,9 @@ export const Sidebar = () => {
   const location = useLocation();
   const [collapsed, setCollapsed] = React.useState(false);
   const { userRole } = useAuth();
-  const { hasPermission, loading: permissionsLoading } = usePermissoes();
   
-  console.log('[Sidebar] Current user role:', userRole);
-  console.log('[Sidebar] Permissions loading:', permissionsLoading);
-  
-  const allNavigationItems = [
+  const navigationItems = [
     { path: "/", text: "Dashboard", icon: ChartBar },
-    ...(userRole === 'master' ? [{ path: "/saas", text: "SaaS", icon: Building2 }] : []),
     { path: "/clientes", text: "Clientes", icon: User },
     { path: "/produtos", text: "Produtos", icon: Package },
     { path: "/fornecedores", text: "Fornecedores", icon: Users },
@@ -77,55 +70,6 @@ export const Sidebar = () => {
     { path: "/ordens-servico", text: "Ordens de Serviço", icon: FilePen },
     { path: "/configuracoes", text: "Configurações", icon: Settings },
   ];
-
-  const navigationItems = React.useMemo(() => {
-    if (permissionsLoading) return [];
-    
-    return allNavigationItems.filter(item => {
-      // O Dashboard (/) é sempre visível.
-      if (item.path === '/') {
-        console.log('[Sidebar] Dashboard always visible');
-        return true;
-      }
-      
-      // A página SaaS é visível apenas para usuários 'master'.
-      if (item.path === '/saas') {
-        const isMaster = userRole === 'master';
-        console.log('[Sidebar] SaaS access check - userRole:', userRole, 'isMaster:', isMaster);
-        return isMaster;
-      }
-      
-      // Configurações é sempre visível para usuários logados
-      if (item.path === '/configuracoes') {
-        console.log('[Sidebar] Configurações always visible for authenticated users');
-        return true;
-      }
-      
-      // Para usuários master, dar acesso total a todos os módulos
-      if (userRole === 'master') {
-        console.log('[Sidebar] Master user has access to all modules including:', item.path);
-        return true;
-      }
-      
-      // Os outros itens dependem das permissões do usuário.
-      const hasAccess = hasPermission(item.path, 'pode_ver');
-      console.log('[Sidebar] Permission check for', item.path, ':', hasAccess);
-      return hasAccess;
-    });
-  }, [hasPermission, permissionsLoading, userRole]);
-
-  console.log('[Sidebar] Final navigation items:', navigationItems.map(item => item.path));
-
-  if (permissionsLoading) {
-    return (
-      <aside className="w-64 bg-background border-r border-border h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-6 h-6 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto"></div>
-          <p className="text-xs text-muted-foreground">Carregando permissões...</p>
-        </div>
-      </aside>
-    );
-  }
 
   return (
     <aside className={`bg-background border-r border-border h-screen transition-all duration-300 flex flex-col ${collapsed ? 'w-16' : 'w-64'}`}>
