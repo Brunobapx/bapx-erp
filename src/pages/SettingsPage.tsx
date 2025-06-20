@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,7 +9,6 @@ import { CompanySettings } from '@/components/Settings/CompanySettings';
 import { SecuritySettings } from '@/components/Settings/SecuritySettings';
 import { useAuth } from '@/components/Auth/AuthProvider';
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import ProfilesManagement from '@/components/Settings/ProfilesManagement';
 import { Shield, Users, User, Building, Settings as SettingsIcon } from 'lucide-react';
 
 const SettingsPage = () => {
@@ -18,9 +18,6 @@ const SettingsPage = () => {
   const isMaster = userRole === 'master';
   const isAdmin = userRole === 'admin' || userRole === 'master';
 
-  // Mais uma coluna no grid para master devido à aba de Perfis
-  const gridCols = isMaster ? 'grid-cols-6' : 'grid-cols-5';
-
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center gap-3 mb-6">
@@ -29,7 +26,7 @@ const SettingsPage = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className={`grid w-full ${gridCols}`}>
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             Perfil
@@ -50,13 +47,6 @@ const SettingsPage = () => {
             <Shield className="h-4 w-4" />
             Segurança
           </TabsTrigger>
-          {/* Nova aba Perfis (apenas para master) */}
-          {isMaster && (
-            <TabsTrigger value="profiles" className="flex items-center gap-2">
-              <Shield className="h-4 w-4" />
-              Perfis
-            </TabsTrigger>
-          )}
         </TabsList>
 
         <TabsContent value="profile">
@@ -110,13 +100,6 @@ const SettingsPage = () => {
             <SecuritySettings />
           )}
         </TabsContent>
-
-        {/* Aba nova de Perfis */}
-        {isMaster && (
-          <TabsContent value="profiles">
-            <ProfilesManagement />
-          </TabsContent>
-        )}
       </Tabs>
     </div>
   );
