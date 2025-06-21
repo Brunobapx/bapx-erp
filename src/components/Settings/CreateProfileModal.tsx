@@ -15,7 +15,7 @@ interface CreateProfileModalProps {
 }
 
 export const CreateProfileModal = ({ open, onOpenChange }: CreateProfileModalProps) => {
-  const { createProfile, modules } = useProfiles();
+  const { createProfile, modules, updateProfileModules } = useProfiles();
   const { companyInfo } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -39,13 +39,12 @@ export const CreateProfileModal = ({ open, onOpenChange }: CreateProfileModalPro
 
       // Se módulos foram selecionados, adicionar as permissões
       if (selectedModules.length > 0 && profile) {
-        const { updateProfileModules } = useProfiles();
         await updateProfileModules(
           profile.id,
           selectedModules.map(moduleId => ({
             moduleId,
             canView: true,
-            canEdit: !formData.is_admin, // Admin tem edit por padrão
+            canEdit: !formData.is_admin,
             canDelete: false,
           }))
         );
@@ -129,11 +128,11 @@ export const CreateProfileModal = ({ open, onOpenChange }: CreateProfileModalPro
                     {categoryModules.map((module) => (
                       <div key={module.id} className="flex items-center space-x-2">
                         <Checkbox
-                          id={module.id}
+                          id={`module-${module.id}`}
                           checked={selectedModules.includes(module.id)}
                           onCheckedChange={() => toggleModule(module.id)}
                         />
-                        <Label htmlFor={module.id} className="text-sm">
+                        <Label htmlFor={`module-${module.id}`} className="text-sm">
                           {module.name}
                         </Label>
                       </div>

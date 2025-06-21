@@ -28,7 +28,7 @@ export const EditProfileModal = ({ profileId, open, onOpenChange }: EditProfileM
   const profile = profiles.find(p => p.id === profileId);
 
   useEffect(() => {
-    if (profile) {
+    if (profile && open) {
       setFormData({
         name: profile.name,
         description: profile.description || '',
@@ -41,7 +41,7 @@ export const EditProfileModal = ({ profileId, open, onOpenChange }: EditProfileM
         setSelectedModules(profileModules.map(pm => pm.module_id));
       });
     }
-  }, [profile, profileId, loadProfileModules]);
+  }, [profile, profileId, open, loadProfileModules]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,12 +154,12 @@ export const EditProfileModal = ({ profileId, open, onOpenChange }: EditProfileM
                     {categoryModules.map((module) => (
                       <div key={module.id} className="flex items-center space-x-2">
                         <Checkbox
-                          id={module.id}
+                          id={`edit-module-${module.id}`}
                           checked={selectedModules.includes(module.id)}
                           onCheckedChange={() => toggleModule(module.id)}
                           disabled={profile.name === 'Master'}
                         />
-                        <Label htmlFor={module.id} className="text-sm">
+                        <Label htmlFor={`edit-module-${module.id}`} className="text-sm">
                           {module.name}
                         </Label>
                       </div>

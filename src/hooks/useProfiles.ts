@@ -94,14 +94,31 @@ export const useProfiles = () => {
     try {
       const { data, error } = await supabase
         .from('profile_modules')
-        .select(`
-          *,
-          system_modules(*)
-        `)
+        .select('*')
         .eq('profile_id', profileId);
 
       if (error) throw error;
-      return data || [];
+      
+      // Buscar informações dos módulos separadamente
+      if (data && data.length > 0) {
+        const moduleIds = data.map(pm => pm.module_id);
+        const { data: moduleData, error: moduleError } = await supabase
+          .from('system_modules')
+          .select('*')
+          .in('id', moduleIds);
+
+        if (moduleError) throw moduleError;
+
+        // Combinar os dados
+        const profileModules = data.map(pm => ({
+          ...pm,
+          module: moduleData?.find(m => m.id === pm.module_id)
+        }));
+
+        return profileModules;
+      }
+
+      return [];
     } catch (error: any) {
       console.error('Error loading profile modules:', error);
       toast({
