@@ -25,9 +25,9 @@ serve(async (req) => {
     }
 
     const requestData = await req.json();
-    const { email, password, role } = requestData;
-    if (!email || !password || !role) {
-      return buildErrorResponse("Email, senha e função são obrigatórios", 400);
+    const { email, password, profile_id, company_id } = requestData;
+    if (!email || !password || !profile_id || !company_id) {
+      return buildErrorResponse("Email, senha, perfil e empresa são obrigatórios", 400);
     }
 
     const requesterRole = req.headers.get("x-requester-role");
@@ -39,19 +39,21 @@ serve(async (req) => {
 
     const requesterContext = await getRequesterContext(req, supabaseUrl, anonKey, supabaseServiceRole);
     if ("error" in requesterContext) return requesterContext.error;
-    const { requesterId, companyId } = requesterContext;
+    const { requesterId } = requesterContext;
 
     const newUserResult = await createSupabaseUser(supabaseServiceRole, email, password);
     if ("error" in newUserResult) return newUserResult.error;
     const newUserId = newUserResult.user.id;
 
-    const profileCreateError = await upsertUserProfile(supabaseServiceRole, newUserId, companyId);
+    // Criar perfil do usuário com profile_id
+    const profileCreateError = await upsertUserProfile(supabaseServiceRole, newUserId, company_id, profile_id);
     if (profileCreateError) {
       await deleteSupabaseUser(supabaseServiceRole, newUserId);
       return buildErrorResponse("Erro ao criar perfil do usuário: " + profileCreateError.message, 500);
     }
 
-    const roleCreateError = await insertUserRole(supabaseServiceRole, newUserId, role, companyId);
+    // Criar role baseada no perfil (compatibilidade com sistema antigo)
+    const roleCreateError = await insertUserRole(supabaseServiceRole, newUserId, 'user', company_id);
     if (roleCreateError) {
       await deleteSupabaseUser(supabaseServiceRole, newUserId);
       return buildErrorResponse("Erro ao definir função do usuário: " + roleCreateError.message, 500);
@@ -60,7 +62,8 @@ serve(async (req) => {
     return buildSuccessResponse({
       success: true,
       user: newUserResult.user,
-      company_id: companyId,
+      company_id: company_id,
+      profile_id: profile_id,
       message: "Usuário criado com sucesso e associado à empresa!"
     });
   } catch (error) {

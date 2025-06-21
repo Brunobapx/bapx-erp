@@ -1,17 +1,32 @@
 
-export async function upsertUserProfile(supabaseServiceRole: any, userId: string, companyId: string) {
-  // Usar upsert para garantir que não haverá conflito se o trigger criar primeiro
-  const { error } = await supabaseServiceRole
-    .from('profiles')
-    .upsert({ 
-      id: userId, 
-      company_id: companyId, 
-      is_active: true, 
-      first_name: '', 
-      last_name: '' 
-    }, {
-      onConflict: 'id',
-      ignoreDuplicates: false
-    });
-  return error;
+import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+export async function upsertUserProfile(
+  supabase: SupabaseClient,
+  userId: string,
+  companyId: string,
+  profileId?: string
+): Promise<Error | null> {
+  try {
+    const profileData: any = {
+      id: userId,
+      company_id: companyId,
+      first_name: '',
+      last_name: '',
+      is_active: true,
+    };
+
+    // Adicionar profile_id se fornecido
+    if (profileId) {
+      profileData.profile_id = profileId;
+    }
+
+    const { error } = await supabase
+      .from('profiles')
+      .upsert(profileData);
+
+    return error;
+  } catch (error) {
+    return error as Error;
+  }
 }

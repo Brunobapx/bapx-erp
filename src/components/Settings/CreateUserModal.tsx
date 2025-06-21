@@ -4,16 +4,23 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import CreateUserForm from './CreateUserForm';
 import { useCreateUserForm } from './useCreateUserForm';
 
+interface AccessProfile {
+  id: string;
+  name: string;
+  description: string;
+  is_active: boolean;
+}
+
 interface CreateUserModalProps {
   open: boolean;
   setOpen: (open: boolean) => void;
   onSuccess: () => void;
-  availableRoles: Array<{ value: string, label: string, masterOnly?: boolean }>;
+  availableProfiles: AccessProfile[];
   userRole: string;
 }
 
 const CreateUserModal: React.FC<CreateUserModalProps> = ({
-  open, setOpen, onSuccess, availableRoles, userRole
+  open, setOpen, onSuccess, availableProfiles, userRole
 }) => {
   const {
     form,
@@ -33,7 +40,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
           form={form}
           validationErrors={validationErrors}
           loading={loading}
-          availableRoles={availableRoles}
+          availableProfiles={availableProfiles}
           userRole={userRole}
           onFieldChange={handleChange}
           onSubmit={handleSubmit}

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from '@/components/Auth/AuthProvider';
+import { useProfiles } from '@/hooks/useProfiles';
 import ActiveUsersTable from './ActiveUsersTable';
 import CreateUserModal from './CreateUserModal';
 
@@ -19,19 +20,12 @@ interface UserProfile {
   last_login: string;
   role: string;
   email?: string;
+  profile_id?: string;
+  access_profile?: {
+    name: string;
+    description: string;
+  };
 }
-
-const availableRoles = [
-  { value: 'user', label: 'Usuário' },
-  { value: 'admin', label: 'Administrador' },
-  { value: 'master', label: 'Master', masterOnly: true },
-  { value: 'vendedor', label: 'Vendedor' },
-  { value: 'administrativo', label: 'Administrativo' },
-  { value: 'financeiro', label: 'Financeiro' },
-  { value: 'producao', label: 'Produção' },
-  { value: 'embalagem', label: 'Embalagem' },
-  { value: 'entrega', label: 'Entrega' }
-];
 
 export const UserManagement = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -39,6 +33,7 @@ export const UserManagement = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { userRole, companyInfo } = useAuth();
+  const { profiles: accessProfiles } = useProfiles();
 
   // Security check - only admins and masters can access
   if (userRole !== 'admin' && userRole !== 'master') {
@@ -66,7 +61,12 @@ export const UserManagement = () => {
           department,
           position,
           is_active,
-          last_login
+          last_login,
+          profile_id,
+          access_profiles!inner(
+            name,
+            description
+          )
         `)
         .eq('company_id', companyInfo?.id)
         .eq('is_active', true);
@@ -89,7 +89,10 @@ export const UserManagement = () => {
           return {
             ...profile,
             email: authData?.user?.email || '',
-            role: roleData?.role || 'user'
+            role: roleData?.role || 'user',
+            access_profile: Array.isArray(profile.access_profiles) 
+              ? profile.access_profiles[0] 
+              : profile.access_profiles
           };
         })
       );
@@ -134,38 +137,24 @@ export const UserManagement = () => {
     }
   };
 
-  // Update user role
-  const handleUpdateUserRole = async (userId: string, newRole: string) => {
-    if (newRole === 'master' && userRole !== 'master') {
-      toast({
-        title: "Erro",
-        description: "Apenas usuários master podem atribuir a função master",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (!confirm('Tem certeza que deseja alterar a função deste usuário?')) return;
+  // Update user profile
+  const handleUpdateUserProfile = async (userId: string, profileId: string) => {
+    if (!confirm('Tem certeza que deseja alterar o perfil deste usuário?')) return;
     
     try {
-      // Atualizar role do usuário
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .upsert({ 
-          user_id: userId, 
-          role: newRole,
-          company_id: companyInfo?.id 
-        });
+      // Atualizar perfil do usuário
+      const { error } = await supabase
+        .from('profiles')
+        .update({ profile_id: profileId })
+        .eq('id', userId);
 
-      if (roleError && !roleError.message.includes('duplicate')) {
-        throw roleError;
-      }
+      if (error) throw error;
 
-      toast({ title: "Sucesso", description: "Função do usuário atualizada com sucesso!" });
+      toast({ title: "Sucesso", description: "Perfil do usuário atualizado com sucesso!" });
       loadUsers();
     } catch (error) {
-      console.error('Error updating user role:', error);
-      toast({ title: "Erro", description: "Erro ao atualizar função", variant: "destructive" });
+      console.error('Error updating user profile:', error);
+      toast({ title: "Erro", description: "Erro ao atualizar perfil", variant: "destructive" });
     }
   };
 
@@ -193,16 +182,16 @@ export const UserManagement = () => {
         open={isCreateUserModalOpen}
         setOpen={setIsCreateUserModalOpen}
         onSuccess={handleUserCreated}
-        availableRoles={availableRoles}
+        availableProfiles={accessProfiles}
         userRole={userRole}
       />
       
       <ActiveUsersTable
         users={users}
-        availableRoles={availableRoles}
+        availableProfiles={accessProfiles}
         userRole={userRole}
         onStatusChange={handleUpdateUserStatus}
-        onRoleChange={handleUpdateUserRole}
+        onProfileChange={handleUpdateUserProfile}
         loading={loading}
       />
     </div>

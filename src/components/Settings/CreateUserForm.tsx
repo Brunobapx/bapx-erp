@@ -7,17 +7,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RefreshCw } from "lucide-react";
 import { CreateUserFormState, CreateUserFormValidationErrors } from "./useCreateUserForm";
 
-interface RoleOption {
-  value: string;
-  label: string;
-  masterOnly?: boolean;
+interface AccessProfile {
+  id: string;
+  name: string;
+  description: string;
+  is_active: boolean;
 }
 
 interface CreateUserFormProps {
   form: CreateUserFormState;
   validationErrors: CreateUserFormValidationErrors;
   loading: boolean;
-  availableRoles: RoleOption[];
+  availableProfiles: AccessProfile[];
   userRole: string;
   onFieldChange: (field: keyof CreateUserFormState, value: string) => void;
   onSubmit: () => void;
@@ -27,7 +28,7 @@ const CreateUserForm: React.FC<CreateUserFormProps> = ({
   form,
   validationErrors,
   loading,
-  availableRoles,
+  availableProfiles,
   userRole,
   onFieldChange,
   onSubmit,
@@ -63,21 +64,24 @@ const CreateUserForm: React.FC<CreateUserFormProps> = ({
         )}
       </div>
       <div className="space-y-2">
-        <Label htmlFor="role">Função</Label>
-        <Select value={form.role} onValueChange={role => onFieldChange('role', role)}>
+        <Label htmlFor="profile">Perfil de Acesso</Label>
+        <Select value={form.profile} onValueChange={profile => onFieldChange('profile', profile)}>
           <SelectTrigger>
-            <SelectValue />
+            <SelectValue placeholder="Selecionar perfil" />
           </SelectTrigger>
           <SelectContent>
-            {availableRoles.map(role =>
-              role.value === 'master' && userRole !== 'master' ? null : (
-                <SelectItem value={role.value} key={role.value}>
-                  {role.label}
+            {availableProfiles
+              .filter(profile => profile.is_active)
+              .map(profile => (
+                <SelectItem value={profile.id} key={profile.id}>
+                  {profile.name} - {profile.description}
                 </SelectItem>
-              )
-            )}
+              ))}
           </SelectContent>
         </Select>
+        {validationErrors.profile && (
+          <p className="text-sm text-red-500">{validationErrors.profile}</p>
+        )}
       </div>
       <Button onClick={onSubmit} disabled={loading} className="w-full">
         {loading ? (

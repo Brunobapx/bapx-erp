@@ -7,6 +7,7 @@ import { ProfileManagement } from '@/components/Settings/ProfileManagement';
 import { SystemSettings } from '@/components/Settings/SystemSettings';
 import { CompanySettings } from '@/components/Settings/CompanySettings';
 import { SecuritySettings } from '@/components/Settings/SecuritySettings';
+import { ProfilesManagement } from '@/components/Settings/ProfilesManagement';
 import { useAuth } from '@/components/Auth/AuthProvider';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Shield, Users, User, Building, Settings as SettingsIcon } from 'lucide-react';
@@ -26,7 +27,7 @@ const SettingsPage = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className={`grid w-full ${isMaster ? 'grid-cols-6' : 'grid-cols-5'}`}>
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             Perfil
@@ -47,6 +48,12 @@ const SettingsPage = () => {
             <Shield className="h-4 w-4" />
             Segurança
           </TabsTrigger>
+          {isMaster && (
+            <TabsTrigger value="profiles" className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Perfis
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="profile">
@@ -100,6 +107,12 @@ const SettingsPage = () => {
             <SecuritySettings />
           )}
         </TabsContent>
+
+        {isMaster && (
+          <TabsContent value="profiles">
+            <ProfilesManagement />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

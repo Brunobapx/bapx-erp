@@ -18,26 +18,31 @@ interface UserProfile {
   last_login: string;
   role: string;
   email?: string;
-  perfil_nome?: string;
+  profile_id?: string;
+  access_profile?: {
+    name: string;
+    description: string;
+  };
 }
 
-interface AvailableRole {
-  value: string;
-  label: string;
-  masterOnly?: boolean;
+interface AccessProfile {
+  id: string;
+  name: string;
+  description: string;
+  is_active: boolean;
 }
 
 interface Props {
   users: UserProfile[];
-  availableRoles: AvailableRole[];
+  availableProfiles: AccessProfile[];
   userRole: string;
   onStatusChange: (userId: string, isActive: boolean) => void;
-  onRoleChange: (userId: string, newRole: string) => void;
+  onProfileChange: (userId: string, profileId: string) => void;
   loading?: boolean;
 }
 
 const ActiveUsersTable: React.FC<Props> = ({
-  users, availableRoles, userRole, onStatusChange, onRoleChange, loading = false
+  users, availableProfiles, userRole, onStatusChange, onProfileChange, loading = false
 }) => {
   if (loading) {
     return (
@@ -61,7 +66,6 @@ const ActiveUsersTable: React.FC<Props> = ({
             <TableHead>Nome</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Perfil</TableHead>
-            <TableHead>Função</TableHead>
             <TableHead>Departamento</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Ações</TableHead>
@@ -70,7 +74,7 @@ const ActiveUsersTable: React.FC<Props> = ({
         <TableBody>
           {users.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="text-center text-gray-500">
+              <TableCell colSpan={6} className="text-center text-gray-500">
                 Nenhum usuário ativo encontrado
               </TableCell>
             </TableRow>
@@ -85,27 +89,22 @@ const ActiveUsersTable: React.FC<Props> = ({
                 </TableCell>
                 <TableCell>{user.email || 'Email não disponível'}</TableCell>
                 <TableCell>
-                  <Badge variant="outline">
-                    {user.perfil_nome || 'Usuário'}
-                  </Badge>
-                </TableCell>
-                <TableCell className="capitalize">
                   <Select
-                    value={user.role}
+                    value={user.profile_id || ''}
                     disabled={userRole !== 'master' && user.role === 'master'}
-                    onValueChange={newRole => onRoleChange(user.id, newRole)}
+                    onValueChange={profileId => onProfileChange(user.id, profileId)}
                   >
-                    <SelectTrigger className="capitalize w-32">
-                      <SelectValue />
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="Selecionar perfil">
+                        {user.access_profile?.name || 'Sem perfil'}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {availableRoles.map(role =>
-                        role.value === 'master' && userRole !== 'master' ? null : (
-                          <SelectItem value={role.value} key={role.value}>
-                            {role.label}
-                          </SelectItem>
-                        )
-                      )}
+                      {availableProfiles.map(profile => (
+                        <SelectItem value={profile.id} key={profile.id}>
+                          {profile.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </TableCell>
