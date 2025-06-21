@@ -4,52 +4,49 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/components/Auth/AuthProvider';
 
-export interface AccessProfile {
+interface Profile {
   id: string;
-  company_id: string;
   name: string;
-  description: string;
-  is_active: boolean;
+  description?: string;
   is_admin: boolean;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
 
-export interface SystemModule {
+interface Module {
   id: string;
   name: string;
   route_path: string;
-  description: string;
+  description?: string;
   category: string;
-  icon: string;
+  icon?: string;
   is_active: boolean;
   sort_order: number;
 }
 
-export interface ProfileModule {
+interface ProfileModule {
   id: string;
   profile_id: string;
   module_id: string;
   can_view: boolean;
   can_edit: boolean;
   can_delete: boolean;
-  module?: SystemModule;
 }
 
 export const useProfiles = () => {
-  const [profiles, setProfiles] = useState<AccessProfile[]>([]);
-  const [modules, setModules] = useState<SystemModule[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const { companyInfo } = useAuth();
+  const { user, companyInfo } = useAuth();
 
   const loadProfiles = async () => {
+    if (!user || !companyInfo?.id) return;
+    
     try {
-      if (!companyInfo?.id) {
-        setProfiles([]);
-        return;
-      }
-
+      console.log('[useProfiles] Carregando perfis da empresa:', companyInfo.id);
+      
       const { data, error } = await supabase
         .from('access_profiles')
         .select('*')
@@ -57,98 +54,87 @@ export const useProfiles = () => {
         .order('name');
 
       if (error) throw error;
+
+      console.log('[useProfiles] Perfis carregados:', data?.length);
       setProfiles(data || []);
     } catch (error: any) {
-      console.error('Error loading profiles:', error);
+      console.error('[useProfiles] Erro ao carregar perfis:', error);
       toast({
         title: "Erro",
-        description: "Erro ao carregar perfis",
+        description: error.message || "Erro ao carregar perfis",
         variant: "destructive",
       });
-      setProfiles([]);
     }
   };
 
   const loadModules = async () => {
     try {
+      console.log('[useProfiles] Carregando módulos do sistema');
+      
       const { data, error } = await supabase
         .from('system_modules')
         .select('*')
         .eq('is_active', true)
-        .order('category, sort_order');
+        .order('sort_order');
 
       if (error) throw error;
+
+      console.log('[useProfiles] Módulos carregados:', data?.length);
       setModules(data || []);
     } catch (error: any) {
-      console.error('Error loading modules:', error);
+      console.error('[useProfiles] Erro ao carregar módulos:', error);
       toast({
         title: "Erro",
-        description: "Erro ao carregar módulos",
+        description: error.message || "Erro ao carregar módulos",
         variant: "destructive",
       });
-      setModules([]);
     }
   };
 
   const loadProfileModules = async (profileId: string): Promise<ProfileModule[]> => {
     try {
+      console.log('[useProfiles] Carregando módulos do perfil:', profileId);
+      
       const { data, error } = await supabase
         .from('profile_modules')
         .select('*')
         .eq('profile_id', profileId);
 
       if (error) throw error;
-      
-      // Buscar informações dos módulos separadamente
-      if (data && data.length > 0) {
-        const moduleIds = data.map(pm => pm.module_id);
-        const { data: moduleData, error: moduleError } = await supabase
-          .from('system_modules')
-          .select('*')
-          .in('id', moduleIds);
 
-        if (moduleError) throw moduleError;
-
-        // Combinar os dados
-        const profileModules = data.map(pm => ({
-          ...pm,
-          module: moduleData?.find(m => m.id === pm.module_id)
-        }));
-
-        return profileModules;
-      }
-
-      return [];
+      console.log('[useProfiles] Módulos do perfil carregados:', data?.length);
+      return data || [];
     } catch (error: any) {
-      console.error('Error loading profile modules:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar módulos do perfil",
-        variant: "destructive",
-      });
+      console.error('[useProfiles] Erro ao carregar módulos do perfil:', error);
       return [];
     }
   };
 
-  const createProfile = async (profileData: Omit<AccessProfile, 'id' | 'created_at' | 'updated_at'>) => {
+  const createProfile = async (profileData: {
+    name: string;
+    description?: string;
+    is_admin: boolean;
+    company_id: string;
+    is_active: boolean;
+  }) => {
     try {
       const { data, error } = await supabase
         .from('access_profiles')
-        .insert(profileData)
+        .insert([profileData])
         .select()
         .single();
 
       if (error) throw error;
-      
+
+      await loadProfiles();
       toast({
         title: "Sucesso",
         description: "Perfil criado com sucesso!",
       });
-      
-      await loadProfiles();
+
       return data;
     } catch (error: any) {
-      console.error('Error creating profile:', error);
+      console.error('[useProfiles] Erro ao criar perfil:', error);
       toast({
         title: "Erro",
         description: error.message || "Erro ao criar perfil",
@@ -158,7 +144,7 @@ export const useProfiles = () => {
     }
   };
 
-  const updateProfile = async (profileId: string, profileData: Partial<AccessProfile>) => {
+  const updateProfile = async (profileId: string, profileData: Partial<Profile>) => {
     try {
       const { error } = await supabase
         .from('access_profiles')
@@ -166,15 +152,14 @@ export const useProfiles = () => {
         .eq('id', profileId);
 
       if (error) throw error;
-      
+
+      await loadProfiles();
       toast({
         title: "Sucesso",
         description: "Perfil atualizado com sucesso!",
       });
-      
-      await loadProfiles();
     } catch (error: any) {
-      console.error('Error updating profile:', error);
+      console.error('[useProfiles] Erro ao atualizar perfil:', error);
       toast({
         title: "Erro",
         description: error.message || "Erro ao atualizar perfil",
@@ -186,21 +171,27 @@ export const useProfiles = () => {
 
   const deleteProfile = async (profileId: string) => {
     try {
+      // Primeiro remover módulos do perfil
+      await supabase
+        .from('profile_modules')
+        .delete()
+        .eq('profile_id', profileId);
+
+      // Depois remover o perfil
       const { error } = await supabase
         .from('access_profiles')
         .delete()
         .eq('id', profileId);
 
       if (error) throw error;
-      
+
+      await loadProfiles();
       toast({
         title: "Sucesso",
         description: "Perfil excluído com sucesso!",
       });
-      
-      await loadProfiles();
     } catch (error: any) {
-      console.error('Error deleting profile:', error);
+      console.error('[useProfiles] Erro ao excluir perfil:', error);
       toast({
         title: "Erro",
         description: error.message || "Erro ao excluir perfil",
@@ -211,42 +202,47 @@ export const useProfiles = () => {
   };
 
   const updateProfileModules = async (
-    profileId: string, 
-    modulePermissions: { moduleId: string; canView: boolean; canEdit: boolean; canDelete: boolean }[]
+    profileId: string,
+    modulePermissions: Array<{
+      moduleId: string;
+      canView: boolean;
+      canEdit: boolean;
+      canDelete: boolean;
+    }>
   ) => {
     try {
-      // Remove existing permissions
+      // Primeiro remover módulos existentes
       await supabase
         .from('profile_modules')
         .delete()
         .eq('profile_id', profileId);
 
-      // Insert new permissions
+      // Depois inserir novos módulos
       if (modulePermissions.length > 0) {
         const { error } = await supabase
           .from('profile_modules')
           .insert(
-            modulePermissions.map(perm => ({
+            modulePermissions.map(mp => ({
               profile_id: profileId,
-              module_id: perm.moduleId,
-              can_view: perm.canView,
-              can_edit: perm.canEdit,
-              can_delete: perm.canDelete
+              module_id: mp.moduleId,
+              can_view: mp.canView,
+              can_edit: mp.canEdit,
+              can_delete: mp.canDelete,
             }))
           );
 
         if (error) throw error;
       }
-      
+
       toast({
         title: "Sucesso",
-        description: "Permissões do perfil atualizadas com sucesso!",
+        description: "Módulos do perfil atualizados com sucesso!",
       });
     } catch (error: any) {
-      console.error('Error updating profile modules:', error);
+      console.error('[useProfiles] Erro ao atualizar módulos do perfil:', error);
       toast({
         title: "Erro",
-        description: error.message || "Erro ao atualizar permissões",
+        description: error.message || "Erro ao atualizar módulos do perfil",
         variant: "destructive",
       });
       throw error;
@@ -254,19 +250,16 @@ export const useProfiles = () => {
   };
 
   useEffect(() => {
-    const loadData = async () => {
-      if (!companyInfo?.id) {
-        setLoading(false);
-        return;
-      }
-      
+    const initializeData = async () => {
       setLoading(true);
       await Promise.all([loadProfiles(), loadModules()]);
       setLoading(false);
     };
 
-    loadData();
-  }, [companyInfo?.id]);
+    if (user && companyInfo?.id) {
+      initializeData();
+    }
+  }, [user, companyInfo?.id]);
 
   return {
     profiles,
