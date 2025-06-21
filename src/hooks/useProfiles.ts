@@ -49,16 +49,13 @@ export const useProfiles = () => {
     }
   };
 
+  // Mantém compatibilidade com código existente, mas agora delega para o novo hook
   const loadProfileModules = async (profileId: string): Promise<ProfileModule[]> => {
     try {
       return await modulesService.loadProfileModules(profileId);
     } catch (error: any) {
       console.error('Error loading profile modules:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar módulos do perfil",
-        variant: "destructive",
-      });
+      // Não mostra toast aqui para evitar duplicação - o hook dedicado já faz isso
       return [];
     }
   };
@@ -116,6 +113,7 @@ export const useProfiles = () => {
     }
   };
 
+  // Delega para o serviço, mas mantém a interface
   const updateProfileModules = async (
     profileId: string, 
     modulePermissions: ModulePermission[]

@@ -1,8 +1,8 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useProfiles } from '@/hooks/useProfiles';
+import { useProfileModules } from '@/hooks/useProfileModules';
 import { useToast } from "@/hooks/use-toast";
-import { AccessProfile } from '@/types/profiles';
 
 interface FormData {
   name: string;
@@ -12,8 +12,10 @@ interface FormData {
 }
 
 export const useEditProfileForm = (profileId: string, open: boolean) => {
-  const { profiles, modules, updateProfile, loadProfileModules, updateProfileModules } = useProfiles();
+  const { profiles, modules, updateProfile } = useProfiles();
+  const { profileModules, loading: modulesLoading, loadProfileModules, updateProfileModules } = useProfileModules();
   const { toast } = useToast();
+  
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -25,72 +27,91 @@ export const useEditProfileForm = (profileId: string, open: boolean) => {
 
   const profile = profiles.find(p => p.id === profileId);
 
-  useEffect(() => {
-    const loadData = async () => {
-      if (profile && open) {
-        console.log('Loading profile data:', profile);
-        setFormData({
-          name: profile.name || '',
-          description: profile.description || '',
-          is_admin: profile.is_admin || false,
-          is_active: profile.is_active !== false,
-        });
+  const loadData = useCallback(async () => {
+    if (!profile || !open || !profileId) {
+      return;
+    }
 
-        // Carregar módulos do perfil
-        try {
-          const profileModules = await loadProfileModules(profileId);
-          console.log('Profile modules loaded:', profileModules);
-          setSelectedModules(profileModules.map(pm => pm.module_id));
-        } catch (error) {
-          console.error('Error loading profile modules:', error);
-          setSelectedModules([]);
-        }
-      }
-    };
+    console.log('Loading profile data:', profile);
+    
+    // Carregar dados do formulário
+    setFormData({
+      name: profile.name || '',
+      description: profile.description || '',
+      is_admin: profile.is_admin || false,
+      is_active: profile.is_active !== false,
+    });
 
-    loadData();
+    // Carregar módulos do perfil
+    try {
+      const modules = await loadProfileModules(profileId);
+      const moduleIds = modules.map(pm => pm.module_id);
+      setSelectedModules(moduleIds);
+      console.log('Profile modules loaded:', moduleIds.length);
+    } catch (error) {
+      console.error('Error loading profile modules in form:', error);
+      setSelectedModules([]);
+    }
   }, [profile, profileId, open, loadProfileModules]);
 
-  const handleFormDataChange = (data: Partial<FormData>) => {
-    setFormData(prev => ({ ...prev, ...data }));
-  };
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
-  const toggleModule = (moduleId: string) => {
+  const handleFormDataChange = useCallback((data: Partial<FormData>) => {
+    setFormData(prev => ({ ...prev, ...data }));
+  }, []);
+
+  const toggleModule = useCallback((moduleId: string) => {
     setSelectedModules(prev => {
       const newSelection = prev.includes(moduleId)
         ? prev.filter(id => id !== moduleId)
         : [...prev, moduleId];
-      console.log('Module selection changed:', { moduleId, newSelection });
+      console.log('Module selection changed:', { moduleId, newSelection: newSelection.length });
       return newSelection;
     });
-  };
+  }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent): Promise<boolean> => {
     e.preventDefault();
+    
+    if (!profileId) {
+      toast({
+        title: "Erro",
+        description: "ID do perfil não encontrado",
+        variant: "destructive",
+      });
+      return false;
+    }
+
     setLoading(true);
     
     try {
       console.log('Updating profile with data:', formData);
+      
+      // Atualizar dados do perfil
       await updateProfile(profileId, formData);
       
-      // Atualizar módulos
-      console.log('Updating profile modules:', selectedModules);
-      await updateProfileModules(
-        profileId,
-        selectedModules.map(moduleId => ({
-          moduleId,
-          canView: true,
-          canEdit: true,
-          canDelete: false,
-        }))
-      );
-
-      toast({
-        title: "Sucesso",
-        description: "Perfil atualizado com sucesso!",
-      });
-
-      return true;
+      // Atualizar módulos do perfil
+      console.log('Updating profile modules:', selectedModules.length);
+      const modulePermissions = selectedModules.map(moduleId => ({
+        moduleId,
+        canView: true,
+        canEdit: true,
+        canDelete: false,
+      }));
+      
+      const success = await updateProfileModules(profileId, modulePermissions);
+      
+      if (success) {
+        toast({
+          title: "Sucesso",
+          description: "Perfil atualizado com sucesso!",
+        });
+        return true;
+      }
+      
+      return false;
     } catch (error: any) {
       console.error('Error updating profile:', error);
       toast({
@@ -102,14 +123,14 @@ export const useEditProfileForm = (profileId: string, open: boolean) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [profileId, formData, selectedModules, updateProfile, updateProfileModules, toast]);
 
   return {
     profile,
     modules,
     formData,
     selectedModules,
-    loading,
+    loading: loading || modulesLoading,
     handleFormDataChange,
     toggleModule,
     handleSubmit,
