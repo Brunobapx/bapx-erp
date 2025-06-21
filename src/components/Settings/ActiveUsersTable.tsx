@@ -58,7 +58,7 @@ const ActiveUsersTable: React.FC<Props> = ({
   if (loading) {
     return (
       <div className="space-y-4">
-        <h4 className="text-md font-medium">Usuários Ativos</h4>
+        <h4 className="text-md font-medium">Usuários do Sistema</h4>
         <div className="space-y-2">
           <Skeleton className="h-12 w-full" />
           <Skeleton className="h-12 w-full" />
@@ -90,6 +90,20 @@ const ActiveUsersTable: React.FC<Props> = ({
     onProfileChange(userId, actualProfileId);
   };
 
+  const canManageUser = (user: UserProfile) => {
+    // Master pode gerenciar todos
+    if (userRole === 'master') return true;
+    
+    // Admin não pode gerenciar master
+    if (userRole === 'admin' && user.role === 'master') return false;
+    
+    // Admin pode gerenciar outros
+    if (userRole === 'admin') return true;
+    
+    // Outros não podem gerenciar ninguém
+    return false;
+  };
+
   console.log('Available profiles in table:', availableProfiles);
   console.log('Users in table:', users);
 
@@ -106,7 +120,7 @@ const ActiveUsersTable: React.FC<Props> = ({
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Perfil</TableHead>
+              <TableHead>Perfil de Acesso</TableHead>
               <TableHead>Departamento</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Ações</TableHead>
@@ -115,15 +129,15 @@ const ActiveUsersTable: React.FC<Props> = ({
           <TableBody>
             {users.map((user) => (
               <TableRow key={user.id}>
-                <TableCell>{getDisplayName(user)}</TableCell>
+                <TableCell className="font-medium">{getDisplayName(user)}</TableCell>
                 <TableCell>{user.email || 'Email não disponível'}</TableCell>
                 <TableCell>
                   <Select
                     value={getCurrentProfileId(user)}
-                    disabled={userRole !== 'master' && user.role === 'master'}
+                    disabled={!canManageUser(user)}
                     onValueChange={(profileId) => handleProfileChange(user.id, profileId)}
                   >
-                    <SelectTrigger className="w-40">
+                    <SelectTrigger className="w-48">
                       <SelectValue placeholder="Selecionar perfil">
                         {getProfileDisplayName(user)}
                       </SelectValue>
@@ -134,7 +148,7 @@ const ActiveUsersTable: React.FC<Props> = ({
                         .filter(profile => profile.is_active)
                         .map(profile => (
                           <SelectItem value={profile.id} key={profile.id}>
-                            {profile.name}
+                            {profile.name} - {profile.description}
                           </SelectItem>
                         ))}
                     </SelectContent>
@@ -148,13 +162,19 @@ const ActiveUsersTable: React.FC<Props> = ({
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-2">
-                    <Button variant="ghost" size="sm" title="Editar usuário">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      title="Editar usuário"
+                      disabled={!canManageUser(user)}
+                    >
                       <Edit className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => onStatusChange(user.id, !user.is_active)}
+                      disabled={!canManageUser(user)}
                       title={user.is_active ? 'Desativar usuário' : 'Ativar usuário'}
                     >
                       {user.is_active ? 'Desativar' : 'Ativar'}
@@ -167,7 +187,10 @@ const ActiveUsersTable: React.FC<Props> = ({
                         getDisplayName(user),
                         user.email || ''
                       )}
-                      disabled={user.id === currentUserId || (userRole !== 'master' && user.role === 'master')}
+                      disabled={
+                        user.id === currentUserId || 
+                        !canManageUser(user)
+                      }
                       title="Excluir usuário permanentemente"
                       className="text-red-600 hover:text-red-800"
                     >

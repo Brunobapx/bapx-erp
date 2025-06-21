@@ -1,56 +1,41 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from './AuthProvider';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Shield } from 'lucide-react';
 
 interface ModuleAccessCheckProps {
   routePath: string;
   children: React.ReactNode;
+  requirePermission?: 'view' | 'edit' | 'delete';
 }
 
-export const ModuleAccessCheck = ({ routePath, children }: ModuleAccessCheckProps) => {
+export const ModuleAccessCheck = ({ 
+  routePath, 
+  children, 
+  requirePermission = 'view' 
+}: ModuleAccessCheckProps) => {
   const { user, userRole } = useAuth();
-  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { hasAccess, loading } = useUserPermissions();
+  const [accessGranted, setAccessGranted] = useState<boolean | null>(null);
 
   useEffect(() => {
     const checkAccess = async () => {
       if (!user) {
-        setHasAccess(false);
-        setLoading(false);
+        setAccessGranted(false);
         return;
       }
 
-      // Master e Admin sempre têm acesso a todos os módulos
-      if (userRole === 'master' || userRole === 'admin') {
-        setHasAccess(true);
-        setLoading(false);
-        return;
-      }
-
-      // Usuários comuns têm acesso a módulos básicos
-      const allowedRoutes = [
-        '/dashboard',
-        '/orders',
-        '/sales',
-        '/clients',
-        '/products',
-        '/stock',
-        '/production',
-        '/packaging',
-        '/routes',
-        '/finance'
-      ];
-
-      // Verificar se a rota atual está na lista de rotas permitidas
-      const routeAllowed = allowedRoutes.some(route => routePath.startsWith(route));
-      setHasAccess(routeAllowed);
-      setLoading(false);
+      // Verificar acesso usando o hook de permissões
+      const access = hasAccess(routePath, requirePermission);
+      setAccessGranted(access);
     };
 
-    checkAccess();
-  }, [user, userRole, routePath]);
+    if (!loading) {
+      checkAccess();
+    }
+  }, [user, userRole, routePath, requirePermission, hasAccess, loading]);
 
   if (loading) {
     return (
@@ -63,7 +48,7 @@ export const ModuleAccessCheck = ({ routePath, children }: ModuleAccessCheckProp
     );
   }
 
-  if (!hasAccess) {
+  if (!accessGranted) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
         <div className="max-w-md w-full">

@@ -1,122 +1,167 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
-  Package, 
-  Box, 
-  Truck, 
-  DollarSign, 
-  Route, 
-  Settings, 
-  ChartBar,
-  Calendar,
-  User,
-  Users,
-  FilePen,
-  Warehouse,
-  ShoppingCart
+  ChartBar, Users, Package, ShoppingCart, DollarSign, 
+  Truck, Calendar, Settings, FileText, Box, Warehouse,
+  FilePen, User, LogOut, Menu, X
 } from 'lucide-react';
-import { cn } from "@/lib/utils";
-import { UserSection } from './UserSection';
 import { useAuth } from '@/components/Auth/AuthProvider';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
+import { Button } from '@/components/ui/button';
 
-const SidebarLink = ({ 
-  to, 
-  icon: Icon, 
-  text, 
-  isActive 
-}: { 
-  to: string; 
-  icon: React.ElementType; 
-  text: string; 
-  isActive: boolean;
-}) => {
-  return (
-    <Link
-      to={to}
-      className={cn(
-        // Cores do menu baseadas nas variáveis definidas no index.css
-        "flex items-center gap-3 rounded-md px-3 py-2 text-sm menu-bg menu-text transition-all",
-        "hover:menu-hover hover:menu-text",
-        isActive ? "menu-hover menu-text font-medium" : ""
-      )}
-    >
-      <Icon className="h-4 w-4" />
-      <span>{text}</span>
-    </Link>
-  );
+const iconMap = {
+  ChartBar,
+  User: Users,
+  Package,
+  Users,
+  ShoppingCart,
+  Warehouse,
+  Box,
+  DollarSign,
+  FilePen,
+  Truck,
+  Calendar,
+  Settings
 };
 
-export const Sidebar = () => {
+const Sidebar = () => {
   const location = useLocation();
-  const [collapsed, setCollapsed] = React.useState(false);
-  const { userRole } = useAuth();
-  
-  const navigationItems = [
-    { path: "/", text: "Dashboard", icon: ChartBar },
-    { path: "/clientes", text: "Clientes", icon: User },
-    { path: "/produtos", text: "Produtos", icon: Package },
-    { path: "/fornecedores", text: "Fornecedores", icon: Users },
-    { path: "/compras", text: "Compras", icon: ShoppingCart },
-    { path: "/estoque", text: "Estoque", icon: Warehouse },
-    { path: "/pedidos", text: "Pedidos", icon: Package },
-    { path: "/producao", text: "Produção", icon: Box },
-    { path: "/embalagem", text: "Embalagem", icon: Box },
-    { path: "/vendas", text: "Vendas", icon: DollarSign },
-    { path: "/emissao-fiscal", text: "Emissão Fiscal", icon: FilePen },
-    { path: "/financeiro", text: "Financeiro", icon: DollarSign },
-    { path: "/rotas", text: "Roteirização", icon: Truck },
-    { path: "/calendario", text: "Calendário", icon: Calendar },
-    { path: "/ordens-servico", text: "Ordens de Serviço", icon: FilePen },
-    { path: "/configuracoes", text: "Configurações", icon: Settings },
+  const { signOut, userRole } = useAuth();
+  const { getAllowedRoutes, loading } = useUserPermissions();
+  const [isOpen, setIsOpen] = useState(false);
+
+  const menuItems = [
+    { icon: ChartBar, label: 'Dashboard', href: '/', iconName: 'ChartBar' },
+    { icon: Users, label: 'Clientes', href: '/clientes', iconName: 'User' },
+    { icon: Package, label: 'Produtos', href: '/produtos', iconName: 'Package' },
+    { icon: Users, label: 'Fornecedores', href: '/fornecedores', iconName: 'Users' },
+    { icon: ShoppingCart, label: 'Compras', href: '/compras', iconName: 'ShoppingCart' },
+    { icon: Warehouse, label: 'Estoque', href: '/estoque', iconName: 'Warehouse' },
+    { icon: Package, label: 'Pedidos', href: '/pedidos', iconName: 'Package' },
+    { icon: Box, label: 'Produção', href: '/producao', iconName: 'Box' },
+    { icon: Box, label: 'Embalagem', href: '/embalagem', iconName: 'Box' },
+    { icon: DollarSign, label: 'Vendas', href: '/vendas', iconName: 'DollarSign' },
+    { icon: FilePen, label: 'Emissão Fiscal', href: '/emissao-fiscal', iconName: 'FilePen' },
+    { icon: DollarSign, label: 'Financeiro', href: '/financeiro', iconName: 'DollarSign' },
+    { icon: Truck, label: 'Rotas', href: '/rotas', iconName: 'Truck' },
+    { icon: Calendar, label: 'Calendário', href: '/calendario', iconName: 'Calendar' },
+    { icon: FilePen, label: 'Ordens de Serviço', href: '/ordens-servico', iconName: 'FilePen' },
+    { icon: Settings, label: 'Configurações', href: '/configuracoes', iconName: 'Settings' }
   ];
 
-  return (
-    <aside className={`bg-background border-r border-border h-screen transition-all duration-300 flex flex-col ${collapsed ? 'w-16' : 'w-64'}`}>
-      <div className="p-4 flex flex-col items-center justify-between">
-        {!collapsed && (
-          <div className="flex flex-col items-center gap-2 w-full">
-            <img
-              src="/lovable-uploads/a627e39d-287e-4e8b-96f3-d8c8f7b7d997.png"
-              alt="BAPX ERP Logo"
-              className="w-14 h-14 object-contain bg-white rounded shadow mb-1"
-              style={{ background: '#eaf7fb' }}
-            />
-            <h2
-              className="text-2xl font-extrabold text-primary font-poppins tracking-tight text-center w-full"
-            >
-              BAPX ERP
-            </h2>
+  const allowedRoutes = getAllowedRoutes();
+
+  // Filtrar itens do menu baseado nas permissões
+  const filteredMenuItems = menuItems.filter(item => {
+    if (loading) return false;
+    
+    // Master e Admin veem tudo
+    if (userRole === 'master' || userRole === 'admin') {
+      return true;
+    }
+    
+    // Para outros usuários, verificar permissões
+    return allowedRoutes.includes(item.href);
+  });
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+    }
+  };
+
+  const SidebarContent = () => (
+    <>
+      <div className="p-6 border-b border-gray-200">
+        <div className="flex items-center gap-3">
+          <img
+            src="/lovable-uploads/a627e39d-287e-4e8b-96f3-d8c8f7b7d997.png"
+            alt="BAPX ERP"
+            className="w-10 h-10 rounded-lg"
+          />
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">BAPX ERP</h1>
+            <p className="text-sm text-gray-500">Gestão Empresarial</p>
           </div>
+        </div>
+      </div>
+
+      <nav className="flex-1 p-4 space-y-1">
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="w-6 h-6 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+          </div>
+        ) : (
+          filteredMenuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = location.pathname === item.href;
+            
+            return (
+              <Link
+                key={item.href}
+                to={item.href}
+                onClick={() => setIsOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+              >
+                <Icon className="h-5 w-5 flex-shrink-0" />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })
         )}
-        <button 
-          onClick={() => setCollapsed(!collapsed)}
-          className="rounded-lg p-1 hover:bg-accent/50 text-muted-foreground absolute right-4 top-4 md:relative md:right-0 md:top-0"
+      </nav>
+
+      <div className="p-4 border-t border-gray-200">
+        <Button
+          onClick={handleSignOut}
+          variant="ghost"
+          className="w-full justify-start gap-3 text-red-600 hover:text-red-700 hover:bg-red-50"
         >
-          {collapsed ? 
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m9 18 6-6-6-6"></path>
-            </svg> : 
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m15 18-6-6 6-6"></path>
-            </svg>
-          }
-        </button>
+          <LogOut className="h-5 w-5" />
+          Sair do Sistema
+        </Button>
       </div>
-      <div className="p-2 flex-1">
-        <nav className="space-y-1">
-          {navigationItems.map((item) => (
-            <SidebarLink
-              key={item.path}
-              to={item.path}
-              icon={item.icon}
-              text={collapsed ? "" : item.text}
-              isActive={location.pathname === item.path}
-            />
-          ))}
-        </nav>
-      </div>
-      {!collapsed && <UserSection />}
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile menu button */}
+      <Button
+        onClick={() => setIsOpen(!isOpen)}
+        variant="ghost"
+        size="sm"
+        className="lg:hidden fixed top-4 left-4 z-50 bg-white shadow-md"
+      >
+        {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+      </Button>
+
+      {/* Desktop sidebar */}
+      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white border-r border-gray-200">
+        <SidebarContent />
+      </aside>
+
+      {/* Mobile sidebar */}
+      {isOpen && (
+        <>
+          <div
+            className="lg:hidden fixed inset-0 z-40 bg-black bg-opacity-25"
+            onClick={() => setIsOpen(false)}
+          />
+          <aside className="lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 flex flex-col">
+            <SidebarContent />
+          </aside>
+        </>
+      )}
+    </>
   );
 };
+
+export default Sidebar;

@@ -111,7 +111,7 @@ export const useProfiles = () => {
         .from('profile_modules')
         .select(`
           *,
-          module:system_modules(*)
+          system_modules(*)
         `)
         .eq('profile_id', profileId);
 
@@ -208,7 +208,10 @@ export const useProfiles = () => {
     }
   };
 
-  const updateProfileModules = async (profileId: string, modulePermissions: { moduleId: string; canView: boolean; canEdit: boolean; canDelete: boolean }[]) => {
+  const updateProfileModules = async (
+    profileId: string, 
+    modulePermissions: { moduleId: string; canView: boolean; canEdit: boolean; canDelete: boolean }[]
+  ) => {
     try {
       // Primeiro, remove todas as permissões existentes do perfil
       await supabase
