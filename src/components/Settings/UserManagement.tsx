@@ -7,6 +7,7 @@ import { useAuth } from '@/components/Auth/AuthProvider';
 import { useProfiles } from '@/hooks/useProfiles';
 import ActiveUsersTable from './ActiveUsersTable';
 import CreateUserModal from './CreateUserModal';
+import { DeleteUserModal } from './DeleteUserModal';
 
 // Interface definitions
 interface UserProfile {
@@ -30,9 +31,20 @@ interface UserProfile {
 export const UserManagement = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
+  const [deleteUserModal, setDeleteUserModal] = useState<{
+    open: boolean;
+    userId: string;
+    userName: string;
+    userEmail: string;
+  }>({
+    open: false,
+    userId: '',
+    userName: '',
+    userEmail: ''
+  });
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const { userRole, companyInfo } = useAuth();
+  const { userRole, companyInfo, user } = useAuth();
   const { profiles: accessProfiles } = useProfiles();
 
   // Security check - only admins and masters can access
@@ -50,7 +62,7 @@ export const UserManagement = () => {
       setLoading(true);
       console.log('Loading users for company:', companyInfo?.id);
       
-      // Buscar usuários da empresa atual
+      // Buscar usuários da empresa atual (incluindo usuários sem perfil)
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select(`
@@ -63,13 +75,12 @@ export const UserManagement = () => {
           is_active,
           last_login,
           profile_id,
-          access_profiles!inner(
+          access_profiles(
             name,
             description
           )
         `)
-        .eq('company_id', companyInfo?.id)
-        .eq('is_active', true);
+        .eq('company_id', companyInfo?.id);
 
       if (profilesError) throw profilesError;
 
@@ -90,9 +101,7 @@ export const UserManagement = () => {
             ...profile,
             email: authData?.user?.email || '',
             role: roleData?.role || 'user',
-            access_profile: Array.isArray(profile.access_profiles) 
-              ? profile.access_profiles[0] 
-              : profile.access_profiles
+            access_profile: profile.access_profiles
           };
         })
       );
@@ -150,11 +159,46 @@ export const UserManagement = () => {
 
       if (error) throw error;
 
-      toast({ title: "Sucesso", description: "Perfil do usuário atualizado com sucesso!" });
+      toast({ 
+        title: "Sucesso", 
+        description: "Perfil do usuário atualizado com sucesso! As novas permissões serão aplicadas no próximo login." 
+      });
       loadUsers();
     } catch (error) {
       console.error('Error updating user profile:', error);
       toast({ title: "Erro", description: "Erro ao atualizar perfil", variant: "destructive" });
+    }
+  };
+
+  // Delete user
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      // Primeiro, deletar das tabelas relacionadas
+      await supabase.from('user_roles').delete().eq('user_id', userId);
+      await supabase.from('profiles').delete().eq('id', userId);
+      
+      // Deletar usuário do auth usando edge function
+      const { error } = await supabase.functions.invoke('delete-user', {
+        body: { userId },
+        headers: {
+          'x-requester-role': userRole,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Usuário excluído com sucesso!",
+      });
+      loadUsers();
+    } catch (error: any) {
+      console.error('Error deleting user:', error);
+      toast({ 
+        title: "Erro", 
+        description: error.message || "Erro ao excluir usuário", 
+        variant: "destructive" 
+      });
     }
   };
 
@@ -167,6 +211,15 @@ export const UserManagement = () => {
     });
     // Recarrega a lista de usuários imediatamente
     loadUsers();
+  };
+
+  const handleDeleteUserClick = (userId: string, userName: string, userEmail: string) => {
+    setDeleteUserModal({
+      open: true,
+      userId,
+      userName,
+      userEmail
+    });
   };
 
   return (
@@ -185,13 +238,25 @@ export const UserManagement = () => {
         availableProfiles={accessProfiles}
         userRole={userRole}
       />
+
+      <DeleteUserModal
+        userId={deleteUserModal.userId}
+        userName={deleteUserModal.userName}
+        userEmail={deleteUserModal.userEmail}
+        open={deleteUserModal.open}
+        onOpenChange={(open) => setDeleteUserModal(prev => ({ ...prev, open }))}
+        onConfirm={handleDeleteUser}
+        currentUserId={user?.id}
+      />
       
       <ActiveUsersTable
         users={users}
         availableProfiles={accessProfiles}
         userRole={userRole}
+        currentUserId={user?.id}
         onStatusChange={handleUpdateUserStatus}
         onProfileChange={handleUpdateUserProfile}
+        onDeleteUser={handleDeleteUserClick}
         loading={loading}
       />
     </div>

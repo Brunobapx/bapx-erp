@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Edit } from 'lucide-react';
+import { Edit, Trash2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface UserProfile {
@@ -36,13 +36,22 @@ interface Props {
   users: UserProfile[];
   availableProfiles: AccessProfile[];
   userRole: string;
+  currentUserId?: string;
   onStatusChange: (userId: string, isActive: boolean) => void;
   onProfileChange: (userId: string, profileId: string) => void;
+  onDeleteUser: (userId: string, userName: string, userEmail: string) => void;
   loading?: boolean;
 }
 
 const ActiveUsersTable: React.FC<Props> = ({
-  users, availableProfiles, userRole, onStatusChange, onProfileChange, loading = false
+  users, 
+  availableProfiles, 
+  userRole, 
+  currentUserId,
+  onStatusChange, 
+  onProfileChange, 
+  onDeleteUser,
+  loading = false
 }) => {
   if (loading) {
     return (
@@ -59,7 +68,7 @@ const ActiveUsersTable: React.FC<Props> = ({
 
   return (
     <div className="space-y-4">
-      <h4 className="text-md font-medium">Usuários Ativos</h4>
+      <h4 className="text-md font-medium">Usuários do Sistema</h4>
       <Table>
         <TableHeader>
           <TableRow>
@@ -75,7 +84,7 @@ const ActiveUsersTable: React.FC<Props> = ({
           {users.length === 0 ? (
             <TableRow>
               <TableCell colSpan={6} className="text-center text-gray-500">
-                Nenhum usuário ativo encontrado
+                Nenhum usuário encontrado
               </TableCell>
             </TableRow>
           ) : (
@@ -116,15 +125,30 @@ const ActiveUsersTable: React.FC<Props> = ({
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-2">
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" title="Editar usuário">
                       <Edit className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => onStatusChange(user.id, !user.is_active)}
+                      title={user.is_active ? 'Desativar usuário' : 'Ativar usuário'}
                     >
                       {user.is_active ? 'Desativar' : 'Ativar'}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onDeleteUser(
+                        user.id, 
+                        `${user.first_name} ${user.last_name}`.trim() || 'Usuário',
+                        user.email || ''
+                      )}
+                      disabled={user.id === currentUserId || (userRole !== 'master' && user.role === 'master')}
+                      title="Excluir usuário permanentemente"
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </TableCell>
