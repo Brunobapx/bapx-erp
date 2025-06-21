@@ -5,14 +5,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 
+interface FormData {
+  name: string;
+  description: string;
+  is_admin: boolean;
+  is_active: boolean;
+}
+
 interface ProfileFormFieldsProps {
-  formData: {
-    name: string;
-    description: string;
-    is_admin: boolean;
-    is_active: boolean;
-  };
-  onFormDataChange: (data: Partial<typeof formData>) => void;
+  formData: FormData;
+  onFormDataChange: (data: Partial<FormData>) => void;
   isMasterProfile: boolean;
 }
 
