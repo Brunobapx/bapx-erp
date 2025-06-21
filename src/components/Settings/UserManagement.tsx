@@ -79,7 +79,7 @@ export const UserManagement = () => {
   // Convert profiles to AccessProfile format with description
   const availableProfiles = profiles.map(profile => ({
     ...profile,
-    description: profile.description || `Perfil ${profile.first_name || ''} ${profile.last_name || ''}`.trim()
+    description: profile.description || `Perfil ${profile.name || ''}`.trim()
   }));
 
   return (

@@ -16,8 +16,7 @@ import {
 } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useClients } from "@/hooks/useClients";
-import { Client } from "@/hooks/useClients";
+import { useClients, Client } from "@/hooks/useClients";
 
 type ReceivableClientSelectorProps = {
   selectedClientId: string;
@@ -102,7 +101,7 @@ const ReceivableClientSelector: React.FC<ReceivableClientSelectorProps> = ({
                   <div className="flex flex-col flex-1">
                     <span className="font-medium">{client.name || "Nome não informado"}</span>
                     <span className="text-xs text-muted-foreground">
-                      {client.type === "Jurídica"
+                      {client.type === "PJ"
                         ? client.cnpj || "CNPJ não informado"
                         : client.cpf || "CPF não informado"}
                     </span>
