@@ -22,7 +22,7 @@ interface UserProfile {
   access_profile?: {
     name: string;
     description: string;
-  };
+  } | null;
 }
 
 interface AccessProfile {
@@ -42,6 +42,8 @@ interface Props {
   onDeleteUser: (userId: string, userName: string, userEmail: string) => void;
   loading?: boolean;
 }
+
+const NO_PROFILE_VALUE = '__no_profile__';
 
 const ActiveUsersTable: React.FC<Props> = ({
   users, 
@@ -79,7 +81,13 @@ const ActiveUsersTable: React.FC<Props> = ({
   };
 
   const getCurrentProfileId = (user: UserProfile) => {
-    return user.profile_id || '';
+    return user.profile_id || NO_PROFILE_VALUE;
+  };
+
+  const handleProfileChange = (userId: string, profileId: string) => {
+    // Se for o valor especial "sem perfil", converter para string vazia para o backend
+    const actualProfileId = profileId === NO_PROFILE_VALUE ? '' : profileId;
+    onProfileChange(userId, actualProfileId);
   };
 
   console.log('Available profiles in table:', availableProfiles);
@@ -113,7 +121,7 @@ const ActiveUsersTable: React.FC<Props> = ({
                   <Select
                     value={getCurrentProfileId(user)}
                     disabled={userRole !== 'master' && user.role === 'master'}
-                    onValueChange={(profileId) => onProfileChange(user.id, profileId)}
+                    onValueChange={(profileId) => handleProfileChange(user.id, profileId)}
                   >
                     <SelectTrigger className="w-40">
                       <SelectValue placeholder="Selecionar perfil">
@@ -121,7 +129,7 @@ const ActiveUsersTable: React.FC<Props> = ({
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Sem perfil</SelectItem>
+                      <SelectItem value={NO_PROFILE_VALUE}>Sem perfil</SelectItem>
                       {availableProfiles
                         .filter(profile => profile.is_active)
                         .map(profile => (

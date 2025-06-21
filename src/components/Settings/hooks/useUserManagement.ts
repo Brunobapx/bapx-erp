@@ -20,7 +20,7 @@ export interface UserProfile {
   access_profile?: {
     name: string;
     description: string;
-  };
+  } | null;
 }
 
 export const useUserManagement = () => {
@@ -41,7 +41,7 @@ export const useUserManagement = () => {
         return;
       }
 
-      // Query simplificada com LEFT JOIN direto
+      // Query otimizada com LEFT JOIN direto
       const { data: usersData, error: usersError } = await supabase
         .from('profiles')
         .select(`
@@ -74,10 +74,8 @@ export const useUserManagement = () => {
         return;
       }
 
-      // Buscar emails dos usuários do auth.users via RPC ou query separada
-      const userIds = usersData.map(user => user.id);
-      
       // Buscar roles dos usuários
+      const userIds = usersData.map(user => user.id);
       const { data: rolesData } = await supabase
         .from('user_roles')
         .select('user_id, role')
@@ -85,21 +83,23 @@ export const useUserManagement = () => {
 
       console.log('Roles data:', rolesData);
 
-      // Buscar emails via query direta na view do auth se disponível
-      const { data: authData } = await supabase
-        .from('profiles')
-        .select('id')
-        .in('id', userIds);
-
-      // Mapear dados dos usuários
+      // Mapear dados dos usuários com correção do tipo
       const processedUsers: UserProfile[] = usersData.map((profile) => {
         const userRole = rolesData?.find(r => r.user_id === profile.id);
         
+        // Corrigir o access_profile - pode ser null ou um objeto
+        let accessProfile = null;
+        if (profile.access_profiles && Array.isArray(profile.access_profiles) && profile.access_profiles.length > 0) {
+          accessProfile = profile.access_profiles[0];
+        } else if (profile.access_profiles && !Array.isArray(profile.access_profiles)) {
+          accessProfile = profile.access_profiles;
+        }
+
         const user: UserProfile = {
           ...profile,
           email: `user-${profile.id.substring(0, 8)}@system.local`, // Fallback temporário
           role: userRole?.role || 'user',
-          access_profile: profile.access_profiles || undefined
+          access_profile: accessProfile
         };
 
         return user;
