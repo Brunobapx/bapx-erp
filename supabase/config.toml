@@ -1,3 +1,4 @@
+
 project_id = "gtqmwlxzszttzriswoxj"
 
 [api]
@@ -20,4 +21,7 @@ enable_confirmations = false
 verify_jwt = false
 
 [functions.create-user]
+verify_jwt = false
+
+[functions.otimizar-roteiro-entregas]
 verify_jwt = false
