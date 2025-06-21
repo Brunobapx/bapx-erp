@@ -18,6 +18,7 @@ export type Vendor = {
   created_at?: string;
   updated_at?: string;
   user_id?: string;
+  company_id?: string;
 };
 
 export const useVendors = () => {
@@ -49,7 +50,6 @@ export const useVendors = () => {
       const { data, error } = await supabase
         .from('vendors')
         .select('*')
-        .eq('user_id', user.id)
         .order('name', { ascending: true });
 
       if (error) {
@@ -75,6 +75,43 @@ export const useVendors = () => {
       setVendors([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const createVendor = async (vendorData: Omit<Vendor, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error('Usuário não autenticado');
+
+      const { data, error } = await supabase
+        .from('vendors')
+        .insert([{ ...vendorData, user_id: user.id }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      await fetchVendors();
+      toast.success('Fornecedor criado com sucesso!');
+      return data;
+    } catch (err: any) {
+      toast.error('Erro ao criar fornecedor: ' + (err.message || 'Erro desconhecido'));
+      throw err;
+    }
+  };
+
+  const updateVendor = async (id: string, vendorData: Partial<Vendor>) => {
+    try {
+      const { error } = await supabase
+        .from('vendors')
+        .update(vendorData)
+        .eq('id', id);
+
+      if (error) throw error;
+      await fetchVendors();
+      toast.success('Fornecedor atualizado com sucesso!');
+    } catch (err: any) {
+      toast.error('Erro ao atualizar fornecedor: ' + (err.message || 'Erro desconhecido'));
+      throw err;
     }
   };
 
@@ -110,6 +147,9 @@ export const useVendors = () => {
     fetchVendors();
   };
 
+  // Legacy methods for backward compatibility
+  const loadVendors = fetchVendors;
+
   useEffect(() => {
     fetchVendors();
   }, []);
@@ -118,7 +158,10 @@ export const useVendors = () => {
     vendors,
     loading,
     error,
+    refreshVendors,
+    loadVendors, // for backward compatibility
+    createVendor,
+    updateVendor,
     deleteVendor,
-    refreshVendors
   };
 };

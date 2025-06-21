@@ -26,6 +26,7 @@ export type Order = {
   created_at?: string;
   updated_at?: string;
   user_id?: string;
+  company_id?: string;
   order_items?: OrderItem[];
 };
 
@@ -40,6 +41,7 @@ export type OrderItem = {
   created_at?: string;
   updated_at?: string;
   user_id?: string;
+  company_id?: string;
 };
 
 // Sub-hooks importados

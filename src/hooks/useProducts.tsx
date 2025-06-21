@@ -16,8 +16,11 @@ export type Product = {
   price?: number;
   cost?: number;
   stock?: number;
+  weight?: number;
   is_manufactured?: boolean;
   is_direct_sale?: boolean;
+  commission_type?: string;
+  commission_value?: number;
   tax_type?: string;
   icms?: string;
   ipi?: string;
@@ -26,6 +29,7 @@ export type Product = {
   created_at?: string;
   updated_at?: string;
   user_id?: string;
+  company_id?: string;
 };
 
 async function fetchProducts() {
@@ -37,7 +41,6 @@ async function fetchProducts() {
   const { data, error } = await supabase
     .from('products')
     .select('*')
-    .eq('user_id', user.id)
     .order('name', { ascending: true });
 
   if (error) {
@@ -73,6 +76,62 @@ export const useProducts = () => {
     queryClient.invalidateQueries({ queryKey: ['products'] });
   };
 
+  // Legacy methods for backward compatibility
+  const loadProducts = refreshProducts;
+
+  const createProduct = async (productData: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error('Usuário não autenticado');
+
+      const { data, error } = await supabase
+        .from('products')
+        .insert([{ ...productData, user_id: user.id }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      await refreshProducts();
+      toast.success('Produto criado com sucesso!');
+      return data;
+    } catch (err: any) {
+      toast.error('Erro ao criar produto: ' + (err.message || 'Erro desconhecido'));
+      throw err;
+    }
+  };
+
+  const updateProduct = async (id: string, productData: Partial<Product>) => {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update(productData)
+        .eq('id', id);
+
+      if (error) throw error;
+      await refreshProducts();
+      toast.success('Produto atualizado com sucesso!');
+    } catch (err: any) {
+      toast.error('Erro ao atualizar produto: ' + (err.message || 'Erro desconhecido'));
+      throw err;
+    }
+  };
+
+  const deleteProduct = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      await refreshProducts();
+      toast.success('Produto excluído com sucesso!');
+    } catch (err: any) {
+      toast.error('Erro ao excluir produto: ' + (err.message || 'Erro desconhecido'));
+      throw err;
+    }
+  };
+
   // Busca/filtragem em memória (memoizada)
   const searchProducts = (searchTerm: string) => {
     if (!searchTerm || searchTerm.trim() === '') return allProducts;
@@ -97,7 +156,11 @@ export const useProducts = () => {
     searchQuery,
     setSearchQuery,
     refreshProducts,
+    loadProducts, // for backward compatibility
     searchProducts,
-    refetch
+    refetch,
+    createProduct,
+    updateProduct,
+    deleteProduct,
   };
 };

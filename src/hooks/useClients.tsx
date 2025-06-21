@@ -1,3 +1,4 @@
+
 import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,9 +18,13 @@ export type Client = {
   city?: string;
   state?: string;
   zip?: string;
+  bairro?: string;
+  number?: string;
+  complement?: string;
   created_at?: string;
   updated_at?: string;
   user_id?: string;
+  company_id?: string;
 };
 
 async function fetchClients() {
@@ -31,7 +36,6 @@ async function fetchClients() {
   const { data, error } = await supabase
     .from('clients')
     .select('*')
-    .eq('user_id', user.id)
     .order('name', { ascending: true });
 
   if (error) {
@@ -91,16 +95,78 @@ export const useClients = () => {
 
   const filteredClients: Client[] = searchClients(searchQuery);
 
+  // Legacy methods for backward compatibility
+  const loadClients = refreshClients;
+  const loading = isLoading;
+
+  const createClient = async (clientData: Omit<Client, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error('Usuário não autenticado');
+
+      const { data, error } = await supabase
+        .from('clients')
+        .insert([{ ...clientData, user_id: user.id }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      await refreshClients();
+      toast.success('Cliente criado com sucesso!');
+      return data;
+    } catch (err: any) {
+      toast.error('Erro ao criar cliente: ' + (err.message || 'Erro desconhecido'));
+      throw err;
+    }
+  };
+
+  const updateClient = async (id: string, clientData: Partial<Client>) => {
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .update(clientData)
+        .eq('id', id);
+
+      if (error) throw error;
+      await refreshClients();
+      toast.success('Cliente atualizado com sucesso!');
+    } catch (err: any) {
+      toast.error('Erro ao atualizar cliente: ' + (err.message || 'Erro desconhecido'));
+      throw err;
+    }
+  };
+
+  const deleteClient = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      await refreshClients();
+      toast.success('Cliente excluído com sucesso!');
+    } catch (err: any) {
+      toast.error('Erro ao excluir cliente: ' + (err.message || 'Erro desconhecido'));
+      throw err;
+    }
+  };
+
   return {
     clients: filteredClients,
     allClients,
     isLoading,
+    loading, // for backward compatibility
     error: error ? error.message : null,
     searchQuery,
     setSearchQuery,
     refreshClients,
+    loadClients, // for backward compatibility
     getClientById,
     searchClients,
     refetch,
+    createClient,
+    updateClient,
+    deleteClient,
   };
 };
