@@ -1,13 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useProfiles } from '@/hooks/useProfiles';
-import { useToast } from "@/hooks/use-toast";
+import { ProfileFormFields } from './EditProfile/ProfileFormFields';
+import { ModulePermissions } from './EditProfile/ModulePermissions';
+import { useEditProfileForm } from './EditProfile/useEditProfileForm';
 
 interface EditProfileModalProps {
   profileId: string;
@@ -16,113 +13,16 @@ interface EditProfileModalProps {
 }
 
 export const EditProfileModal = ({ profileId, open, onOpenChange }: EditProfileModalProps) => {
-  const { profiles, modules, updateProfile, loadProfileModules, updateProfileModules } = useProfiles();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    is_admin: false,
-    is_active: true,
-  });
-  const [selectedModules, setSelectedModules] = useState<string[]>([]);
-
-  const profile = profiles.find(p => p.id === profileId);
-
-  useEffect(() => {
-    const loadData = async () => {
-      if (profile && open) {
-        console.log('Loading profile data:', profile);
-        setFormData({
-          name: profile.name || '',
-          description: profile.description || '',
-          is_admin: profile.is_admin || false,
-          is_active: profile.is_active !== false,
-        });
-
-        // Carregar módulos do perfil
-        try {
-          const profileModules = await loadProfileModules(profileId);
-          console.log('Profile modules loaded:', profileModules);
-          setSelectedModules(profileModules.map(pm => pm.module_id));
-        } catch (error) {
-          console.error('Error loading profile modules:', error);
-          setSelectedModules([]);
-        }
-      }
-    };
-
-    loadData();
-  }, [profile, profileId, open, loadProfileModules]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    
-    try {
-      console.log('Updating profile with data:', formData);
-      await updateProfile(profileId, formData);
-      
-      // Atualizar módulos
-      console.log('Updating profile modules:', selectedModules);
-      await updateProfileModules(
-        profileId,
-        selectedModules.map(moduleId => ({
-          moduleId,
-          canView: true,
-          canEdit: true,
-          canDelete: false,
-        }))
-      );
-
-      toast({
-        title: "Sucesso",
-        description: "Perfil atualizado com sucesso!",
-      });
-
-      onOpenChange(false);
-    } catch (error: any) {
-      console.error('Error updating profile:', error);
-      toast({
-        title: "Erro",
-        description: error.message || "Erro ao atualizar perfil",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const toggleModule = (moduleId: string) => {
-    setSelectedModules(prev => {
-      const newSelection = prev.includes(moduleId)
-        ? prev.filter(id => id !== moduleId)
-        : [...prev, moduleId];
-      console.log('Module selection changed:', { moduleId, newSelection });
-      return newSelection;
-    });
-  };
-
-  const handleAdminChange = (checked: boolean | string) => {
-    const isAdmin = checked === true;
-    console.log('Admin status changed:', isAdmin);
-    setFormData(prev => ({ ...prev, is_admin: isAdmin }));
-  };
-
-  const handleActiveChange = (checked: boolean | string) => {
-    const isActive = checked === true;
-    console.log('Active status changed:', isActive);
-    setFormData(prev => ({ ...prev, is_active: isActive }));
-  };
-
-  // Agrupar módulos por categoria
-  const modulesByCategory = modules.reduce((acc, module) => {
-    if (!acc[module.category]) {
-      acc[module.category] = [];
-    }
-    acc[module.category].push(module);
-    return acc;
-  }, {} as Record<string, typeof modules>);
+  const {
+    profile,
+    modules,
+    formData,
+    selectedModules,
+    loading,
+    handleFormDataChange,
+    toggleModule,
+    handleSubmit,
+  } = useEditProfileForm(profileId, open);
 
   if (!profile) {
     console.log('Profile not found:', profileId);
@@ -131,85 +31,32 @@ export const EditProfileModal = ({ profileId, open, onOpenChange }: EditProfileM
 
   const isMasterProfile = profile.name === 'Master';
 
+  const onSubmit = async (e: React.FormEvent) => {
+    const success = await handleSubmit(e);
+    if (success) {
+      onOpenChange(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editar Perfil: {profile.name}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nome do Perfil</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Nome do perfil"
-                required
-                disabled={isMasterProfile}
-              />
-            </div>
-            <div className="space-y-2 flex items-center gap-2">
-              <Checkbox
-                id="is_admin"
-                checked={formData.is_admin}
-                onCheckedChange={handleAdminChange}
-                disabled={isMasterProfile}
-              />
-              <Label htmlFor="is_admin">Perfil Administrativo</Label>
-            </div>
-          </div>
+        <form onSubmit={onSubmit} className="space-y-6">
+          <ProfileFormFields
+            formData={formData}
+            onFormDataChange={handleFormDataChange}
+            isMasterProfile={isMasterProfile}
+          />
 
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="is_active"
-                checked={formData.is_active}
-                onCheckedChange={handleActiveChange}
-                disabled={isMasterProfile}
-              />
-              <Label htmlFor="is_active">Perfil Ativo</Label>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Descrição</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Descrição do perfil"
-              rows={3}
-              disabled={isMasterProfile}
-            />
-          </div>
-
-          <div className="space-y-4">
-            <Label>Módulos Permitidos</Label>
-            <div className="grid grid-cols-1 gap-4 max-h-64 overflow-y-auto border rounded p-4">
-              {Object.entries(modulesByCategory).map(([category, categoryModules]) => (
-                <div key={category} className="space-y-2">
-                  <h4 className="font-medium text-sm text-gray-600 uppercase">{category}</h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    {categoryModules.map((module) => (
-                      <div key={module.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`edit-module-${module.id}`}
-                          checked={selectedModules.includes(module.id)}
-                          onCheckedChange={() => toggleModule(module.id)}
-                          disabled={isMasterProfile}
-                        />
-                        <Label htmlFor={`edit-module-${module.id}`} className="text-sm cursor-pointer">
-                          {module.name}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <ModulePermissions
+            modules={modules}
+            selectedModules={selectedModules}
+            onToggleModule={toggleModule}
+            isMasterProfile={isMasterProfile}
+          />
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
