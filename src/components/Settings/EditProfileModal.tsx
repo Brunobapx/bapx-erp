@@ -70,7 +70,7 @@ export const EditProfileModal = ({ profileId, open, onOpenChange }: EditProfileM
         selectedModules.map(moduleId => ({
           moduleId,
           canView: true,
-          canEdit: !formData.is_admin,
+          canEdit: true,
           canDelete: false,
         }))
       );
@@ -101,6 +101,18 @@ export const EditProfileModal = ({ profileId, open, onOpenChange }: EditProfileM
       console.log('Module selection changed:', { moduleId, newSelection });
       return newSelection;
     });
+  };
+
+  const handleAdminChange = (checked: boolean | string) => {
+    const isAdmin = checked === true;
+    console.log('Admin status changed:', isAdmin);
+    setFormData(prev => ({ ...prev, is_admin: isAdmin }));
+  };
+
+  const handleActiveChange = (checked: boolean | string) => {
+    const isActive = checked === true;
+    console.log('Active status changed:', isActive);
+    setFormData(prev => ({ ...prev, is_active: isActive }));
   };
 
   // Agrupar módulos por categoria
@@ -142,9 +154,7 @@ export const EditProfileModal = ({ profileId, open, onOpenChange }: EditProfileM
               <Checkbox
                 id="is_admin"
                 checked={formData.is_admin}
-                onCheckedChange={(checked) => 
-                  setFormData(prev => ({ ...prev, is_admin: checked as boolean }))
-                }
+                onCheckedChange={handleAdminChange}
                 disabled={isMasterProfile}
               />
               <Label htmlFor="is_admin">Perfil Administrativo</Label>
@@ -156,9 +166,7 @@ export const EditProfileModal = ({ profileId, open, onOpenChange }: EditProfileM
               <Checkbox
                 id="is_active"
                 checked={formData.is_active}
-                onCheckedChange={(checked) => 
-                  setFormData(prev => ({ ...prev, is_active: checked as boolean }))
-                }
+                onCheckedChange={handleActiveChange}
                 disabled={isMasterProfile}
               />
               <Label htmlFor="is_active">Perfil Ativo</Label>
