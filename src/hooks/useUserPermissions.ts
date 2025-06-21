@@ -89,9 +89,10 @@ export const useUserPermissions = () => {
       const modulePermissions: ModulePermission[] = [];
       
       if (userPermissions?.access_profiles) {
-        const accessProfile = userPermissions.access_profiles as AccessProfileData;
-        if (accessProfile.profile_modules) {
-          accessProfile.profile_modules.forEach((pm: ProfileModuleData) => {
+        // access_profiles é um array, então pegamos o primeiro elemento
+        const accessProfileArray = userPermissions.access_profiles as AccessProfileData[];
+        if (accessProfileArray.length > 0 && accessProfileArray[0].profile_modules) {
+          accessProfileArray[0].profile_modules.forEach((pm: ProfileModuleData) => {
             if (pm.system_modules) {
               modulePermissions.push({
                 moduleId: pm.system_modules.id,
