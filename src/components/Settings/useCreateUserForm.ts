@@ -6,13 +6,17 @@ import { useToast } from '@/hooks/use-toast';
 export interface CreateUserFormState {
   email: string;
   password: string;
-  profile: string;
+  firstName: string;
+  lastName: string;
+  profileId: string;
 }
 
 export interface CreateUserFormValidationErrors {
   email?: string;
   password?: string;
-  profile?: string;
+  firstName?: string;
+  lastName?: string;
+  profileId?: string;
 }
 
 interface UseCreateUserFormProps {
@@ -25,7 +29,9 @@ export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUse
   const [form, setForm] = useState<CreateUserFormState>({
     email: '',
     password: '',
-    profile: '',
+    firstName: '',
+    lastName: '',
+    profileId: '',
   });
   
   const [validationErrors, setValidationErrors] = useState<CreateUserFormValidationErrors>({});
@@ -34,7 +40,6 @@ export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUse
 
   const handleChange = (field: keyof CreateUserFormState, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }));
-    // Limpar erro específico quando o usuário começa a digitar
     if (validationErrors[field]) {
       setValidationErrors(prev => ({ ...prev, [field]: undefined }));
     }
@@ -55,8 +60,16 @@ export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUse
       errors.password = 'Senha deve ter pelo menos 6 caracteres';
     }
 
-    if (!form.profile.trim()) {
-      errors.profile = 'Perfil é obrigatório';
+    if (!form.firstName.trim()) {
+      errors.firstName = 'Nome é obrigatório';
+    }
+
+    if (!form.lastName.trim()) {
+      errors.lastName = 'Sobrenome é obrigatório';
+    }
+
+    if (!form.profileId.trim()) {
+      errors.profileId = 'Perfil é obrigatório';
     }
 
     setValidationErrors(errors);
@@ -68,7 +81,7 @@ export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUse
 
     setLoading(true);
     try {
-      // Buscar a empresa do usuário logado
+      // Get current user's company
       const { data: currentUser, error: userError } = await supabase
         .from('profiles')
         .select('company_id')
@@ -79,12 +92,14 @@ export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUse
         throw new Error('Erro ao obter informações do usuário atual');
       }
 
-      // Chamar a função serverless para criar o usuário
+      // Call edge function to create user
       const { data, error } = await supabase.functions.invoke('create-user', {
         body: {
           email: form.email.trim(),
           password: form.password,
-          profile_id: form.profile,
+          firstName: form.firstName.trim(),
+          lastName: form.lastName.trim(),
+          profile_id: form.profileId,
           company_id: currentUser.company_id
         },
         headers: {
@@ -99,11 +114,12 @@ export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUse
         description: "Usuário criado com sucesso!",
       });
 
-      // Resetar formulário
       setForm({
         email: '',
         password: '',
-        profile: '',
+        firstName: '',
+        lastName: '',
+        profileId: '',
       });
       
       setOpen(false);

@@ -23,9 +23,8 @@ export const useUserPermissions = () => {
       return;
     }
 
-    // Master e Admin têm acesso total - não precisam de consulta ao banco
+    // Master e Admin têm acesso total
     if (userRole === 'master' || userRole === 'admin') {
-      // Definir módulos básicos que sempre existem
       const basicModules: ModulePermission[] = [
         { moduleId: 'dashboard', routePath: '/', canView: true, canEdit: true, canDelete: true },
         { moduleId: 'orders', routePath: '/pedidos', canView: true, canEdit: true, canDelete: true },
@@ -50,7 +49,7 @@ export const useUserPermissions = () => {
       return;
     }
 
-    // Para usuários comuns, tentar buscar permissões do perfil
+    // Para usuários comuns, buscar permissões do perfil
     try {
       const { data: profile } = await supabase
         .from('profiles')
@@ -59,9 +58,10 @@ export const useUserPermissions = () => {
         .single();
 
       if (!profile?.profile_id) {
-        // Se não tem perfil, dar acesso básico ao dashboard apenas
+        // Se não tem perfil, dar acesso básico
         setPermissions([
-          { moduleId: 'dashboard', routePath: '/', canView: true, canEdit: false, canDelete: false }
+          { moduleId: 'dashboard', routePath: '/', canView: true, canEdit: false, canDelete: false },
+          { moduleId: 'settings', routePath: '/configuracoes', canView: true, canEdit: false, canDelete: false }
         ]);
         setLoading(false);
         return;
@@ -82,15 +82,6 @@ export const useUserPermissions = () => {
         .eq('profile_id', profile.profile_id);
 
       const modulePermissions: ModulePermission[] = [];
-      
-      // Sempre incluir dashboard
-      modulePermissions.push({
-        moduleId: 'dashboard',
-        routePath: '/',
-        canView: true,
-        canEdit: false,
-        canDelete: false
-      });
 
       if (profileModules) {
         profileModules.forEach((pm: any) => {
@@ -109,9 +100,9 @@ export const useUserPermissions = () => {
       setPermissions(modulePermissions);
     } catch (error) {
       console.error('Erro ao carregar permissões do usuário:', error);
-      // Em caso de erro, dar acesso ao dashboard
       setPermissions([
-        { moduleId: 'dashboard', routePath: '/', canView: true, canEdit: false, canDelete: false }
+        { moduleId: 'dashboard', routePath: '/', canView: true, canEdit: false, canDelete: false },
+        { moduleId: 'settings', routePath: '/configuracoes', canView: true, canEdit: false, canDelete: false }
       ]);
     } finally {
       setLoading(false);
@@ -125,11 +116,6 @@ export const useUserPermissions = () => {
   const hasAccess = (routePath: string, permission: 'view' | 'edit' | 'delete' = 'view') => {
     // Master e Admin têm acesso total
     if (userRole === 'master' || userRole === 'admin') {
-      return true;
-    }
-
-    // Dashboard sempre acessível
-    if (routePath === '/') {
       return true;
     }
 

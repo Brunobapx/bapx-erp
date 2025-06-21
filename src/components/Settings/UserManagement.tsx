@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/components/Auth/AuthProvider';
 import { useSimpleUserManagement } from '@/hooks/useSimpleUserManagement';
+import { useProfiles } from '@/hooks/useProfiles';
 import SimpleUsersTable from './SimpleUsersTable';
 import CreateUserModal from './CreateUserModal';
 import { DeleteUserModal } from './DeleteUserModal';
@@ -24,6 +25,7 @@ export const UserManagement = () => {
   const { toast } = useToast();
   const { userRole, user } = useAuth();
   const { users, loading, loadUsers, updateUserStatus, updateUserRole } = useSimpleUserManagement();
+  const { profiles } = useProfiles();
 
   if (userRole !== 'admin' && userRole !== 'master') {
     return (
@@ -87,7 +89,7 @@ export const UserManagement = () => {
         open={isCreateUserModalOpen}
         setOpen={setIsCreateUserModalOpen}
         onSuccess={handleUserCreated}
-        availableProfiles={[]}
+        availableProfiles={profiles}
         userRole={userRole}
       />
 

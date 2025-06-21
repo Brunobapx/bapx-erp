@@ -3,10 +3,11 @@ import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserManagement } from '@/components/Settings/UserManagement';
 import { ProfileManagement } from '@/components/Settings/ProfileManagement';
+import { ProfilesManagement } from '@/components/Settings/ProfilesManagement';
 import { CompanySettings } from '@/components/Settings/CompanySettings';
 import { useAuth } from '@/components/Auth/AuthProvider';
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Users, User, Building, Settings as SettingsIcon } from 'lucide-react';
+import { Users, User, Building, Settings as SettingsIcon, Shield } from 'lucide-react';
 
 const SettingsPage = () => {
   const { userRole } = useAuth();
@@ -22,7 +23,7 @@ const SettingsPage = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             Perfil
@@ -30,6 +31,10 @@ const SettingsPage = () => {
           <TabsTrigger value="users" className="flex items-center gap-2" disabled={!isAdmin}>
             <Users className="h-4 w-4" />
             Usuários
+          </TabsTrigger>
+          <TabsTrigger value="profiles" className="flex items-center gap-2" disabled={!isAdmin}>
+            <Shield className="h-4 w-4" />
+            Perfis de Acesso
           </TabsTrigger>
           <TabsTrigger value="company" className="flex items-center gap-2" disabled={!isAdmin}>
             <Building className="h-4 w-4" />
@@ -50,6 +55,18 @@ const SettingsPage = () => {
             </Alert>
           ) : (
             <UserManagement />
+          )}
+        </TabsContent>
+
+        <TabsContent value="profiles">
+          {!isAdmin ? (
+            <Alert>
+              <AlertDescription>
+                Você não tem permissão para acessar esta seção. Acesso restrito a administradores.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <ProfilesManagement />
           )}
         </TabsContent>
 

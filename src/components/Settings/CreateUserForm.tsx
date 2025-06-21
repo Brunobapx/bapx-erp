@@ -35,6 +35,37 @@ const CreateUserForm: React.FC<CreateUserFormProps> = ({
 }) => {
   return (
     <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="firstName">Nome</Label>
+          <Input
+            id="firstName"
+            type="text"
+            value={form.firstName}
+            onChange={e => onFieldChange('firstName', e.target.value)}
+            placeholder="Nome"
+            className={validationErrors.firstName ? 'border-red-500' : ''}
+          />
+          {validationErrors.firstName && (
+            <p className="text-sm text-red-500">{validationErrors.firstName}</p>
+          )}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="lastName">Sobrenome</Label>
+          <Input
+            id="lastName"
+            type="text"
+            value={form.lastName}
+            onChange={e => onFieldChange('lastName', e.target.value)}
+            placeholder="Sobrenome"
+            className={validationErrors.lastName ? 'border-red-500' : ''}
+          />
+          {validationErrors.lastName && (
+            <p className="text-sm text-red-500">{validationErrors.lastName}</p>
+          )}
+        </div>
+      </div>
+      
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <Input
@@ -49,6 +80,7 @@ const CreateUserForm: React.FC<CreateUserFormProps> = ({
           <p className="text-sm text-red-500">{validationErrors.email}</p>
         )}
       </div>
+
       <div className="space-y-2">
         <Label htmlFor="password">Senha</Label>
         <Input
@@ -63,10 +95,11 @@ const CreateUserForm: React.FC<CreateUserFormProps> = ({
           <p className="text-sm text-red-500">{validationErrors.password}</p>
         )}
       </div>
+
       <div className="space-y-2">
-        <Label htmlFor="profile">Perfil de Acesso</Label>
-        <Select value={form.profile} onValueChange={profile => onFieldChange('profile', profile)}>
-          <SelectTrigger>
+        <Label htmlFor="profileId">Perfil de Acesso</Label>
+        <Select value={form.profileId} onValueChange={profileId => onFieldChange('profileId', profileId)}>
+          <SelectTrigger className={validationErrors.profileId ? 'border-red-500' : ''}>
             <SelectValue placeholder="Selecionar perfil" />
           </SelectTrigger>
           <SelectContent>
@@ -79,10 +112,11 @@ const CreateUserForm: React.FC<CreateUserFormProps> = ({
               ))}
           </SelectContent>
         </Select>
-        {validationErrors.profile && (
-          <p className="text-sm text-red-500">{validationErrors.profile}</p>
+        {validationErrors.profileId && (
+          <p className="text-sm text-red-500">{validationErrors.profileId}</p>
         )}
       </div>
+
       <Button onClick={onSubmit} disabled={loading} className="w-full">
         {loading ? (
           <RefreshCw className="h-4 w-4 mr-2 animate-spin" />

@@ -2,31 +2,30 @@
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 export async function upsertUserProfile(
-  supabase: SupabaseClient,
+  supabaseServiceRole: SupabaseClient,
   userId: string,
   companyId: string,
-  profileId?: string
-): Promise<Error | null> {
+  profileId: string,
+  firstName?: string,
+  lastName?: string
+) {
   try {
-    const profileData: any = {
-      id: userId,
-      company_id: companyId,
-      first_name: '',
-      last_name: '',
-      is_active: true,
-    };
-
-    // Adicionar profile_id se fornecido
-    if (profileId) {
-      profileData.profile_id = profileId;
-    }
-
-    const { error } = await supabase
+    const { error } = await supabaseServiceRole
       .from('profiles')
-      .upsert(profileData);
+      .upsert({
+        id: userId,
+        company_id: companyId,
+        profile_id: profileId,
+        first_name: firstName || '',
+        last_name: lastName || '',
+        is_active: true
+      }, {
+        onConflict: 'id'
+      });
 
     return error;
   } catch (error) {
-    return error as Error;
+    console.error('Error upserting user profile:', error);
+    return error;
   }
 }

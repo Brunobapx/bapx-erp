@@ -32,7 +32,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent>
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Novo Usuário</DialogTitle>
         </DialogHeader>

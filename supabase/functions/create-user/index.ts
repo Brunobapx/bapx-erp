@@ -25,7 +25,7 @@ serve(async (req) => {
     }
 
     const requestData = await req.json();
-    const { email, password, profile_id, company_id } = requestData;
+    const { email, password, profile_id, company_id, firstName, lastName } = requestData;
     if (!email || !password || !profile_id || !company_id) {
       return buildErrorResponse("Email, senha, perfil e empresa são obrigatórios", 400);
     }
@@ -39,20 +39,26 @@ serve(async (req) => {
 
     const requesterContext = await getRequesterContext(req, supabaseUrl, anonKey, supabaseServiceRole);
     if ("error" in requesterContext) return requesterContext.error;
-    const { requesterId } = requesterContext;
 
     const newUserResult = await createSupabaseUser(supabaseServiceRole, email, password);
     if ("error" in newUserResult) return newUserResult.error;
     const newUserId = newUserResult.user.id;
 
     // Criar perfil do usuário com profile_id
-    const profileCreateError = await upsertUserProfile(supabaseServiceRole, newUserId, company_id, profile_id);
+    const profileCreateError = await upsertUserProfile(
+      supabaseServiceRole, 
+      newUserId, 
+      company_id, 
+      profile_id,
+      firstName,
+      lastName
+    );
     if (profileCreateError) {
       await deleteSupabaseUser(supabaseServiceRole, newUserId);
       return buildErrorResponse("Erro ao criar perfil do usuário: " + profileCreateError.message, 500);
     }
 
-    // Criar role baseada no perfil (compatibilidade com sistema antigo)
+    // Criar role baseada no perfil (usuário comum por padrão)
     const roleCreateError = await insertUserRole(supabaseServiceRole, newUserId, 'user', company_id);
     if (roleCreateError) {
       await deleteSupabaseUser(supabaseServiceRole, newUserId);
