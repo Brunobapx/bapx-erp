@@ -11,20 +11,6 @@ interface ModulePermission {
   canDelete: boolean;
 }
 
-interface ProfileModuleData {
-  can_view: boolean;
-  can_edit: boolean;
-  can_delete: boolean;
-  system_modules: {
-    id: string;
-    route_path: string;
-  };
-}
-
-interface AccessProfileData {
-  profile_modules: ProfileModuleData[];
-}
-
 export const useUserPermissions = () => {
   const [permissions, setPermissions] = useState<ModulePermission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,10 +75,11 @@ export const useUserPermissions = () => {
       const modulePermissions: ModulePermission[] = [];
       
       if (userPermissions?.access_profiles) {
-        // access_profiles é um array, então pegamos o primeiro elemento
-        const accessProfileArray = userPermissions.access_profiles as AccessProfileData[];
-        if (accessProfileArray.length > 0 && accessProfileArray[0].profile_modules) {
-          accessProfileArray[0].profile_modules.forEach((pm: ProfileModuleData) => {
+        // Tratar access_profiles como any para contornar problemas de tipagem do Supabase
+        const accessProfiles = userPermissions.access_profiles as any;
+        
+        if (accessProfiles && accessProfiles.profile_modules) {
+          accessProfiles.profile_modules.forEach((pm: any) => {
             if (pm.system_modules) {
               modulePermissions.push({
                 moduleId: pm.system_modules.id,
