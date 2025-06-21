@@ -62,24 +62,13 @@ export const useSimpleUserManagement = () => {
         return;
       }
 
-      // Buscar emails reais da tabela auth.users
-      const userIds = profilesData.map(user => user.id);
-      const { data: authData, error: authError } = await supabase
-        .from('auth.users')
-        .select('id, email')
-        .in('id', userIds);
-
-      // Se não conseguir acessar auth.users diretamente, usar RPC
-      let emailsData = authData;
-      if (authError) {
-        console.log('Trying RPC to get emails...');
-        const { data: rpcData } = await supabase.rpc('get_company_users', {
-          company_id_param: companyInfo.id
-        });
-        emailsData = rpcData?.map((user: any) => ({ id: user.id, email: user.email })) || [];
-      }
+      // Buscar emails reais da tabela auth.users via RPC
+      const { data: emailsData } = await supabase.rpc('get_company_users', {
+        company_id_param: companyInfo.id
+      });
 
       // Buscar roles dos usuários
+      const userIds = profilesData.map(user => user.id);
       const { data: rolesData } = await supabase
         .from('user_roles')
         .select('user_id, role')
@@ -88,7 +77,7 @@ export const useSimpleUserManagement = () => {
       // Combinar dados
       const processedUsers: SimpleUser[] = profilesData.map((profile) => {
         const userRole = rolesData?.find(r => r.user_id === profile.id);
-        const userEmail = emailsData?.find(e => e.id === profile.id);
+        const userEmail = emailsData?.find((e: any) => e.id === profile.id);
         
         // Corrigir o access_profile
         let accessProfile = null;
@@ -102,6 +91,7 @@ export const useSimpleUserManagement = () => {
           ...profile,
           email: userEmail?.email || `user-${profile.id.substring(0, 8)}@sistema.local`,
           role: userRole?.role || 'user',
+          last_login: profile.last_login || '',
           access_profile: accessProfile
         };
       });

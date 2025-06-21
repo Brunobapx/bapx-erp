@@ -110,31 +110,23 @@ export const EditUserModal = ({
 
       // Atualizar senha se fornecida
       if (formData.new_password.trim()) {
-        const { error: passwordError } = await supabase.auth.admin.updateUserById(
-          user.id,
-          { password: formData.new_password }
-        );
+        const { error: functionError } = await supabase.functions.invoke('update-user-password', {
+          body: { 
+            userId: user.id, 
+            newPassword: formData.new_password 
+          },
+          headers: {
+            'x-requester-role': userRole,
+          },
+        });
 
-        if (passwordError) {
-          // Se não conseguir via admin, tentar via edge function
-          const { error: functionError } = await supabase.functions.invoke('update-user-password', {
-            body: { 
-              userId: user.id, 
-              newPassword: formData.new_password 
-            },
-            headers: {
-              'x-requester-role': userRole,
-            },
+        if (functionError) {
+          console.warn('Não foi possível atualizar a senha:', functionError);
+          toast({
+            title: "Aviso",
+            description: "Usuário atualizado, mas não foi possível alterar a senha.",
+            variant: "default",
           });
-
-          if (functionError) {
-            console.warn('Não foi possível atualizar a senha:', functionError);
-            toast({
-              title: "Aviso",
-              description: "Usuário atualizado, mas não foi possível alterar a senha. Peça para o usuário redefinir a senha.",
-              variant: "default",
-            });
-          }
         }
       }
 
