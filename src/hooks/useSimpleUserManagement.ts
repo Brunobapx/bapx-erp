@@ -30,14 +30,35 @@ export const useSimpleUserManagement = () => {
   const loadUsers = async () => {
     try {
       setLoading(true);
+      console.log('Loading users for company:', companyInfo?.id);
       
       if (!companyInfo?.id) {
+        console.log('No company ID available');
         setUsers([]);
         return;
       }
 
-      // Buscar usuários da empresa com perfis de acesso
-      const { data: profilesData, error: profilesError } = await supabase
+      // Usar apenas a RPC que já funciona para obter usuários completos
+      const { data: usersData, error: usersError } = await supabase.rpc('get_company_users', {
+        company_id_param: companyInfo.id
+      });
+
+      if (usersError) {
+        console.error('Error loading users via RPC:', usersError);
+        throw usersError;
+      }
+
+      console.log('Users data from RPC:', usersData);
+
+      if (!usersData || usersData.length === 0) {
+        console.log('No users found');
+        setUsers([]);
+        return;
+      }
+
+      // Buscar dados adicionais dos perfis
+      const userIds = usersData.map((user: any) => user.id);
+      const { data: profilesData } = await supabase
         .from('profiles')
         .select(`
           id, 
@@ -47,63 +68,54 @@ export const useSimpleUserManagement = () => {
           last_login, 
           department, 
           position,
-          profile_id,
-          access_profiles:profile_id (
-            name,
-            description
-          )
+          profile_id
         `)
-        .eq('company_id', companyInfo.id);
+        .in('id', userIds);
 
-      if (profilesError) throw profilesError;
-
-      if (!profilesData || profilesData.length === 0) {
-        setUsers([]);
-        return;
+      // Buscar perfis de acesso se existirem
+      const profileIds = profilesData?.filter(p => p.profile_id).map(p => p.profile_id) || [];
+      let accessProfilesData: any[] = [];
+      
+      if (profileIds.length > 0) {
+        const { data } = await supabase
+          .from('access_profiles')
+          .select('id, name, description')
+          .in('id', profileIds);
+        accessProfilesData = data || [];
       }
 
-      // Buscar emails reais da tabela auth.users via RPC
-      const { data: emailsData } = await supabase.rpc('get_company_users', {
-        company_id_param: companyInfo.id
-      });
-
-      // Buscar roles dos usuários
-      const userIds = profilesData.map(user => user.id);
-      const { data: rolesData } = await supabase
-        .from('user_roles')
-        .select('user_id, role')
-        .in('user_id', userIds);
-
-      // Combinar dados
-      const processedUsers: SimpleUser[] = profilesData.map((profile) => {
-        const userRole = rolesData?.find(r => r.user_id === profile.id);
-        const userEmail = emailsData?.find((e: any) => e.id === profile.id);
-        
-        // Corrigir o access_profile
-        let accessProfile = null;
-        if (profile.access_profiles && Array.isArray(profile.access_profiles) && profile.access_profiles.length > 0) {
-          accessProfile = profile.access_profiles[0];
-        } else if (profile.access_profiles && !Array.isArray(profile.access_profiles)) {
-          accessProfile = profile.access_profiles;
-        }
+      // Combinar todos os dados
+      const processedUsers: SimpleUser[] = usersData.map((user: any) => {
+        const profile = profilesData?.find(p => p.id === user.id);
+        const accessProfile = profile?.profile_id 
+          ? accessProfilesData.find(ap => ap.id === profile.profile_id)
+          : null;
         
         return {
-          ...profile,
-          email: userEmail?.email || `user-${profile.id.substring(0, 8)}@sistema.local`,
-          role: userRole?.role || 'user',
-          last_login: profile.last_login || '',
+          id: user.id,
+          first_name: profile?.first_name || '',
+          last_name: profile?.last_name || '',
+          email: user.email || `user-${user.id.substring(0, 8)}@sistema.local`,
+          role: user.role || 'user',
+          is_active: profile?.is_active ?? true,
+          last_login: profile?.last_login || '',
+          department: profile?.department || '',
+          position: profile?.position || '',
+          profile_id: profile?.profile_id || '',
           access_profile: accessProfile
         };
       });
 
+      console.log('Processed users:', processedUsers);
       setUsers(processedUsers);
     } catch (error) {
-      console.error('Erro ao carregar usuários:', error);
+      console.error('Error loading users:', error);
       toast({
         title: "Erro",
-        description: "Erro ao carregar usuários",
+        description: "Erro ao carregar usuários. Tente novamente.",
         variant: "destructive",
       });
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -185,6 +197,7 @@ export const useSimpleUserManagement = () => {
   };
 
   useEffect(() => {
+    console.log('Company info changed:', companyInfo?.id);
     if (companyInfo?.id) {
       loadUsers();
     }

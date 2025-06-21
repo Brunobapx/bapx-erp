@@ -1,15 +1,21 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/components/Auth/AuthProvider';
 import { useSimpleUserManagement, SimpleUser } from '@/hooks/useSimpleUserManagement';
-import { useProfiles } from '@/hooks/useProfiles';
+import { supabase } from '@/integrations/supabase/client';
 import SimpleUsersTable from './SimpleUsersTable';
 import CreateUserModal from './CreateUserModal';
 import { DeleteUserModal } from './DeleteUserModal';
 import { EditUserModal } from './EditUserModal';
-import { supabase } from '@/integrations/supabase/client';
+
+interface AccessProfile {
+  id: string;
+  name: string;
+  description: string;
+  is_active: boolean;
+}
 
 export const UserManagement = () => {
   const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
@@ -23,11 +29,38 @@ export const UserManagement = () => {
     userId: '',
     userName: ''
   });
+  const [availableProfiles, setAvailableProfiles] = useState<AccessProfile[]>([]);
   
   const { toast } = useToast();
-  const { userRole, user } = useAuth();
+  const { userRole, user, companyInfo } = useAuth();
   const { users, loading, loadUsers, updateUserStatus, updateUserRole, updateUserProfile } = useSimpleUserManagement();
-  const { profiles } = useProfiles();
+
+  // Carregar perfis de acesso disponíveis
+  const loadProfiles = async () => {
+    try {
+      if (!companyInfo?.id) return;
+
+      const { data, error } = await supabase
+        .from('access_profiles')
+        .select('id, name, description, is_active')
+        .eq('company_id', companyInfo.id)
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+
+      setAvailableProfiles(data || []);
+    } catch (error) {
+      console.error('Error loading profiles:', error);
+      setAvailableProfiles([]);
+    }
+  };
+
+  useEffect(() => {
+    if (companyInfo?.id) {
+      loadProfiles();
+    }
+  }, [companyInfo?.id]);
 
   if (userRole !== 'admin' && userRole !== 'master') {
     return (
@@ -44,6 +77,7 @@ export const UserManagement = () => {
       description: "Usuário criado com sucesso!",
     });
     await loadUsers();
+    await loadProfiles(); // Recarregar perfis também
   };
 
   const handleDeleteUser = async (userId: string) => {
@@ -84,13 +118,8 @@ export const UserManagement = () => {
 
   const handleUserUpdated = async () => {
     await loadUsers();
+    await loadProfiles();
   };
-
-  // Convert profiles to AccessProfile format with description
-  const availableProfiles = profiles.map(profile => ({
-    ...profile,
-    description: profile.description || `Perfil ${profile.name || ''}`.trim()
-  }));
 
   return (
     <div className="space-y-6">

@@ -15,6 +15,8 @@ const SettingsPage = () => {
 
   const isAdmin = userRole === 'admin' || userRole === 'master';
 
+  console.log('SettingsPage rendered, userRole:', userRole, 'isAdmin:', isAdmin);
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center gap-3 mb-6">
@@ -43,7 +45,9 @@ const SettingsPage = () => {
         </TabsList>
 
         <TabsContent value="profile">
-          <ProfileManagement />
+          <div className="bg-white rounded-lg border p-6">
+            <ProfileManagement />
+          </div>
         </TabsContent>
 
         <TabsContent value="users">
@@ -54,7 +58,9 @@ const SettingsPage = () => {
               </AlertDescription>
             </Alert>
           ) : (
-            <UserManagement />
+            <div className="bg-white rounded-lg border p-6">
+              <UserManagement />
+            </div>
           )}
         </TabsContent>
 
@@ -66,7 +72,9 @@ const SettingsPage = () => {
               </AlertDescription>
             </Alert>
           ) : (
-            <ProfilesManagement />
+            <div className="bg-white rounded-lg border p-6">
+              <ProfilesManagement />
+            </div>
           )}
         </TabsContent>
 
@@ -78,7 +86,9 @@ const SettingsPage = () => {
               </AlertDescription>
             </Alert>
           ) : (
-            <CompanySettings />
+            <div className="bg-white rounded-lg border p-6">
+              <CompanySettings />
+            </div>
           )}
         </TabsContent>
       </Tabs>
