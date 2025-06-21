@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useProfiles } from '@/hooks/useProfiles';
+import { useToast } from "@/hooks/use-toast";
 
 interface EditProfileModalProps {
   profileId: string;
@@ -16,6 +17,7 @@ interface EditProfileModalProps {
 
 export const EditProfileModal = ({ profileId, open, onOpenChange }: EditProfileModalProps) => {
   const { profiles, modules, updateProfile, loadProfileModules, updateProfileModules } = useProfiles();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -28,28 +30,41 @@ export const EditProfileModal = ({ profileId, open, onOpenChange }: EditProfileM
   const profile = profiles.find(p => p.id === profileId);
 
   useEffect(() => {
-    if (profile && open) {
-      setFormData({
-        name: profile.name,
-        description: profile.description || '',
-        is_admin: profile.is_admin,
-        is_active: profile.is_active,
-      });
+    const loadData = async () => {
+      if (profile && open) {
+        console.log('Loading profile data:', profile);
+        setFormData({
+          name: profile.name || '',
+          description: profile.description || '',
+          is_admin: profile.is_admin || false,
+          is_active: profile.is_active !== false,
+        });
 
-      // Carregar módulos do perfil
-      loadProfileModules(profileId).then(profileModules => {
-        setSelectedModules(profileModules.map(pm => pm.module_id));
-      });
-    }
+        // Carregar módulos do perfil
+        try {
+          const profileModules = await loadProfileModules(profileId);
+          console.log('Profile modules loaded:', profileModules);
+          setSelectedModules(profileModules.map(pm => pm.module_id));
+        } catch (error) {
+          console.error('Error loading profile modules:', error);
+          setSelectedModules([]);
+        }
+      }
+    };
+
+    loadData();
   }, [profile, profileId, open, loadProfileModules]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    
     try {
+      console.log('Updating profile with data:', formData);
       await updateProfile(profileId, formData);
       
       // Atualizar módulos
+      console.log('Updating profile modules:', selectedModules);
       await updateProfileModules(
         profileId,
         selectedModules.map(moduleId => ({
@@ -60,20 +75,32 @@ export const EditProfileModal = ({ profileId, open, onOpenChange }: EditProfileM
         }))
       );
 
+      toast({
+        title: "Sucesso",
+        description: "Perfil atualizado com sucesso!",
+      });
+
       onOpenChange(false);
-    } catch (error) {
-      // Error is handled in the hook
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao atualizar perfil",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const toggleModule = (moduleId: string) => {
-    setSelectedModules(prev =>
-      prev.includes(moduleId)
+    setSelectedModules(prev => {
+      const newSelection = prev.includes(moduleId)
         ? prev.filter(id => id !== moduleId)
-        : [...prev, moduleId]
-    );
+        : [...prev, moduleId];
+      console.log('Module selection changed:', { moduleId, newSelection });
+      return newSelection;
+    });
   };
 
   // Agrupar módulos por categoria
@@ -85,7 +112,12 @@ export const EditProfileModal = ({ profileId, open, onOpenChange }: EditProfileM
     return acc;
   }, {} as Record<string, typeof modules>);
 
-  if (!profile) return null;
+  if (!profile) {
+    console.log('Profile not found:', profileId);
+    return null;
+  }
+
+  const isMasterProfile = profile.name === 'Master';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -103,7 +135,7 @@ export const EditProfileModal = ({ profileId, open, onOpenChange }: EditProfileM
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="Nome do perfil"
                 required
-                disabled={profile.name === 'Master'}
+                disabled={isMasterProfile}
               />
             </div>
             <div className="space-y-2 flex items-center gap-2">
@@ -113,7 +145,7 @@ export const EditProfileModal = ({ profileId, open, onOpenChange }: EditProfileM
                 onCheckedChange={(checked) => 
                   setFormData(prev => ({ ...prev, is_admin: checked as boolean }))
                 }
-                disabled={profile.name === 'Master'}
+                disabled={isMasterProfile}
               />
               <Label htmlFor="is_admin">Perfil Administrativo</Label>
             </div>
@@ -127,7 +159,7 @@ export const EditProfileModal = ({ profileId, open, onOpenChange }: EditProfileM
                 onCheckedChange={(checked) => 
                   setFormData(prev => ({ ...prev, is_active: checked as boolean }))
                 }
-                disabled={profile.name === 'Master'}
+                disabled={isMasterProfile}
               />
               <Label htmlFor="is_active">Perfil Ativo</Label>
             </div>
@@ -141,6 +173,7 @@ export const EditProfileModal = ({ profileId, open, onOpenChange }: EditProfileM
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               placeholder="Descrição do perfil"
               rows={3}
+              disabled={isMasterProfile}
             />
           </div>
 
@@ -157,9 +190,9 @@ export const EditProfileModal = ({ profileId, open, onOpenChange }: EditProfileM
                           id={`edit-module-${module.id}`}
                           checked={selectedModules.includes(module.id)}
                           onCheckedChange={() => toggleModule(module.id)}
-                          disabled={profile.name === 'Master'}
+                          disabled={isMasterProfile}
                         />
-                        <Label htmlFor={`edit-module-${module.id}`} className="text-sm">
+                        <Label htmlFor={`edit-module-${module.id}`} className="text-sm cursor-pointer">
                           {module.name}
                         </Label>
                       </div>
