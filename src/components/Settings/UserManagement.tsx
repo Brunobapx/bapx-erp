@@ -30,38 +30,13 @@ export const UserManagement = () => {
     userName: ''
   });
   const [availableProfiles, setAvailableProfiles] = useState<AccessProfile[]>([]);
+  const [profilesLoading, setProfilesLoading] = useState(false);
   
   const { toast } = useToast();
   const { userRole, user, companyInfo } = useAuth();
   const { users, loading, loadUsers, updateUserStatus, updateUserRole, updateUserProfile } = useSimpleUserManagement();
 
-  // Carregar perfis de acesso disponíveis
-  const loadProfiles = async () => {
-    try {
-      if (!companyInfo?.id) return;
-
-      const { data, error } = await supabase
-        .from('access_profiles')
-        .select('id, name, description, is_active')
-        .eq('company_id', companyInfo.id)
-        .eq('is_active', true)
-        .order('name');
-
-      if (error) throw error;
-
-      setAvailableProfiles(data || []);
-    } catch (error) {
-      console.error('Error loading profiles:', error);
-      setAvailableProfiles([]);
-    }
-  };
-
-  useEffect(() => {
-    if (companyInfo?.id) {
-      loadProfiles();
-    }
-  }, [companyInfo?.id]);
-
+  // Verificar permissões antes de renderizar
   if (userRole !== 'admin' && userRole !== 'master') {
     return (
       <div className="text-center p-4">
@@ -70,6 +45,50 @@ export const UserManagement = () => {
     );
   }
 
+  const loadProfiles = async () => {
+    if (!companyInfo?.id) {
+      console.log('No company ID for loading profiles');
+      return;
+    }
+
+    try {
+      setProfilesLoading(true);
+      console.log('Loading profiles for company:', companyInfo.id);
+
+      const { data, error } = await supabase
+        .from('access_profiles')
+        .select('id, name, description, is_active')
+        .eq('company_id', companyInfo.id)
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) {
+        console.error('Error loading profiles:', error);
+        throw error;
+      }
+
+      console.log('Loaded profiles:', data);
+      setAvailableProfiles(data || []);
+    } catch (error) {
+      console.error('Error loading profiles:', error);
+      setAvailableProfiles([]);
+      toast({
+        title: "Aviso",
+        description: "Não foi possível carregar os perfis de acesso.",
+        variant: "default",
+      });
+    } finally {
+      setProfilesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    console.log('UserManagement: Company info changed:', companyInfo?.id);
+    if (companyInfo?.id) {
+      loadProfiles();
+    }
+  }, [companyInfo?.id]);
+
   const handleUserCreated = async () => {
     setIsCreateUserModalOpen(false);
     toast({
@@ -77,7 +96,7 @@ export const UserManagement = () => {
       description: "Usuário criado com sucesso!",
     });
     await loadUsers();
-    await loadProfiles(); // Recarregar perfis também
+    await loadProfiles();
   };
 
   const handleDeleteUser = async (userId: string) => {
@@ -120,6 +139,16 @@ export const UserManagement = () => {
     await loadUsers();
     await loadProfiles();
   };
+
+  // Mostrar loading inicial
+  if (loading && users.length === 0) {
+    return (
+      <div className="text-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+        <p>Carregando usuários...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

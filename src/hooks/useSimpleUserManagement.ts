@@ -28,17 +28,17 @@ export const useSimpleUserManagement = () => {
   const { companyInfo } = useAuth();
 
   const loadUsers = async () => {
+    if (!companyInfo?.id) {
+      console.log('No company ID available for loading users');
+      setUsers([]);
+      return;
+    }
+
     try {
       setLoading(true);
-      console.log('Loading users for company:', companyInfo?.id);
+      console.log('Loading users for company:', companyInfo.id);
       
-      if (!companyInfo?.id) {
-        console.log('No company ID available');
-        setUsers([]);
-        return;
-      }
-
-      // Usar apenas a RPC que já funciona para obter usuários completos
+      // Usar apenas a RPC para obter dados básicos dos usuários
       const { data: usersData, error: usersError } = await supabase.rpc('get_company_users', {
         company_id_param: companyInfo.id
       });
@@ -56,9 +56,9 @@ export const useSimpleUserManagement = () => {
         return;
       }
 
-      // Buscar dados adicionais dos perfis
+      // Buscar dados adicionais dos perfis em uma query separada
       const userIds = usersData.map((user: any) => user.id);
-      const { data: profilesData } = await supabase
+      const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select(`
           id, 
@@ -72,16 +72,24 @@ export const useSimpleUserManagement = () => {
         `)
         .in('id', userIds);
 
+      if (profilesError) {
+        console.error('Error loading profiles:', profilesError);
+        // Continuar mesmo se houver erro nos perfis
+      }
+
       // Buscar perfis de acesso se existirem
       const profileIds = profilesData?.filter(p => p.profile_id).map(p => p.profile_id) || [];
       let accessProfilesData: any[] = [];
       
       if (profileIds.length > 0) {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('access_profiles')
           .select('id, name, description')
           .in('id', profileIds);
-        accessProfilesData = data || [];
+        
+        if (!error) {
+          accessProfilesData = data || [];
+        }
       }
 
       // Combinar todos os dados

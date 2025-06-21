@@ -32,12 +32,15 @@ const SimpleUsersTable: React.FC<Props> = ({
   loading = false,
   availableProfiles = []
 }) => {
+  
   const getDisplayName = (user: SimpleUser) => {
+    if (!user) return 'Usuário não identificado';
     const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
     return fullName || 'Nome não informado';
   };
 
   const getProfileDisplayName = (user: SimpleUser) => {
+    if (!user) return 'Sem perfil';
     if (user.access_profile?.name) {
       return user.access_profile.name;
     }
@@ -58,12 +61,15 @@ const SimpleUsersTable: React.FC<Props> = ({
   };
 
   const canManageUser = (user: SimpleUser) => {
+    if (!user || !userRole) return false;
     if (userRole === 'master') return true;
     if (userRole === 'admin' && user.role !== 'master') return true;
     return false;
   };
 
-  if (loading) {
+  const safeUsers = Array.isArray(users) ? users : [];
+
+  if (loading && safeUsers.length === 0) {
     return (
       <div className="text-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
@@ -74,8 +80,8 @@ const SimpleUsersTable: React.FC<Props> = ({
 
   return (
     <div className="space-y-4">
-      <h4 className="text-md font-medium">Lista de Usuários ({users.length})</h4>
-      {users.length === 0 ? (
+      <h4 className="text-md font-medium">Lista de Usuários ({safeUsers.length})</h4>
+      {safeUsers.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           <p>Nenhum usuário encontrado.</p>
           <p className="text-sm mt-1">Clique em "Novo Usuário" para adicionar o primeiro usuário.</p>
@@ -95,7 +101,7 @@ const SimpleUsersTable: React.FC<Props> = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
+              {safeUsers.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{getDisplayName(user)}</TableCell>
                   <TableCell>{user.email || 'Email não disponível'}</TableCell>
