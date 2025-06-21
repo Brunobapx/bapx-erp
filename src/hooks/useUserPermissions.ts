@@ -11,6 +11,20 @@ interface ModulePermission {
   canDelete: boolean;
 }
 
+interface ProfileModuleData {
+  can_view: boolean;
+  can_edit: boolean;
+  can_delete: boolean;
+  system_modules: {
+    id: string;
+    route_path: string;
+  };
+}
+
+interface AccessProfileData {
+  profile_modules: ProfileModuleData[];
+}
+
 export const useUserPermissions = () => {
   const [permissions, setPermissions] = useState<ModulePermission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,18 +88,21 @@ export const useUserPermissions = () => {
 
       const modulePermissions: ModulePermission[] = [];
       
-      if (userPermissions.access_profiles?.profile_modules) {
-        userPermissions.access_profiles.profile_modules.forEach((pm: any) => {
-          if (pm.system_modules) {
-            modulePermissions.push({
-              moduleId: pm.system_modules.id,
-              routePath: pm.system_modules.route_path,
-              canView: pm.can_view,
-              canEdit: pm.can_edit,
-              canDelete: pm.can_delete
-            });
-          }
-        });
+      if (userPermissions?.access_profiles) {
+        const accessProfile = userPermissions.access_profiles as AccessProfileData;
+        if (accessProfile.profile_modules) {
+          accessProfile.profile_modules.forEach((pm: ProfileModuleData) => {
+            if (pm.system_modules) {
+              modulePermissions.push({
+                moduleId: pm.system_modules.id,
+                routePath: pm.system_modules.route_path,
+                canView: pm.can_view,
+                canEdit: pm.can_edit,
+                canDelete: pm.can_delete
+              });
+            }
+          });
+        }
       }
 
       setPermissions(modulePermissions);

@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/components/Auth/AuthProvider";
 import { ProtectedRoute } from "@/components/Auth/ProtectedRoute";
 import { ModuleAccessCheck } from "@/components/Auth/ModuleAccessCheck";
-import { Sidebar } from "@/components/Sidebar/Sidebar";
+import Sidebar from "@/components/Sidebar/Sidebar";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import OrdersPage from "./pages/OrdersPage";
