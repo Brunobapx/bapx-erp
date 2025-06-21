@@ -14,6 +14,11 @@ export interface SimpleUser {
   last_login: string;
   department: string;
   position: string;
+  profile_id?: string;
+  access_profile?: {
+    name: string;
+    description: string;
+  } | null;
 }
 
 export const useSimpleUserManagement = () => {
@@ -31,10 +36,23 @@ export const useSimpleUserManagement = () => {
         return;
       }
 
-      // Buscar usuários da empresa
+      // Buscar usuários da empresa com perfis de acesso
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, is_active, last_login, department, position')
+        .select(`
+          id, 
+          first_name, 
+          last_name, 
+          is_active, 
+          last_login, 
+          department, 
+          position,
+          profile_id,
+          access_profiles:profile_id (
+            name,
+            description
+          )
+        `)
         .eq('company_id', companyInfo.id);
 
       if (profilesError) throw profilesError;
@@ -44,8 +62,24 @@ export const useSimpleUserManagement = () => {
         return;
       }
 
-      // Buscar roles dos usuários
+      // Buscar emails reais da tabela auth.users
       const userIds = profilesData.map(user => user.id);
+      const { data: authData, error: authError } = await supabase
+        .from('auth.users')
+        .select('id, email')
+        .in('id', userIds);
+
+      // Se não conseguir acessar auth.users diretamente, usar RPC
+      let emailsData = authData;
+      if (authError) {
+        console.log('Trying RPC to get emails...');
+        const { data: rpcData } = await supabase.rpc('get_company_users', {
+          company_id_param: companyInfo.id
+        });
+        emailsData = rpcData?.map((user: any) => ({ id: user.id, email: user.email })) || [];
+      }
+
+      // Buscar roles dos usuários
       const { data: rolesData } = await supabase
         .from('user_roles')
         .select('user_id, role')
@@ -54,11 +88,21 @@ export const useSimpleUserManagement = () => {
       // Combinar dados
       const processedUsers: SimpleUser[] = profilesData.map((profile) => {
         const userRole = rolesData?.find(r => r.user_id === profile.id);
+        const userEmail = emailsData?.find(e => e.id === profile.id);
+        
+        // Corrigir o access_profile
+        let accessProfile = null;
+        if (profile.access_profiles && Array.isArray(profile.access_profiles) && profile.access_profiles.length > 0) {
+          accessProfile = profile.access_profiles[0];
+        } else if (profile.access_profiles && !Array.isArray(profile.access_profiles)) {
+          accessProfile = profile.access_profiles;
+        }
         
         return {
           ...profile,
-          email: `user-${profile.id.substring(0, 8)}@system.local`,
+          email: userEmail?.email || `user-${profile.id.substring(0, 8)}@sistema.local`,
           role: userRole?.role || 'user',
+          access_profile: accessProfile
         };
       });
 
@@ -123,6 +167,33 @@ export const useSimpleUserManagement = () => {
     }
   };
 
+  const updateUserProfile = async (userId: string, profileId: string) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          profile_id: profileId || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      toast({ 
+        title: "Sucesso", 
+        description: "Perfil de acesso do usuário atualizado com sucesso!" 
+      });
+      
+      await loadUsers();
+    } catch (error) {
+      toast({ 
+        title: "Erro", 
+        description: "Erro ao atualizar perfil de acesso do usuário", 
+        variant: "destructive" 
+      });
+    }
+  };
+
   useEffect(() => {
     if (companyInfo?.id) {
       loadUsers();
@@ -135,5 +206,6 @@ export const useSimpleUserManagement = () => {
     loadUsers,
     updateUserStatus,
     updateUserRole,
+    updateUserProfile,
   };
 };

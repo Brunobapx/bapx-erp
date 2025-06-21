@@ -3,15 +3,17 @@ import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/components/Auth/AuthProvider';
-import { useSimpleUserManagement } from '@/hooks/useSimpleUserManagement';
+import { useSimpleUserManagement, SimpleUser } from '@/hooks/useSimpleUserManagement';
 import { useProfiles } from '@/hooks/useProfiles';
 import SimpleUsersTable from './SimpleUsersTable';
 import CreateUserModal from './CreateUserModal';
 import { DeleteUserModal } from './DeleteUserModal';
+import { EditUserModal } from './EditUserModal';
 import { supabase } from '@/integrations/supabase/client';
 
 export const UserManagement = () => {
   const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<SimpleUser | null>(null);
   const [deleteUserModal, setDeleteUserModal] = useState<{
     open: boolean;
     userId: string;
@@ -24,7 +26,7 @@ export const UserManagement = () => {
   
   const { toast } = useToast();
   const { userRole, user } = useAuth();
-  const { users, loading, loadUsers, updateUserStatus, updateUserRole } = useSimpleUserManagement();
+  const { users, loading, loadUsers, updateUserStatus, updateUserRole, updateUserProfile } = useSimpleUserManagement();
   const { profiles } = useProfiles();
 
   if (userRole !== 'admin' && userRole !== 'master') {
@@ -76,6 +78,14 @@ export const UserManagement = () => {
     });
   };
 
+  const handleEditUser = (user: SimpleUser) => {
+    setEditingUser(user);
+  };
+
+  const handleUserUpdated = async () => {
+    await loadUsers();
+  };
+
   // Convert profiles to AccessProfile format with description
   const availableProfiles = profiles.map(profile => ({
     ...profile,
@@ -99,6 +109,15 @@ export const UserManagement = () => {
         userRole={userRole}
       />
 
+      <EditUserModal
+        user={editingUser}
+        open={!!editingUser}
+        onOpenChange={(open) => !open && setEditingUser(null)}
+        onSuccess={handleUserUpdated}
+        availableProfiles={availableProfiles}
+        userRole={userRole}
+      />
+
       <DeleteUserModal
         userId={deleteUserModal.userId}
         userName={deleteUserModal.userName}
@@ -115,8 +134,11 @@ export const UserManagement = () => {
         currentUserId={user?.id}
         onStatusChange={updateUserStatus}
         onRoleChange={updateUserRole}
+        onProfileChange={updateUserProfile}
         onDeleteUser={handleDeleteUserClick}
+        onEditUser={handleEditUser}
         loading={loading}
+        availableProfiles={availableProfiles}
       />
     </div>
   );

@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2 } from 'lucide-react';
+import { Edit, Trash2 } from 'lucide-react';
 import { SimpleUser } from '@/hooks/useSimpleUserManagement';
 
 interface Props {
@@ -13,8 +13,11 @@ interface Props {
   currentUserId?: string;
   onStatusChange: (userId: string, isActive: boolean) => void;
   onRoleChange: (userId: string, role: string) => void;
+  onProfileChange: (userId: string, profileId: string) => void;
   onDeleteUser: (userId: string, userName: string) => void;
+  onEditUser: (user: SimpleUser) => void;
   loading?: boolean;
+  availableProfiles?: Array<{id: string; name: string; description: string; is_active: boolean}>;
 }
 
 const SimpleUsersTable: React.FC<Props> = ({
@@ -23,12 +26,22 @@ const SimpleUsersTable: React.FC<Props> = ({
   currentUserId,
   onStatusChange, 
   onRoleChange, 
+  onProfileChange,
   onDeleteUser,
-  loading = false
+  onEditUser,
+  loading = false,
+  availableProfiles = []
 }) => {
   const getDisplayName = (user: SimpleUser) => {
     const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
     return fullName || 'Nome não informado';
+  };
+
+  const getProfileDisplayName = (user: SimpleUser) => {
+    if (user.access_profile?.name) {
+      return user.access_profile.name;
+    }
+    return 'Sem perfil';
   };
 
   const canManageUser = (user: SimpleUser) => {
@@ -55,6 +68,7 @@ const SimpleUsersTable: React.FC<Props> = ({
               <TableHead>Nome</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Papel</TableHead>
+              <TableHead>Perfil de Acesso</TableHead>
               <TableHead>Departamento</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Ações</TableHead>
@@ -83,6 +97,29 @@ const SimpleUsersTable: React.FC<Props> = ({
                     </SelectContent>
                   </Select>
                 </TableCell>
+                <TableCell>
+                  <Select
+                    value={user.profile_id || ''}
+                    disabled={!canManageUser(user)}
+                    onValueChange={(profileId) => onProfileChange(user.id, profileId)}
+                  >
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="Selecionar perfil">
+                        {getProfileDisplayName(user)}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Sem perfil</SelectItem>
+                      {availableProfiles
+                        .filter(profile => profile.is_active)
+                        .map(profile => (
+                          <SelectItem value={profile.id} key={profile.id}>
+                            {profile.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </TableCell>
                 <TableCell>{user.department || '-'}</TableCell>
                 <TableCell>
                   <Badge variant={user.is_active ? 'default' : 'secondary'}>
@@ -91,6 +128,15 @@ const SimpleUsersTable: React.FC<Props> = ({
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onEditUser(user)}
+                      disabled={!canManageUser(user)}
+                      title="Editar usuário"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="sm"
