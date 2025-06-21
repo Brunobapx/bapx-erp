@@ -20,10 +20,25 @@ export const ModuleAccessCheck = ({
   const { hasAccess, loading } = useUserPermissions();
   const [accessGranted, setAccessGranted] = useState<boolean | null>(null);
 
+  // Rotas que sempre devem ser acessíveis
+  const publicRoutes = ['/', '/configuracoes'];
+
   useEffect(() => {
     const checkAccess = async () => {
       if (!user) {
         setAccessGranted(false);
+        return;
+      }
+
+      // Dashboard e configurações sempre acessíveis
+      if (publicRoutes.includes(routePath)) {
+        setAccessGranted(true);
+        return;
+      }
+
+      // Master e Admin têm acesso total
+      if (userRole === 'master' || userRole === 'admin') {
+        setAccessGranted(true);
         return;
       }
 
@@ -35,11 +50,12 @@ export const ModuleAccessCheck = ({
     if (!loading) {
       checkAccess();
     }
-  }, [user, userRole, routePath, requirePermission, hasAccess, loading]);
+  }, [user, userRole, routePath, requirePermission, hasAccess, loading, publicRoutes]);
 
-  if (loading) {
+  // Mostrar loading apenas se ainda não determinou o acesso
+  if (loading || accessGranted === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-[200px] flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto"></div>
           <p className="text-gray-600">Verificando permissões...</p>
@@ -50,7 +66,7 @@ export const ModuleAccessCheck = ({
 
   if (!accessGranted) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="min-h-[400px] flex items-center justify-center p-6">
         <div className="max-w-md w-full">
           <Alert>
             <Shield className="h-4 w-4" />

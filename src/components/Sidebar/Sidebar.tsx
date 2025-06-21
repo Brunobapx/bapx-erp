@@ -10,21 +10,6 @@ import { useAuth } from '@/components/Auth/AuthProvider';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { Button } from '@/components/ui/button';
 
-const iconMap = {
-  ChartBar,
-  User: Users,
-  Package,
-  Users,
-  ShoppingCart,
-  Warehouse,
-  Box,
-  DollarSign,
-  FilePen,
-  Truck,
-  Calendar,
-  Settings
-};
-
 const Sidebar = () => {
   const location = useLocation();
   const { signOut, userRole } = useAuth();
@@ -50,20 +35,30 @@ const Sidebar = () => {
     { icon: Settings, label: 'Configurações', href: '/configuracoes', iconName: 'Settings' }
   ];
 
-  const allowedRoutes = getAllowedRoutes();
-
   // Filtrar itens do menu baseado nas permissões
-  const filteredMenuItems = menuItems.filter(item => {
-    if (loading) return false;
-    
+  const getFilteredMenuItems = () => {
     // Master e Admin veem tudo
     if (userRole === 'master' || userRole === 'admin') {
-      return true;
+      return menuItems;
+    }
+    
+    // Se ainda está carregando, mostrar pelo menos o dashboard
+    if (loading) {
+      return menuItems.filter(item => item.href === '/');
     }
     
     // Para outros usuários, verificar permissões
-    return allowedRoutes.includes(item.href);
-  });
+    const allowedRoutes = getAllowedRoutes();
+    return menuItems.filter(item => {
+      // Dashboard sempre visível
+      if (item.href === '/') return true;
+      
+      // Verificar se tem permissão para a rota
+      return allowedRoutes.includes(item.href);
+    });
+  };
+
+  const filteredMenuItems = getFilteredMenuItems();
 
   const handleSignOut = async () => {
     try {
@@ -90,32 +85,26 @@ const Sidebar = () => {
       </div>
 
       <nav className="flex-1 p-4 space-y-1">
-        {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="w-6 h-6 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-          </div>
-        ) : (
-          filteredMenuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.href;
-            
-            return (
-              <Link
-                key={item.href}
-                to={item.href}
-                onClick={() => setIsOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`}
-              >
-                <Icon className="h-5 w-5 flex-shrink-0" />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })
-        )}
+        {filteredMenuItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = location.pathname === item.href;
+          
+          return (
+            <Link
+              key={item.href}
+              to={item.href}
+              onClick={() => setIsOpen(false)}
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }`}
+            >
+              <Icon className="h-5 w-5 flex-shrink-0" />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
       </nav>
 
       <div className="p-4 border-t border-gray-200">

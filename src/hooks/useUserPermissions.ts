@@ -23,80 +23,96 @@ export const useUserPermissions = () => {
       return;
     }
 
-    // Master e Admin têm acesso total
+    // Master e Admin têm acesso total - não precisam de consulta ao banco
     if (userRole === 'master' || userRole === 'admin') {
-      try {
-        const { data: modules, error } = await supabase
-          .from('system_modules')
-          .select('id, route_path')
-          .eq('is_active', true);
-
-        if (error) throw error;
-
-        const fullPermissions: ModulePermission[] = modules.map(module => ({
-          moduleId: module.id,
-          routePath: module.route_path,
-          canView: true,
-          canEdit: true,
-          canDelete: true
-        }));
-
-        setPermissions(fullPermissions);
-      } catch (error) {
-        console.error('Erro ao carregar módulos para admin:', error);
-        setPermissions([]);
-      }
+      // Definir módulos básicos que sempre existem
+      const basicModules: ModulePermission[] = [
+        { moduleId: 'dashboard', routePath: '/', canView: true, canEdit: true, canDelete: true },
+        { moduleId: 'orders', routePath: '/pedidos', canView: true, canEdit: true, canDelete: true },
+        { moduleId: 'products', routePath: '/produtos', canView: true, canEdit: true, canDelete: true },
+        { moduleId: 'clients', routePath: '/clientes', canView: true, canEdit: true, canDelete: true },
+        { moduleId: 'production', routePath: '/producao', canView: true, canEdit: true, canDelete: true },
+        { moduleId: 'packaging', routePath: '/embalagem', canView: true, canEdit: true, canDelete: true },
+        { moduleId: 'sales', routePath: '/vendas', canView: true, canEdit: true, canDelete: true },
+        { moduleId: 'finance', routePath: '/financeiro', canView: true, canEdit: true, canDelete: true },
+        { moduleId: 'routes', routePath: '/rotas', canView: true, canEdit: true, canDelete: true },
+        { moduleId: 'calendar', routePath: '/calendario', canView: true, canEdit: true, canDelete: true },
+        { moduleId: 'settings', routePath: '/configuracoes', canView: true, canEdit: true, canDelete: true },
+        { moduleId: 'vendors', routePath: '/fornecedores', canView: true, canEdit: true, canDelete: true },
+        { moduleId: 'purchases', routePath: '/compras', canView: true, canEdit: true, canDelete: true },
+        { moduleId: 'stock', routePath: '/estoque', canView: true, canEdit: true, canDelete: true },
+        { moduleId: 'fiscal', routePath: '/emissao-fiscal', canView: true, canEdit: true, canDelete: true },
+        { moduleId: 'service-orders', routePath: '/ordens-servico', canView: true, canEdit: true, canDelete: true }
+      ];
+      
+      setPermissions(basicModules);
       setLoading(false);
       return;
     }
 
-    // Para usuários comuns, buscar permissões baseadas no perfil
+    // Para usuários comuns, tentar buscar permissões do perfil
     try {
-      const { data: userPermissions, error } = await supabase
+      const { data: profile } = await supabase
         .from('profiles')
-        .select(`
-          access_profiles!inner(
-            profile_modules!inner(
-              can_view,
-              can_edit,
-              can_delete,
-              system_modules!inner(
-                id,
-                route_path
-              )
-            )
-          )
-        `)
+        .select('profile_id')
         .eq('id', user.id)
         .single();
 
-      if (error) throw error;
+      if (!profile?.profile_id) {
+        // Se não tem perfil, dar acesso básico ao dashboard apenas
+        setPermissions([
+          { moduleId: 'dashboard', routePath: '/', canView: true, canEdit: false, canDelete: false }
+        ]);
+        setLoading(false);
+        return;
+      }
+
+      // Buscar permissões do perfil
+      const { data: profileModules } = await supabase
+        .from('profile_modules')
+        .select(`
+          can_view,
+          can_edit,
+          can_delete,
+          system_modules!inner(
+            id,
+            route_path
+          )
+        `)
+        .eq('profile_id', profile.profile_id);
 
       const modulePermissions: ModulePermission[] = [];
       
-      if (userPermissions?.access_profiles) {
-        // Tratar access_profiles como any para contornar problemas de tipagem do Supabase
-        const accessProfiles = userPermissions.access_profiles as any;
-        
-        if (accessProfiles && accessProfiles.profile_modules) {
-          accessProfiles.profile_modules.forEach((pm: any) => {
-            if (pm.system_modules) {
-              modulePermissions.push({
-                moduleId: pm.system_modules.id,
-                routePath: pm.system_modules.route_path,
-                canView: pm.can_view,
-                canEdit: pm.can_edit,
-                canDelete: pm.can_delete
-              });
-            }
-          });
-        }
+      // Sempre incluir dashboard
+      modulePermissions.push({
+        moduleId: 'dashboard',
+        routePath: '/',
+        canView: true,
+        canEdit: false,
+        canDelete: false
+      });
+
+      if (profileModules) {
+        profileModules.forEach((pm: any) => {
+          if (pm.system_modules) {
+            modulePermissions.push({
+              moduleId: pm.system_modules.id,
+              routePath: pm.system_modules.route_path,
+              canView: pm.can_view,
+              canEdit: pm.can_edit,
+              canDelete: pm.can_delete
+            });
+          }
+        });
       }
 
       setPermissions(modulePermissions);
     } catch (error) {
       console.error('Erro ao carregar permissões do usuário:', error);
-      setPermissions([]);
+      // Em caso de erro, dar acesso ao dashboard
+      setPermissions([
+        { moduleId: 'dashboard', routePath: '/', canView: true, canEdit: false, canDelete: false }
+      ]);
     } finally {
       setLoading(false);
     }
@@ -109,6 +125,11 @@ export const useUserPermissions = () => {
   const hasAccess = (routePath: string, permission: 'view' | 'edit' | 'delete' = 'view') => {
     // Master e Admin têm acesso total
     if (userRole === 'master' || userRole === 'admin') {
+      return true;
+    }
+
+    // Dashboard sempre acessível
+    if (routePath === '/') {
       return true;
     }
 
