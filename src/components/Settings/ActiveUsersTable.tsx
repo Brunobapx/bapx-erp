@@ -78,40 +78,42 @@ const ActiveUsersTable: React.FC<Props> = ({
     return 'Sem perfil';
   };
 
-  console.log('Available profiles:', availableProfiles);
-  console.log('Users:', users);
+  const getCurrentProfileId = (user: UserProfile) => {
+    return user.profile_id || '';
+  };
+
+  console.log('Available profiles in table:', availableProfiles);
+  console.log('Users in table:', users);
 
   return (
     <div className="space-y-4">
       <h4 className="text-md font-medium">Usuários do Sistema</h4>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Nome</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Perfil</TableHead>
-            <TableHead>Departamento</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Ações</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {users.length === 0 ? (
+      {users.length === 0 && !loading ? (
+        <div className="text-center py-8 text-gray-500">
+          <p>Nenhum usuário encontrado para esta empresa.</p>
+        </div>
+      ) : (
+        <Table>
+          <TableHeader>
             <TableRow>
-              <TableCell colSpan={6} className="text-center text-gray-500">
-                Nenhum usuário encontrado
-              </TableCell>
+              <TableHead>Nome</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Perfil</TableHead>
+              <TableHead>Departamento</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Ações</TableHead>
             </TableRow>
-          ) : (
-            users.map((user) => (
+          </TableHeader>
+          <TableBody>
+            {users.map((user) => (
               <TableRow key={user.id}>
                 <TableCell>{getDisplayName(user)}</TableCell>
                 <TableCell>{user.email || 'Email não disponível'}</TableCell>
                 <TableCell>
                   <Select
-                    value={user.profile_id || ''}
+                    value={getCurrentProfileId(user)}
                     disabled={userRole !== 'master' && user.role === 'master'}
-                    onValueChange={profileId => onProfileChange(user.id, profileId)}
+                    onValueChange={(profileId) => onProfileChange(user.id, profileId)}
                   >
                     <SelectTrigger className="w-40">
                       <SelectValue placeholder="Selecionar perfil">
@@ -166,10 +168,10 @@ const ActiveUsersTable: React.FC<Props> = ({
                   </div>
                 </TableCell>
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            ))}
+          </TableBody>
+        </Table>
+      )}
     </div>
   );
 };

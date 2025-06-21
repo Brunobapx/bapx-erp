@@ -48,7 +48,8 @@ export const useProfiles = () => {
       console.log('Loading profiles for company:', companyInfo?.id);
       
       if (!companyInfo?.id) {
-        console.warn('No company ID available');
+        console.warn('No company ID available for profiles');
+        setProfiles([]);
         return;
       }
 
@@ -58,7 +59,10 @@ export const useProfiles = () => {
         .eq('company_id', companyInfo.id)
         .order('name');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading profiles:', error);
+        throw error;
+      }
       
       console.log('Loaded profiles:', data);
       setProfiles(data || []);
@@ -69,6 +73,7 @@ export const useProfiles = () => {
         description: "Erro ao carregar perfis",
         variant: "destructive",
       });
+      setProfiles([]);
     }
   };
 
@@ -82,7 +87,10 @@ export const useProfiles = () => {
         .eq('is_active', true)
         .order('category, sort_order');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading modules:', error);
+        throw error;
+      }
       
       console.log('Loaded modules:', data);
       setModules(data || []);
@@ -93,6 +101,7 @@ export const useProfiles = () => {
         description: "Erro ao carregar módulos",
         variant: "destructive",
       });
+      setModules([]);
     }
   };
 
@@ -109,6 +118,7 @@ export const useProfiles = () => {
       if (error) throw error;
       return data || [];
     } catch (error: any) {
+      console.error('Error loading profile modules:', error);
       toast({
         title: "Erro",
         description: "Erro ao carregar módulos do perfil",
@@ -133,9 +143,10 @@ export const useProfiles = () => {
         description: "Perfil criado com sucesso!",
       });
       
-      await loadProfiles();
+      await loadProfiles(); // Recarregar lista
       return data;
     } catch (error: any) {
+      console.error('Error creating profile:', error);
       toast({
         title: "Erro",
         description: error.message || "Erro ao criar perfil",
@@ -159,8 +170,9 @@ export const useProfiles = () => {
         description: "Perfil atualizado com sucesso!",
       });
       
-      await loadProfiles();
+      await loadProfiles(); // Recarregar lista após atualização
     } catch (error: any) {
+      console.error('Error updating profile:', error);
       toast({
         title: "Erro",
         description: error.message || "Erro ao atualizar perfil",
@@ -184,8 +196,9 @@ export const useProfiles = () => {
         description: "Perfil excluído com sucesso!",
       });
       
-      await loadProfiles();
+      await loadProfiles(); // Recarregar lista
     } catch (error: any) {
+      console.error('Error deleting profile:', error);
       toast({
         title: "Erro",
         description: error.message || "Erro ao excluir perfil",
@@ -225,6 +238,7 @@ export const useProfiles = () => {
         description: "Permissões do perfil atualizadas com sucesso!",
       });
     } catch (error: any) {
+      console.error('Error updating profile modules:', error);
       toast({
         title: "Erro",
         description: error.message || "Erro ao atualizar permissões",

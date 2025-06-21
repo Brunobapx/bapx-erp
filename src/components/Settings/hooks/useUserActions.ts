@@ -10,20 +10,29 @@ export const useUserActions = (loadUsers: () => Promise<void>) => {
   // Update user status
   const handleUpdateUserStatus = async (userId: string, isActive: boolean) => {
     if (!confirm(`Tem certeza que deseja ${isActive ? 'ativar' : 'desativar'} este usuário?`)) return;
+    
     try {
       const { error } = await supabase
         .from('profiles')
         .update({ is_active: isActive })
         .eq('id', userId);
+        
       if (error) throw error;
+      
       toast({
         title: "Sucesso",
         description: `Usuário ${isActive ? 'ativado' : 'desativado'} com sucesso!`,
       });
-      loadUsers();
+      
+      // Recarregar usuários após mudança
+      await loadUsers();
     } catch (error) {
       console.error('Error updating user status:', error);
-      toast({ title: "Erro", description: "Erro ao atualizar usuário", variant: "destructive" });
+      toast({ 
+        title: "Erro", 
+        description: "Erro ao atualizar status do usuário", 
+        variant: "destructive" 
+      });
     }
   };
 
@@ -35,7 +44,10 @@ export const useUserActions = (loadUsers: () => Promise<void>) => {
       // Atualizar perfil do usuário
       const { error } = await supabase
         .from('profiles')
-        .update({ profile_id: profileId })
+        .update({ 
+          profile_id: profileId || null,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', userId);
 
       if (error) throw error;
@@ -44,10 +56,16 @@ export const useUserActions = (loadUsers: () => Promise<void>) => {
         title: "Sucesso", 
         description: "Perfil do usuário atualizado com sucesso! As novas permissões serão aplicadas no próximo login." 
       });
-      loadUsers();
+      
+      // Recarregar usuários após mudança
+      await loadUsers();
     } catch (error) {
       console.error('Error updating user profile:', error);
-      toast({ title: "Erro", description: "Erro ao atualizar perfil", variant: "destructive" });
+      toast({ 
+        title: "Erro", 
+        description: "Erro ao atualizar perfil do usuário", 
+        variant: "destructive" 
+      });
     }
   };
 
@@ -72,7 +90,9 @@ export const useUserActions = (loadUsers: () => Promise<void>) => {
         title: "Sucesso",
         description: "Usuário excluído com sucesso!",
       });
-      loadUsers();
+      
+      // Recarregar usuários após exclusão
+      await loadUsers();
     } catch (error: any) {
       console.error('Error deleting user:', error);
       toast({ 

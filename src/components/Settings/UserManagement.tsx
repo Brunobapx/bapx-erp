@@ -25,8 +25,8 @@ export const UserManagement = () => {
   
   const { toast } = useToast();
   const { userRole, user } = useAuth();
-  const { profiles: accessProfiles } = useProfiles();
-  const { users, loading, loadUsers } = useUserManagement();
+  const { profiles: accessProfiles, loading: profilesLoading } = useProfiles();
+  const { users, loading: usersLoading, loadUsers } = useUserManagement();
   const { 
     handleUpdateUserStatus, 
     handleUpdateUserProfile, 
@@ -43,14 +43,14 @@ export const UserManagement = () => {
   }
 
   // Callback após criar usuário - recarrega a lista imediatamente
-  const handleUserCreated = () => {
+  const handleUserCreated = async () => {
     setIsCreateUserModalOpen(false);
     toast({
       title: "Sucesso",
       description: "Usuário criado com sucesso!",
     });
     // Recarrega a lista de usuários imediatamente
-    loadUsers();
+    await loadUsers();
   };
 
   const handleDeleteUserClick = (userId: string, userName: string, userEmail: string) => {
@@ -61,6 +61,8 @@ export const UserManagement = () => {
       userEmail
     });
   };
+
+  const isLoading = usersLoading || profilesLoading;
 
   return (
     <div className="space-y-6">
@@ -91,7 +93,7 @@ export const UserManagement = () => {
         onStatusChange={handleUpdateUserStatus}
         onProfileChange={handleUpdateUserProfile}
         onDeleteUser={handleDeleteUserClick}
-        loading={loading}
+        loading={isLoading}
       />
     </div>
   );

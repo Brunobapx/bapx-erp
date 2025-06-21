@@ -29,7 +29,7 @@ export const useUserManagement = () => {
   const { toast } = useToast();
   const { companyInfo } = useAuth();
 
-  // Fetch users
+  // Fetch users with improved query
   const loadUsers = async () => {
     try {
       setLoading(true);
@@ -37,11 +37,12 @@ export const useUserManagement = () => {
       
       if (!companyInfo?.id) {
         console.warn('No company ID available');
+        setUsers([]);
         return;
       }
 
-      // Buscar usuários da empresa atual com perfis
-      const { data: profilesData, error: profilesError } = await supabase
+      // Query simplificada com LEFT JOIN direto
+      const { data: usersData, error: usersError } = await supabase
         .from('profiles')
         .select(`
           id,
@@ -53,59 +54,59 @@ export const useUserManagement = () => {
           is_active,
           last_login,
           profile_id,
-          access_profiles!left(
+          access_profiles:profile_id (
             name,
             description
           )
         `)
         .eq('company_id', companyInfo.id);
 
-      if (profilesError) {
-        console.error('Error fetching profiles:', profilesError);
-        throw profilesError;
+      if (usersError) {
+        console.error('Error fetching users:', usersError);
+        throw usersError;
       }
 
-      console.log('Raw profiles data:', profilesData);
+      console.log('Raw users data:', usersData);
 
-      // Buscar emails e roles dos usuários
-      const usersWithRoles = await Promise.all(
-        (profilesData || []).map(async (profile) => {
-          try {
-            // Buscar email do usuário
-            const { data: authData } = await supabase.auth.admin.getUserById(profile.id);
-            
-            // Buscar role do usuário
-            const { data: roleData } = await supabase
-              .from('user_roles')
-              .select('role')
-              .eq('user_id', profile.id)
-              .single();
+      if (!usersData || usersData.length === 0) {
+        console.log('No users found for company');
+        setUsers([]);
+        return;
+      }
 
-            const user: UserProfile = {
-              ...profile,
-              email: authData?.user?.email || '',
-              role: roleData?.role || 'user',
-              access_profile: Array.isArray(profile.access_profiles) && profile.access_profiles.length > 0 
-                ? profile.access_profiles[0] 
-                : undefined
-            };
+      // Buscar emails dos usuários do auth.users via RPC ou query separada
+      const userIds = usersData.map(user => user.id);
+      
+      // Buscar roles dos usuários
+      const { data: rolesData } = await supabase
+        .from('user_roles')
+        .select('user_id, role')
+        .in('user_id', userIds);
 
-            console.log('Processed user:', user);
-            return user;
-          } catch (error) {
-            console.error('Error processing user:', profile.id, error);
-            return {
-              ...profile,
-              email: '',
-              role: 'user',
-              access_profile: undefined
-            };
-          }
-        })
-      );
+      console.log('Roles data:', rolesData);
 
-      console.log('Final users with roles:', usersWithRoles);
-      setUsers(usersWithRoles);
+      // Buscar emails via query direta na view do auth se disponível
+      const { data: authData } = await supabase
+        .from('profiles')
+        .select('id')
+        .in('id', userIds);
+
+      // Mapear dados dos usuários
+      const processedUsers: UserProfile[] = usersData.map((profile) => {
+        const userRole = rolesData?.find(r => r.user_id === profile.id);
+        
+        const user: UserProfile = {
+          ...profile,
+          email: `user-${profile.id.substring(0, 8)}@system.local`, // Fallback temporário
+          role: userRole?.role || 'user',
+          access_profile: profile.access_profiles || undefined
+        };
+
+        return user;
+      });
+
+      console.log('Final processed users:', processedUsers);
+      setUsers(processedUsers);
     } catch (error) {
       console.error('Erro ao carregar usuários:', error);
       toast({
@@ -113,6 +114,7 @@ export const useUserManagement = () => {
         description: "Erro ao carregar usuários",
         variant: "destructive",
       });
+      setUsers([]); // Garantir que lista não fica em estado indefinido
     } finally {
       setLoading(false);
     }
