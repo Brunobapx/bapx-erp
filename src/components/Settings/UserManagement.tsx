@@ -3,11 +3,11 @@ import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/components/Auth/AuthProvider';
-import { useProfiles } from '@/hooks/useProfiles';
-import ActiveUsersTable from './ActiveUsersTable';
-import { UserManagementModals } from './UserManagementModals';
-import { useUserManagement } from './hooks/useUserManagement';
-import { useUserActions } from './hooks/useUserActions';
+import { useSimpleUserManagement } from '@/hooks/useSimpleUserManagement';
+import SimpleUsersTable from './SimpleUsersTable';
+import CreateUserModal from './CreateUserModal';
+import { DeleteUserModal } from './DeleteUserModal';
+import { supabase } from '@/integrations/supabase/client';
 
 export const UserManagement = () => {
   const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
@@ -15,25 +15,16 @@ export const UserManagement = () => {
     open: boolean;
     userId: string;
     userName: string;
-    userEmail: string;
   }>({
     open: false,
     userId: '',
-    userName: '',
-    userEmail: ''
+    userName: ''
   });
   
   const { toast } = useToast();
   const { userRole, user } = useAuth();
-  const { profiles: accessProfiles, loading: profilesLoading } = useProfiles();
-  const { users, loading: usersLoading, loadUsers } = useUserManagement();
-  const { 
-    handleUpdateUserStatus, 
-    handleUpdateUserProfile, 
-    handleDeleteUser 
-  } = useUserActions(loadUsers);
+  const { users, loading, loadUsers, updateUserStatus, updateUserRole } = useSimpleUserManagement();
 
-  // Security check - only admins and masters can access
   if (userRole !== 'admin' && userRole !== 'master') {
     return (
       <div className="text-center p-4">
@@ -42,27 +33,46 @@ export const UserManagement = () => {
     );
   }
 
-  // Callback após criar usuário - recarrega a lista imediatamente
   const handleUserCreated = async () => {
     setIsCreateUserModalOpen(false);
     toast({
       title: "Sucesso",
       description: "Usuário criado com sucesso!",
     });
-    // Recarrega a lista de usuários imediatamente
     await loadUsers();
   };
 
-  const handleDeleteUserClick = (userId: string, userName: string, userEmail: string) => {
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      const { error } = await supabase.functions.invoke('delete-user', {
+        body: { userId },
+        headers: { 'x-requester-role': userRole },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Usuário excluído com sucesso!",
+      });
+      
+      await loadUsers();
+    } catch (error: any) {
+      toast({ 
+        title: "Erro", 
+        description: error.message || "Erro ao excluir usuário", 
+        variant: "destructive" 
+      });
+    }
+  };
+
+  const handleDeleteUserClick = (userId: string, userName: string) => {
     setDeleteUserModal({
       open: true,
       userId,
-      userName,
-      userEmail
+      userName
     });
   };
-
-  const isLoading = usersLoading || profilesLoading;
 
   return (
     <div className="space-y-6">
@@ -73,27 +83,32 @@ export const UserManagement = () => {
         </Button>
       </div>
       
-      <UserManagementModals
-        isCreateUserModalOpen={isCreateUserModalOpen}
-        setIsCreateUserModalOpen={setIsCreateUserModalOpen}
-        deleteUserModal={deleteUserModal}
-        setDeleteUserModal={setDeleteUserModal}
-        availableProfiles={accessProfiles}
+      <CreateUserModal
+        open={isCreateUserModalOpen}
+        setOpen={setIsCreateUserModalOpen}
+        onSuccess={handleUserCreated}
+        availableProfiles={[]}
         userRole={userRole}
+      />
+
+      <DeleteUserModal
+        userId={deleteUserModal.userId}
+        userName={deleteUserModal.userName}
+        userEmail=""
+        open={deleteUserModal.open}
+        onOpenChange={(open) => setDeleteUserModal(prev => ({ ...prev, open }))}
+        onConfirm={handleDeleteUser}
         currentUserId={user?.id}
-        onUserCreated={handleUserCreated}
-        onDeleteUser={handleDeleteUser}
       />
       
-      <ActiveUsersTable
+      <SimpleUsersTable
         users={users}
-        availableProfiles={accessProfiles}
         userRole={userRole}
         currentUserId={user?.id}
-        onStatusChange={handleUpdateUserStatus}
-        onProfileChange={handleUpdateUserProfile}
+        onStatusChange={updateUserStatus}
+        onRoleChange={updateUserRole}
         onDeleteUser={handleDeleteUserClick}
-        loading={isLoading}
+        loading={loading}
       />
     </div>
   );

@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -49,13 +48,9 @@ const App = () => (
                       <Sidebar />
                       <main className="flex-1 overflow-auto lg:ml-64">
                         <Routes>
-                          {/* Dashboard sempre acessível */}
                           <Route path="/" element={<Index />} />
-                          
-                          {/* Configurações sempre acessível */}
                           <Route path="/configuracoes" element={<SettingsPage />} />
                           
-                          {/* Módulos com controle de acesso */}
                           <Route path="/pedidos" element={
                             <ModuleAccessCheck routePath="/pedidos">
                               <OrdersPage />

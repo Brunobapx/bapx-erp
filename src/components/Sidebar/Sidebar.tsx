@@ -4,61 +4,39 @@ import { Link, useLocation } from 'react-router-dom';
 import { 
   ChartBar, Users, Package, ShoppingCart, DollarSign, 
   Truck, Calendar, Settings, FileText, Box, Warehouse,
-  FilePen, User, LogOut, Menu, X
+  FilePen, LogOut, Menu, X
 } from 'lucide-react';
 import { useAuth } from '@/components/Auth/AuthProvider';
-import { useUserPermissions } from '@/hooks/useUserPermissions';
+import { useSimplePermissions } from '@/hooks/useSimplePermissions';
 import { Button } from '@/components/ui/button';
 
 const Sidebar = () => {
   const location = useLocation();
-  const { signOut, userRole } = useAuth();
-  const { getAllowedRoutes, loading } = useUserPermissions();
+  const { signOut } = useAuth();
+  const { getAllowedRoutes } = useSimplePermissions();
   const [isOpen, setIsOpen] = useState(false);
 
   const menuItems = [
-    { icon: ChartBar, label: 'Dashboard', href: '/', iconName: 'ChartBar' },
-    { icon: Users, label: 'Clientes', href: '/clientes', iconName: 'User' },
-    { icon: Package, label: 'Produtos', href: '/produtos', iconName: 'Package' },
-    { icon: Users, label: 'Fornecedores', href: '/fornecedores', iconName: 'Users' },
-    { icon: ShoppingCart, label: 'Compras', href: '/compras', iconName: 'ShoppingCart' },
-    { icon: Warehouse, label: 'Estoque', href: '/estoque', iconName: 'Warehouse' },
-    { icon: Package, label: 'Pedidos', href: '/pedidos', iconName: 'Package' },
-    { icon: Box, label: 'Produção', href: '/producao', iconName: 'Box' },
-    { icon: Box, label: 'Embalagem', href: '/embalagem', iconName: 'Box' },
-    { icon: DollarSign, label: 'Vendas', href: '/vendas', iconName: 'DollarSign' },
-    { icon: FilePen, label: 'Emissão Fiscal', href: '/emissao-fiscal', iconName: 'FilePen' },
-    { icon: DollarSign, label: 'Financeiro', href: '/financeiro', iconName: 'DollarSign' },
-    { icon: Truck, label: 'Rotas', href: '/rotas', iconName: 'Truck' },
-    { icon: Calendar, label: 'Calendário', href: '/calendario', iconName: 'Calendar' },
-    { icon: FilePen, label: 'Ordens de Serviço', href: '/ordens-servico', iconName: 'FilePen' },
-    { icon: Settings, label: 'Configurações', href: '/configuracoes', iconName: 'Settings' }
+    { icon: ChartBar, label: 'Dashboard', href: '/' },
+    { icon: Users, label: 'Clientes', href: '/clientes' },
+    { icon: Package, label: 'Produtos', href: '/produtos' },
+    { icon: Users, label: 'Fornecedores', href: '/fornecedores' },
+    { icon: ShoppingCart, label: 'Compras', href: '/compras' },
+    { icon: Warehouse, label: 'Estoque', href: '/estoque' },
+    { icon: Package, label: 'Pedidos', href: '/pedidos' },
+    { icon: Box, label: 'Produção', href: '/producao' },
+    { icon: Box, label: 'Embalagem', href: '/embalagem' },
+    { icon: DollarSign, label: 'Vendas', href: '/vendas' },
+    { icon: FilePen, label: 'Emissão Fiscal', href: '/emissao-fiscal' },
+    { icon: DollarSign, label: 'Financeiro', href: '/financeiro' },
+    { icon: Truck, label: 'Rotas', href: '/rotas' },
+    { icon: Calendar, label: 'Calendário', href: '/calendario' },
+    { icon: FilePen, label: 'Ordens de Serviço', href: '/ordens-servico' },
+    { icon: Settings, label: 'Configurações', href: '/configuracoes' }
   ];
 
-  // Filtrar itens do menu baseado nas permissões
-  const getFilteredMenuItems = () => {
-    // Master e Admin veem tudo
-    if (userRole === 'master' || userRole === 'admin') {
-      return menuItems;
-    }
-    
-    // Se ainda está carregando, mostrar pelo menos o dashboard
-    if (loading) {
-      return menuItems.filter(item => item.href === '/');
-    }
-    
-    // Para outros usuários, verificar permissões
-    const allowedRoutes = getAllowedRoutes();
-    return menuItems.filter(item => {
-      // Dashboard sempre visível
-      if (item.href === '/') return true;
-      
-      // Verificar se tem permissão para a rota
-      return allowedRoutes.includes(item.href);
-    });
-  };
-
-  const filteredMenuItems = getFilteredMenuItems();
+  const allowedRoutes = getAllowedRoutes();
+  const filteredMenuItems = menuItems.filter(item => allowedRoutes.includes(item.href));
 
   const handleSignOut = async () => {
     try {
@@ -122,7 +100,6 @@ const Sidebar = () => {
 
   return (
     <>
-      {/* Mobile menu button */}
       <Button
         onClick={() => setIsOpen(!isOpen)}
         variant="ghost"
@@ -132,12 +109,10 @@ const Sidebar = () => {
         {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </Button>
 
-      {/* Desktop sidebar */}
       <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white border-r border-gray-200">
         <SidebarContent />
       </aside>
 
-      {/* Mobile sidebar */}
       {isOpen && (
         <>
           <div
