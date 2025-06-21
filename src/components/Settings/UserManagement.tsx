@@ -101,7 +101,7 @@ export const UserManagement = () => {
             ...profile,
             email: authData?.user?.email || '',
             role: roleData?.role || 'user',
-            access_profile: profile.access_profiles
+            access_profile: profile.access_profiles?.[0] || undefined
           };
         })
       );
