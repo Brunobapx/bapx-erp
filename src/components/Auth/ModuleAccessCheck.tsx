@@ -1,7 +1,6 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from './AuthProvider';
-import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Shield } from 'lucide-react';
 
@@ -23,28 +22,31 @@ export const ModuleAccessCheck = ({ routePath, children }: ModuleAccessCheckProp
         return;
       }
 
-      // Master e Admin sempre têm acesso
+      // Master e Admin sempre têm acesso a todos os módulos
       if (userRole === 'master' || userRole === 'admin') {
         setHasAccess(true);
         setLoading(false);
         return;
       }
 
-      try {
-        const { data, error } = await supabase
-          .rpc('user_has_module_access', {
-            _user_id: user.id,
-            _route_path: routePath
-          });
+      // Usuários comuns têm acesso a módulos básicos
+      const allowedRoutes = [
+        '/dashboard',
+        '/orders',
+        '/sales',
+        '/clients',
+        '/products',
+        '/stock',
+        '/production',
+        '/packaging',
+        '/routes',
+        '/finance'
+      ];
 
-        if (error) throw error;
-        setHasAccess(data);
-      } catch (error) {
-        console.error('Erro ao verificar acesso ao módulo:', error);
-        setHasAccess(false);
-      } finally {
-        setLoading(false);
-      }
+      // Verificar se a rota atual está na lista de rotas permitidas
+      const routeAllowed = allowedRoutes.some(route => routePath.startsWith(route));
+      setHasAccess(routeAllowed);
+      setLoading(false);
     };
 
     checkAccess();
