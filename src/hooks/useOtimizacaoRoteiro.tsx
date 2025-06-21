@@ -83,15 +83,16 @@ export const useOtimizacaoRoteiro = () => {
       }
 
       const pedidosProcessados: PedidoRoteiro[] = (data || []).map(pedido => {
-        const cliente = pedido.clients;
+        // Corrigir acesso aos dados do cliente - clients é um objeto, não array
+        const cliente = Array.isArray(pedido.clients) ? pedido.clients[0] : pedido.clients;
         const endereco_parts = [
-          cliente.address,
-          cliente.number,
-          cliente.complement,
-          cliente.bairro,
-          cliente.city,
-          cliente.state,
-          cliente.zip
+          cliente?.address,
+          cliente?.number,
+          cliente?.complement,
+          cliente?.bairro,
+          cliente?.city,
+          cliente?.state,
+          cliente?.zip
         ].filter(Boolean);
         
         const endereco_completo = endereco_parts.join(', ');
