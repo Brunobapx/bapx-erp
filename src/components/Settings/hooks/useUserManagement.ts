@@ -35,7 +35,12 @@ export const useUserManagement = () => {
       setLoading(true);
       console.log('Loading users for company:', companyInfo?.id);
       
-      // Buscar usuários da empresa atual (incluindo usuários sem perfil)
+      if (!companyInfo?.id) {
+        console.warn('No company ID available');
+        return;
+      }
+
+      // Buscar usuários da empresa atual com perfis
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select(`
@@ -48,38 +53,58 @@ export const useUserManagement = () => {
           is_active,
           last_login,
           profile_id,
-          access_profiles(
+          access_profiles!left(
             name,
             description
           )
         `)
-        .eq('company_id', companyInfo?.id);
+        .eq('company_id', companyInfo.id);
 
-      if (profilesError) throw profilesError;
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        throw profilesError;
+      }
+
+      console.log('Raw profiles data:', profilesData);
 
       // Buscar emails e roles dos usuários
       const usersWithRoles = await Promise.all(
         (profilesData || []).map(async (profile) => {
-          // Buscar email do usuário
-          const { data: authData } = await supabase.auth.admin.getUserById(profile.id);
-          
-          // Buscar role do usuário
-          const { data: roleData } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', profile.id)
-            .single();
+          try {
+            // Buscar email do usuário
+            const { data: authData } = await supabase.auth.admin.getUserById(profile.id);
+            
+            // Buscar role do usuário
+            const { data: roleData } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', profile.id)
+              .single();
 
-          return {
-            ...profile,
-            email: authData?.user?.email || '',
-            role: roleData?.role || 'user',
-            access_profile: profile.access_profiles?.[0] || undefined
-          };
+            const user: UserProfile = {
+              ...profile,
+              email: authData?.user?.email || '',
+              role: roleData?.role || 'user',
+              access_profile: Array.isArray(profile.access_profiles) && profile.access_profiles.length > 0 
+                ? profile.access_profiles[0] 
+                : undefined
+            };
+
+            console.log('Processed user:', user);
+            return user;
+          } catch (error) {
+            console.error('Error processing user:', profile.id, error);
+            return {
+              ...profile,
+              email: '',
+              role: 'user',
+              access_profile: undefined
+            };
+          }
         })
       );
 
-      console.log('Loaded users:', usersWithRoles);
+      console.log('Final users with roles:', usersWithRoles);
       setUsers(usersWithRoles);
     } catch (error) {
       console.error('Erro ao carregar usuários:', error);

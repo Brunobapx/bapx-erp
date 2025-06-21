@@ -66,6 +66,21 @@ const ActiveUsersTable: React.FC<Props> = ({
     );
   }
 
+  const getDisplayName = (user: UserProfile) => {
+    const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+    return fullName || user.email || 'Nome não informado';
+  };
+
+  const getProfileDisplayName = (user: UserProfile) => {
+    if (user.access_profile?.name) {
+      return user.access_profile.name;
+    }
+    return 'Sem perfil';
+  };
+
+  console.log('Available profiles:', availableProfiles);
+  console.log('Users:', users);
+
   return (
     <div className="space-y-4">
       <h4 className="text-md font-medium">Usuários do Sistema</h4>
@@ -90,12 +105,7 @@ const ActiveUsersTable: React.FC<Props> = ({
           ) : (
             users.map((user) => (
               <TableRow key={user.id}>
-                <TableCell>
-                  {user.first_name || user.last_name ? 
-                    `${user.first_name} ${user.last_name}`.trim() : 
-                    'Nome não informado'
-                  }
-                </TableCell>
+                <TableCell>{getDisplayName(user)}</TableCell>
                 <TableCell>{user.email || 'Email não disponível'}</TableCell>
                 <TableCell>
                   <Select
@@ -105,15 +115,18 @@ const ActiveUsersTable: React.FC<Props> = ({
                   >
                     <SelectTrigger className="w-40">
                       <SelectValue placeholder="Selecionar perfil">
-                        {user.access_profile?.name || 'Sem perfil'}
+                        {getProfileDisplayName(user)}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {availableProfiles.map(profile => (
-                        <SelectItem value={profile.id} key={profile.id}>
-                          {profile.name}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="">Sem perfil</SelectItem>
+                      {availableProfiles
+                        .filter(profile => profile.is_active)
+                        .map(profile => (
+                          <SelectItem value={profile.id} key={profile.id}>
+                            {profile.name}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </TableCell>
@@ -141,7 +154,7 @@ const ActiveUsersTable: React.FC<Props> = ({
                       size="sm"
                       onClick={() => onDeleteUser(
                         user.id, 
-                        `${user.first_name} ${user.last_name}`.trim() || 'Usuário',
+                        getDisplayName(user),
                         user.email || ''
                       )}
                       disabled={user.id === currentUserId || (userRole !== 'master' && user.role === 'master')}

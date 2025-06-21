@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/components/Auth/AuthProvider';
 
 export interface AccessProfile {
   id: string;
@@ -40,17 +41,29 @@ export const useProfiles = () => {
   const [modules, setModules] = useState<SystemModule[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { companyInfo } = useAuth();
 
   const loadProfiles = async () => {
     try {
+      console.log('Loading profiles for company:', companyInfo?.id);
+      
+      if (!companyInfo?.id) {
+        console.warn('No company ID available');
+        return;
+      }
+
       const { data, error } = await supabase
         .from('access_profiles')
         .select('*')
+        .eq('company_id', companyInfo.id)
         .order('name');
 
       if (error) throw error;
+      
+      console.log('Loaded profiles:', data);
       setProfiles(data || []);
     } catch (error: any) {
+      console.error('Error loading profiles:', error);
       toast({
         title: "Erro",
         description: "Erro ao carregar perfis",
@@ -61,14 +74,20 @@ export const useProfiles = () => {
 
   const loadModules = async () => {
     try {
+      console.log('Loading system modules');
+      
       const { data, error } = await supabase
         .from('system_modules')
         .select('*')
-        .order('sort_order');
+        .eq('is_active', true)
+        .order('category, sort_order');
 
       if (error) throw error;
+      
+      console.log('Loaded modules:', data);
       setModules(data || []);
     } catch (error: any) {
+      console.error('Error loading modules:', error);
       toast({
         title: "Erro",
         description: "Erro ao carregar módulos",
@@ -217,13 +236,18 @@ export const useProfiles = () => {
 
   useEffect(() => {
     const loadData = async () => {
+      if (!companyInfo?.id) {
+        setLoading(false);
+        return;
+      }
+      
       setLoading(true);
       await Promise.all([loadProfiles(), loadModules()]);
       setLoading(false);
     };
 
     loadData();
-  }, []);
+  }, [companyInfo?.id]);
 
   return {
     profiles,
