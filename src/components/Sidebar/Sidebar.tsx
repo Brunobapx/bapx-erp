@@ -36,7 +36,10 @@ const Sidebar = () => {
   ];
 
   const allowedRoutes = getAllowedRoutes();
+  console.log('[Sidebar] Allowed routes:', allowedRoutes);
+  
   const filteredMenuItems = menuItems.filter(item => allowedRoutes.includes(item.href));
+  console.log('[Sidebar] Filtered menu items:', filteredMenuItems.map(item => ({ label: item.label, href: item.href })));
 
   const handleSignOut = async () => {
     try {
