@@ -1,14 +1,18 @@
-
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface PedidoRoteiro {
   id: string;
-  endereco_completo: string;
-  peso: number;
-  client_name: string;
   order_number: string;
+  client_name: string;
+  endereco_completo: string;
+  peso_total: number;
+  items?: Array<{
+    product_name: string;
+    quantity: number;
+    weight: number;
+  }>;
   coordenadas?: {
     longitude: number;
     latitude: number;
@@ -20,6 +24,7 @@ export interface VeiculoRoteiro {
   model: string;
   license_plate: string;
   capacity: number;
+  driver_name?: string;
 }
 
 export interface RoteiroOtimizado {
@@ -40,21 +45,102 @@ export interface ResultadoOtimizacao {
   };
   total_veiculos: number;
   total_pedidos: number;
+  pedidos_nao_alocados: number;
   error?: string;
 }
 
 export const useOtimizacaoRoteiro = () => {
   const [loading, setLoading] = useState(false);
+  const [loadingPedidos, setLoadingPedidos] = useState(false);
   const [roteiros, setRoteiros] = useState<RoteiroOtimizado[]>([]);
+  const [pedidosDisponiveis, setPedidosDisponiveis] = useState<PedidoRoteiro[]>([]);
 
-  const otimizarRoteiroEntregas = async (enderecoOrigem: string): Promise<ResultadoOtimizacao | null> => {
+  const buscarPedidosDisponiveis = async (): Promise<PedidoRoteiro[]> => {
+    try {
+      setLoadingPedidos(true);
+      console.log('Buscando pedidos liberados para venda...');
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
+
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          id,
+          order_number,
+          client_name,
+          client_id,
+          clients!inner(address, number, complement, bairro, city, state, zip),
+          order_items!inner(product_name, quantity, products!inner(weight))
+        `)
+        .eq('status', 'released_for_sale')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Erro ao buscar pedidos:', error);
+        throw new Error('Erro ao buscar pedidos disponíveis');
+      }
+
+      const pedidosProcessados: PedidoRoteiro[] = (data || []).map(pedido => {
+        const cliente = pedido.clients;
+        const endereco_parts = [
+          cliente.address,
+          cliente.number,
+          cliente.complement,
+          cliente.bairro,
+          cliente.city,
+          cliente.state,
+          cliente.zip
+        ].filter(Boolean);
+        
+        const endereco_completo = endereco_parts.join(', ');
+        
+        // Calcular peso total do pedido
+        const peso_total = pedido.order_items.reduce((total: number, item: any) => {
+          return total + (item.quantity * (item.products?.weight || 1));
+        }, 0);
+
+        return {
+          id: pedido.id,
+          order_number: pedido.order_number,
+          client_name: pedido.client_name,
+          endereco_completo,
+          peso_total,
+          items: pedido.order_items.map((item: any) => ({
+            product_name: item.product_name,
+            quantity: item.quantity,
+            weight: item.products?.weight || 1
+          }))
+        };
+      });
+
+      console.log('Pedidos encontrados:', pedidosProcessados.length);
+      setPedidosDisponiveis(pedidosProcessados);
+      return pedidosProcessados;
+
+    } catch (error: any) {
+      console.error('Erro ao buscar pedidos:', error);
+      toast.error(error.message || 'Erro ao buscar pedidos disponíveis');
+      return [];
+    } finally {
+      setLoadingPedidos(false);
+    }
+  };
+
+  const otimizarRoteiroEntregas = async (
+    enderecoOrigem: string, 
+    pedidosSelecionados?: string[]
+  ): Promise<ResultadoOtimizacao | null> => {
     try {
       setLoading(true);
       console.log('Iniciando otimização de roteiro para origem:', enderecoOrigem);
+      console.log('Pedidos selecionados:', pedidosSelecionados);
 
       const { data, error } = await supabase.functions.invoke('otimizar-roteiro-entregas', {
         body: {
-          endereco_origem: enderecoOrigem
+          endereco_origem: enderecoOrigem,
+          pedidos_selecionados: pedidosSelecionados
         }
       });
 
@@ -70,7 +156,12 @@ export const useOtimizacaoRoteiro = () => {
       console.log('Roteiros otimizados recebidos:', data.roteiros);
       setRoteiros(data.roteiros);
       
-      toast.success(`${data.total_veiculos} roteiro(s) otimizado(s) com ${data.total_pedidos} pedido(s)`);
+      let message = `${data.total_veiculos} roteiro(s) otimizado(s) com ${data.total_pedidos} pedido(s)`;
+      if (data.pedidos_nao_alocados > 0) {
+        message += ` (${data.pedidos_nao_alocados} pedido(s) não alocado(s) por excesso de capacidade)`;
+      }
+      
+      toast.success(message);
       
       return data;
 
@@ -96,20 +187,23 @@ export const useOtimizacaoRoteiro = () => {
       // Informações do veículo
       doc.setFontSize(14);
       doc.text(`Veículo: ${roteiro.veiculo.model} - ${roteiro.veiculo.license_plate}`, 20, 40);
-      doc.text(`Capacidade: ${roteiro.veiculo.capacity}kg`, 20, 50);
-      doc.text(`Tempo Total: ${Math.round(roteiro.tempo_total / 60)} minutos`, 20, 60);
-      doc.text(`Distância Total: ${(roteiro.distancia_total / 1000).toFixed(2)} km`, 20, 70);
+      doc.text(`Motorista: ${roteiro.veiculo.driver_name || 'Não informado'}`, 20, 50);
+      doc.text(`Capacidade: ${roteiro.veiculo.capacity}kg`, 20, 60);
+      doc.text(`Tempo Total: ${Math.round(roteiro.tempo_total / 60)} minutos`, 20, 70);
+      doc.text(`Distância Total: ${(roteiro.distancia_total / 1000).toFixed(2)} km`, 20, 80);
       
       // Lista de entregas
       doc.setFontSize(12);
-      doc.text('Sequência de Entregas:', 20, 90);
+      doc.text('Sequência de Entregas:', 20, 100);
       
-      let yPosition = 100;
+      let yPosition = 110;
       roteiro.sequencia.forEach((jobIndex, index) => {
         const pedido = roteiro.pedidos[jobIndex - 1];
         if (pedido) {
           doc.text(`${index + 1}. ${pedido.client_name} - ${pedido.order_number}`, 25, yPosition);
-          yPosition += 10;
+          doc.text(`   ${pedido.endereco_completo}`, 25, yPosition + 7);
+          doc.text(`   Peso: ${pedido.peso_total}kg`, 25, yPosition + 14);
+          yPosition += 25;
         }
       });
       
@@ -129,6 +223,9 @@ export const useOtimizacaoRoteiro = () => {
       // Gerar mensagem formatada para WhatsApp
       let mensagem = `🚛 *ROTEIRO DE ENTREGA*\n\n`;
       mensagem += `*Veículo:* ${roteiro.veiculo.model} - ${roteiro.veiculo.license_plate}\n`;
+      if (roteiro.veiculo.driver_name) {
+        mensagem += `*Motorista:* ${roteiro.veiculo.driver_name}\n`;
+      }
       mensagem += `*Tempo Total:* ${Math.round(roteiro.tempo_total / 60)} minutos\n`;
       mensagem += `*Distância:* ${(roteiro.distancia_total / 1000).toFixed(2)} km\n\n`;
       mensagem += `*SEQUÊNCIA DE ENTREGAS:*\n\n`;
@@ -138,7 +235,8 @@ export const useOtimizacaoRoteiro = () => {
         if (pedido) {
           mensagem += `${index + 1}. *${pedido.client_name}*\n`;
           mensagem += `   Pedido: ${pedido.order_number}\n`;
-          mensagem += `   Peso: ${pedido.peso}kg\n\n`;
+          mensagem += `   Peso: ${pedido.peso_total}kg\n`;
+          mensagem += `   ${pedido.endereco_completo}\n\n`;
         }
       });
       
@@ -160,7 +258,10 @@ export const useOtimizacaoRoteiro = () => {
 
   return {
     loading,
+    loadingPedidos,
     roteiros,
+    pedidosDisponiveis,
+    buscarPedidosDisponiveis,
     otimizarRoteiroEntregas,
     exportarRoteiroPDF,
     enviarRoteiroWhatsApp,

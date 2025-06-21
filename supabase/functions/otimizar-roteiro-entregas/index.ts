@@ -1,20 +1,27 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from "../_shared/cors.ts"
 
-interface Pedido {
+interface PedidoCompleto {
   id: string;
-  endereco_completo: string;
-  peso: number;
-  client_name: string;
   order_number: string;
+  client_name: string;
+  endereco_completo: string;
+  peso_total: number;
+  items: Array<{
+    product_name: string;
+    quantity: number;
+    weight: number;
+  }>;
 }
 
-interface Veiculo {
+interface VeiculoCompleto {
   id: string;
   model: string;
   license_plate: string;
   capacity: number;
+  driver_name?: string;
 }
 
 interface Coordenada {
@@ -22,12 +29,12 @@ interface Coordenada {
   latitude: number;
 }
 
-interface PedidoGeocodificado extends Pedido {
+interface PedidoGeocodificado extends PedidoCompleto {
   coordenadas: Coordenada;
 }
 
 interface RoteiroOtimizado {
-  veiculo: Veiculo;
+  veiculo: VeiculoCompleto;
   pedidos: PedidoGeocodificado[];
   sequencia: number[];
   tempo_total: number;
@@ -41,7 +48,12 @@ serve(async (req) => {
   }
 
   try {
-    const { endereco_origem } = await req.json()
+    const { endereco_origem, pedidos_selecionados } = await req.json()
+    
+    // Criar cliente Supabase
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabase = createClient(supabaseUrl, supabaseKey)
     
     // Obter a chave da API do OpenRouteService
     const orsApiKey = Deno.env.get('OPENROUTESERVICE_API_KEY')
@@ -49,32 +61,113 @@ serve(async (req) => {
       throw new Error('Chave da API OpenRouteService não configurada')
     }
 
-    console.log('Iniciando otimização de roteiro...')
+    console.log('Iniciando otimização de roteiro com dados reais...')
+    console.log('Pedidos selecionados:', pedidos_selecionados)
 
-    // 1. Obter pedidos selecionados (simulado para este exemplo)
-    // Em produção, isso viria do banco de dados
-    const pedidosSelecionados: Pedido[] = [
-      {
-        id: '1',
-        endereco_completo: 'Rua das Flores, 123, Rio de Janeiro, RJ, 20000-000',
-        peso: 10,
-        client_name: 'Cliente A',
-        order_number: 'PED-001'
-      },
-      {
-        id: '2', 
-        endereco_completo: 'Av. Copacabana, 456, Rio de Janeiro, RJ, 22000-000',
-        peso: 20,
-        client_name: 'Cliente B',
-        order_number: 'PED-002'
+    // 1. Buscar pedidos selecionados do banco
+    let pedidosQuery = supabase
+      .from('orders')
+      .select(`
+        id,
+        order_number,
+        client_name,
+        client_id,
+        clients!inner(address, number, complement, bairro, city, state, zip),
+        order_items!inner(product_name, quantity, products!inner(weight))
+      `)
+      .eq('status', 'released_for_sale')
+
+    if (pedidos_selecionados && pedidos_selecionados.length > 0) {
+      pedidosQuery = pedidosQuery.in('id', pedidos_selecionados)
+    }
+
+    const { data: pedidosData, error: pedidosError } = await pedidosQuery
+
+    if (pedidosError) {
+      console.error('Erro ao buscar pedidos:', pedidosError)
+      throw new Error('Erro ao buscar pedidos do banco de dados')
+    }
+
+    if (!pedidosData || pedidosData.length === 0) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Nenhum pedido liberado para venda encontrado'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        },
+      )
+    }
+
+    // 2. Processar pedidos e construir endereços
+    const pedidosProcessados: PedidoCompleto[] = pedidosData.map(pedido => {
+      const cliente = pedido.clients
+      const endereco_parts = [
+        cliente.address,
+        cliente.number,
+        cliente.complement,
+        cliente.bairro,
+        cliente.city,
+        cliente.state,
+        cliente.zip
+      ].filter(Boolean)
+      
+      const endereco_completo = endereco_parts.join(', ')
+      
+      // Calcular peso total do pedido
+      const peso_total = pedido.order_items.reduce((total: number, item: any) => {
+        return total + (item.quantity * (item.products?.weight || 1))
+      }, 0)
+
+      return {
+        id: pedido.id,
+        order_number: pedido.order_number,
+        client_name: pedido.client_name,
+        endereco_completo,
+        peso_total,
+        items: pedido.order_items.map((item: any) => ({
+          product_name: item.product_name,
+          quantity: item.quantity,
+          weight: item.products?.weight || 1
+        }))
       }
-    ]
+    })
 
-    // 2. Geocodificar endereços
+    console.log('Pedidos processados:', pedidosProcessados.length)
+
+    // 3. Buscar veículos ativos
+    const { data: veiculosData, error: veiculosError } = await supabase
+      .from('vehicles')
+      .select('*')
+      .eq('status', 'active')
+
+    if (veiculosError) {
+      console.error('Erro ao buscar veículos:', veiculosError)
+      throw new Error('Erro ao buscar veículos do banco de dados')
+    }
+
+    if (!veiculosData || veiculosData.length === 0) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Nenhum veículo ativo encontrado'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        },
+      )
+    }
+
+    console.log('Veículos encontrados:', veiculosData.length)
+
+    // 4. Geocodificar endereços dos pedidos
     console.log('Geocodificando endereços...')
     const pedidosGeocodificados: PedidoGeocodificado[] = []
     
-    for (const pedido of pedidosSelecionados) {
+    for (const pedido of pedidosProcessados) {
       try {
         const geocodeUrl = `https://api.openrouteservice.org/geocode/search?api_key=${orsApiKey}&text=${encodeURIComponent(pedido.endereco_completo)}`
         
@@ -89,14 +182,29 @@ serve(async (req) => {
             coordenadas: { longitude, latitude }
           })
           
-          console.log(`Geocodificado: ${pedido.endereco_completo} -> ${longitude}, ${latitude}`)
+          console.log(`Geocodificado: ${pedido.client_name} -> ${longitude}, ${latitude}`)
+        } else {
+          console.warn(`Não foi possível geocodificar: ${pedido.endereco_completo}`)
         }
       } catch (error) {
         console.error(`Erro ao geocodificar ${pedido.endereco_completo}:`, error)
       }
     }
 
-    // Geocodificar endereço de origem
+    if (pedidosGeocodificados.length === 0) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Não foi possível geocodificar nenhum endereço'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        },
+      )
+    }
+
+    // 5. Geocodificar endereço de origem
     const origemUrl = `https://api.openrouteservice.org/geocode/search?api_key=${orsApiKey}&text=${encodeURIComponent(endereco_origem)}`
     const origemResponse = await fetch(origemUrl)
     const origemData = await origemResponse.json()
@@ -105,49 +213,44 @@ serve(async (req) => {
     if (origemData.features && origemData.features.length > 0) {
       const [longitude, latitude] = origemData.features[0].geometry.coordinates
       coordenadasOrigem = { longitude, latitude }
+      console.log(`Origem geocodificada: ${endereco_origem} -> ${longitude}, ${latitude}`)
     }
 
-    // 3. Obter veículos ativos (simulado)
-    const veiculosAtivos: Veiculo[] = [
-      {
-        id: '1',
-        model: 'Mercedes Sprinter',
-        license_plate: 'ABC-1234',
-        capacity: 30
-      },
-      {
-        id: '2',
-        model: 'Ford Transit',
-        license_plate: 'DEF-5678', 
-        capacity: 25
-      }
-    ]
-
-    // 4. Alocar pedidos aos veículos respeitando capacidade
+    // 6. Alocar pedidos aos veículos respeitando capacidade
     console.log('Alocando pedidos aos veículos...')
-    const alocacoes: { veiculo: Veiculo; pedidos: PedidoGeocodificado[] }[] = []
+    const alocacoes: { veiculo: VeiculoCompleto; pedidos: PedidoGeocodificado[] }[] = []
     
     let pedidosRestantes = [...pedidosGeocodificados]
     
-    for (const veiculo of veiculosAtivos) {
+    for (const veiculo of veiculosData) {
       const pedidosDoVeiculo: PedidoGeocodificado[] = []
       let pesoTotal = 0
       
       for (let i = pedidosRestantes.length - 1; i >= 0; i--) {
         const pedido = pedidosRestantes[i]
-        if (pesoTotal + pedido.peso <= veiculo.capacity) {
+        if (pesoTotal + pedido.peso_total <= veiculo.capacity) {
           pedidosDoVeiculo.push(pedido)
-          pesoTotal += pedido.peso
+          pesoTotal += pedido.peso_total
           pedidosRestantes.splice(i, 1)
         }
       }
       
       if (pedidosDoVeiculo.length > 0) {
-        alocacoes.push({ veiculo, pedidos: pedidosDoVeiculo })
+        alocacoes.push({ 
+          veiculo: {
+            id: veiculo.id,
+            model: veiculo.model,
+            license_plate: veiculo.license_plate,
+            capacity: veiculo.capacity,
+            driver_name: veiculo.driver_name
+          }, 
+          pedidos: pedidosDoVeiculo 
+        })
+        console.log(`Veículo ${veiculo.license_plate}: ${pedidosDoVeiculo.length} pedidos, ${pesoTotal}kg`)
       }
     }
 
-    // 5. Otimizar rotas para cada veículo
+    // 7. Otimizar rotas para cada veículo
     console.log('Otimizando rotas...')
     const roteirosOtimizados: RoteiroOtimizado[] = []
     
@@ -156,7 +259,7 @@ serve(async (req) => {
         const jobs = alocacao.pedidos.map((pedido, index) => ({
           id: index + 1,
           location: [pedido.coordenadas.longitude, pedido.coordenadas.latitude],
-          amount: [pedido.peso]
+          amount: [pedido.peso_total]
         }))
         
         const requestBody = {
@@ -169,7 +272,7 @@ serve(async (req) => {
           }]
         }
         
-        console.log('Enviando para OpenRouteService:', JSON.stringify(requestBody, null, 2))
+        console.log(`Otimizando rota para veículo ${alocacao.veiculo.license_plate}`)
         
         const optimizationResponse = await fetch('https://api.openrouteservice.org/optimization', {
           method: 'POST',
@@ -187,7 +290,6 @@ serve(async (req) => {
         }
         
         const optimizationData = await optimizationResponse.json()
-        console.log('Resposta da otimização:', JSON.stringify(optimizationData, null, 2))
         
         if (optimizationData.routes && optimizationData.routes.length > 0) {
           const route = optimizationData.routes[0]
@@ -215,7 +317,8 @@ serve(async (req) => {
         roteiros: roteirosOtimizados,
         coordenadas_origem: coordenadasOrigem,
         total_veiculos: roteirosOtimizados.length,
-        total_pedidos: pedidosGeocodificados.length
+        total_pedidos: pedidosGeocodificados.length,
+        pedidos_nao_alocados: pedidosRestantes.length
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
