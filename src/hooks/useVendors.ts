@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/components/Auth/AuthProvider';
 
-interface Vendor {
+export interface Vendor {
   id: string;
   name: string;
   cnpj?: string;
@@ -23,6 +23,7 @@ interface Vendor {
 export const useVendors = () => {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -31,6 +32,7 @@ export const useVendors = () => {
     
     try {
       setLoading(true);
+      setError(null);
       console.log('[useVendors] Carregando fornecedores da empresa');
       
       const { data, error } = await supabase
@@ -44,9 +46,11 @@ export const useVendors = () => {
       setVendors(data || []);
     } catch (error: any) {
       console.error('[useVendors] Erro ao carregar fornecedores:', error);
+      const errorMessage = error.message || "Erro ao carregar fornecedores";
+      setError(errorMessage);
       toast({
         title: "Erro",
-        description: error.message || "Erro ao carregar fornecedores",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -137,6 +141,8 @@ export const useVendors = () => {
     }
   };
 
+  const refreshVendors = loadVendors;
+
   useEffect(() => {
     loadVendors();
   }, [user]);
@@ -144,7 +150,9 @@ export const useVendors = () => {
   return {
     vendors,
     loading,
+    error,
     loadVendors,
+    refreshVendors,
     createVendor,
     updateVendor,
     deleteVendor,

@@ -27,7 +27,7 @@ const ClientsPage = () => {
   const { 
     clients: filteredClients, 
     allClients,
-    isLoading, 
+    loading, 
     error, 
     searchQuery, 
     setSearchQuery, 
@@ -35,7 +35,7 @@ const ClientsPage = () => {
   } = useClients();
 
   console.log('ClientsPage - Estado atual:', {
-    isLoading,
+    loading,
     error,
     filteredClientsCount: filteredClients?.length || 0,
     allClientsCount: allClients?.length || 0,
@@ -56,12 +56,12 @@ const ClientsPage = () => {
 
   const getDocumentId = (client: any) => {
     if (!client) return '';
-    return client.type === 'Jurídica' ? (client.cnpj || '') : (client.cpf || '');
+    return client.type === 'PJ' ? (client.cnpj || '') : (client.cpf || '');
   };
 
   const getRegisterNumber = (client: any) => {
     if (!client) return '';
-    return client.type === 'Jurídica' ? (client.ie || '') : (client.rg || '');
+    return client.type === 'PJ' ? (client.ie || '') : (client.rg || '');
   };
 
   const handleModalClose = (refresh = false) => {
@@ -140,7 +140,7 @@ const ClientsPage = () => {
       
       {/* Debug info - remove in production */}
       <div className="text-xs text-gray-500 p-2 bg-gray-50 rounded">
-        Debug: Loading: {isLoading ? 'Sim' : 'Não'} | 
+        Debug: Loading: {loading ? 'Sim' : 'Não'} | 
         Erro: {error || 'Nenhum'} | 
         Total clientes: {allClients?.length || 0} | 
         Filtrados: {safeFilteredClients.length}
@@ -148,7 +148,7 @@ const ClientsPage = () => {
       
       <Card>
         <CardContent className="p-0">
-          {isLoading ? (
+          {loading ? (
             <div className="flex justify-center items-center p-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               <span className="ml-2">Carregando clientes...</span>
@@ -194,8 +194,8 @@ const ClientsPage = () => {
                       <TableCell>{client.email || 'Não informado'}</TableCell>
                       <TableCell>{client.phone || 'Não informado'}</TableCell>
                       <TableCell>
-                        <span className={`stage-badge ${client.type === 'Jurídica' ? 'badge-order' : 'badge-production'}`}>
-                          {client.type === 'Jurídica' ? 'PJ' : 'PF'}
+                        <span className={`stage-badge ${client.type === 'PJ' ? 'badge-order' : 'badge-production'}`}>
+                          {client.type === 'PJ' ? 'PJ' : 'PF'}
                         </span>
                       </TableCell>
                     </TableRow>
@@ -204,7 +204,7 @@ const ClientsPage = () => {
               </TableBody>
             </Table>
           )}
-          {!isLoading && !error && safeFilteredClients.length === 0 && (
+          {!loading && !error && safeFilteredClients.length === 0 && (
             <div className="p-8 text-center">
               <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-600 font-medium">Nenhum cliente encontrado</p>

@@ -1,15 +1,40 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/components/Auth/AuthProvider';
 
-interface Order {
+export type OrderStatus = 
+  | 'pending'
+  | 'in_production'
+  | 'in_packaging'
+  | 'packaged'
+  | 'released_for_sale'
+  | 'sale_confirmed'
+  | 'in_delivery'
+  | 'delivered'
+  | 'cancelled';
+
+export interface OrderItem {
+  id: string;
+  order_id: string;
+  product_id: string;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  created_at?: string;
+  updated_at?: string;
+  user_id?: string;
+  company_id?: string;
+}
+
+export interface Order {
   id: string;
   order_number: string;
   client_id: string;
   client_name: string;
-  status: string;
+  status: OrderStatus;
   total_amount: number;
   delivery_deadline?: string;
   salesperson_id?: string;
@@ -19,6 +44,7 @@ interface Order {
   notes?: string;
   created_at: string;
   updated_at: string;
+  order_items?: OrderItem[];
 }
 
 export const useOrders = () => {
@@ -36,7 +62,10 @@ export const useOrders = () => {
       
       const { data, error } = await supabase
         .from('orders')
-        .select('*')
+        .select(`
+          *,
+          order_items (*)
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -138,6 +167,45 @@ export const useOrders = () => {
     }
   };
 
+  const getOrderById = useCallback((orderId: string) => {
+    return orders.find(order => order.id === orderId);
+  }, [orders]);
+
+  const refreshOrders = loadOrders;
+
+  // Helper functions for backward compatibility
+  const sendToProduction = async (orderId: string) => {
+    await updateOrder(orderId, { status: 'in_production' });
+  };
+
+  const checkStockAndSendToProduction = async (orderId: string) => {
+    // Basic implementation - this can be expanded
+    await sendToProduction(orderId);
+  };
+
+  const isOrderCompleted = (status: OrderStatus) => {
+    return ['delivered', 'cancelled'].includes(status);
+  };
+
+  const getFirstOrderItem = (order: Order) => {
+    return order.order_items?.[0];
+  };
+
+  const translateStatus = (status: OrderStatus) => {
+    const statusMap: Record<OrderStatus, string> = {
+      'pending': 'Pendente',
+      'in_production': 'Em Produção',
+      'in_packaging': 'Em Embalagem',
+      'packaged': 'Embalado',
+      'released_for_sale': 'Liberado para Venda',
+      'sale_confirmed': 'Venda Confirmada',
+      'in_delivery': 'Em Entrega',
+      'delivered': 'Entregue',
+      'cancelled': 'Cancelado'
+    };
+    return statusMap[status] || status;
+  };
+
   useEffect(() => {
     loadOrders();
   }, [user]);
@@ -146,8 +214,15 @@ export const useOrders = () => {
     orders,
     loading,
     loadOrders,
+    refreshOrders,
     createOrder,
     updateOrder,
     deleteOrder,
+    getOrderById,
+    sendToProduction,
+    checkStockAndSendToProduction,
+    isOrderCompleted,
+    getFirstOrderItem,
+    translateStatus,
   };
 };

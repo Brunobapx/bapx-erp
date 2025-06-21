@@ -1,10 +1,10 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/components/Auth/AuthProvider';
 
-interface Product {
+export interface Product {
   id: string;
   code?: string;
   name: string;
@@ -33,6 +33,8 @@ interface Product {
 export const useProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -41,6 +43,7 @@ export const useProducts = () => {
     
     try {
       setLoading(true);
+      setError(null);
       console.log('[useProducts] Carregando produtos da empresa');
       
       const { data, error } = await supabase
@@ -54,9 +57,11 @@ export const useProducts = () => {
       setProducts(data || []);
     } catch (error: any) {
       console.error('[useProducts] Erro ao carregar produtos:', error);
+      const errorMessage = error.message || "Erro ao carregar produtos";
+      setError(errorMessage);
       toast({
         title: "Erro",
-        description: error.message || "Erro ao carregar produtos",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -147,14 +152,36 @@ export const useProducts = () => {
     }
   };
 
+  const searchProducts = useCallback((searchTerm: string) => {
+    if (!searchTerm?.trim()) return products;
+    const searchString = searchTerm.toLowerCase();
+    return products.filter(product => {
+      return (
+        (product.name && product.name.toLowerCase().includes(searchString)) ||
+        (product.code && product.code.toLowerCase().includes(searchString)) ||
+        (product.sku && product.sku.toLowerCase().includes(searchString)) ||
+        (product.ncm && product.ncm.toLowerCase().includes(searchString)) ||
+        (product.category && product.category.toLowerCase().includes(searchString))
+      );
+    });
+  }, [products]);
+
+  const filteredProducts = searchProducts(searchQuery);
+  const refreshProducts = loadProducts;
+
   useEffect(() => {
     loadProducts();
   }, [user]);
 
   return {
-    products,
+    products: filteredProducts,
     loading,
+    error,
+    searchQuery,
+    setSearchQuery,
     loadProducts,
+    refreshProducts,
+    searchProducts,
     createProduct,
     updateProduct,
     deleteProduct,

@@ -76,6 +76,12 @@ export const UserManagement = () => {
     });
   };
 
+  // Convert profiles to AccessProfile format with description
+  const availableProfiles = profiles.map(profile => ({
+    ...profile,
+    description: profile.description || `Perfil ${profile.first_name || ''} ${profile.last_name || ''}`.trim()
+  }));
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -89,7 +95,7 @@ export const UserManagement = () => {
         open={isCreateUserModalOpen}
         setOpen={setIsCreateUserModalOpen}
         onSuccess={handleUserCreated}
-        availableProfiles={profiles}
+        availableProfiles={availableProfiles}
         userRole={userRole}
       />
 

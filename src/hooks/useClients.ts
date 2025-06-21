@@ -1,10 +1,10 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/components/Auth/AuthProvider';
 
-interface Client {
+export interface Client {
   id: string;
   name: string;
   type: 'PF' | 'PJ';
@@ -28,6 +28,8 @@ interface Client {
 export const useClients = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -36,6 +38,7 @@ export const useClients = () => {
     
     try {
       setLoading(true);
+      setError(null);
       console.log('[useClients] Carregando clientes da empresa');
       
       const { data, error } = await supabase
@@ -49,9 +52,11 @@ export const useClients = () => {
       setClients(data || []);
     } catch (error: any) {
       console.error('[useClients] Erro ao carregar clientes:', error);
+      const errorMessage = error.message || "Erro ao carregar clientes";
+      setError(errorMessage);
       toast({
         title: "Erro",
-        description: error.message || "Erro ao carregar clientes",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -142,14 +147,42 @@ export const useClients = () => {
     }
   };
 
+  const getClientById = useCallback((clientId: string) => {
+    return clients.find(c => c.id === clientId);
+  }, [clients]);
+
+  const searchClients = useCallback((searchTerm: string) => {
+    if (!searchTerm?.trim()) return clients;
+    const searchString = searchTerm.toLowerCase();
+    return clients.filter(client => {
+      return (
+        (client.name && client.name.toLowerCase().includes(searchString)) ||
+        (client.cnpj && client.cnpj.toLowerCase().includes(searchString)) ||
+        (client.cpf && client.cpf.toLowerCase().includes(searchString)) ||
+        (client.email && client.email.toLowerCase().includes(searchString))
+      );
+    });
+  }, [clients]);
+
+  const filteredClients = searchClients(searchQuery);
+  const refreshClients = loadClients;
+
   useEffect(() => {
     loadClients();
   }, [user]);
 
   return {
-    clients,
+    clients: filteredClients,
+    allClients: clients,
     loading,
+    isLoading: loading, // alias for backward compatibility
+    error,
+    searchQuery,
+    setSearchQuery,
     loadClients,
+    refreshClients,
+    getClientById,
+    searchClients,
     createClient,
     updateClient,
     deleteClient,
