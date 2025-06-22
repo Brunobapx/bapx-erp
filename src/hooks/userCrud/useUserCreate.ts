@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from '@/components/Auth/AuthProvider';
 import { validateWithSecurity, userOperationSchemas } from '@/lib/enhancedValidation';
 import { sanitizer } from '@/lib/sanitization';
-import { checkRateLimit, createUserRateLimit } from '@/lib/rateLimiting';
+import { checkRateLimit, generalRateLimit } from '@/lib/rateLimiting';
 import { auditUserAction, auditSecurityEvent } from '@/lib/auditLogging';
 
 export interface CreateUserData {
@@ -22,27 +22,28 @@ export interface CreateUserData {
 export const useUserCreate = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const { companyInfo, userRole, user } = useAuth();
+  const { userRole, user } = useAuth();
 
   const createUser = async (userData: CreateUserData) => {
     setLoading(true);
     
     try {
+      const currentUserId = user?.id || 'anonymous';
+      
       // Rate limiting check
-      const userId = user?.id || 'anonymous';
-      const rateLimitCheck = checkRateLimit(createUserRateLimit, userId);
+      const rateLimitCheck = checkRateLimit(generalRateLimit, currentUserId);
       
       if (!rateLimitCheck.allowed) {
         auditSecurityEvent(
           'rate_limit_exceeded',
-          { operation: 'create_user', userId },
+          { operation: 'create_user', userId: currentUserId },
           undefined,
           navigator.userAgent,
           false,
           'Rate limit exceeded for user creation'
         );
         
-        throw new Error('Muitas tentativas de criação. Tente novamente mais tarde.');
+        throw new Error('Muitas tentativas. Tente novamente mais tarde.');
       }
 
       // Validar e sanitizar dados
@@ -51,7 +52,7 @@ export const useUserCreate = () => {
         {
           firstName: sanitizer.sanitizeText(userData.firstName),
           lastName: sanitizer.sanitizeText(userData.lastName),
-          email: sanitizer.sanitizeEmail(userData.email),
+          email: sanitizer.sanitizeText(userData.email),
           password: userData.password,
           profileId: userData.profileId,
           role: userData.role,
@@ -64,9 +65,9 @@ export const useUserCreate = () => {
       if (!validation.success) {
         auditUserAction(
           'create_user_validation_failed',
-          userId,
+          currentUserId,
           user?.email || 'unknown',
-          { errors: validation.errors },
+          { userData: { email: userData.email }, validationErrors: validation.errors },
           false,
           validation.errors.join(', ')
         );
@@ -76,20 +77,6 @@ export const useUserCreate = () => {
 
       const validatedData = validation.data;
 
-      // Detectar tentativas de ataque
-      if (sanitizer.detectXSS(userData.firstName) || sanitizer.detectXSS(userData.lastName)) {
-        auditSecurityEvent(
-          'xss_attempt',
-          { operation: 'create_user', data: userData },
-          undefined,
-          navigator.userAgent,
-          false,
-          'XSS attempt detected in user creation'
-        );
-        
-        throw new Error('Dados inválidos detectados.');
-      }
-
       const { error } = await supabase.functions.invoke('create-user', {
         body: {
           email: validatedData.email,
@@ -98,9 +85,8 @@ export const useUserCreate = () => {
           lastName: validatedData.lastName,
           role: validatedData.role,
           profileId: validatedData.profileId || null,
-          department: validatedData.department || null,
-          position: validatedData.position || null,
-          companyId: companyInfo?.id,
+          department: validatedData.department,
+          position: validatedData.position,
         },
         headers: {
           'x-requester-role': userRole,
@@ -112,12 +98,11 @@ export const useUserCreate = () => {
       // Log sucesso
       auditUserAction(
         'create_user_success',
-        userId,
+        currentUserId,
         user?.email || 'unknown',
         { 
-          targetEmail: validatedData.email,
-          role: validatedData.role,
-          profileId: validatedData.profileId 
+          createdUserEmail: validatedData.email,
+          role: validatedData.role
         }
       );
 
@@ -134,7 +119,7 @@ export const useUserCreate = () => {
         'create_user_failed',
         user?.id || 'anonymous',
         user?.email || 'unknown',
-        { error: error.message },
+        { userData: { email: userData.email }, error: error.message },
         false,
         error.message
       );

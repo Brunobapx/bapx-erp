@@ -1,4 +1,5 @@
 
-export { useUserCreate, type CreateUserData } from './useUserCreate';
-export { useUserUpdate, type UpdateUserData } from './useUserUpdate';
+export { useUserCreate } from './useUserCreate';
+export { useUserUpdate } from './useUserUpdate';
 export { useUserDelete } from './useUserDelete';
+export type { CreateUserData, UpdateUserData, OperationResult } from './types';

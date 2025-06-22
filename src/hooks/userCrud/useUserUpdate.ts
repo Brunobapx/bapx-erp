@@ -1,131 +1,71 @@
 
 import { useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from '@/components/Auth/AuthProvider';
-import { validateWithSecurity, userOperationSchemas } from '@/lib/enhancedValidation';
-import { sanitizer } from '@/lib/sanitization';
-import { checkRateLimit, generalRateLimit } from '@/lib/rateLimiting';
-import { auditUserAction, auditSecurityEvent } from '@/lib/auditLogging';
-
-export interface UpdateUserData {
-  first_name: string;
-  last_name: string;
-  department?: string;
-  position?: string;
-  role?: string;
-  profile_id?: string;
-  new_password?: string;
-}
+import { UpdateUserData, OperationResult } from './types';
+import { validateUpdateUserData } from './validation/updateUserValidation';
+import { updateProfile, updateUserStatus as updateProfileStatus } from './operations/profileOperations';
+import { updateUserRole } from './operations/roleOperations';
+import { updateUserPassword } from './operations/passwordOperations';
+import { checkUserOperationRateLimit } from './security/rateLimitUtils';
+import { 
+  logValidationFailed, 
+  logUpdateSuccess, 
+  logUpdateFailed,
+  logStatusUpdateSuccess,
+  logStatusUpdateFailed
+} from './audit/auditUtils';
 
 export const useUserUpdate = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { userRole, user } = useAuth();
 
-  const updateUser = async (userId: string, userData: UpdateUserData) => {
+  const updateUser = async (userId: string, userData: UpdateUserData): Promise<OperationResult> => {
     setLoading(true);
     
     try {
-      // Rate limiting check
       const currentUserId = user?.id || 'anonymous';
-      const rateLimitCheck = checkRateLimit(generalRateLimit, currentUserId);
+      const userEmail = user?.email || 'unknown';
       
-      if (!rateLimitCheck.allowed) {
-        auditSecurityEvent(
-          'rate_limit_exceeded',
-          { operation: 'update_user', userId: currentUserId },
-          undefined,
-          navigator.userAgent,
-          false,
-          'Rate limit exceeded for user update'
-        );
-        
-        throw new Error('Muitas tentativas. Tente novamente mais tarde.');
-      }
+      // Rate limiting check
+      checkUserOperationRateLimit(currentUserId, 'update_user');
 
       // Validar e sanitizar dados
-      const validation = validateWithSecurity(
-        userOperationSchemas.updateUser,
-        {
-          first_name: sanitizer.sanitizeText(userData.first_name),
-          last_name: sanitizer.sanitizeText(userData.last_name),
-          department: userData.department ? sanitizer.sanitizeText(userData.department) : undefined,
-          position: userData.position ? sanitizer.sanitizeText(userData.position) : undefined,
-          role: userData.role,
-          profile_id: userData.profile_id,
-          new_password: userData.new_password,
-        },
-        'update_user'
-      );
+      const validation = validateUpdateUserData(userData);
 
       if (!validation.success) {
-        auditUserAction(
-          'update_user_validation_failed',
-          currentUserId,
-          user?.email || 'unknown',
-          { targetUserId: userId, errors: validation.errors },
-          false,
-          validation.errors.join(', ')
-        );
-        
+        logValidationFailed(currentUserId, userEmail, userId, validation.errors);
         throw new Error(validation.errors[0]);
       }
 
       const validatedData = validation.data;
 
       // Atualizar dados do perfil
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          first_name: validatedData.first_name,
-          last_name: validatedData.last_name,
-          department: validatedData.department,
-          position: validatedData.position,
-          profile_id: validatedData.profile_id || null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId);
-
-      if (profileError) throw profileError;
+      await updateProfile(userId, {
+        first_name: validatedData.first_name!,
+        last_name: validatedData.last_name!,
+        department: validatedData.department,
+        position: validatedData.position,
+        profile_id: validatedData.profile_id,
+      });
 
       // Atualizar role se fornecida
       if (userData.role) {
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .update({ role: userData.role })
-          .eq('user_id', userId);
-
-        if (roleError) throw roleError;
+        await updateUserRole(userId, userData.role);
       }
 
       // Atualizar senha se fornecida
       if (userData.new_password?.trim()) {
-        const { error: passwordError } = await supabase.functions.invoke('update-user-password', {
-          body: { 
-            userId, 
-            newPassword: userData.new_password 
-          },
-          headers: {
-            'x-requester-role': userRole,
-          },
-        });
-
-        if (passwordError) {
+        try {
+          await updateUserPassword(userId, userData.new_password, userRole);
+        } catch (passwordError) {
           console.warn('Não foi possível atualizar a senha:', passwordError);
         }
       }
 
       // Log sucesso
-      auditUserAction(
-        'update_user_success',
-        currentUserId,
-        user?.email || 'unknown',
-        { 
-          targetUserId: userId,
-          updatedFields: Object.keys(validatedData)
-        }
-      );
+      logUpdateSuccess(currentUserId, userEmail, userId, Object.keys(validatedData));
 
       toast({
         title: "Sucesso",
@@ -136,14 +76,7 @@ export const useUserUpdate = () => {
     } catch (error: any) {
       console.error('Erro ao atualizar usuário:', error);
       
-      auditUserAction(
-        'update_user_failed',
-        user?.id || 'anonymous',
-        user?.email || 'unknown',
-        { targetUserId: userId, error: error.message },
-        false,
-        error.message
-      );
+      logUpdateFailed(user?.id || 'anonymous', user?.email || 'unknown', userId, error.message);
       
       toast({
         title: "Erro",
@@ -157,24 +90,14 @@ export const useUserUpdate = () => {
     }
   };
 
-  const updateUserStatus = async (userId: string, isActive: boolean) => {
+  const updateUserStatus = async (userId: string, isActive: boolean): Promise<OperationResult> => {
     try {
       const currentUserId = user?.id || 'anonymous';
+      const userEmail = user?.email || 'unknown';
       
-      const { error } = await supabase
-        .from('profiles')
-        .update({ is_active: isActive })
-        .eq('id', userId);
-        
-      if (error) throw error;
+      await updateProfileStatus(userId, isActive);
       
-      // Log da ação
-      auditUserAction(
-        'update_user_status',
-        currentUserId,
-        user?.email || 'unknown',
-        { targetUserId: userId, newStatus: isActive }
-      );
+      logStatusUpdateSuccess(currentUserId, userEmail, userId, isActive);
       
       toast({
         title: "Sucesso",
@@ -185,14 +108,7 @@ export const useUserUpdate = () => {
     } catch (error: any) {
       console.error('Error updating user status:', error);
       
-      auditUserAction(
-        'update_user_status_failed',
-        user?.id || 'anonymous',
-        user?.email || 'unknown',
-        { targetUserId: userId, error: error.message },
-        false,
-        error.message
-      );
+      logStatusUpdateFailed(user?.id || 'anonymous', user?.email || 'unknown', userId, error.message);
       
       toast({ 
         title: "Erro", 
