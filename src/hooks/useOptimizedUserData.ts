@@ -107,17 +107,20 @@ export const useOptimizedUserData = () => {
         let accessProfile: { name: string; description: string; } | null = null;
         
         if (user.access_profiles) {
-          if (Array.isArray(user.access_profiles) && user.access_profiles.length > 0) {
+          // Type assertion to help TypeScript understand the possible types
+          const profiles = user.access_profiles as any;
+          
+          if (Array.isArray(profiles) && profiles.length > 0) {
             // If it's an array, take the first item
             accessProfile = {
-              name: user.access_profiles[0].name || '',
-              description: user.access_profiles[0].description || ''
+              name: profiles[0]?.name || '',
+              description: profiles[0]?.description || ''
             };
-          } else if (!Array.isArray(user.access_profiles)) {
+          } else if (typeof profiles === 'object' && profiles.name !== undefined) {
             // If it's a single object
             accessProfile = {
-              name: user.access_profiles.name || '',
-              description: user.access_profiles.description || ''
+              name: profiles.name || '',
+              description: profiles.description || ''
             };
           }
         }
