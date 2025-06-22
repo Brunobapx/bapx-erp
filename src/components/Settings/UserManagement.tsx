@@ -14,7 +14,8 @@ import { EditUserModal } from './EditUserModal';
 import { DeleteUserModal } from './DeleteUserModal';
 
 export const UserManagement = () => {
-  const { userId: currentUserId, userRole } = useAuth();
+  const { user, userRole } = useAuth();
+  const currentUserId = user?.id;
   const { users, loading, loadUsers, updateUserStatus, updateUserRole, updateUserProfile } = useSimpleUserManagement();
   const { profiles: availableProfiles } = useSimpleProfiles();
   const { toast } = useToast();
