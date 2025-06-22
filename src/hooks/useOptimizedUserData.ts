@@ -97,19 +97,33 @@ export const useOptimizedUserData = () => {
         throw usersError;
       }
 
-      const processedUsers: OptimizedUser[] = (usersWithRoles || []).map((user) => ({
-        id: user.id,
-        first_name: user.first_name || '',
-        last_name: user.last_name || '',
-        email: `user-${user.id.substring(0, 8)}@sistema.local`,
-        role: user.user_roles?.role || 'user',
-        is_active: user.is_active ?? true,
-        last_login: user.last_login || '',
-        department: user.department || '',
-        position: user.position || '',
-        profile_id: user.profile_id || '',
-        access_profile: user.access_profiles
-      }));
+      const processedUsers: OptimizedUser[] = (usersWithRoles || []).map((user) => {
+        // Fix: user_roles is an array, get the first role
+        const userRole = Array.isArray(user.user_roles) && user.user_roles.length > 0 
+          ? user.user_roles[0].role 
+          : 'user';
+        
+        // Fix: access_profiles can be an array or null, get first item if array
+        const accessProfile = user.access_profiles
+          ? Array.isArray(user.access_profiles) && user.access_profiles.length > 0
+            ? user.access_profiles[0]
+            : user.access_profiles
+          : null;
+
+        return {
+          id: user.id,
+          first_name: user.first_name || '',
+          last_name: user.last_name || '',
+          email: `user-${user.id.substring(0, 8)}@sistema.local`,
+          role: userRole,
+          is_active: user.is_active ?? true,
+          last_login: user.last_login || '',
+          department: user.department || '',
+          position: user.position || '',
+          profile_id: user.profile_id || '',
+          access_profile: accessProfile
+        };
+      });
 
       setUsers(processedUsers);
       saveUsersToCache(companyInfo.id, processedUsers);

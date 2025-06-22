@@ -160,6 +160,32 @@ export const useUserCrud = () => {
     }
   };
 
+  const updateUserStatus = async (userId: string, isActive: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_active: isActive })
+        .eq('id', userId);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Sucesso",
+        description: `Usuário ${isActive ? 'ativado' : 'desativado'} com sucesso!`,
+      });
+      
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error updating user status:', error);
+      toast({ 
+        title: "Erro", 
+        description: "Erro ao atualizar status do usuário", 
+        variant: "destructive" 
+      });
+      return { success: false, error: error.message };
+    }
+  };
+
   const deleteUser = async (userId: string) => {
     setLoading(true);
     try {
@@ -194,6 +220,7 @@ export const useUserCrud = () => {
   return {
     createUser,
     updateUser,
+    updateUserStatus,
     deleteUser,
     loading,
   };
