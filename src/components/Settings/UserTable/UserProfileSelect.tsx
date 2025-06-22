@@ -11,6 +11,8 @@ interface UserProfileSelectProps {
   displayName: string;
 }
 
+const NO_PROFILE_VALUE = '__no_profile__';
+
 export const UserProfileSelect: React.FC<UserProfileSelectProps> = ({
   user,
   canManage,
@@ -18,11 +20,16 @@ export const UserProfileSelect: React.FC<UserProfileSelectProps> = ({
   onProfileChange,
   displayName,
 }) => {
+  const handleProfileChange = (profileId: string) => {
+    const actualProfileId = profileId === NO_PROFILE_VALUE ? '' : profileId;
+    onProfileChange(user.id, actualProfileId);
+  };
+
   return (
     <Select
-      value={user.profile_id || ''}
+      value={user.profile_id || NO_PROFILE_VALUE}
       disabled={!canManage}
-      onValueChange={(profileId) => onProfileChange(user.id, profileId)}
+      onValueChange={handleProfileChange}
     >
       <SelectTrigger className="w-48">
         <SelectValue placeholder="Selecionar perfil">
@@ -30,7 +37,7 @@ export const UserProfileSelect: React.FC<UserProfileSelectProps> = ({
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="">Sem perfil</SelectItem>
+        <SelectItem value={NO_PROFILE_VALUE}>Sem perfil</SelectItem>
         {availableProfiles
           .filter(profile => profile?.is_active)
           .map(profile => (

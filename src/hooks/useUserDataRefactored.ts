@@ -52,6 +52,8 @@ export const useUserDataRefactored = () => {
         throw profilesError;
       }
 
+      console.log('Profiles loaded:', profilesData?.length || 0);
+
       if (!profilesData || profilesData.length === 0) {
         console.log('No users found for company');
         setUsers([]);
@@ -60,10 +62,14 @@ export const useUserDataRefactored = () => {
 
       // Get user roles in batch
       const userIds = profilesData.map(p => p.id);
+      console.log('Loading roles for users:', userIds.length);
+      
       const { data: rolesData } = await supabase
         .from('user_roles')
         .select('user_id, role')
         .in('user_id', userIds);
+
+      console.log('Roles loaded:', rolesData?.length || 0);
 
       // Get access profiles in batch
       const profileIds = profilesData
@@ -73,12 +79,15 @@ export const useUserDataRefactored = () => {
 
       let accessProfilesData: any[] = [];
       if (profileIds.length > 0) {
+        console.log('Loading access profiles:', profileIds.length);
+        
         const { data } = await supabase
           .from('access_profiles')
           .select('id, name, description')
           .in('id', profileIds);
         
         accessProfilesData = data || [];
+        console.log('Access profiles loaded:', accessProfilesData.length);
       }
 
       // Process users with enhanced security
@@ -103,6 +112,7 @@ export const useUserDataRefactored = () => {
         };
       });
 
+      console.log('Processed users:', processedUsers.length);
       setUsers(processedUsers);
     } catch (error: any) {
       console.error('Error loading users:', error);
@@ -125,7 +135,10 @@ export const useUserDataRefactored = () => {
 
   useEffect(() => {
     if (companyInfo?.id) {
+      console.log('Company ID available, loading users');
       loadUsers();
+    } else {
+      console.log('No company ID, waiting...');
     }
   }, [companyInfo?.id]);
 

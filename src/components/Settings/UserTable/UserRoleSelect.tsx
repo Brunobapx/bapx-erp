@@ -18,14 +18,10 @@ export const UserRoleSelect: React.FC<UserRoleSelectProps> = ({
 }) => {
   const getRoleDisplayName = (role: string) => {
     switch (role) {
-      case 'master':
-        return 'Master';
-      case 'admin':
-        return 'Admin';
-      case 'user':
-        return 'Usuário';
-      default:
-        return role || 'Usuário';
+      case 'admin': return 'Admin';
+      case 'master': return 'Master';
+      case 'user': return 'Usuário';
+      default: return 'Usuário';
     }
   };
 
@@ -36,7 +32,9 @@ export const UserRoleSelect: React.FC<UserRoleSelectProps> = ({
       onValueChange={(role) => onRoleChange(user.id, role)}
     >
       <SelectTrigger className="w-32">
-        <SelectValue>{getRoleDisplayName(user.role)}</SelectValue>
+        <SelectValue>
+          {getRoleDisplayName(user.role)}
+        </SelectValue>
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="user">Usuário</SelectItem>
