@@ -31,19 +31,13 @@ export const UserManagement = () => {
   });
   const [availableProfiles, setAvailableProfiles] = useState<AccessProfile[]>([]);
   const [profilesLoading, setProfilesLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   
   const { toast } = useToast();
   const { userRole, user, companyInfo } = useAuth();
   const { users, loading, loadUsers, updateUserStatus, updateUserRole, updateUserProfile } = useSimpleUserManagement();
 
-  // Verificar permissões antes de renderizar
-  if (userRole !== 'admin' && userRole !== 'master') {
-    return (
-      <div className="text-center p-4">
-        <p className="text-red-500">Acesso negado. Apenas administradores podem gerenciar usuários.</p>
-      </div>
-    );
-  }
+  console.log('UserManagement render - userRole:', userRole, 'companyInfo:', companyInfo?.id);
 
   const loadProfiles = async () => {
     if (!companyInfo?.id) {
@@ -86,8 +80,16 @@ export const UserManagement = () => {
     console.log('UserManagement: Company info changed:', companyInfo?.id);
     if (companyInfo?.id) {
       loadProfiles();
+      // Remove loading after a reasonable time even if data doesn't load
+      setTimeout(() => setInitialLoading(false), 3000);
     }
   }, [companyInfo?.id]);
+
+  useEffect(() => {
+    if (!loading && users.length >= 0) {
+      setInitialLoading(false);
+    }
+  }, [loading, users]);
 
   const handleUserCreated = async () => {
     setIsCreateUserModalOpen(false);
@@ -140,12 +142,24 @@ export const UserManagement = () => {
     await loadProfiles();
   };
 
-  // Mostrar loading inicial
-  if (loading && users.length === 0) {
+  // Check permissions after component has loaded
+  const isAdmin = userRole === 'admin' || userRole === 'master';
+  console.log('Permission check - isAdmin:', isAdmin, 'userRole:', userRole);
+
+  if (!isAdmin) {
+    return (
+      <div className="text-center p-4">
+        <p className="text-red-500">Acesso negado. Apenas administradores podem gerenciar usuários.</p>
+      </div>
+    );
+  }
+
+  // Show loading for initial render
+  if (initialLoading) {
     return (
       <div className="text-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-        <p>Carregando usuários...</p>
+        <p>Carregando configurações...</p>
       </div>
     );
   }

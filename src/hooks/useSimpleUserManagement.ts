@@ -38,78 +38,77 @@ export const useSimpleUserManagement = () => {
       setLoading(true);
       console.log('Loading users for company:', companyInfo.id);
       
-      // Usar apenas a RPC para obter dados básicos dos usuários
-      const { data: usersData, error: usersError } = await supabase.rpc('get_company_users', {
-        company_id_param: companyInfo.id
-      });
+      // Query profiles directly - much simpler and safer
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          first_name,
+          last_name,
+          is_active,
+          last_login,
+          department,
+          position,
+          profile_id
+        `)
+        .eq('company_id', companyInfo.id);
 
-      if (usersError) {
-        console.error('Error loading users via RPC:', usersError);
-        throw usersError;
+      if (profilesError) {
+        console.error('Error loading profiles:', profilesError);
+        throw profilesError;
       }
 
-      console.log('Users data from RPC:', usersData);
+      console.log('Profiles data:', profilesData);
 
-      if (!usersData || usersData.length === 0) {
+      if (!profilesData || profilesData.length === 0) {
         console.log('No users found');
         setUsers([]);
         return;
       }
 
-      // Buscar dados adicionais dos perfis em uma query separada
-      const userIds = usersData.map((user: any) => user.id);
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select(`
-          id, 
-          first_name, 
-          last_name, 
-          is_active, 
-          last_login, 
-          department, 
-          position,
-          profile_id
-        `)
-        .in('id', userIds);
+      // Get user roles separately
+      const userIds = profilesData.map(p => p.id);
+      const { data: rolesData } = await supabase
+        .from('user_roles')
+        .select('user_id, role')
+        .in('user_id', userIds);
 
-      if (profilesError) {
-        console.error('Error loading profiles:', profilesError);
-        // Continuar mesmo se houver erro nos perfis
-      }
+      console.log('Roles data:', rolesData);
 
-      // Buscar perfis de acesso se existirem
-      const profileIds = profilesData?.filter(p => p.profile_id).map(p => p.profile_id) || [];
+      // Get access profiles if needed
+      const profileIds = profilesData
+        .filter(p => p.profile_id)
+        .map(p => p.profile_id)
+        .filter(Boolean);
+
       let accessProfilesData: any[] = [];
-      
       if (profileIds.length > 0) {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('access_profiles')
           .select('id, name, description')
           .in('id', profileIds);
         
-        if (!error) {
-          accessProfilesData = data || [];
-        }
+        accessProfilesData = data || [];
       }
 
-      // Combinar todos os dados
-      const processedUsers: SimpleUser[] = usersData.map((user: any) => {
-        const profile = profilesData?.find(p => p.id === user.id);
-        const accessProfile = profile?.profile_id 
+      // Combine all data
+      const processedUsers: SimpleUser[] = profilesData.map((profile) => {
+        const userRole = rolesData?.find(r => r.user_id === profile.id);
+        const accessProfile = profile.profile_id 
           ? accessProfilesData.find(ap => ap.id === profile.profile_id)
           : null;
         
         return {
-          id: user.id,
-          first_name: profile?.first_name || '',
-          last_name: profile?.last_name || '',
-          email: user.email || `user-${user.id.substring(0, 8)}@sistema.local`,
-          role: user.role || 'user',
-          is_active: profile?.is_active ?? true,
-          last_login: profile?.last_login || '',
-          department: profile?.department || '',
-          position: profile?.position || '',
-          profile_id: profile?.profile_id || '',
+          id: profile.id,
+          first_name: profile.first_name || '',
+          last_name: profile.last_name || '',
+          email: `user-${profile.id.substring(0, 8)}@sistema.local`, // Fallback email
+          role: userRole?.role || 'user',
+          is_active: profile.is_active ?? true,
+          last_login: profile.last_login || '',
+          department: profile.department || '',
+          position: profile.position || '',
+          profile_id: profile.profile_id || '',
           access_profile: accessProfile
         };
       });

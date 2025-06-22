@@ -33,13 +33,15 @@ const SimpleUsersTable: React.FC<Props> = ({
   availableProfiles = []
 }) => {
   
-  const getDisplayName = (user: SimpleUser) => {
+  console.log('SimpleUsersTable render - users:', users?.length, 'loading:', loading);
+  
+  const getDisplayName = (user: SimpleUser | null | undefined) => {
     if (!user) return 'Usuário não identificado';
     const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
     return fullName || 'Nome não informado';
   };
 
-  const getProfileDisplayName = (user: SimpleUser) => {
+  const getProfileDisplayName = (user: SimpleUser | null | undefined) => {
     if (!user) return 'Sem perfil';
     if (user.access_profile?.name) {
       return user.access_profile.name;
@@ -47,7 +49,7 @@ const SimpleUsersTable: React.FC<Props> = ({
     return 'Sem perfil';
   };
 
-  const getRoleDisplayName = (role: string) => {
+  const getRoleDisplayName = (role: string | null | undefined) => {
     switch (role) {
       case 'master':
         return 'Master';
@@ -60,14 +62,17 @@ const SimpleUsersTable: React.FC<Props> = ({
     }
   };
 
-  const canManageUser = (user: SimpleUser) => {
+  const canManageUser = (user: SimpleUser | null | undefined) => {
     if (!user || !userRole) return false;
     if (userRole === 'master') return true;
     if (userRole === 'admin' && user.role !== 'master') return true;
     return false;
   };
 
+  // Ensure users is always an array
   const safeUsers = Array.isArray(users) ? users : [];
+
+  console.log('SafeUsers:', safeUsers);
 
   if (loading && safeUsers.length === 0) {
     return (
@@ -101,91 +106,98 @@ const SimpleUsersTable: React.FC<Props> = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {safeUsers.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className="font-medium">{getDisplayName(user)}</TableCell>
-                  <TableCell>{user.email || 'Email não disponível'}</TableCell>
-                  <TableCell>
-                    <Select
-                      value={user.role || 'user'}
-                      disabled={!canManageUser(user)}
-                      onValueChange={(role) => onRoleChange(user.id, role)}
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue>{getRoleDisplayName(user.role)}</SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="user">Usuário</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        {userRole === 'master' && (
-                          <SelectItem value="master">Master</SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      value={user.profile_id || ''}
-                      disabled={!canManageUser(user)}
-                      onValueChange={(profileId) => onProfileChange(user.id, profileId)}
-                    >
-                      <SelectTrigger className="w-48">
-                        <SelectValue placeholder="Selecionar perfil">
-                          {getProfileDisplayName(user)}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">Sem perfil</SelectItem>
-                        {availableProfiles
-                          .filter(profile => profile.is_active)
-                          .map(profile => (
-                            <SelectItem value={profile.id} key={profile.id}>
-                              {profile.name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell>{user.department || '-'}</TableCell>
-                  <TableCell>
-                    <Badge variant={user.is_active ? 'default' : 'secondary'}>
-                      {user.is_active ? 'Ativo' : 'Inativo'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onEditUser(user)}
+              {safeUsers.map((user) => {
+                if (!user || !user.id) {
+                  console.warn('Invalid user found:', user);
+                  return null;
+                }
+                
+                return (
+                  <TableRow key={user.id}>
+                    <TableCell className="font-medium">{getDisplayName(user)}</TableCell>
+                    <TableCell>{user.email || 'Email não disponível'}</TableCell>
+                    <TableCell>
+                      <Select
+                        value={user.role || 'user'}
                         disabled={!canManageUser(user)}
-                        title="Editar usuário"
+                        onValueChange={(role) => onRoleChange(user.id, role)}
                       >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onStatusChange(user.id, !user.is_active)}
+                        <SelectTrigger className="w-32">
+                          <SelectValue>{getRoleDisplayName(user.role)}</SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="user">Usuário</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          {userRole === 'master' && (
+                            <SelectItem value="master">Master</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={user.profile_id || ''}
                         disabled={!canManageUser(user)}
-                        title={user.is_active ? 'Desativar usuário' : 'Ativar usuário'}
+                        onValueChange={(profileId) => onProfileChange(user.id, profileId)}
                       >
-                        {user.is_active ? 'Desativar' : 'Ativar'}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onDeleteUser(user.id, getDisplayName(user))}
-                        disabled={user.id === currentUserId || !canManageUser(user)}
-                        className="text-red-600 hover:text-red-800"
-                        title="Excluir usuário"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                        <SelectTrigger className="w-48">
+                          <SelectValue placeholder="Selecionar perfil">
+                            {getProfileDisplayName(user)}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Sem perfil</SelectItem>
+                          {Array.isArray(availableProfiles) && availableProfiles
+                            .filter(profile => profile && profile.is_active)
+                            .map(profile => (
+                              <SelectItem value={profile.id} key={profile.id}>
+                                {profile.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell>{user.department || '-'}</TableCell>
+                    <TableCell>
+                      <Badge variant={user.is_active ? 'default' : 'secondary'}>
+                        {user.is_active ? 'Ativo' : 'Inativo'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onEditUser(user)}
+                          disabled={!canManageUser(user)}
+                          title="Editar usuário"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onStatusChange(user.id, !user.is_active)}
+                          disabled={!canManageUser(user)}
+                          title={user.is_active ? 'Desativar usuário' : 'Ativar usuário'}
+                        >
+                          {user.is_active ? 'Desativar' : 'Ativar'}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onDeleteUser(user.id, getDisplayName(user))}
+                          disabled={user.id === currentUserId || !canManageUser(user)}
+                          className="text-red-600 hover:text-red-800"
+                          title="Excluir usuário"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
