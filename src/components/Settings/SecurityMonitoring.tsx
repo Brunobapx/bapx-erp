@@ -9,11 +9,23 @@ import { auditLogger } from '@/lib/auditLogging';
 import { checkRateLimit, generalRateLimit, loginRateLimit, createUserRateLimit } from '@/lib/rateLimiting';
 import { useAuth } from '@/components/Auth/AuthProvider';
 
+interface RateLimitInfo {
+  allowed: boolean;
+  remaining: number;
+  resetTime: number;
+}
+
+interface RateLimitStatus {
+  general?: RateLimitInfo;
+  login?: RateLimitInfo;
+  createUser?: RateLimitInfo;
+}
+
 export const SecurityMonitoring = () => {
   const { user } = useAuth();
   const [auditLogs, setAuditLogs] = useState([]);
   const [statistics, setStatistics] = useState(null);
-  const [rateLimitStatus, setRateLimitStatus] = useState({});
+  const [rateLimitStatus, setRateLimitStatus] = useState<RateLimitStatus>({});
 
   const loadData = () => {
     // Carregar logs de auditoria
@@ -191,7 +203,7 @@ export const SecurityMonitoring = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Requests restantes:</span>
-                    <Badge variant={rateLimitStatus.general?.remaining > 10 ? 'default' : 'destructive'}>
+                    <Badge variant={rateLimitStatus.general?.remaining && rateLimitStatus.general.remaining > 10 ? 'default' : 'destructive'}>
                       {rateLimitStatus.general?.remaining || 0}
                     </Badge>
                   </div>
@@ -213,7 +225,7 @@ export const SecurityMonitoring = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Tentativas restantes:</span>
-                    <Badge variant={rateLimitStatus.login?.remaining > 1 ? 'default' : 'destructive'}>
+                    <Badge variant={rateLimitStatus.login?.remaining && rateLimitStatus.login.remaining > 1 ? 'default' : 'destructive'}>
                       {rateLimitStatus.login?.remaining || 0}
                     </Badge>
                   </div>
@@ -235,7 +247,7 @@ export const SecurityMonitoring = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Criações restantes:</span>
-                    <Badge variant={rateLimitStatus.createUser?.remaining > 2 ? 'default' : 'destructive'}>
+                    <Badge variant={rateLimitStatus.createUser?.remaining && rateLimitStatus.createUser.remaining > 2 ? 'default' : 'destructive'}>
                       {rateLimitStatus.createUser?.remaining || 0}
                     </Badge>
                   </div>

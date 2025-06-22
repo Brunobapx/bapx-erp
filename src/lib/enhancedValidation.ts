@@ -98,21 +98,53 @@ export const validateWithSecurity = <T>(
 // Schemas específicos para operações do sistema
 export const userOperationSchemas = {
   createUser: z.object({
-    firstName: securityValidationSchemas.sanitizedText.min(2, 'Nome deve ter pelo menos 2 caracteres'),
-    lastName: securityValidationSchemas.sanitizedText.min(2, 'Sobrenome deve ter pelo menos 2 caracteres'),
+    firstName: z.string()
+      .min(2, 'Nome deve ter pelo menos 2 caracteres')
+      .max(1000, 'Nome muito longo')
+      .transform(sanitizeTextInput)
+      .refine(val => !/<script|javascript:|on\w+=/i.test(val), 'Conteúdo não permitido detectado'),
+    lastName: z.string()
+      .min(2, 'Sobrenome deve ter pelo menos 2 caracteres')
+      .max(1000, 'Sobrenome muito longo')
+      .transform(sanitizeTextInput)
+      .refine(val => !/<script|javascript:|on\w+=/i.test(val), 'Conteúdo não permitido detectado'),
     email: securityValidationSchemas.email,
     password: securityValidationSchemas.strongPassword,
     profileId: securityValidationSchemas.uuid,
     role: z.enum(['user', 'admin', 'master']).default('user'),
-    department: securityValidationSchemas.sanitizedText.optional(),
-    position: securityValidationSchemas.sanitizedText.optional(),
+    department: z.string()
+      .max(1000, 'Departamento muito longo')
+      .transform(sanitizeTextInput)
+      .refine(val => !/<script|javascript:|on\w+=/i.test(val), 'Conteúdo não permitido detectado')
+      .optional(),
+    position: z.string()
+      .max(1000, 'Posição muito longa')
+      .transform(sanitizeTextInput)
+      .refine(val => !/<script|javascript:|on\w+=/i.test(val), 'Conteúdo não permitido detectado')
+      .optional(),
   }),
 
   updateUser: z.object({
-    first_name: securityValidationSchemas.sanitizedText.min(2, 'Nome deve ter pelo menos 2 caracteres'),
-    last_name: securityValidationSchemas.sanitizedText.min(2, 'Sobrenome deve ter pelo menos 2 caracteres'),
-    department: securityValidationSchemas.sanitizedText.optional(),
-    position: securityValidationSchemas.sanitizedText.optional(),
+    first_name: z.string()
+      .min(2, 'Nome deve ter pelo menos 2 caracteres')
+      .max(1000, 'Nome muito longo')
+      .transform(sanitizeTextInput)
+      .refine(val => !/<script|javascript:|on\w+=/i.test(val), 'Conteúdo não permitido detectado'),
+    last_name: z.string()
+      .min(2, 'Sobrenome deve ter pelo menos 2 caracteres')
+      .max(1000, 'Sobrenome muito longo')
+      .transform(sanitizeTextInput)
+      .refine(val => !/<script|javascript:|on\w+=/i.test(val), 'Conteúdo não permitido detectado'),
+    department: z.string()
+      .max(1000, 'Departamento muito longo')
+      .transform(sanitizeTextInput)
+      .refine(val => !/<script|javascript:|on\w+=/i.test(val), 'Conteúdo não permitido detectado')
+      .optional(),
+    position: z.string()
+      .max(1000, 'Posição muito longa')
+      .transform(sanitizeTextInput)
+      .refine(val => !/<script|javascript:|on\w+=/i.test(val), 'Conteúdo não permitido detectado')
+      .optional(),
     role: z.enum(['user', 'admin', 'master']).optional(),
     profile_id: securityValidationSchemas.uuid.optional(),
     new_password: securityValidationSchemas.strongPassword.optional(),
