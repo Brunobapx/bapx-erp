@@ -7,13 +7,13 @@ import {
   FilePen, LogOut, Menu, X
 } from 'lucide-react';
 import { useAuth } from '@/components/Auth/AuthProvider';
-import { useUserPermissions } from '@/hooks/useUserPermissions';
+import { useSimplePermissions } from '@/hooks/useSimplePermissions';
 import { Button } from '@/components/ui/button';
 
 const Sidebar = () => {
   const location = useLocation();
   const { signOut } = useAuth();
-  const { getAllowedRoutes } = useUserPermissions();
+  const { getAllowedRoutes } = useSimplePermissions();
   const [isOpen, setIsOpen] = useState(false);
 
   const menuItems = [
