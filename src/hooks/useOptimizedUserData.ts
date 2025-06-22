@@ -103,12 +103,24 @@ export const useOptimizedUserData = () => {
           ? user.user_roles[0].role 
           : 'user';
         
-        // Fix: access_profiles can be an array or null, get first item if array
-        const accessProfile = user.access_profiles
-          ? Array.isArray(user.access_profiles) && user.access_profiles.length > 0
-            ? user.access_profiles[0]
-            : user.access_profiles
-          : null;
+        // Fix: access_profiles can be an array or single object, normalize to single object or null
+        let accessProfile: { name: string; description: string; } | null = null;
+        
+        if (user.access_profiles) {
+          if (Array.isArray(user.access_profiles) && user.access_profiles.length > 0) {
+            // If it's an array, take the first item
+            accessProfile = {
+              name: user.access_profiles[0].name || '',
+              description: user.access_profiles[0].description || ''
+            };
+          } else if (!Array.isArray(user.access_profiles)) {
+            // If it's a single object
+            accessProfile = {
+              name: user.access_profiles.name || '',
+              description: user.access_profiles.description || ''
+            };
+          }
+        }
 
         return {
           id: user.id,
