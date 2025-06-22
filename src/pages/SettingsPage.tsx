@@ -15,7 +15,12 @@ const SettingsPage = () => {
 
   const isAdmin = userRole === 'admin' || userRole === 'master';
 
-  console.log('SettingsPage rendered, userRole:', userRole, 'isAdmin:', isAdmin, 'companyInfo:', companyInfo?.id);
+  console.log('SettingsPage rendered:', { 
+    userRole, 
+    isAdmin, 
+    companyId: companyInfo?.id,
+    activeTab 
+  });
 
   // Show loading if still getting auth info
   if (!userRole || !companyInfo) {
@@ -32,6 +37,25 @@ const SettingsPage = () => {
       </div>
     );
   }
+
+  const TabContent = ({ tabName, children }: { tabName: string, children: React.ReactNode }) => {
+    try {
+      return (
+        <div className="bg-white rounded-lg border p-6">
+          {children}
+        </div>
+      );
+    } catch (error) {
+      console.error(`Error rendering ${tabName} tab:`, error);
+      return (
+        <Alert>
+          <AlertDescription>
+            Erro ao carregar a aba {tabName}. Tente recarregar a página.
+          </AlertDescription>
+        </Alert>
+      );
+    }
+  };
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -61,9 +85,9 @@ const SettingsPage = () => {
         </TabsList>
 
         <TabsContent value="profile">
-          <div className="bg-white rounded-lg border p-6">
+          <TabContent tabName="Perfil">
             <ProfileManagement />
-          </div>
+          </TabContent>
         </TabsContent>
 
         <TabsContent value="users">
@@ -74,9 +98,9 @@ const SettingsPage = () => {
               </AlertDescription>
             </Alert>
           ) : (
-            <div className="bg-white rounded-lg border p-6">
+            <TabContent tabName="Usuários">
               <UserManagement />
-            </div>
+            </TabContent>
           )}
         </TabsContent>
 
@@ -88,9 +112,9 @@ const SettingsPage = () => {
               </AlertDescription>
             </Alert>
           ) : (
-            <div className="bg-white rounded-lg border p-6">
+            <TabContent tabName="Perfis de Acesso">
               <ProfilesManagement />
-            </div>
+            </TabContent>
           )}
         </TabsContent>
 
@@ -102,9 +126,9 @@ const SettingsPage = () => {
               </AlertDescription>
             </Alert>
           ) : (
-            <div className="bg-white rounded-lg border p-6">
+            <TabContent tabName="Empresa">
               <CompanySettings />
-            </div>
+            </TabContent>
           )}
         </TabsContent>
       </Tabs>

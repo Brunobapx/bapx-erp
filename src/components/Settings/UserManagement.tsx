@@ -31,17 +31,17 @@ export const UserManagement = () => {
   });
   const [availableProfiles, setAvailableProfiles] = useState<AccessProfile[]>([]);
   const [profilesLoading, setProfilesLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
   
   const { toast } = useToast();
   const { userRole, user, companyInfo } = useAuth();
   const { users, loading, loadUsers, updateUserStatus, updateUserRole, updateUserProfile } = useSimpleUserManagement();
 
-  console.log('UserManagement render - userRole:', userRole, 'companyInfo:', companyInfo?.id);
+  console.log('UserManagement render - userRole:', userRole, 'companyInfo:', companyInfo?.id, 'users:', users?.length);
 
   const loadProfiles = async () => {
     if (!companyInfo?.id) {
       console.log('No company ID for loading profiles');
+      setAvailableProfiles([]);
       return;
     }
 
@@ -66,11 +66,6 @@ export const UserManagement = () => {
     } catch (error) {
       console.error('Error loading profiles:', error);
       setAvailableProfiles([]);
-      toast({
-        title: "Aviso",
-        description: "Não foi possível carregar os perfis de acesso.",
-        variant: "default",
-      });
     } finally {
       setProfilesLoading(false);
     }
@@ -80,16 +75,8 @@ export const UserManagement = () => {
     console.log('UserManagement: Company info changed:', companyInfo?.id);
     if (companyInfo?.id) {
       loadProfiles();
-      // Remove loading after a reasonable time even if data doesn't load
-      setTimeout(() => setInitialLoading(false), 3000);
     }
   }, [companyInfo?.id]);
-
-  useEffect(() => {
-    if (!loading && users.length >= 0) {
-      setInitialLoading(false);
-    }
-  }, [loading, users]);
 
   const handleUserCreated = async () => {
     setIsCreateUserModalOpen(false);
@@ -142,7 +129,7 @@ export const UserManagement = () => {
     await loadProfiles();
   };
 
-  // Check permissions after component has loaded
+  // Check permissions
   const isAdmin = userRole === 'admin' || userRole === 'master';
   console.log('Permission check - isAdmin:', isAdmin, 'userRole:', userRole);
 
@@ -150,16 +137,6 @@ export const UserManagement = () => {
     return (
       <div className="text-center p-4">
         <p className="text-red-500">Acesso negado. Apenas administradores podem gerenciar usuários.</p>
-      </div>
-    );
-  }
-
-  // Show loading for initial render
-  if (initialLoading) {
-    return (
-      <div className="text-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-        <p>Carregando configurações...</p>
       </div>
     );
   }

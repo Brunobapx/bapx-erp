@@ -33,23 +33,25 @@ const SimpleUsersTable: React.FC<Props> = ({
   availableProfiles = []
 }) => {
   
-  console.log('SimpleUsersTable render - users:', users?.length, 'loading:', loading);
+  console.log('SimpleUsersTable render:', { 
+    usersCount: users?.length, 
+    loading, 
+    userRole, 
+    profilesCount: availableProfiles?.length 
+  });
   
-  const getDisplayName = (user: SimpleUser | null | undefined) => {
+  const getDisplayName = (user: SimpleUser) => {
     if (!user) return 'Usuário não identificado';
     const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
     return fullName || 'Nome não informado';
   };
 
-  const getProfileDisplayName = (user: SimpleUser | null | undefined) => {
-    if (!user) return 'Sem perfil';
-    if (user.access_profile?.name) {
-      return user.access_profile.name;
-    }
-    return 'Sem perfil';
+  const getProfileDisplayName = (user: SimpleUser) => {
+    if (!user || !user.access_profile?.name) return 'Sem perfil';
+    return user.access_profile.name;
   };
 
-  const getRoleDisplayName = (role: string | null | undefined) => {
+  const getRoleDisplayName = (role: string) => {
     switch (role) {
       case 'master':
         return 'Master';
@@ -62,17 +64,14 @@ const SimpleUsersTable: React.FC<Props> = ({
     }
   };
 
-  const canManageUser = (user: SimpleUser | null | undefined) => {
+  const canManageUser = (user: SimpleUser) => {
     if (!user || !userRole) return false;
     if (userRole === 'master') return true;
     if (userRole === 'admin' && user.role !== 'master') return true;
     return false;
   };
 
-  // Ensure users is always an array
   const safeUsers = Array.isArray(users) ? users : [];
-
-  console.log('SafeUsers:', safeUsers);
 
   if (loading && safeUsers.length === 0) {
     return (
@@ -86,8 +85,9 @@ const SimpleUsersTable: React.FC<Props> = ({
   return (
     <div className="space-y-4">
       <h4 className="text-md font-medium">Lista de Usuários ({safeUsers.length})</h4>
+      
       {safeUsers.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
+        <div className="text-center py-8 text-gray-500 border rounded-lg">
           <p>Nenhum usuário encontrado.</p>
           <p className="text-sm mt-1">Clique em "Novo Usuário" para adicionar o primeiro usuário.</p>
         </div>
@@ -107,7 +107,7 @@ const SimpleUsersTable: React.FC<Props> = ({
             </TableHeader>
             <TableBody>
               {safeUsers.map((user) => {
-                if (!user || !user.id) {
+                if (!user?.id) {
                   console.warn('Invalid user found:', user);
                   return null;
                 }
@@ -147,8 +147,8 @@ const SimpleUsersTable: React.FC<Props> = ({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="">Sem perfil</SelectItem>
-                          {Array.isArray(availableProfiles) && availableProfiles
-                            .filter(profile => profile && profile.is_active)
+                          {availableProfiles
+                            .filter(profile => profile?.is_active)
                             .map(profile => (
                               <SelectItem value={profile.id} key={profile.id}>
                                 {profile.name}

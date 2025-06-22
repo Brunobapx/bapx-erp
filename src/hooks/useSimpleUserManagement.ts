@@ -38,19 +38,10 @@ export const useSimpleUserManagement = () => {
       setLoading(true);
       console.log('Loading users for company:', companyInfo.id);
       
-      // Query profiles directly - much simpler and safer
+      // Query profiles directly
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select(`
-          id,
-          first_name,
-          last_name,
-          is_active,
-          last_login,
-          department,
-          position,
-          profile_id
-        `)
+        .select('*')
         .eq('company_id', companyInfo.id);
 
       if (profilesError) {
@@ -61,12 +52,12 @@ export const useSimpleUserManagement = () => {
       console.log('Profiles data:', profilesData);
 
       if (!profilesData || profilesData.length === 0) {
-        console.log('No users found');
+        console.log('No users found for company');
         setUsers([]);
         return;
       }
 
-      // Get user roles separately
+      // Get user roles
       const userIds = profilesData.map(p => p.id);
       const { data: rolesData } = await supabase
         .from('user_roles')
@@ -75,7 +66,7 @@ export const useSimpleUserManagement = () => {
 
       console.log('Roles data:', rolesData);
 
-      // Get access profiles if needed
+      // Get access profiles
       const profileIds = profilesData
         .filter(p => p.profile_id)
         .map(p => p.profile_id)
@@ -91,7 +82,7 @@ export const useSimpleUserManagement = () => {
         accessProfilesData = data || [];
       }
 
-      // Combine all data
+      // Process users
       const processedUsers: SimpleUser[] = profilesData.map((profile) => {
         const userRole = rolesData?.find(r => r.user_id === profile.id);
         const accessProfile = profile.profile_id 
@@ -102,7 +93,7 @@ export const useSimpleUserManagement = () => {
           id: profile.id,
           first_name: profile.first_name || '',
           last_name: profile.last_name || '',
-          email: `user-${profile.id.substring(0, 8)}@sistema.local`, // Fallback email
+          email: `user-${profile.id.substring(0, 8)}@sistema.local`,
           role: userRole?.role || 'user',
           is_active: profile.is_active ?? true,
           last_login: profile.last_login || '',
@@ -156,8 +147,7 @@ export const useSimpleUserManagement = () => {
     try {
       const { error } = await supabase
         .from('user_roles')
-        .update({ role })
-        .eq('user_id', userId);
+        .upsert({ user_id: userId, role, company_id: companyInfo?.id });
 
       if (error) throw error;
 
@@ -204,7 +194,7 @@ export const useSimpleUserManagement = () => {
   };
 
   useEffect(() => {
-    console.log('Company info changed:', companyInfo?.id);
+    console.log('useSimpleUserManagement: Company info changed:', companyInfo?.id);
     if (companyInfo?.id) {
       loadUsers();
     }
