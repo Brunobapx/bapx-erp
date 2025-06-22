@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { validateAndSanitizeUser } from '@/lib/validation';
 
 export interface CreateUserFormState {
   email: string;
@@ -17,6 +18,7 @@ export interface CreateUserFormValidationErrors {
   firstName?: string;
   lastName?: string;
   profileId?: string;
+  general?: string;
 }
 
 interface UseCreateUserFormProps {
@@ -45,42 +47,15 @@ export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUse
     }
   };
 
-  const validateForm = (): boolean => {
-    const errors: CreateUserFormValidationErrors = {};
-
-    if (!form.email.trim()) {
-      errors.email = 'Email é obrigatório';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      errors.email = 'Email inválido';
-    }
-
-    if (!form.password.trim()) {
-      errors.password = 'Senha é obrigatória';
-    } else if (form.password.length < 6) {
-      errors.password = 'Senha deve ter pelo menos 6 caracteres';
-    }
-
-    if (!form.firstName.trim()) {
-      errors.firstName = 'Nome é obrigatório';
-    }
-
-    if (!form.lastName.trim()) {
-      errors.lastName = 'Sobrenome é obrigatório';
-    }
-
-    if (!form.profileId.trim()) {
-      errors.profileId = 'Perfil é obrigatório';
-    }
-
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
   const handleSubmit = async () => {
-    if (!validateForm()) return;
-
-    setLoading(true);
+    setValidationErrors({});
+    
     try {
+      // Valida e sanitiza os dados
+      const validatedData = validateAndSanitizeUser(form);
+      
+      setLoading(true);
+
       // Get current user's company
       const { data: currentUser, error: userError } = await supabase
         .from('profiles')
@@ -95,11 +70,11 @@ export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUse
       // Call edge function to create user
       const { data, error } = await supabase.functions.invoke('create-user', {
         body: {
-          email: form.email.trim(),
-          password: form.password,
-          firstName: form.firstName.trim(),
-          lastName: form.lastName.trim(),
-          profile_id: form.profileId,
+          email: validatedData.email,
+          password: validatedData.password,
+          firstName: validatedData.firstName,
+          lastName: validatedData.lastName,
+          profile_id: validatedData.profileId,
           company_id: currentUser.company_id
         },
         headers: {
@@ -127,20 +102,33 @@ export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUse
     } catch (error: any) {
       console.error('Erro ao criar usuário:', error);
       
-      let errorMessage = 'Erro ao criar usuário';
-      if (error.message?.includes('User already registered')) {
-        errorMessage = 'Este email já está cadastrado no sistema';
-      } else if (error.message?.includes('Permission denied')) {
-        errorMessage = 'Você não tem permissão para criar usuários';
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
+      if (error.name === 'ZodError') {
+        // Erros de validação
+        const fieldErrors: CreateUserFormValidationErrors = {};
+        error.errors.forEach((err: any) => {
+          if (err.path.length > 0) {
+            fieldErrors[err.path[0] as keyof CreateUserFormValidationErrors] = err.message;
+          }
+        });
+        setValidationErrors(fieldErrors);
+      } else {
+        // Outros erros
+        let errorMessage = 'Erro ao criar usuário';
+        if (error.message?.includes('User already registered')) {
+          errorMessage = 'Este email já está cadastrado no sistema';
+        } else if (error.message?.includes('Permission denied')) {
+          errorMessage = 'Você não tem permissão para criar usuários';
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
 
-      toast({
-        title: "Erro",
-        description: errorMessage,
-        variant: "destructive",
-      });
+        setValidationErrors({ general: errorMessage });
+        toast({
+          title: "Erro",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
