@@ -1,29 +1,7 @@
 
-interface AuditLogEntry {
-  id: string;
-  timestamp: string;
-  userId?: string;
-  userEmail?: string;
-  action: string;
-  resource: string;
-  resourceId?: string;
-  details: Record<string, any>;
-  ipAddress?: string;
-  userAgent?: string;
-  success: boolean;
-  errorMessage?: string;
-}
+import { AuditLogEntry, AuditLogFilter, AuditStatistics } from './types';
 
-interface AuditLogFilter {
-  userId?: string;
-  action?: string;
-  resource?: string;
-  startDate?: Date;
-  endDate?: Date;
-  success?: boolean;
-}
-
-class AuditLogger {
+export class AuditLogger {
   private logs: AuditLogEntry[] = [];
   private maxLogs: number = 10000;
 
@@ -105,12 +83,7 @@ class AuditLogger {
     this.logs = [];
   }
 
-  getStatistics(): {
-    totalLogs: number;
-    successRate: number;
-    topActions: Array<{ action: string; count: number }>;
-    topUsers: Array<{ userId: string; count: number }>;
-  } {
+  getStatistics(): AuditStatistics {
     const totalLogs = this.logs.length;
     const successfulLogs = this.logs.filter(log => log.success).length;
     const successRate = totalLogs > 0 ? (successfulLogs / totalLogs) * 100 : 0;
@@ -144,60 +117,3 @@ class AuditLogger {
     };
   }
 }
-
-export const auditLogger = new AuditLogger();
-
-// Funções utilitárias para diferentes tipos de audit
-export const auditUserAction = (
-  action: string,
-  userId: string,
-  userEmail: string,
-  details: Record<string, any>,
-  success: boolean = true,
-  errorMessage?: string
-) => {
-  auditLogger.log({
-    userId,
-    userEmail,
-    action,
-    resource: 'user',
-    details,
-    success,
-    errorMessage
-  });
-};
-
-export const auditSystemAction = (
-  action: string,
-  resource: string,
-  details: Record<string, any>,
-  success: boolean = true,
-  errorMessage?: string
-) => {
-  auditLogger.log({
-    action,
-    resource,
-    details,
-    success,
-    errorMessage
-  });
-};
-
-export const auditSecurityEvent = (
-  action: string,
-  details: Record<string, any>,
-  ipAddress?: string,
-  userAgent?: string,
-  success: boolean = true,
-  errorMessage?: string
-) => {
-  auditLogger.log({
-    action,
-    resource: 'security',
-    details,
-    ipAddress,
-    userAgent,
-    success,
-    errorMessage
-  });
-};
