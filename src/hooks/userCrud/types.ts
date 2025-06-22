@@ -11,8 +11,8 @@ export interface CreateUserData {
 }
 
 export interface UpdateUserData {
-  first_name: string;
-  last_name: string;
+  first_name?: string;
+  last_name?: string;
   department?: string;
   position?: string;
   role?: string;
@@ -23,4 +23,5 @@ export interface UpdateUserData {
 export interface OperationResult {
   success: boolean;
   error?: string;
+  data?: any;
 }

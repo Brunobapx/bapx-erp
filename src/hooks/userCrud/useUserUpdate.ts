@@ -31,14 +31,20 @@ export const useUserUpdate = () => {
       // Validate input data
       const validationResult = validateUpdateUserData(userData);
       if (!validationResult.success) {
-        // Type guard: we know success is false, so errors exists
-        const errorMessage = validationResult.errors?.[0] || "Dados inválidos";
+        const errorMessage = 'errors' in validationResult && validationResult.errors 
+          ? validationResult.errors[0] 
+          : "Dados inválidos";
         toast({
           title: "Erro de validação",
           description: errorMessage,
           variant: "destructive",
         });
-        return { success: false, error: validationResult.errors?.join(', ') || "Validation failed" };
+        return { 
+          success: false, 
+          error: 'errors' in validationResult && validationResult.errors 
+            ? validationResult.errors.join(', ') 
+            : "Validation failed" 
+        };
       }
 
       console.log('Updating user with validated data:', validationResult.data);

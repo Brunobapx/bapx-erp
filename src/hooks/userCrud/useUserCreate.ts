@@ -29,8 +29,7 @@ export const useUserCreate = () => {
       // Validate input data
       const validationResult = validateCreateUserData(userData);
       if (!validationResult.success) {
-        // Type guard: we know success is false, so errors exists
-        const errorMessage = validationResult.errors.length > 0 
+        const errorMessage = 'errors' in validationResult && validationResult.errors.length > 0 
           ? validationResult.errors[0] 
           : "Dados inválidos";
         
@@ -42,7 +41,7 @@ export const useUserCreate = () => {
         
         return { 
           success: false, 
-          error: validationResult.errors.join(', ') 
+          error: 'errors' in validationResult ? validationResult.errors.join(', ') : "Validation failed"
         };
       }
 

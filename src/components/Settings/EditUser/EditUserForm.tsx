@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SimpleUser } from '@/hooks/useSimpleUserManagement';
+import { SimpleUser } from '@/hooks/useUserData';
+import { useEditUserForm } from './useEditUserForm';
 
 interface AccessProfile {
   id: string;
@@ -13,60 +14,62 @@ interface AccessProfile {
   is_active: boolean;
 }
 
-interface EditUserFormProps {
-  formData: {
-    first_name: string;
-    last_name: string;
-    email: string;
-    department: string;
-    position: string;
-    role: string;
-    profile_id: string;
-    new_password: string;
-  };
+export interface EditUserFormProps {
   user: SimpleUser;
-  availableProfiles: AccessProfile[];
   userRole: string;
-  isEditable: boolean;
-  loading: boolean;
-  onFormDataChange: (field: string, value: string) => void;
-  onSubmit: (e: React.FormEvent) => void;
-  onCancel: () => void;
+  onClose: () => void;
+  onSuccess: () => void;
+  availableProfiles: AccessProfile[];
 }
 
 export const EditUserForm: React.FC<EditUserFormProps> = ({
-  formData,
   user,
-  availableProfiles,
   userRole,
-  isEditable,
-  loading,
-  onFormDataChange,
-  onSubmit,
-  onCancel,
+  onClose,
+  onSuccess,
+  availableProfiles,
 }) => {
+  const {
+    formData,
+    loading,
+    validationErrors,
+    canManageUser,
+    handleFormDataChange,
+    handleSubmit,
+  } = useEditUserForm({ user, userRole, onSuccess, onClose });
+
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {validationErrors.general && (
+        <div className="text-red-500 text-sm">{validationErrors.general}</div>
+      )}
+      
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="first_name">Nome</Label>
           <Input
             id="first_name"
             value={formData.first_name}
-            onChange={(e) => onFormDataChange('first_name', e.target.value)}
-            disabled={!isEditable}
+            onChange={(e) => handleFormDataChange('first_name', e.target.value)}
+            disabled={!canManageUser}
             required
           />
+          {validationErrors.first_name && (
+            <div className="text-red-500 text-sm">{validationErrors.first_name}</div>
+          )}
         </div>
         <div className="space-y-2">
           <Label htmlFor="last_name">Sobrenome</Label>
           <Input
             id="last_name"
             value={formData.last_name}
-            onChange={(e) => onFormDataChange('last_name', e.target.value)}
-            disabled={!isEditable}
+            onChange={(e) => handleFormDataChange('last_name', e.target.value)}
+            disabled={!canManageUser}
             required
           />
+          {validationErrors.last_name && (
+            <div className="text-red-500 text-sm">{validationErrors.last_name}</div>
+          )}
         </div>
       </div>
 
@@ -88,8 +91,8 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
           <Input
             id="department"
             value={formData.department}
-            onChange={(e) => onFormDataChange('department', e.target.value)}
-            disabled={!isEditable}
+            onChange={(e) => handleFormDataChange('department', e.target.value)}
+            disabled={!canManageUser}
           />
         </div>
         <div className="space-y-2">
@@ -97,8 +100,8 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
           <Input
             id="position"
             value={formData.position}
-            onChange={(e) => onFormDataChange('position', e.target.value)}
-            disabled={!isEditable}
+            onChange={(e) => handleFormDataChange('position', e.target.value)}
+            disabled={!canManageUser}
           />
         </div>
       </div>
@@ -107,8 +110,8 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
         <Label htmlFor="role">Papel</Label>
         <Select 
           value={formData.role} 
-          onValueChange={(value) => onFormDataChange('role', value)}
-          disabled={!isEditable}
+          onValueChange={(value) => handleFormDataChange('role', value)}
+          disabled={!canManageUser}
         >
           <SelectTrigger>
             <SelectValue />
@@ -127,8 +130,8 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
         <Label htmlFor="profile_id">Perfil de Acesso</Label>
         <Select 
           value={formData.profile_id} 
-          onValueChange={(value) => onFormDataChange('profile_id', value)}
-          disabled={!isEditable}
+          onValueChange={(value) => handleFormDataChange('profile_id', value)}
+          disabled={!canManageUser}
         >
           <SelectTrigger>
             <SelectValue placeholder="Selecionar perfil" />
@@ -152,17 +155,17 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
           id="new_password"
           type="password"
           value={formData.new_password}
-          onChange={(e) => onFormDataChange('new_password', e.target.value)}
-          disabled={!isEditable}
+          onChange={(e) => handleFormDataChange('new_password', e.target.value)}
+          disabled={!canManageUser}
           placeholder="Deixe em branco para manter a senha atual"
         />
       </div>
 
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button" variant="outline" onClick={onClose}>
           Cancelar
         </Button>
-        <Button type="submit" disabled={loading || !isEditable}>
+        <Button type="submit" disabled={loading || !canManageUser}>
           {loading ? 'Salvando...' : 'Salvar'}
         </Button>
       </div>

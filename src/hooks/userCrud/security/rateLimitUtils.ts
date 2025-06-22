@@ -1,9 +1,10 @@
 
-import { checkRateLimit, generalRateLimit } from '@/lib/rateLimiting';
+import { checkRateLimit as checkRateLimitLib, generalRateLimit } from '@/lib/rateLimiting';
 import { auditSecurityEvent } from '@/lib/auditLogging';
 
-export const checkUserOperationRateLimit = (currentUserId: string, operation: string) => {
-  const rateLimitCheck = checkRateLimit(generalRateLimit, currentUserId);
+export const checkRateLimit = async (operation: string): Promise<boolean> => {
+  const currentUserId = 'anonymous'; // In a real app, get from auth context
+  const rateLimitCheck = checkRateLimitLib(generalRateLimit, currentUserId);
   
   if (!rateLimitCheck.allowed) {
     auditSecurityEvent(
@@ -15,8 +16,8 @@ export const checkUserOperationRateLimit = (currentUserId: string, operation: st
       `Rate limit exceeded for ${operation}`
     );
     
-    throw new Error('Muitas tentativas. Tente novamente mais tarde.');
+    return false;
   }
   
-  return rateLimitCheck;
+  return true;
 };
