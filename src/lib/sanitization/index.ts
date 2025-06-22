@@ -1,6 +1,7 @@
 
 import { AdvancedSanitizer } from './AdvancedSanitizer';
 import { auditSecurityEvent } from '../auditLogging';
+import { SanitizationOptions } from './types';
 
 export const sanitizer = new AdvancedSanitizer();
 

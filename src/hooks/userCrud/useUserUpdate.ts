@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from '@/components/Auth/AuthProvider';
 import { validateWithSecurity, userOperationSchemas } from '@/lib/enhancedValidation';
-import { sanitizer } from '@/lib/advancedSanitization';
+import { sanitizer } from '@/lib/sanitization';
 import { checkRateLimit, generalRateLimit } from '@/lib/rateLimiting';
 import { auditUserAction, auditSecurityEvent } from '@/lib/auditLogging';
 
