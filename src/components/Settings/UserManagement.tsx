@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '@/components/Auth/AuthProvider';
 import { useSimpleUserManagement } from '@/hooks/useSimpleUserManagement';
@@ -9,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { UserManagementHeader } from './UserManagement/UserManagementHeader';
 import { UserManagementStats } from './UserManagement/UserManagementStats';
 import SimpleUsersTable from './SimpleUsersTable';
-import CreateUserModal from './CreateUserModal';
+import CreateUserModal from './CreateUser/CreateUserModal';
 import { EditUserModal } from './EditUserModal';
 import { DeleteUserModal } from './DeleteUserModal';
 

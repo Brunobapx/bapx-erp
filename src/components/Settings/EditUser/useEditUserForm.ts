@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { SimpleUser } from '@/hooks/useSimpleUserManagement';
+import { editUserSchema, type EditUserData, sanitizeTextInput } from '@/lib/userValidation';
 
 interface UseEditUserFormProps {
   user: SimpleUser | null;
@@ -11,9 +12,32 @@ interface UseEditUserFormProps {
   onClose: () => void;
 }
 
+interface EditUserFormData {
+  first_name: string;
+  last_name: string;
+  email: string;
+  department: string;
+  position: string;
+  role: string;
+  profile_id: string;
+  new_password: string;
+}
+
+interface EditUserValidationErrors {
+  first_name?: string;
+  last_name?: string;
+  department?: string;
+  position?: string;
+  role?: string;
+  profile_id?: string;
+  new_password?: string;
+  general?: string;
+}
+
 export const useEditUserForm = ({ user, userRole, onSuccess, onClose }: UseEditUserFormProps) => {
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
+  const [validationErrors, setValidationErrors] = useState<EditUserValidationErrors>({});
+  const [formData, setFormData] = useState<EditUserFormData>({
     first_name: '',
     last_name: '',
     email: '',
@@ -37,6 +61,7 @@ export const useEditUserForm = ({ user, userRole, onSuccess, onClose }: UseEditU
         profile_id: user.profile_id || '',
         new_password: ''
       });
+      setValidationErrors({});
     }
   }, [user]);
 
@@ -46,8 +71,66 @@ export const useEditUserForm = ({ user, userRole, onSuccess, onClose }: UseEditU
     return false;
   };
 
-  const handleFormDataChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const validateForm = (): boolean => {
+    try {
+      setValidationErrors({});
+      
+      const validationData = {
+        firstName: formData.first_name,
+        lastName: formData.last_name,
+        email: formData.email,
+        profileId: formData.profile_id,
+        role: formData.role,
+        department: formData.department,
+        position: formData.position,
+        newPassword: formData.new_password
+      };
+
+      editUserSchema.parse(validationData);
+
+      // Validações específicas de contexto
+      if (userRole !== 'master' && formData.role === 'master') {
+        setValidationErrors({ role: 'Apenas usuários master podem atribuir o papel master' });
+        return false;
+      }
+
+      return true;
+    } catch (error: any) {
+      const errors: EditUserValidationErrors = {};
+      
+      if (error.errors) {
+        error.errors.forEach((err: any) => {
+          const field = err.path[0];
+          // Mapear nomes dos campos
+          const fieldMap: Record<string, keyof EditUserValidationErrors> = {
+            firstName: 'first_name',
+            lastName: 'last_name',
+            profileId: 'profile_id',
+            newPassword: 'new_password'
+          };
+          
+          const mappedField = fieldMap[field] || field;
+          errors[mappedField as keyof EditUserValidationErrors] = err.message;
+        });
+      }
+      
+      setValidationErrors(errors);
+      return false;
+    }
+  };
+
+  const handleFormDataChange = (field: keyof EditUserFormData, value: string) => {
+    // Sanitizar entrada de texto
+    const sanitizedValue = ['department', 'position'].includes(field) 
+      ? sanitizeTextInput(value) 
+      : value;
+    
+    setFormData(prev => ({ ...prev, [field]: sanitizedValue }));
+    
+    // Limpar erro do campo
+    if (validationErrors[field]) {
+      setValidationErrors(prev => ({ ...prev, [field]: undefined }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -55,11 +138,13 @@ export const useEditUserForm = ({ user, userRole, onSuccess, onClose }: UseEditU
     if (!user) return;
 
     if (!canManageUser(user)) {
-      toast({
-        title: "Erro",
-        description: "Você não tem permissão para editar este usuário",
-        variant: "destructive",
+      setValidationErrors({
+        general: "Você não tem permissão para editar este usuário"
       });
+      return;
+    }
+
+    if (!validateForm()) {
       return;
     }
 
@@ -122,10 +207,8 @@ export const useEditUserForm = ({ user, userRole, onSuccess, onClose }: UseEditU
       onClose();
     } catch (error: any) {
       console.error('Erro ao atualizar usuário:', error);
-      toast({
-        title: "Erro",
-        description: error.message || "Erro ao atualizar usuário",
-        variant: "destructive",
+      setValidationErrors({
+        general: error.message || "Erro ao atualizar usuário"
       });
     } finally {
       setLoading(false);
@@ -135,6 +218,7 @@ export const useEditUserForm = ({ user, userRole, onSuccess, onClose }: UseEditU
   return {
     formData,
     loading,
+    validationErrors,
     canManageUser,
     handleFormDataChange,
     handleSubmit,
