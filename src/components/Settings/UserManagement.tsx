@@ -1,94 +1,41 @@
 
-import React, { useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import React, { useState } from 'react';
 import { useAuth } from '@/components/Auth/AuthProvider';
-import { useSimpleUserManagement, SimpleUser } from '@/hooks/useSimpleUserManagement';
-import { supabase } from '@/integrations/supabase/client';
+import { useSimpleUserManagement } from '@/hooks/useSimpleUserManagement';
+import { useSimpleProfiles } from '@/hooks/useSimpleProfiles';
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+
+import { UserManagementHeader } from './UserManagement/UserManagementHeader';
+import { UserManagementStats } from './UserManagement/UserManagementStats';
 import SimpleUsersTable from './SimpleUsersTable';
 import CreateUserModal from './CreateUserModal';
-import { DeleteUserModal } from './DeleteUserModal';
 import { EditUserModal } from './EditUserModal';
-
-interface AccessProfile {
-  id: string;
-  name: string;
-  description: string;
-  is_active: boolean;
-}
+import { DeleteUserModal } from './DeleteUserModal';
 
 export const UserManagement = () => {
-  const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<SimpleUser | null>(null);
-  const [deleteUserModal, setDeleteUserModal] = useState<{
-    open: boolean;
-    userId: string;
-    userName: string;
-  }>({
-    open: false,
-    userId: '',
-    userName: ''
-  });
-  const [availableProfiles, setAvailableProfiles] = useState<AccessProfile[]>([]);
-  const [profilesLoading, setProfilesLoading] = useState(false);
-  
-  const { toast } = useToast();
-  const { userRole, user, companyInfo } = useAuth();
+  const { userId: currentUserId, userRole } = useAuth();
   const { users, loading, loadUsers, updateUserStatus, updateUserRole, updateUserProfile } = useSimpleUserManagement();
+  const { profiles: availableProfiles } = useSimpleProfiles();
+  const { toast } = useToast();
 
-  console.log('UserManagement render - userRole:', userRole, 'companyInfo:', companyInfo?.id, 'users:', users?.length);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [userToDelete, setUserToDelete] = useState({ id: '', name: '', email: '' });
 
-  const loadProfiles = async () => {
-    if (!companyInfo?.id) {
-      console.log('No company ID for loading profiles');
-      setAvailableProfiles([]);
-      return;
-    }
-
-    try {
-      setProfilesLoading(true);
-      console.log('Loading profiles for company:', companyInfo.id);
-
-      const { data, error } = await supabase
-        .from('access_profiles')
-        .select('id, name, description, is_active')
-        .eq('company_id', companyInfo.id)
-        .eq('is_active', true)
-        .order('name');
-
-      if (error) {
-        console.error('Error loading profiles:', error);
-        throw error;
-      }
-
-      console.log('Loaded profiles:', data);
-      setAvailableProfiles(data || []);
-    } catch (error) {
-      console.error('Error loading profiles:', error);
-      setAvailableProfiles([]);
-    } finally {
-      setProfilesLoading(false);
-    }
+  const handleEditUser = (user) => {
+    setSelectedUser(user);
+    setEditModalOpen(true);
   };
 
-  useEffect(() => {
-    console.log('UserManagement: Company info changed:', companyInfo?.id);
-    if (companyInfo?.id) {
-      loadProfiles();
-    }
-  }, [companyInfo?.id]);
-
-  const handleUserCreated = async () => {
-    setIsCreateUserModalOpen(false);
-    toast({
-      title: "Sucesso",
-      description: "Usuário criado com sucesso!",
-    });
-    await loadUsers();
-    await loadProfiles();
+  const handleDeleteUser = (userId, userName, userEmail = '') => {
+    setUserToDelete({ id: userId, name: userName, email: userEmail });
+    setDeleteModalOpen(true);
   };
 
-  const handleDeleteUser = async (userId: string) => {
+  const confirmDeleteUser = async (userId) => {
     try {
       const { error } = await supabase.functions.invoke('delete-user', {
         body: { userId },
@@ -101,93 +48,82 @@ export const UserManagement = () => {
         title: "Sucesso",
         description: "Usuário excluído com sucesso!",
       });
-      
+
       await loadUsers();
-    } catch (error: any) {
-      toast({ 
-        title: "Erro", 
-        description: error.message || "Erro ao excluir usuário", 
-        variant: "destructive" 
+    } catch (error) {
+      console.error('Erro ao excluir usuário:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao excluir usuário",
+        variant: "destructive",
       });
     }
   };
 
-  const handleDeleteUserClick = (userId: string, userName: string) => {
-    setDeleteUserModal({
-      open: true,
-      userId,
-      userName
-    });
-  };
-
-  const handleEditUser = (user: SimpleUser) => {
-    setEditingUser(user);
-  };
-
-  const handleUserUpdated = async () => {
+  const handleModalSuccess = async () => {
     await loadUsers();
-    await loadProfiles();
+    setCreateModalOpen(false);
+    setEditModalOpen(false);
+    setSelectedUser(null);
   };
 
-  // Check permissions
-  const isAdmin = userRole === 'admin' || userRole === 'master';
-  console.log('Permission check - isAdmin:', isAdmin, 'userRole:', userRole);
-
-  if (!isAdmin) {
+  if (!userRole || (userRole !== 'admin' && userRole !== 'master')) {
     return (
-      <div className="text-center p-4">
-        <p className="text-red-500">Acesso negado. Apenas administradores podem gerenciar usuários.</p>
+      <div className="text-center p-8">
+        <p>Você não tem permissão para acessar esta funcionalidade.</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Usuários do Sistema</h3>
-        <Button onClick={() => setIsCreateUserModalOpen(true)}>
-          Novo Usuário
-        </Button>
-      </div>
-      
+      <UserManagementHeader
+        usersCount={users.length}
+        loading={loading}
+        onRefresh={loadUsers}
+        onNewUser={() => setCreateModalOpen(true)}
+      />
+
+      <UserManagementStats users={users} />
+
+      <SimpleUsersTable
+        users={users}
+        userRole={userRole}
+        currentUserId={currentUserId}
+        onStatusChange={updateUserStatus}
+        onRoleChange={updateUserRole}
+        onProfileChange={updateUserProfile}
+        onDeleteUser={handleDeleteUser}
+        onEditUser={handleEditUser}
+        loading={loading}
+        availableProfiles={availableProfiles}
+      />
+
       <CreateUserModal
-        open={isCreateUserModalOpen}
-        setOpen={setIsCreateUserModalOpen}
-        onSuccess={handleUserCreated}
+        open={createModalOpen}
+        setOpen={setCreateModalOpen}
+        onSuccess={handleModalSuccess}
         availableProfiles={availableProfiles}
         userRole={userRole}
       />
 
       <EditUserModal
-        user={editingUser}
-        open={!!editingUser}
-        onOpenChange={(open) => !open && setEditingUser(null)}
-        onSuccess={handleUserUpdated}
+        user={selectedUser}
+        open={editModalOpen}
+        onOpenChange={setEditModalOpen}
+        onSuccess={handleModalSuccess}
         availableProfiles={availableProfiles}
         userRole={userRole}
       />
 
       <DeleteUserModal
-        userId={deleteUserModal.userId}
-        userName={deleteUserModal.userName}
-        userEmail=""
-        open={deleteUserModal.open}
-        onOpenChange={(open) => setDeleteUserModal(prev => ({ ...prev, open }))}
-        onConfirm={handleDeleteUser}
-        currentUserId={user?.id}
-      />
-      
-      <SimpleUsersTable
-        users={users}
-        userRole={userRole}
-        currentUserId={user?.id}
-        onStatusChange={updateUserStatus}
-        onRoleChange={updateUserRole}
-        onProfileChange={updateUserProfile}
-        onDeleteUser={handleDeleteUserClick}
-        onEditUser={handleEditUser}
-        loading={loading}
-        availableProfiles={availableProfiles}
+        userId={userToDelete.id}
+        userName={userToDelete.name}
+        userEmail={userToDelete.email}
+        open={deleteModalOpen}
+        onOpenChange={setDeleteModalOpen}
+        onConfirm={confirmDeleteUser}
+        currentUserId={currentUserId}
       />
     </div>
   );
