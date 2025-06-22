@@ -2,135 +2,106 @@
 import { useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from '@/components/Auth/AuthProvider';
-import { validateWithSecurity, userOperationSchemas } from '@/lib/enhancedValidation';
-import { sanitizer } from '@/lib/sanitization';
-import { checkRateLimit, generalRateLimit } from '@/lib/rateLimiting';
-import { auditUserAction, auditSecurityEvent } from '@/lib/auditLogging';
-
-export interface CreateUserData {
-  firstName: string;
-  lastName: string;
-  email: string;
-  password: string;
-  profileId: string;
-  role: string;
-  department?: string;
-  position?: string;
-}
+import { validateCreateUserData } from './validation/createUserValidation';
+import { checkRateLimit } from './security/rateLimitUtils';
+import { logUserAction } from './audit/auditUtils';
+import type { CreateUserData, OperationResult } from './types';
 
 export const useUserCreate = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const { userRole, user } = useAuth();
 
-  const createUser = async (userData: CreateUserData) => {
-    setLoading(true);
-    
+  const createUser = async (userData: CreateUserData): Promise<OperationResult> => {
     try {
-      const currentUserId = user?.id || 'anonymous';
-      
+      setLoading(true);
+
       // Rate limiting check
-      const rateLimitCheck = checkRateLimit(generalRateLimit, currentUserId);
-      
-      if (!rateLimitCheck.allowed) {
-        auditSecurityEvent(
-          'rate_limit_exceeded',
-          { operation: 'create_user', userId: currentUserId },
-          undefined,
-          navigator.userAgent,
-          false,
-          'Rate limit exceeded for user creation'
-        );
-        
-        throw new Error('Muitas tentativas. Tente novamente mais tarde.');
+      const rateLimitPassed = await checkRateLimit('create_user');
+      if (!rateLimitPassed) {
+        toast({
+          title: "Erro",
+          description: "Muitas tentativas. Tente novamente em alguns minutos.",
+          variant: "destructive",
+        });
+        return { success: false, error: "Rate limit exceeded" };
       }
 
-      // Validar e sanitizar dados
-      const validation = validateWithSecurity(
-        userOperationSchemas.createUser,
-        {
-          firstName: sanitizer.sanitizeText(userData.firstName),
-          lastName: sanitizer.sanitizeText(userData.lastName),
-          email: sanitizer.sanitizeText(userData.email),
-          password: userData.password,
-          profileId: userData.profileId,
-          role: userData.role,
-          department: userData.department ? sanitizer.sanitizeText(userData.department) : undefined,
-          position: userData.position ? sanitizer.sanitizeText(userData.position) : undefined,
-        },
-        'create_user'
-      );
-
-      if (!validation.success) {
-        auditUserAction(
-          'create_user_validation_failed',
-          currentUserId,
-          user?.email || 'unknown',
-          { userData: { email: userData.email }, validationErrors: validation.errors },
-          false,
-          validation.errors.join(', ')
-        );
+      // Validate input data
+      const validationResult = validateCreateUserData(userData);
+      if (!validationResult.success) {
+        // Type guard: we know success is false, so errors exists
+        const errorMessage = validationResult.errors.length > 0 
+          ? validationResult.errors[0] 
+          : "Dados inválidos";
         
-        throw new Error(validation.errors[0]);
+        toast({
+          title: "Erro de validação",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        
+        return { 
+          success: false, 
+          error: validationResult.errors.join(', ') 
+        };
       }
 
-      const validatedData = validation.data;
+      console.log('Creating user with validated data:', validationResult.data);
 
-      const { error } = await supabase.functions.invoke('create-user', {
+      // Call Supabase Edge Function to create user
+      const { data, error } = await supabase.functions.invoke('create-user', {
         body: {
-          email: validatedData.email,
-          password: validatedData.password,
-          firstName: validatedData.firstName,
-          lastName: validatedData.lastName,
-          role: validatedData.role,
-          profileId: validatedData.profileId || null,
-          department: validatedData.department,
-          position: validatedData.position,
-        },
-        headers: {
-          'x-requester-role': userRole,
+          email: userData.email,
+          password: userData.password,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          role: userData.role,
+          profileId: userData.profileId,
+          department: userData.department,
+          position: userData.position,
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating user:', error);
+        const errorMessage = error.message || "Erro ao criar usuário";
+        
+        toast({
+          title: "Erro",
+          description: errorMessage,
+          variant: "destructive",
+        });
 
-      // Log sucesso
-      auditUserAction(
-        'create_user_success',
-        currentUserId,
-        user?.email || 'unknown',
-        { 
-          createdUserEmail: validatedData.email,
-          role: validatedData.role
+        return { success: false, error: errorMessage };
+      }
+
+      // Log successful user creation
+      await logUserAction('create_user', {
+        targetUserId: data?.user?.id,
+        userData: {
+          email: userData.email,
+          role: userData.role,
         }
-      );
+      });
 
       toast({
         title: "Sucesso",
         description: "Usuário criado com sucesso!",
       });
 
-      return { success: true };
-    } catch (error: any) {
-      console.error('Erro ao criar usuário:', error);
+      return { success: true, data };
       
-      auditUserAction(
-        'create_user_failed',
-        user?.id || 'anonymous',
-        user?.email || 'unknown',
-        { userData: { email: userData.email }, error: error.message },
-        false,
-        error.message
-      );
+    } catch (error: any) {
+      console.error('Unexpected error creating user:', error);
+      const errorMessage = error.message || "Erro inesperado ao criar usuário";
       
       toast({
         title: "Erro",
-        description: error.message || "Erro ao criar usuário",
+        description: errorMessage,
         variant: "destructive",
       });
-      
-      return { success: false, error: error.message };
+
+      return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }

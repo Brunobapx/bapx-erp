@@ -1,69 +1,53 @@
 
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { EditUserForm } from './EditUser/EditUserForm';
-import { useEditUserForm } from './EditUser/useEditUserForm';
-import { SimpleUser } from '@/hooks/useSimpleUserManagement';
-
-interface AccessProfile {
-  id: string;
-  name: string;
-  description: string;
-  is_active: boolean;
-}
+import { SimpleUser } from '@/hooks/useUserData';
 
 interface EditUserModalProps {
   user: SimpleUser | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
-  availableProfiles: AccessProfile[];
+  availableProfiles: Array<{id: string; name: string; description: string; is_active: boolean}>;
   userRole: string;
 }
 
-export const EditUserModal = ({
+export const EditUserModal: React.FC<EditUserModalProps> = ({
   user,
   open,
   onOpenChange,
   onSuccess,
   availableProfiles,
-  userRole
-}: EditUserModalProps) => {
-  const {
-    formData,
-    loading,
-    canManageUser,
-    handleFormDataChange,
-    handleSubmit,
-  } = useEditUserForm({
-    user,
-    userRole,
-    onSuccess,
-    onClose: () => onOpenChange(false)
-  });
-
-  if (!user) return null;
-
-  const isEditable = canManageUser(user);
+  userRole,
+}) => {
+  const handleClose = () => {
+    onOpenChange(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Editar Usuário</DialogTitle>
+          <DialogTitle>
+            Editar Usuário: {user ? `${user.first_name} ${user.last_name}` : ''}
+          </DialogTitle>
         </DialogHeader>
         
-        <EditUserForm
-          formData={formData}
-          user={user}
-          availableProfiles={availableProfiles}
-          userRole={userRole}
-          isEditable={isEditable}
-          loading={loading}
-          onFormDataChange={handleFormDataChange}
-          onSubmit={handleSubmit}
-          onCancel={() => onOpenChange(false)}
-        />
+        {user && (
+          <EditUserForm
+            user={user}
+            userRole={userRole}
+            onSuccess={onSuccess}
+            onClose={handleClose}
+            availableProfiles={availableProfiles}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
