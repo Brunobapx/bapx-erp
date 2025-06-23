@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/components/Auth/AuthProvider';
@@ -12,9 +12,11 @@ export const useUserDataRefactored = () => {
   const { toast } = useToast();
   const { companyInfo } = useAuth();
 
-  const loadUsers = async (): Promise<void> => {
+  console.log('[useUserDataRefactored] Hook initialized, companyInfo:', companyInfo?.id);
+
+  const loadUsers = useCallback(async (): Promise<void> => {
     if (!companyInfo?.id) {
-      console.log('No company ID available for loading users');
+      console.log('[useUserDataRefactored] No company ID available for loading users');
       setUsers([]);
       return;
     }
@@ -23,7 +25,7 @@ export const useUserDataRefactored = () => {
       setLoading(true);
       setError(null);
       
-      console.log('Loading users for company:', companyInfo.id);
+      console.log('[useUserDataRefactored] Loading users for company:', companyInfo.id);
       
       // Query profiles with error handling
       const { data: profilesData, error: profilesError } = await supabase
@@ -32,28 +34,28 @@ export const useUserDataRefactored = () => {
         .eq('company_id', companyInfo.id);
 
       if (profilesError) {
-        console.error('Error loading profiles:', profilesError);
+        console.error('[useUserDataRefactored] Error loading profiles:', profilesError);
         throw profilesError;
       }
 
-      console.log('Profiles loaded:', profilesData?.length || 0);
+      console.log('[useUserDataRefactored] Profiles loaded:', profilesData?.length || 0);
 
       if (!profilesData || profilesData.length === 0) {
-        console.log('No users found for company');
+        console.log('[useUserDataRefactored] No users found for company');
         setUsers([]);
         return;
       }
 
       // Get user roles in batch
       const userIds = profilesData.map(p => p.id);
-      console.log('Loading roles for users:', userIds.length);
+      console.log('[useUserDataRefactored] Loading roles for users:', userIds.length);
       
       const { data: rolesData } = await supabase
         .from('user_roles')
         .select('user_id, role')
         .in('user_id', userIds);
 
-      console.log('Roles loaded:', rolesData?.length || 0);
+      console.log('[useUserDataRefactored] Roles loaded:', rolesData?.length || 0);
 
       // Get access profiles in batch
       const profileIds = profilesData
@@ -63,7 +65,7 @@ export const useUserDataRefactored = () => {
 
       let accessProfilesData: any[] = [];
       if (profileIds.length > 0) {
-        console.log('Loading access profiles:', profileIds.length);
+        console.log('[useUserDataRefactored] Loading access profiles:', profileIds.length);
         
         const { data } = await supabase
           .from('access_profiles')
@@ -71,16 +73,22 @@ export const useUserDataRefactored = () => {
           .in('id', profileIds);
         
         accessProfilesData = data || [];
-        console.log('Access profiles loaded:', accessProfilesData.length);
+        console.log('[useUserDataRefactored] Access profiles loaded:', accessProfilesData.length);
       }
 
-      // Get real email addresses using RPC call to fetch from auth.users
-      console.log('Loading real email addresses...');
-      const { data: usersWithEmails } = await supabase.rpc('get_company_users', {
-        company_id_param: companyInfo.id
-      });
-
-      console.log('Users with emails loaded:', usersWithEmails?.length || 0);
+      // Try to get real email addresses using RPC call
+      console.log('[useUserDataRefactored] Loading real email addresses...');
+      let usersWithEmails: any[] = [];
+      
+      try {
+        const { data } = await supabase.rpc('get_company_users', {
+          company_id_param: companyInfo.id
+        });
+        usersWithEmails = data || [];
+        console.log('[useUserDataRefactored] Users with emails loaded:', usersWithEmails.length);
+      } catch (emailError) {
+        console.warn('[useUserDataRefactored] Failed to load real emails, using fallback:', emailError);
+      }
 
       // Process users with enhanced security and real emails
       const processedUsers: SimpleUser[] = profilesData.map((profile) => {
@@ -89,8 +97,8 @@ export const useUserDataRefactored = () => {
           ? accessProfilesData.find(ap => ap.id === profile.profile_id)
           : null;
         
-        // Try to get real email from RPC function result
-        const userWithEmail = usersWithEmails?.find(u => u.id === profile.id);
+        // Try to get real email from RPC function result, fallback to generated email
+        const userWithEmail = usersWithEmails.find(u => u.id === profile.id);
         const realEmail = userWithEmail?.email || `user-${profile.id.substring(0, 8)}@sistema.local`;
         
         return {
@@ -109,10 +117,10 @@ export const useUserDataRefactored = () => {
         };
       });
 
-      console.log('Processed users:', processedUsers.length);
+      console.log('[useUserDataRefactored] Processed users:', processedUsers.length);
       setUsers(processedUsers);
     } catch (error: any) {
-      console.error('Error loading users:', error);
+      console.error('[useUserDataRefactored] Error loading users:', error);
       const errorMessage = error.message || "Erro ao carregar usuários";
       setError(errorMessage);
       toast({
@@ -124,20 +132,21 @@ export const useUserDataRefactored = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [companyInfo?.id, toast]);
 
-  const refreshUsers = async (): Promise<void> => {
+  const refreshUsers = useCallback(async (): Promise<void> => {
+    console.log('[useUserDataRefactored] Refreshing users...');
     await loadUsers();
-  };
+  }, [loadUsers]);
 
   useEffect(() => {
     if (companyInfo?.id) {
-      console.log('Company ID available, loading users');
+      console.log('[useUserDataRefactored] Company ID available, loading users');
       loadUsers();
     } else {
-      console.log('No company ID, waiting...');
+      console.log('[useUserDataRefactored] No company ID, waiting...');
     }
-  }, [companyInfo?.id]);
+  }, [companyInfo?.id, loadUsers]);
 
   return {
     users,
