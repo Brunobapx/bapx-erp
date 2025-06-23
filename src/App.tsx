@@ -1,9 +1,10 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/components/Auth/AuthProvider";
+import { EnhancedAuthProvider } from "@/components/Auth/EnhancedAuthProvider";
 import { ProtectedRoute } from "@/components/Auth/ProtectedRoute";
 import { ModuleAccessCheck } from "@/components/Auth/ModuleAccessCheck";
 import Sidebar from "@/components/Sidebar/Sidebar";
@@ -36,7 +37,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <AuthProvider>
+        <EnhancedAuthProvider>
           <FinancialProvider>
             <Routes>
               <Route path="/auth" element={<AuthPage />} />
@@ -135,7 +136,7 @@ const App = () => (
               />
             </Routes>
           </FinancialProvider>
-        </AuthProvider>
+        </EnhancedAuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
