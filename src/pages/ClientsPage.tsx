@@ -24,9 +24,11 @@ import { useClients } from '@/hooks/useClients';
 const ClientsPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [sortOrder, setSortOrder] = useState('name_az');
+  
   const { 
-    clients: filteredClients, 
-    allClients,
+    clients: allClients, 
     loading, 
     error, 
     searchQuery, 
@@ -37,10 +39,55 @@ const ClientsPage = () => {
   console.log('ClientsPage - Estado atual:', {
     loading,
     error,
-    filteredClientsCount: filteredClients?.length || 0,
     allClientsCount: allClients?.length || 0,
-    searchQuery
+    searchQuery,
+    typeFilter,
+    sortOrder
   });
+
+  // Apply filters
+  const filteredClients = React.useMemo(() => {
+    let filtered = Array.isArray(allClients) ? [...allClients] : [];
+    
+    // Apply type filter
+    if (typeFilter !== 'all') {
+      filtered = filtered.filter(client => {
+        if (typeFilter === 'pf') return client.type === 'PF';
+        if (typeFilter === 'pj') return client.type === 'PJ';
+        return true;
+      });
+    }
+    
+    // Apply search filter
+    if (searchQuery) {
+      const search = searchQuery.toLowerCase();
+      filtered = filtered.filter(client =>
+        client.name?.toLowerCase().includes(search) ||
+        client.email?.toLowerCase().includes(search) ||
+        client.phone?.toLowerCase().includes(search) ||
+        client.cpf?.includes(search) ||
+        client.cnpj?.includes(search)
+      );
+    }
+    
+    // Apply sorting
+    filtered.sort((a, b) => {
+      switch (sortOrder) {
+        case 'name_az':
+          return (a.name || '').localeCompare(b.name || '');
+        case 'name_za':
+          return (b.name || '').localeCompare(a.name || '');
+        case 'recent':
+          return new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime();
+        case 'oldest':
+          return new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime();
+        default:
+          return 0;
+      }
+    });
+    
+    return filtered;
+  }, [allClients, typeFilter, searchQuery, sortOrder]);
 
   const handleClientClick = (client: any) => {
     console.log('ClientsPage - Cliente clicado:', client);
@@ -73,9 +120,6 @@ const ClientsPage = () => {
       refreshClients();
     }
   };
-
-  // Ensure filteredClients is always an array
-  const safeFilteredClients = Array.isArray(filteredClients) ? filteredClients : [];
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
@@ -116,9 +160,15 @@ const ClientsPage = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem>Todos</DropdownMenuItem>
-              <DropdownMenuItem>Pessoa Física</DropdownMenuItem>
-              <DropdownMenuItem>Pessoa Jurídica</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTypeFilter('all')}>
+                Todos
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTypeFilter('pf')}>
+                Pessoa Física
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTypeFilter('pj')}>
+                Pessoa Jurídica
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           
@@ -129,21 +179,21 @@ const ClientsPage = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem>Nome (A-Z)</DropdownMenuItem>
-              <DropdownMenuItem>Nome (Z-A)</DropdownMenuItem>
-              <DropdownMenuItem>Mais recentes</DropdownMenuItem>
-              <DropdownMenuItem>Mais antigos</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortOrder('name_az')}>
+                Nome (A-Z)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortOrder('name_za')}>
+                Nome (Z-A)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortOrder('recent')}>
+                Mais recentes
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortOrder('oldest')}>
+                Mais antigos
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </div>
-      
-      {/* Debug info - remove in production */}
-      <div className="text-xs text-gray-500 p-2 bg-gray-50 rounded">
-        Debug: Loading: {loading ? 'Sim' : 'Não'} | 
-        Erro: {error || 'Nenhum'} | 
-        Total clientes: {allClients?.length || 0} | 
-        Filtrados: {safeFilteredClients.length}
       </div>
       
       <Card>
@@ -179,7 +229,7 @@ const ClientsPage = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {safeFilteredClients.map((client) => {
+                {filteredClients.map((client) => {
                   if (!client || !client.id) return null;
                   
                   return (
@@ -204,14 +254,14 @@ const ClientsPage = () => {
               </TableBody>
             </Table>
           )}
-          {!loading && !error && safeFilteredClients.length === 0 && (
+          {!loading && !error && filteredClients.length === 0 && (
             <div className="p-8 text-center">
               <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-600 font-medium">Nenhum cliente encontrado</p>
               <p className="text-sm text-gray-500 mt-2">
-                {searchQuery ? 'Tente alterar os filtros de busca' : 'Clique em "Novo Cliente" para adicionar o primeiro cliente'}
+                {searchQuery || typeFilter !== 'all' ? 'Tente alterar os filtros de busca' : 'Clique em "Novo Cliente" para adicionar o primeiro cliente'}
               </p>
-              {!searchQuery && (
+              {!searchQuery && typeFilter === 'all' && (
                 <Button 
                   onClick={handleNewClient} 
                   className="mt-4 bg-erp-order hover:bg-erp-order/90"
