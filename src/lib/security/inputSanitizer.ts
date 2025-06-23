@@ -75,27 +75,29 @@ export class InputSanitizer {
     return sanitized;
   }
   
-  // Validate and sanitize form data
+  // Validate and sanitize form data with proper typing
   static sanitizeFormData<T extends Record<string, any>>(data: T): T {
-    const sanitizedData = { ...data };
+    const result = {} as Record<string, any>;
     
-    for (const [key, value] of Object.entries(sanitizedData)) {
+    for (const [key, value] of Object.entries(data)) {
       if (typeof value === 'string') {
         try {
           if (key.toLowerCase().includes('email')) {
-            sanitizedData[key] = this.sanitizeEmail(value);
+            result[key] = this.sanitizeEmail(value);
           } else if (key.toLowerCase().includes('phone')) {
-            sanitizedData[key] = this.sanitizePhone(value);
+            result[key] = this.sanitizePhone(value);
           } else {
-            sanitizedData[key] = this.sanitizeText(value);
+            result[key] = this.sanitizeText(value);
           }
         } catch (error) {
           console.error(`[SECURITY] Error sanitizing field ${key}:`, error);
           throw new Error(`Invalid ${key}: ${error.message}`);
         }
+      } else {
+        result[key] = value;
       }
     }
     
-    return sanitizedData;
+    return result as T;
   }
 }
