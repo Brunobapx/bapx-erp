@@ -64,6 +64,7 @@ const SimpleUsersTable: React.FC<Props> = ({
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Papel</TableHead>
                 <TableHead>Perfil de Acesso</TableHead>
                 <TableHead>Departamento</TableHead>
                 <TableHead>Status</TableHead>

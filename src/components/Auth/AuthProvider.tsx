@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from "@/integrations/supabase/client";
@@ -27,14 +28,14 @@ export const useAuth = () => {
   return context;
 };
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
 
-  const loadUserData = async (userId: string) => {
+  const fetchUserData = async (userId: string) => {
     try {
       console.log('[AuthProvider] Fetching user data for:', userId);
       
@@ -89,110 +90,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   useEffect(() => {
-    let isMounted = true;
-
-    const initializeAuth = async () => {
-      try {
-        console.log('Initializing auth...');
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('[AuthProvider] Auth state changed:', event, session?.user?.email);
         
-        // Set up auth state listener first
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
-            if (!isMounted) return;
-            
-            console.log('Auth state change:', event, session?.user?.id);
-            
-            if (session?.user) {
-              // Check if user is active when they sign in
-              const { data: profile, error: profileError } = await supabase
-                .from('profiles')
-                .select('is_active, first_name, last_name, company_id, profile_id')
-                .eq('id', session.user.id)
-                .single();
-
-              if (profileError) {
-                console.error('Error fetching user profile:', profileError);
-                setUser(null);
-                setUserRole(null);
-                setCompanyInfo(null);
-                setLoading(false);
-                return;
-              }
-
-              // Block inactive users
-              if (!profile.is_active) {
-                console.log('User is inactive, blocking access');
-                await supabase.auth.signOut();
-                setUser(null);
-                setUserRole(null);
-                setCompanyInfo(null);
-                setLoading(false);
-                toast({
-                  title: "Acesso Negado",
-                  description: "Sua conta foi desativada. Entre em contato com o administrador.",
-                  variant: "destructive",
-                });
-                return;
-              }
-
-              // Continue with normal auth flow for active users
-              setUser(session.user);
-              
-              setTimeout(() => {
-                if (isMounted) {
-                  loadUserData(session.user.id);
-                }
-              }, 0);
-            } else {
-              console.log('No session, clearing user data');
-              setUser(null);
-              setUserRole(null);
-              setCompanyInfo(null);
-              setLoading(false);
-            }
-          }
-        );
-
-        // Then check for existing session
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user && isMounted) {
-          console.log('Found existing session for user:', session.user.id);
-          
-          // Check if existing user is still active
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('is_active')
-            .eq('id', session.user.id)
-            .single();
-
-          if (!profile?.is_active) {
-            console.log('Existing user is inactive, signing out');
-            await supabase.auth.signOut();
-            return;
-          }
-
-          setUser(session.user);
-          loadUserData(session.user.id);
-        } else if (isMounted) {
-          setLoading(false);
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          // Use setTimeout to avoid blocking the auth state change
+          setTimeout(() => {
+            fetchUserData(session.user.id);
+          }, 0);
+        } else {
+          console.log('[AuthProvider] No user, clearing state');
+          setUserRole(null);
+          setCompanyInfo(null);
         }
-
-        return () => {
-          subscription.unsubscribe();
-        };
-      } catch (error) {
-        console.error('Auth initialization error:', error);
-        if (isMounted) {
-          setLoading(false);
-        }
+        
+        setLoading(false);
       }
-    };
+    );
 
-    initializeAuth();
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('[AuthProvider] Initial session check:', session?.user?.email);
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        fetchUserData(session.user.id);
+      }
+      
+      setLoading(false);
+    });
 
-    return () => {
-      isMounted = false;
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   const signOut = async () => {
