@@ -2,9 +2,10 @@
 import React from 'react';
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Edit, Trash2, UserCheck, UserX } from 'lucide-react';
 import { SimpleUser } from '@/hooks/useUserData';
+import { UserActionsMenu } from './UserActionsMenu';
+import { UserRoleSelect } from './UserRoleSelect';
+import { UserProfileSelect } from './UserProfileSelect';
 
 interface UserTableRowProps {
   user: SimpleUser;
@@ -23,8 +24,11 @@ export const UserTableRow: React.FC<UserTableRowProps> = ({
   userRole,
   currentUserId,
   onStatusChange,
+  onRoleChange,
+  onProfileChange,
   onDeleteUser,
   onEditUser,
+  availableProfiles,
 }) => {
   const getDisplayName = (user: SimpleUser) => {
     if (!user) return 'Usuário não identificado';
@@ -44,19 +48,6 @@ export const UserTableRow: React.FC<UserTableRowProps> = ({
     return false;
   };
 
-  const handleDeleteUser = () => {
-    if (window.confirm(`Tem certeza que deseja excluir o usuário "${getDisplayName(user)}"? Esta ação não pode ser desfeita.`)) {
-      onDeleteUser(user.id, getDisplayName(user));
-    }
-  };
-
-  const handleToggleStatus = () => {
-    const action = user.is_active ? 'desativar' : 'ativar';
-    if (window.confirm(`Tem certeza que deseja ${action} o usuário "${getDisplayName(user)}"?`)) {
-      onStatusChange(user.id, !user.is_active);
-    }
-  };
-
   if (!user?.id) {
     console.warn('Invalid user found:', user);
     return null;
@@ -67,9 +58,21 @@ export const UserTableRow: React.FC<UserTableRowProps> = ({
       <TableCell className="font-medium">{getDisplayName(user)}</TableCell>
       <TableCell>{user.email || 'Email não disponível'}</TableCell>
       <TableCell>
-        <span className="text-sm text-gray-700">
-          {getProfileDisplayName(user)}
-        </span>
+        <UserRoleSelect
+          user={user}
+          userRole={userRole}
+          canManage={canManageUser(user)}
+          onRoleChange={onRoleChange}
+        />
+      </TableCell>
+      <TableCell>
+        <UserProfileSelect
+          user={user}
+          canManage={canManageUser(user)}
+          availableProfiles={availableProfiles}
+          onProfileChange={onProfileChange}
+          displayName={getProfileDisplayName(user)}
+        />
       </TableCell>
       <TableCell>{user.department || '-'}</TableCell>
       <TableCell>
@@ -78,39 +81,15 @@ export const UserTableRow: React.FC<UserTableRowProps> = ({
         </Badge>
       </TableCell>
       <TableCell>
-        <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onEditUser(user)}
-            disabled={!canManageUser(user)}
-            title="Editar usuário"
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleToggleStatus}
-            disabled={!canManageUser(user) || user.id === currentUserId}
-            title={user.is_active ? 'Desativar usuário' : 'Ativar usuário'}
-            className={user.is_active ? 'text-orange-600 hover:text-orange-800' : 'text-green-600 hover:text-green-800'}
-          >
-            {user.is_active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-          </Button>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleDeleteUser}
-            disabled={user.id === currentUserId || !canManageUser(user)}
-            title="Excluir usuário permanentemente"
-            className="text-red-600 hover:text-red-800"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
+        <UserActionsMenu
+          user={user}
+          currentUserId={currentUserId}
+          canManage={canManageUser(user)}
+          onStatusChange={onStatusChange}
+          onDeleteUser={onDeleteUser}
+          onEditUser={onEditUser}
+          displayName={getDisplayName(user)}
+        />
       </TableCell>
     </TableRow>
   );

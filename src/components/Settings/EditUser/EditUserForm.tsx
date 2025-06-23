@@ -22,8 +22,6 @@ export interface EditUserFormProps {
   availableProfiles: AccessProfile[];
 }
 
-const NO_PROFILE_VALUE = '__no_profile__';
-
 export const EditUserForm: React.FC<EditUserFormProps> = ({
   user,
   userRole,
@@ -39,11 +37,6 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
     handleFormDataChange,
     handleSubmit,
   } = useEditUserForm({ user, userRole, onSuccess, onClose });
-
-  const handleProfileChange = (profileId: string) => {
-    const actualProfileId = profileId === NO_PROFILE_VALUE ? '' : profileId;
-    handleFormDataChange('profile_id', actualProfileId);
-  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -136,15 +129,15 @@ export const EditUserForm: React.FC<EditUserFormProps> = ({
       <div className="space-y-2">
         <Label htmlFor="profile_id">Perfil de Acesso</Label>
         <Select 
-          value={formData.profile_id || NO_PROFILE_VALUE} 
-          onValueChange={handleProfileChange}
+          value={formData.profile_id} 
+          onValueChange={(value) => handleFormDataChange('profile_id', value)}
           disabled={!canManageUser}
         >
           <SelectTrigger>
             <SelectValue placeholder="Selecionar perfil" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={NO_PROFILE_VALUE}>Sem perfil</SelectItem>
+            <SelectItem value="">Sem perfil</SelectItem>
             {availableProfiles
               .filter(profile => profile.is_active)
               .map(profile => (

@@ -6,7 +6,6 @@ import { useSimpleProfiles } from '@/hooks/useSimpleProfiles';
 import { useUserCrud } from '@/hooks/useUserCrud';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 import { UserManagementHeader } from './UserManagement/UserManagementHeader';
 import { UserManagementStats } from './UserManagement/UserManagementStats';
@@ -78,81 +77,18 @@ export const UserManagement = () => {
   };
 
   const updateUserStatus = async (userId: string, isActive: boolean) => {
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ is_active: isActive })
-        .eq('id', userId);
-        
-      if (error) throw error;
-      
-      toast({
-        title: "Sucesso",
-        description: `Usuário ${isActive ? 'ativado' : 'desativado'} com sucesso!`,
-      });
-      
-      await refreshUsers();
-    } catch (error) {
-      console.error('Error updating user status:', error);
-      toast({ 
-        title: "Erro", 
-        description: "Erro ao atualizar status do usuário", 
-        variant: "destructive" 
-      });
-    }
+    // Implementação será feita através dos novos hooks CRUD
+    console.log('updateUserStatus:', userId, isActive);
   };
 
   const updateUserRole = async (userId: string, role: string) => {
-    try {
-      const { error } = await supabase
-        .from('user_roles')
-        .update({ role })
-        .eq('user_id', userId);
-
-      if (error) throw error;
-
-      toast({ 
-        title: "Sucesso", 
-        description: "Papel do usuário atualizado com sucesso!" 
-      });
-      
-      await refreshUsers();
-    } catch (error) {
-      console.error('Error updating user role:', error);
-      toast({ 
-        title: "Erro", 
-        description: "Erro ao atualizar papel do usuário", 
-        variant: "destructive" 
-      });
-    }
+    // Implementação será feita através dos novos hooks CRUD
+    console.log('updateUserRole:', userId, role);
   };
 
   const updateUserProfile = async (userId: string, profileId: string) => {
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ 
-          profile_id: profileId || null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId);
-
-      if (error) throw error;
-
-      toast({ 
-        title: "Sucesso", 
-        description: "Perfil de acesso do usuário atualizado com sucesso!" 
-      });
-      
-      await refreshUsers();
-    } catch (error) {
-      console.error('Error updating user profile:', error);
-      toast({ 
-        title: "Erro", 
-        description: "Erro ao atualizar perfil de acesso do usuário", 
-        variant: "destructive" 
-      });
-    }
+    // Implementação será feita através dos novos hooks CRUD
+    console.log('updateUserProfile:', userId, profileId);
   };
 
   if (!userRole || !hasPermission('canViewUserDetails')) {

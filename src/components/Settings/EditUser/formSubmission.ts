@@ -9,8 +9,6 @@ export const submitUserUpdate = async (
   userRole: string
 ): Promise<{ success: boolean; errors?: EditUserValidationErrors }> => {
   try {
-    console.log('Updating user with data:', formData);
-
     // Atualizar dados do perfil
     const { error: profileError } = await supabase
       .from('profiles')
@@ -24,52 +22,36 @@ export const submitUserUpdate = async (
       })
       .eq('id', user.id);
 
-    if (profileError) {
-      console.error('Profile update error:', profileError);
-      throw profileError;
-    }
+    if (profileError) throw profileError;
 
     // Atualizar role se mudou
     if (formData.role !== user.role) {
       const { error: roleError } = await supabase
         .from('user_roles')
-        .upsert({ 
-          user_id: user.id, 
-          role: formData.role,
-          company_id: user.company_id || null
-        })
+        .update({ role: formData.role })
         .eq('user_id', user.id);
 
-      if (roleError) {
-        console.error('Role update error:', roleError);
-        throw roleError;
-      }
+      if (roleError) throw roleError;
     }
 
     // Atualizar senha se fornecida
     if (formData.new_password.trim()) {
-      try {
-        const { error: functionError } = await supabase.functions.invoke('update-user-password', {
-          body: { 
-            userId: user.id, 
-            newPassword: formData.new_password 
-          },
-          headers: {
-            'x-requester-role': userRole,
-          },
-        });
+      const { error: functionError } = await supabase.functions.invoke('update-user-password', {
+        body: { 
+          userId: user.id, 
+          newPassword: formData.new_password 
+        },
+        headers: {
+          'x-requester-role': userRole,
+        },
+      });
 
-        if (functionError) {
-          console.warn('Não foi possível atualizar a senha:', functionError);
-          // Continue with success but log the warning
-        }
-      } catch (passwordError) {
-        console.warn('Password update failed:', passwordError);
-        // Don't fail the entire update for password issues
+      if (functionError) {
+        console.warn('Não foi possível atualizar a senha:', functionError);
+        // Continue with success but log the warning
       }
     }
 
-    console.log('User update completed successfully');
     return { success: true };
   } catch (error: any) {
     console.error('Erro ao atualizar usuário:', error);
