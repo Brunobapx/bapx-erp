@@ -3,24 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/components/Auth/AuthProvider';
-
-export interface SimpleUser {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  role: string;
-  is_active: boolean;
-  last_login: string;
-  department: string;
-  position: string;
-  profile_id?: string;
-  company_id?: string;
-  access_profile?: {
-    name: string;
-    description: string;
-  } | null;
-}
+import { SimpleUser } from '@/types/user';
 
 export const useUserDataRefactored = () => {
   const [users, setUsers] = useState<SimpleUser[]>([]);

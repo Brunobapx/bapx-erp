@@ -4,7 +4,7 @@ import { TableCell, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2, UserCheck, UserX } from 'lucide-react';
-import { SimpleUser } from '@/hooks/useUserData';
+import { SimpleUser } from '@/types/user';
 
 interface UserTableRowProps {
   user: SimpleUser;
