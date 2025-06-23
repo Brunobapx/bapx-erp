@@ -27,9 +27,36 @@ export interface OptimizedClient {
   updated_at: string;
 }
 
-// Simple in-memory cache with TTL
-const clientsCache = new Map<string, { data: OptimizedClient[]; timestamp: number }>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+// Optimized cache with better memory management
+class ClientsCache {
+  private cache = new Map<string, { data: OptimizedClient[]; timestamp: number }>();
+  private readonly TTL = 5 * 60 * 1000; // 5 minutes
+
+  get(key: string): OptimizedClient[] | null {
+    const cached = this.cache.get(key);
+    if (cached && Date.now() - cached.timestamp < this.TTL) {
+      return cached.data;
+    }
+    this.cache.delete(key);
+    return null;
+  }
+
+  set(key: string, data: OptimizedClient[]): void {
+    this.cache.set(key, { data, timestamp: Date.now() });
+    
+    // Cleanup old entries to prevent memory leaks
+    if (this.cache.size > 10) {
+      const oldestKey = this.cache.keys().next().value;
+      this.cache.delete(oldestKey);
+    }
+  }
+
+  clear(): void {
+    this.cache.clear();
+  }
+}
+
+const clientsCache = new ClientsCache();
 
 export const useOptimizedClients = () => {
   const [clients, setClients] = useState<OptimizedClient[]>([]);
@@ -37,23 +64,20 @@ export const useOptimizedClients = () => {
   const [error, setError] = useState<string | null>(null);
   const { user, companyInfo } = useAuth();
   
+  // Memoized values to prevent unnecessary re-renders
   const companyId = useMemo(() => companyInfo?.id, [companyInfo?.id]);
   const cacheKey = useMemo(() => `clients_${companyId}`, [companyId]);
 
-  // Get clients from cache if valid
+  // Memoized cache operations
   const getCachedClients = useCallback((): OptimizedClient[] | null => {
-    const cached = clientsCache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      return cached.data;
-    }
-    return null;
+    return clientsCache.get(cacheKey);
   }, [cacheKey]);
 
-  // Save clients to cache
   const setCachedClients = useCallback((data: OptimizedClient[]) => {
-    clientsCache.set(cacheKey, { data, timestamp: Date.now() });
+    clientsCache.set(cacheKey, data);
   }, [cacheKey]);
 
+  // Optimized load function with better error handling
   const loadClients = useCallback(async (useCache: boolean = true) => {
     if (!user || !companyId) {
       setClients([]);
@@ -73,6 +97,7 @@ export const useOptimizedClients = () => {
       setLoading(true);
       setError(null);
 
+      // Single optimized query
       const { data, error: fetchError } = await supabase
         .from('clients')
         .select('*')
@@ -98,13 +123,13 @@ export const useOptimizedClients = () => {
     }
   }, [user, companyId, getCachedClients, setCachedClients]);
 
+  // Memoized CRUD operations
   const createClient = useCallback(async (clientData: Omit<OptimizedClient, 'id' | 'created_at' | 'updated_at'>) => {
     if (!user) {
       throw new Error('Usuário não autenticado');
     }
 
     try {
-      // Sanitize input data
       const sanitizedData = InputSanitizer.sanitizeFormData(clientData);
 
       const { data, error: insertError } = await supabase
@@ -121,7 +146,6 @@ export const useOptimizedClients = () => {
         SecureErrorHandler.handleApiError(insertError, 'CreateClient');
       }
 
-      // Refresh clients after creation
       await loadClients(false);
       toast.success('Cliente criado com sucesso!');
       
@@ -138,20 +162,18 @@ export const useOptimizedClients = () => {
     }
 
     try {
-      // Sanitize input data
       const sanitizedData = InputSanitizer.sanitizeFormData(clientData);
 
       const { error: updateError } = await supabase
         .from('clients')
         .update(sanitizedData)
         .eq('id', id)
-        .eq('company_id', companyId); // Ensure user can only update their company's clients
+        .eq('company_id', companyId);
 
       if (updateError) {
         SecureErrorHandler.handleApiError(updateError, 'UpdateClient');
       }
 
-      // Refresh clients after update
       await loadClients(false);
       toast.success('Cliente atualizado com sucesso!');
     } catch (error: any) {
@@ -170,13 +192,12 @@ export const useOptimizedClients = () => {
         .from('clients')
         .delete()
         .eq('id', id)
-        .eq('company_id', companyId); // Ensure user can only delete their company's clients
+        .eq('company_id', companyId);
 
       if (deleteError) {
         SecureErrorHandler.handleApiError(deleteError, 'DeleteClient');
       }
 
-      // Refresh clients after deletion
       await loadClients(false);
       toast.success('Cliente excluído com sucesso!');
     } catch (error: any) {
@@ -185,12 +206,11 @@ export const useOptimizedClients = () => {
     }
   }, [user, companyId, loadClients]);
 
-  // Search clients with sanitized input
+  // Memoized search function
   const searchClients = useCallback((searchTerm: string): OptimizedClient[] => {
     if (!searchTerm?.trim()) return clients;
     
     try {
-      // Sanitize search term
       const sanitizedSearch = InputSanitizer.sanitizeSearchQuery(searchTerm);
       const searchLower = sanitizedSearch.toLowerCase();
       
@@ -209,21 +229,24 @@ export const useOptimizedClients = () => {
     }
   }, [clients, user?.id]);
 
+  // Memoized utility functions
   const refreshClients = useCallback(() => {
     loadClients(false);
   }, [loadClients]);
 
   const clearCache = useCallback(() => {
-    clientsCache.delete(cacheKey);
-  }, [cacheKey]);
+    clientsCache.clear();
+  }, []);
 
+  // Effect with stable dependencies
   useEffect(() => {
     if (companyId) {
       loadClients();
     }
   }, [companyId, loadClients]);
 
-  return {
+  // Memoized return object
+  return useMemo(() => ({
     clients,
     loading,
     error,
@@ -234,5 +257,16 @@ export const useOptimizedClients = () => {
     searchClients,
     refreshClients,
     clearCache,
-  };
+  }), [
+    clients,
+    loading,
+    error,
+    loadClients,
+    createClient,
+    updateClient,
+    deleteClient,
+    searchClients,
+    refreshClients,
+    clearCache,
+  ]);
 };

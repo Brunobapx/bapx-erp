@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { InputSanitizer } from '@/lib/security/inputSanitizer';
 import { useClients } from '@/hooks/useClients';
 import { toast } from 'sonner';
@@ -26,12 +26,11 @@ export const useSecureClientForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { createClient, updateClient } = useClients();
 
+  // Memoized validation function
   const validateAndSanitizeClientData = useCallback((data: SecureClientFormData): SecureClientFormData => {
     try {
-      // Sanitize all string fields
       const sanitizedData = InputSanitizer.sanitizeFormData(data);
       
-      // Additional validation for required fields
       if (!sanitizedData.name?.trim()) {
         throw new Error('Nome/Razão Social é obrigatório');
       }
@@ -40,14 +39,12 @@ export const useSecureClientForm = () => {
         if (!sanitizedData.cnpj?.trim()) {
           throw new Error('CNPJ é obrigatório para Pessoa Jurídica');
         }
-        // Add CNPJ validation here if needed
       }
       
       if (sanitizedData.type === 'PF') {
         if (!sanitizedData.cpf?.trim()) {
           throw new Error('CPF é obrigatório para Pessoa Física');
         }
-        // Add CPF validation here if needed
       }
       
       return sanitizedData;
@@ -56,6 +53,7 @@ export const useSecureClientForm = () => {
     }
   }, []);
 
+  // Memoized submit function
   const submitSecureClient = useCallback(async (
     data: SecureClientFormData, 
     isUpdate: boolean = false, 
@@ -64,7 +62,6 @@ export const useSecureClientForm = () => {
     setIsSubmitting(true);
     
     try {
-      // Validate and sanitize input data
       const sanitizedData = validateAndSanitizeClientData(data);
       
       if (isUpdate && clientId) {
@@ -85,9 +82,10 @@ export const useSecureClientForm = () => {
     }
   }, [validateAndSanitizeClientData, createClient, updateClient]);
 
-  return {
+  // Memoized return object
+  return useMemo(() => ({
     submitSecureClient,
     isSubmitting,
     validateAndSanitizeClientData,
-  };
+  }), [submitSecureClient, isSubmitting, validateAndSanitizeClientData]);
 };

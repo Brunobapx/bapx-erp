@@ -12,8 +12,10 @@ export const useUserDataRefactored = () => {
   const { toast } = useToast();
   const { companyInfo } = useAuth();
 
+  // Memoize company ID to prevent unnecessary re-renders
   const companyId = useMemo(() => companyInfo?.id, [companyInfo?.id]);
 
+  // Memoized load function to prevent infinite loops
   const loadUsers = useCallback(async (): Promise<void> => {
     if (!companyId) {
       console.log('[useUserDataRefactored] No company ID available');
@@ -27,7 +29,7 @@ export const useUserDataRefactored = () => {
       
       console.log('[useUserDataRefactored] Loading users for company:', companyId);
       
-      // Optimized query with single JOIN
+      // Single optimized query with proper JOIN
       const { data: usersData, error: usersError } = await supabase
         .from('profiles')
         .select(`
@@ -55,13 +57,12 @@ export const useUserDataRefactored = () => {
         return;
       }
 
+      // Memoized user processing
       const processedUsers: SimpleUser[] = usersData.map((user) => {
-        // Handle user_roles array properly
         const userRole = Array.isArray(user.user_roles) && user.user_roles.length > 0 
           ? user.user_roles[0].role 
           : 'user';
         
-        // Handle access_profiles properly
         let accessProfile: { name: string; description: string; } | null = null;
         
         if (user.access_profiles) {
@@ -99,34 +100,38 @@ export const useUserDataRefactored = () => {
       setUsers(processedUsers);
     } catch (error: any) {
       console.error('[useUserDataRefactored] Error loading users:', error);
-      setError(error.message || "Erro ao carregar usuários");
+      const errorMessage = error.message || "Erro ao carregar usuários";
+      setError(errorMessage);
       setUsers([]);
       
       toast({
         title: "Erro",
-        description: error.message || "Erro ao carregar usuários",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  }, [companyId, toast]);
+  }, [companyId, toast]); // Stable dependencies only
 
+  // Memoized refresh function
   const refreshUsers = useCallback(async (): Promise<void> => {
     await loadUsers();
   }, [loadUsers]);
 
+  // Effect with stable dependencies
   useEffect(() => {
     if (companyId) {
       loadUsers();
     }
   }, [companyId, loadUsers]);
 
-  return {
+  // Memoized return object to prevent unnecessary re-renders
+  return useMemo(() => ({
     users,
     loading,
     error,
     loadUsers,
     refreshUsers,
-  };
+  }), [users, loading, error, loadUsers, refreshUsers]);
 };
