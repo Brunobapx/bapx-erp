@@ -13,23 +13,11 @@ import {
 interface FinanceOverviewFiltersProps {
   searchQuery: string;
   setSearchQuery: (q: string) => void;
-  typeFilter?: string;
-  setTypeFilter?: (type: string) => void;
-  statusFilter?: string;
-  setStatusFilter?: (status: string) => void;
-  sortOrder?: string;
-  setSortOrder?: (sort: string) => void;
 }
 
 export const FinanceOverviewFilters: React.FC<FinanceOverviewFiltersProps> = ({
   searchQuery,
   setSearchQuery,
-  typeFilter = 'all',
-  setTypeFilter = () => {},
-  statusFilter = 'all',
-  setStatusFilter = () => {},
-  sortOrder = 'recent',
-  setSortOrder = () => {},
 }) => (
   <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
     <div className="relative w-full sm:max-w-xs">
@@ -49,9 +37,9 @@ export const FinanceOverviewFilters: React.FC<FinanceOverviewFiltersProps> = ({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
-          <DropdownMenuItem onClick={() => setTypeFilter('all')}>Todos</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setTypeFilter('receivable')}>Receitas</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setTypeFilter('payable')}>Despesas</DropdownMenuItem>
+          <DropdownMenuItem>Todos</DropdownMenuItem>
+          <DropdownMenuItem>Receitas</DropdownMenuItem>
+          <DropdownMenuItem>Despesas</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
       <DropdownMenu>
@@ -61,10 +49,10 @@ export const FinanceOverviewFilters: React.FC<FinanceOverviewFiltersProps> = ({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
-          <DropdownMenuItem onClick={() => setStatusFilter('all')}>Todos</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setStatusFilter('paid')}>Pago</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setStatusFilter('pending')}>Pendente</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setStatusFilter('overdue')}>Vencido</DropdownMenuItem>
+          <DropdownMenuItem>Todos</DropdownMenuItem>
+          <DropdownMenuItem>Pago</DropdownMenuItem>
+          <DropdownMenuItem>Pendente</DropdownMenuItem>
+          <DropdownMenuItem>Aguardando Confirmação</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
       <DropdownMenu>
@@ -74,12 +62,10 @@ export const FinanceOverviewFilters: React.FC<FinanceOverviewFiltersProps> = ({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
-          <DropdownMenuItem onClick={() => setSortOrder('recent')}>Mais recente</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setSortOrder('oldest')}>Mais antigo</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setSortOrder('due_near')}>Vencimento próximo</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setSortOrder('due_far')}>Vencimento distante</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setSortOrder('amount_high')}>Maior valor</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setSortOrder('amount_low')}>Menor valor</DropdownMenuItem>
+          <DropdownMenuItem>Vencimento próximo</DropdownMenuItem>
+          <DropdownMenuItem>Vencimento distante</DropdownMenuItem>
+          <DropdownMenuItem>Maior valor</DropdownMenuItem>
+          <DropdownMenuItem>Menor valor</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

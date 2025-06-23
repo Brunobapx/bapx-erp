@@ -1,26 +1,26 @@
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { User } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
-interface Company {
+interface CompanyInfo {
   id: string;
   name: string;
-  subdomain: string;
   status: string;
-  logo_url?: string;
-  primary_color?: string;
-  secondary_color?: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  userRole: string | null;
-  companyInfo: Company | null;
+  session: Session | null;
   loading: boolean;
   signOut: () => Promise<void>;
-  refreshUserData: () => Promise<void>;
+  userRole: string | null;
+  companyInfo: CompanyInfo | null;
+}
+
+interface AuthProviderProps {
+  children: React.ReactNode;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,157 +33,213 @@ export const useAuth = () => {
   return context;
 };
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [companyInfo, setCompanyInfo] = useState<Company | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [dataLoaded, setDataLoaded] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
   const { toast } = useToast();
 
-  const loadUserData = useCallback(async (currentUser: User) => {
-    if (!currentUser || dataLoaded) return;
-    
+  console.log('[AuthProvider] Component rendered, loading:', loading, 'user:', user?.id);
+
+  const loadUserData = async (userId: string) => {
     try {
-      console.log('[AuthProvider] Loading user data for:', currentUser.id);
-      setDataLoaded(true);
-
-      // Get user role with error handling
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', currentUser.id)
-        .maybeSingle();
-
-      if (roleError) {
-        console.error('[AuthProvider] Error loading role:', roleError);
-      } else if (roleData) {
-        setUserRole(roleData.role);
-        console.log('[AuthProvider] User role loaded:', roleData.role);
-      }
-
-      // Get user profile and company with error handling
+      console.log('[AuthProvider] Loading user data for:', userId);
+      
+      // Buscar perfil do usuário
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('company_id')
-        .eq('id', currentUser.id)
-        .maybeSingle();
+        .select(`
+          company_id,
+          is_active,
+          companies!inner(
+            id,
+            name,
+            status
+          )
+        `)
+        .eq('id', userId)
+        .single();
 
       if (profileError) {
-        console.error('[AuthProvider] Error loading profile:', profileError);
+        console.error('[AuthProvider] Error fetching profile:', profileError);
+        setLoading(false);
         return;
       }
 
-      if (profileData?.company_id) {
-        const { data: companyData, error: companyError } = await supabase
-          .from('companies')
-          .select('*')
-          .eq('id', profileData.company_id)
-          .maybeSingle();
+      console.log('[AuthProvider] Profile data loaded:', profileData);
 
-        if (companyError) {
-          console.error('[AuthProvider] Error loading company:', companyError);
-        } else if (companyData) {
-          setCompanyInfo(companyData);
-          console.log('[AuthProvider] Company loaded:', companyData.name);
-        }
+      // Verificar se usuário está ativo
+      if (!profileData?.is_active) {
+        console.log('[AuthProvider] User is inactive, signing out');
+        await supabase.auth.signOut();
+        setUser(null);
+        setUserRole(null);
+        setCompanyInfo(null);
+        setLoading(false);
+        toast({
+          title: "Acesso Negado",
+          description: "Sua conta foi desativada. Entre em contato com o administrador.",
+          variant: "destructive",
+        });
+        return;
       }
-    } catch (error: any) {
-      console.error('[AuthProvider] Error loading user data:', error);
-      // Reset loading state on error
-      setDataLoaded(false);
-    }
-  }, [dataLoaded]);
 
-  const refreshUserData = useCallback(async () => {
-    if (user) {
-      setDataLoaded(false);
-      await loadUserData(user);
+      // Configurar informações da empresa
+      if (profileData?.companies) {
+        const company = Array.isArray(profileData.companies) ? profileData.companies[0] : profileData.companies;
+        console.log('[AuthProvider] Company info set:', company);
+        setCompanyInfo({
+          id: company.id,
+          name: company.name,
+          status: company.status
+        });
+      }
+
+      // Buscar role do usuário
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .single();
+      
+      if (roleError) {
+        console.error('[AuthProvider] Error fetching role:', roleError);
+        setUserRole('user'); // Default role
+      } else {
+        const role = roleData?.role || 'user';
+        console.log('[AuthProvider] User role set:', role);
+        setUserRole(role);
+      }
+
+      setLoading(false);
+    } catch (error) {
+      console.error('[AuthProvider] Error in loadUserData:', error);
+      setUserRole('user');
+      setCompanyInfo(null);
+      setLoading(false);
     }
-  }, [user, loadUserData]);
+  };
 
   useEffect(() => {
-    console.log('[AuthProvider] Initializing auth state...');
-    
+    let isMounted = true;
+
     const initializeAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log('[AuthProvider] Initializing auth...');
         
-        if (error) {
-          console.error('[AuthProvider] Error getting session:', error);
-          setLoading(false);
-          return;
-        }
-        
-        if (session?.user) {
-          console.log('[AuthProvider] Session found, setting user');
+        // Set up auth state listener
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            if (!isMounted) return;
+            
+            console.log('[AuthProvider] Auth state change:', event, session?.user?.id);
+            
+            if (session?.user) {
+              setUser(session.user);
+              setSession(session);
+              
+              // Verificar se usuário está ativo antes de carregar dados
+              try {
+                const { data: profile } = await supabase
+                  .from('profiles')
+                  .select('is_active')
+                  .eq('id', session.user.id)
+                  .single();
+
+                if (!profile?.is_active) {
+                  console.log('[AuthProvider] User inactive during state change, signing out');
+                  await supabase.auth.signOut();
+                  return;
+                }
+
+                // Usar setTimeout para evitar problemas de recursão
+                setTimeout(() => {
+                  if (isMounted) {
+                    loadUserData(session.user.id);
+                  }
+                }, 0);
+              } catch (error) {
+                console.error('[AuthProvider] Error checking user status:', error);
+                setLoading(false);
+              }
+            } else {
+              console.log('[AuthProvider] No session, clearing user data');
+              setUser(null);
+              setSession(null);
+              setUserRole(null);
+              setCompanyInfo(null);
+              setLoading(false);
+            }
+          }
+        );
+
+        // Check for existing session
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user && isMounted) {
+          console.log('[AuthProvider] Found existing session for user:', session.user.id);
+          
+          // Check if existing user is still active
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('is_active')
+            .eq('id', session.user.id)
+            .single();
+
+          if (!profile?.is_active) {
+            console.log('[AuthProvider] Existing user is inactive, signing out');
+            await supabase.auth.signOut();
+            return;
+          }
+
           setUser(session.user);
-          await loadUserData(session.user);
-        } else {
-          console.log('[AuthProvider] No session found');
+          setSession(session);
+          loadUserData(session.user.id);
+        } else if (isMounted) {
+          setLoading(false);
         }
+
+        return () => {
+          subscription.unsubscribe();
+        };
       } catch (error) {
-        console.error('[AuthProvider] Error initializing auth:', error);
-      } finally {
-        setLoading(false);
+        console.error('[AuthProvider] Auth initialization error:', error);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     initializeAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('[AuthProvider] Auth state changed:', event);
-        
-        if (event === 'SIGNED_IN' && session?.user) {
-          setUser(session.user);
-          setDataLoaded(false); // Reset to allow data loading
-          await loadUserData(session.user);
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-          setUserRole(null);
-          setCompanyInfo(null);
-          setDataLoaded(false);
-        }
-        
-        setLoading(false);
-      }
-    );
-
     return () => {
-      subscription.unsubscribe();
+      isMounted = false;
     };
-  }, [loadUserData]);
+  }, []);
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
-      setUser(null);
-      setUserRole(null);
-      setCompanyInfo(null);
-      setDataLoaded(false);
-    } catch (error: any) {
-      console.error('[AuthProvider] Error signing out:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao fazer logout",
-        variant: "destructive",
-      });
+      console.log('[AuthProvider] Signing out...');
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('[AuthProvider] Error signing out:', error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('[AuthProvider] Sign out failed:', error);
+      // Don't re-throw, just log the error
     }
   };
 
   const value = {
     user,
-    userRole,
-    companyInfo,
+    session,
     loading,
     signOut,
-    refreshUserData,
+    userRole,
+    companyInfo,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

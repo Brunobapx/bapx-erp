@@ -22,8 +22,11 @@ export const useUserPermissions = () => {
     canViewSecuritySettings: false,
   });
 
+  console.log('[useUserPermissions] Hook initialized, userRole:', userRole);
+
   useEffect(() => {
     if (!userRole) {
+      console.log('[useUserPermissions] No user role, setting all permissions to false');
       setPermissions({
         canViewUserDetails: false,
         canCreateUsers: false,
@@ -34,6 +37,8 @@ export const useUserPermissions = () => {
       });
       return;
     }
+
+    console.log('[useUserPermissions] Setting permissions for role:', userRole);
 
     // Master tem todas as permissões
     if (userRole === 'master') {
@@ -48,7 +53,7 @@ export const useUserPermissions = () => {
       return;
     }
 
-    // Admin tem quase todas as permissões
+    // Admin tem quase todas as permissões, exceto deletar masters
     if (userRole === 'admin') {
       setPermissions({
         canViewUserDetails: true,
@@ -73,7 +78,9 @@ export const useUserPermissions = () => {
   }, [userRole]);
 
   const hasPermission = (permission: keyof Permissions): boolean => {
-    return permissions[permission];
+    const result = permissions[permission];
+    console.log('[useUserPermissions] Checking permission:', permission, 'result:', result);
+    return result;
   };
 
   return {
