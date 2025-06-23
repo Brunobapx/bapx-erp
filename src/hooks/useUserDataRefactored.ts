@@ -90,18 +90,42 @@ export const useUserDataRefactored = () => {
         console.log('Access profiles loaded:', accessProfilesData.length);
       }
 
-      // Process users with enhanced security
+      // Get real email addresses from auth.users
+      console.log('Loading real email addresses...');
+      const { data: authUsersData } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          first_name,
+          last_name,
+          phone,
+          department,
+          position,
+          is_active,
+          last_login,
+          profile_id,
+          auth_users:id (email)
+        `)
+        .eq('company_id', companyInfo.id);
+
+      console.log('Auth users data loaded:', authUsersData?.length || 0);
+
+      // Process users with enhanced security and real emails
       const processedUsers: SimpleUser[] = profilesData.map((profile) => {
         const userRole = rolesData?.find(r => r.user_id === profile.id);
         const accessProfile = profile.profile_id 
           ? accessProfilesData.find(ap => ap.id === profile.profile_id)
           : null;
         
+        // Try to get real email from auth users data
+        const authUser = authUsersData?.find(au => au.id === profile.id);
+        const realEmail = authUser?.auth_users?.email || `user-${profile.id.substring(0, 8)}@sistema.local`;
+        
         return {
           id: profile.id,
           first_name: profile.first_name || '',
           last_name: profile.last_name || '',
-          email: `user-${profile.id.substring(0, 8)}@sistema.local`,
+          email: realEmail,
           role: userRole?.role || 'user',
           is_active: profile.is_active ?? true,
           last_login: profile.last_login || '',
