@@ -1,7 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { EditUserFormData, EditUserValidationErrors } from './types';
-import { SimpleUser } from '@/types/user';
+import { SimpleUser } from '@/hooks/useSimpleUserManagement';
 
 export const submitUserUpdate = async (
   user: SimpleUser,

@@ -31,17 +31,8 @@ export const UserManagement = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [userToDelete, setUserToDelete] = useState({ id: '', name: '', email: '' });
 
-  console.log('[UserManagement] Component rendered:', { 
-    usersCount: users.length, 
-    loading, 
-    userRole,
-    hasPermissionFunc: typeof hasPermission
-  });
-
   const handleEditUser = (user) => {
-    console.log('[UserManagement] Edit user requested:', user.id);
-    if (!hasPermission || !hasPermission('canEditUsers')) {
-      console.log('[UserManagement] No permission to edit users');
+    if (!hasPermission('canEditUsers')) {
       toast({
         title: "Erro",
         description: "Você não tem permissão para editar usuários",
@@ -54,9 +45,7 @@ export const UserManagement = () => {
   };
 
   const handleDeleteUser = (userId, userName, userEmail = '') => {
-    console.log('[UserManagement] Delete user requested:', userId);
-    if (!hasPermission || !hasPermission('canDeleteUsers')) {
-      console.log('[UserManagement] No permission to delete users');
+    if (!hasPermission('canDeleteUsers')) {
       toast({
         title: "Erro",
         description: "Você não tem permissão para excluir usuários",
@@ -70,7 +59,6 @@ export const UserManagement = () => {
 
   const confirmDeleteUser = async (userId) => {
     try {
-      console.log('[UserManagement] Confirming delete user:', userId);
       const result = await deleteUser(userId);
       if (result.success) {
         await refreshUsers();
@@ -78,12 +66,11 @@ export const UserManagement = () => {
         setUserToDelete({ id: '', name: '', email: '' });
       }
     } catch (error) {
-      console.error('[UserManagement] Error deleting user:', error);
+      console.error('Erro ao excluir usuário:', error);
     }
   };
 
   const handleModalSuccess = async () => {
-    console.log('[UserManagement] Modal success, refreshing users');
     await refreshUsers();
     setCreateModalOpen(false);
     setEditModalOpen(false);
@@ -92,7 +79,6 @@ export const UserManagement = () => {
 
   const updateUserStatus = async (userId: string, isActive: boolean) => {
     try {
-      console.log('[UserManagement] Updating user status:', userId, isActive);
       const { error } = await supabase
         .from('profiles')
         .update({ is_active: isActive })
@@ -107,7 +93,7 @@ export const UserManagement = () => {
       
       await refreshUsers();
     } catch (error) {
-      console.error('[UserManagement] Error updating user status:', error);
+      console.error('Error updating user status:', error);
       toast({ 
         title: "Erro", 
         description: "Erro ao atualizar status do usuário", 
@@ -118,7 +104,6 @@ export const UserManagement = () => {
 
   const updateUserRole = async (userId: string, role: string) => {
     try {
-      console.log('[UserManagement] Updating user role:', userId, role);
       const { error } = await supabase
         .from('user_roles')
         .update({ role })
@@ -133,7 +118,7 @@ export const UserManagement = () => {
       
       await refreshUsers();
     } catch (error) {
-      console.error('[UserManagement] Error updating user role:', error);
+      console.error('Error updating user role:', error);
       toast({ 
         title: "Erro", 
         description: "Erro ao atualizar papel do usuário", 
@@ -144,7 +129,6 @@ export const UserManagement = () => {
 
   const updateUserProfile = async (userId: string, profileId: string) => {
     try {
-      console.log('[UserManagement] Updating user profile:', userId, profileId);
       const { error } = await supabase
         .from('profiles')
         .update({ 
@@ -162,7 +146,7 @@ export const UserManagement = () => {
       
       await refreshUsers();
     } catch (error) {
-      console.error('[UserManagement] Error updating user profile:', error);
+      console.error('Error updating user profile:', error);
       toast({ 
         title: "Erro", 
         description: "Erro ao atualizar perfil de acesso do usuário", 
@@ -171,19 +155,7 @@ export const UserManagement = () => {
     }
   };
 
-  // Verificação simplificada de permissões com fallback
-  if (!userRole) {
-    console.log('[UserManagement] No user role, showing loading');
-    return (
-      <div className="text-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-        <p>Carregando permissões...</p>
-      </div>
-    );
-  }
-
-  if (!hasPermission || !hasPermission('canViewUserDetails')) {
-    console.log('[UserManagement] No permission to view user details');
+  if (!userRole || !hasPermission('canViewUserDetails')) {
     return (
       <div className="text-center p-8">
         <p>Você não tem permissão para acessar esta funcionalidade.</p>

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { StatusCards } from '@/components/Dashboard/StatusCards';
 import { ProcessFunnel } from '@/components/Dashboard/ProcessFunnel';
@@ -9,17 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock } from 'lucide-react';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAuth } from '@/components/Auth/AuthProvider';
 
 const Index = () => {
-  const { user, loading: authLoading } = useAuth();
   const { recentOrders, loading } = useDashboardStats();
-  
-  console.log('[Index] Component rendered:', { 
-    user: user?.id, 
-    authLoading, 
-    dashboardLoading: loading 
-  });
   
   const [alerts, setAlerts] = React.useState([
     {
@@ -81,24 +72,6 @@ const Index = () => {
     const diffInDays = Math.floor(diffInHours / 24);
     return `${diffInDays}d atrás`;
   };
-
-  // Show loading state while auth is loading
-  if (authLoading) {
-    console.log('[Index] Auth loading, showing skeleton');
-    return (
-      <div className="p-4 sm:p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-10 w-32" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <Skeleton key={index} className="h-24 w-full" />
-          ))}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="p-4 sm:p-6 space-y-6">

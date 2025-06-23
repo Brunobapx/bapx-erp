@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { SimpleUser } from '@/types/user';
+import { SimpleUser } from '@/hooks/useSimpleUserManagement';
 import { EditUserFormData, EditUserValidationErrors, UseEditUserFormProps } from './types';
 import { initializeFormData, sanitizeFormField } from './formUtils';
 import { validateEditUserForm } from './validation';

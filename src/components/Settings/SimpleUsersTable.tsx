@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { SimpleUser } from '@/types/user';
+import { SimpleUser } from '@/hooks/useUserData';
 import { UserTableRow } from './UserTable/UserTableRow';
 
 interface Props {

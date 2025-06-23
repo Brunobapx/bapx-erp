@@ -1,5 +1,5 @@
 
-import { SimpleUser } from '@/types/user';
+import { SimpleUser } from '@/hooks/useSimpleUserManagement';
 
 export const canManageUser = (userRole: string, targetUser: SimpleUser): boolean => {
   if (userRole === 'master') return true;

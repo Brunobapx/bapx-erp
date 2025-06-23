@@ -1,90 +1,73 @@
 
-import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/Auth/AuthProvider';
+import { SimpleUser } from '@/hooks/useUserData';
 
-interface Permissions {
-  canViewUserDetails: boolean;
+export interface UserPermissions {
   canCreateUsers: boolean;
   canEditUsers: boolean;
   canDeleteUsers: boolean;
+  canManageRoles: boolean;
   canManageProfiles: boolean;
-  canViewSecuritySettings: boolean;
+  canViewUserDetails: boolean;
 }
 
 export const useUserPermissions = () => {
   const { userRole } = useAuth();
-  const [permissions, setPermissions] = useState<Permissions>({
-    canViewUserDetails: false,
-    canCreateUsers: false,
-    canEditUsers: false,
-    canDeleteUsers: false,
-    canManageProfiles: false,
-    canViewSecuritySettings: false,
-  });
 
-  console.log('[useUserPermissions] Hook initialized, userRole:', userRole);
-
-  useEffect(() => {
-    if (!userRole) {
-      console.log('[useUserPermissions] No user role, setting all permissions to false');
-      setPermissions({
-        canViewUserDetails: false,
-        canCreateUsers: false,
-        canEditUsers: false,
-        canDeleteUsers: false,
-        canManageProfiles: false,
-        canViewSecuritySettings: false,
-      });
-      return;
+  const getPermissions = (): UserPermissions => {
+    switch (userRole) {
+      case 'master':
+        return {
+          canCreateUsers: true,
+          canEditUsers: true,
+          canDeleteUsers: true,
+          canManageRoles: true,
+          canManageProfiles: true,
+          canViewUserDetails: true,
+        };
+      case 'admin':
+        return {
+          canCreateUsers: true,
+          canEditUsers: true,
+          canDeleteUsers: true,
+          canManageRoles: false, // Admin não pode gerenciar roles de master
+          canManageProfiles: true,
+          canViewUserDetails: true,
+        };
+      default:
+        return {
+          canCreateUsers: false,
+          canEditUsers: false,
+          canDeleteUsers: false,
+          canManageRoles: false,
+          canManageProfiles: false,
+          canViewUserDetails: false,
+        };
     }
+  };
 
-    console.log('[useUserPermissions] Setting permissions for role:', userRole);
+  const canManageUser = (targetUser: SimpleUser): boolean => {
+    if (userRole === 'master') return true;
+    if (userRole === 'admin' && targetUser.role !== 'master') return true;
+    return false;
+  };
 
-    // Master tem todas as permissões
-    if (userRole === 'master') {
-      setPermissions({
-        canViewUserDetails: true,
-        canCreateUsers: true,
-        canEditUsers: true,
-        canDeleteUsers: true,
-        canManageProfiles: true,
-        canViewSecuritySettings: true,
-      });
-      return;
-    }
+  const canAssignRole = (targetRole: string): boolean => {
+    if (userRole === 'master') return true;
+    if (userRole === 'admin' && targetRole !== 'master') return true;
+    return false;
+  };
 
-    // Admin tem quase todas as permissões, exceto deletar masters
-    if (userRole === 'admin') {
-      setPermissions({
-        canViewUserDetails: true,
-        canCreateUsers: true,
-        canEditUsers: true,
-        canDeleteUsers: true,
-        canManageProfiles: true,
-        canViewSecuritySettings: true,
-      });
-      return;
-    }
-
-    // User comum tem permissões limitadas
-    setPermissions({
-      canViewUserDetails: false,
-      canCreateUsers: false,
-      canEditUsers: false,
-      canDeleteUsers: false,
-      canManageProfiles: false,
-      canViewSecuritySettings: false,
-    });
-  }, [userRole]);
-
-  const hasPermission = (permission: keyof Permissions): boolean => {
-    const result = permissions[permission];
-    console.log('[useUserPermissions] Checking permission:', permission, 'result:', result);
-    return result;
+  const hasPermission = (action: keyof UserPermissions): boolean => {
+    const permissions = getPermissions();
+    return permissions[action];
   };
 
   return {
-    permissions,
+    permissions: getPermissions(),
+    canManageUser,
+    canAssignRole,
     hasPermission,
+    userRole,
   };
 };

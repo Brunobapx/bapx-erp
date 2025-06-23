@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,11 +28,8 @@ const ProductsPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [categories, setCategories] = useState<any[]>([]);
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const [sortOrder, setSortOrder] = useState('name_az');
-  
   const { 
-    products: allProducts, 
+    products: filteredProducts, 
     loading, 
     error, 
     searchQuery, 
@@ -66,49 +62,6 @@ const ProductsPage = () => {
       console.error('Error fetching categories:', err);
     }
   };
-
-  // Apply filters
-  const filteredProducts = React.useMemo(() => {
-    let filtered = Array.isArray(allProducts) ? [...allProducts] : [];
-    
-    // Apply category filter
-    if (categoryFilter !== 'all') {
-      filtered = filtered.filter(product => product.category === categoryFilter);
-    }
-    
-    // Apply search filter
-    if (searchQuery) {
-      const search = searchQuery.toLowerCase();
-      filtered = filtered.filter(product =>
-        product.name?.toLowerCase().includes(search) ||
-        product.code?.toLowerCase().includes(search) ||
-        product.sku?.toLowerCase().includes(search) ||
-        product.ncm?.includes(search)
-      );
-    }
-    
-    // Apply sorting
-    filtered.sort((a, b) => {
-      switch (sortOrder) {
-        case 'name_az':
-          return (a.name || '').localeCompare(b.name || '');
-        case 'name_za':
-          return (b.name || '').localeCompare(a.name || '');
-        case 'price_high':
-          return (b.price || 0) - (a.price || 0);
-        case 'price_low':
-          return (a.price || 0) - (b.price || 0);
-        case 'stock_high':
-          return (b.stock || 0) - (a.stock || 0);
-        case 'stock_low':
-          return (a.stock || 0) - (b.stock || 0);
-        default:
-          return 0;
-      }
-    });
-    
-    return filtered;
-  }, [allProducts, categoryFilter, searchQuery, sortOrder]);
 
   const handleProductClick = (product: any) => {
     setSelectedProduct(product);
@@ -187,11 +140,9 @@ const ProductsPage = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => setCategoryFilter('all')}>
-                    Todas
-                  </DropdownMenuItem>
+                  <DropdownMenuItem>Todas</DropdownMenuItem>
                   {categories.map(category => (
-                    <DropdownMenuItem key={category.id} onClick={() => setCategoryFilter(category.name)}>
+                    <DropdownMenuItem key={category.id}>
                       {category.name}
                     </DropdownMenuItem>
                   ))}
@@ -205,24 +156,12 @@ const ProductsPage = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => setSortOrder('name_az')}>
-                    Nome (A-Z)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSortOrder('name_za')}>
-                    Nome (Z-A)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSortOrder('price_high')}>
-                    Preço (Maior)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSortOrder('price_low')}>
-                    Preço (Menor)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSortOrder('stock_high')}>
-                    Estoque (Maior)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSortOrder('stock_low')}>
-                    Estoque (Menor)
-                  </DropdownMenuItem>
+                  <DropdownMenuItem>Nome (A-Z)</DropdownMenuItem>
+                  <DropdownMenuItem>Nome (Z-A)</DropdownMenuItem>
+                  <DropdownMenuItem>Preço (Maior)</DropdownMenuItem>
+                  <DropdownMenuItem>Preço (Menor)</DropdownMenuItem>
+                  <DropdownMenuItem>Estoque (Maior)</DropdownMenuItem>
+                  <DropdownMenuItem>Estoque (Menor)</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

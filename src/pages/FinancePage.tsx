@@ -18,9 +18,6 @@ import { FinancialProvider } from "@/contexts/FinancialContext";
 
 const FinancePage = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [sortOrder, setSortOrder] = useState('recent');
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [alerts, setAlerts] = useState([
@@ -52,52 +49,15 @@ const FinancePage = () => {
   const totalDespesas = entries.filter(item => item.type === 'payable').reduce((total, item) => total + Number(item.amount), 0);
   const saldo = totalReceitas - totalDespesas;
 
-  // Apply filters
-  const filteredItems = React.useMemo(() => {
-    let filtered = [...entries];
-    
-    // Apply type filter
-    if (typeFilter !== 'all') {
-      filtered = filtered.filter(item => item.type === typeFilter);
-    }
-    
-    // Apply status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(item => item.payment_status === statusFilter);
-    }
-    
-    // Apply search filter
-    if (searchQuery) {
-      const search = searchQuery.toLowerCase();
-      filtered = filtered.filter(item =>
-        item.entry_number.toLowerCase().includes(search) ||
-        item.description.toLowerCase().includes(search) ||
-        item.type.toLowerCase().includes(search)
-      );
-    }
-    
-    // Apply sorting
-    filtered.sort((a, b) => {
-      switch (sortOrder) {
-        case 'recent':
-          return new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime();
-        case 'oldest':
-          return new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime();
-        case 'due_near':
-          return new Date(a.due_date || '').getTime() - new Date(b.due_date || '').getTime();
-        case 'due_far':
-          return new Date(b.due_date || '').getTime() - new Date(a.due_date || '').getTime();
-        case 'amount_high':
-          return Number(b.amount) - Number(a.amount);
-        case 'amount_low':
-          return Number(a.amount) - Number(b.amount);
-        default:
-          return 0;
-      }
-    });
-    
-    return filtered;
-  }, [entries, typeFilter, statusFilter, searchQuery, sortOrder]);
+  // Filtro por busca
+  const filteredItems = entries.filter(item => {
+    const searchString = searchQuery.toLowerCase();
+    return (
+      item.entry_number.toLowerCase().includes(searchString) ||
+      item.description.toLowerCase().includes(searchString) ||
+      item.type.toLowerCase().includes(searchString)
+    );
+  });
 
   const handleItemClick = (item: any) => {
     setSelectedItem(item);
@@ -137,12 +97,6 @@ const FinancePage = () => {
               <FinanceOverviewFilters
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
-                typeFilter={typeFilter}
-                setTypeFilter={setTypeFilter}
-                statusFilter={statusFilter}
-                setStatusFilter={setStatusFilter}
-                sortOrder={sortOrder}
-                setSortOrder={setSortOrder}
               />
               <div className="p-0">
                 <FinanceOverviewTable items={filteredItems} onItemClick={handleItemClick} />

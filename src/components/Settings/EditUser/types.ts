@@ -1,5 +1,5 @@
 
-import { SimpleUser } from '@/types/user';
+import { SimpleUser } from '@/hooks/useSimpleUserManagement';
 
 export interface EditUserFormData {
   first_name: string;
