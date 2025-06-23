@@ -15,6 +15,7 @@ export interface SimpleUser {
   department: string;
   position: string;
   profile_id?: string;
+  company_id?: string;
   access_profile?: {
     name: string;
     description: string;
@@ -90,25 +91,13 @@ export const useUserDataRefactored = () => {
         console.log('Access profiles loaded:', accessProfilesData.length);
       }
 
-      // Get real email addresses from auth.users
+      // Get real email addresses using RPC call to fetch from auth.users
       console.log('Loading real email addresses...');
-      const { data: authUsersData } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          first_name,
-          last_name,
-          phone,
-          department,
-          position,
-          is_active,
-          last_login,
-          profile_id,
-          auth_users:id (email)
-        `)
-        .eq('company_id', companyInfo.id);
+      const { data: usersWithEmails } = await supabase.rpc('get_company_users', {
+        company_id_param: companyInfo.id
+      });
 
-      console.log('Auth users data loaded:', authUsersData?.length || 0);
+      console.log('Users with emails loaded:', usersWithEmails?.length || 0);
 
       // Process users with enhanced security and real emails
       const processedUsers: SimpleUser[] = profilesData.map((profile) => {
@@ -117,9 +106,9 @@ export const useUserDataRefactored = () => {
           ? accessProfilesData.find(ap => ap.id === profile.profile_id)
           : null;
         
-        // Try to get real email from auth users data
-        const authUser = authUsersData?.find(au => au.id === profile.id);
-        const realEmail = authUser?.auth_users?.email || `user-${profile.id.substring(0, 8)}@sistema.local`;
+        // Try to get real email from RPC function result
+        const userWithEmail = usersWithEmails?.find(u => u.id === profile.id);
+        const realEmail = userWithEmail?.email || `user-${profile.id.substring(0, 8)}@sistema.local`;
         
         return {
           id: profile.id,
@@ -132,6 +121,7 @@ export const useUserDataRefactored = () => {
           department: profile.department || '',
           position: profile.position || '',
           profile_id: profile.profile_id || '',
+          company_id: profile.company_id || '',
           access_profile: accessProfile
         };
       });

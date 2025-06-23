@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface CompanyInfo {
   id: string;
@@ -15,6 +16,10 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   userRole: string | null;
   companyInfo: CompanyInfo | null;
+}
+
+interface AuthProviderProps {
+  children: React.ReactNode;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,6 +38,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
+  const { toast } = useToast();
 
   const loadUserData = async (userId: string) => {
     try {
