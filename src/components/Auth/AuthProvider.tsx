@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +20,7 @@ interface AuthContextType {
   companyInfo: Company | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  refreshUserData: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -37,55 +38,82 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [userRole, setUserRole] = useState<string | null>(null);
   const [companyInfo, setCompanyInfo] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dataLoaded, setDataLoaded] = useState(false);
   const { toast } = useToast();
 
-  const loadUserData = async (currentUser: User) => {
+  const loadUserData = useCallback(async (currentUser: User) => {
+    if (!currentUser || dataLoaded) return;
+    
     try {
       console.log('[AuthProvider] Loading user data for:', currentUser.id);
+      setDataLoaded(true);
 
-      // Get user role
-      const { data: roleData } = await supabase
+      // Get user role with error handling
+      const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', currentUser.id)
-        .single();
+        .maybeSingle();
 
-      if (roleData) {
+      if (roleError) {
+        console.error('[AuthProvider] Error loading role:', roleError);
+      } else if (roleData) {
         setUserRole(roleData.role);
         console.log('[AuthProvider] User role loaded:', roleData.role);
       }
 
-      // Get user profile and company
-      const { data: profileData } = await supabase
+      // Get user profile and company with error handling
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('company_id')
         .eq('id', currentUser.id)
-        .single();
+        .maybeSingle();
+
+      if (profileError) {
+        console.error('[AuthProvider] Error loading profile:', profileError);
+        return;
+      }
 
       if (profileData?.company_id) {
-        const { data: companyData } = await supabase
+        const { data: companyData, error: companyError } = await supabase
           .from('companies')
           .select('*')
           .eq('id', profileData.company_id)
-          .single();
+          .maybeSingle();
 
-        if (companyData) {
+        if (companyError) {
+          console.error('[AuthProvider] Error loading company:', companyError);
+        } else if (companyData) {
           setCompanyInfo(companyData);
           console.log('[AuthProvider] Company loaded:', companyData.name);
         }
       }
     } catch (error: any) {
       console.error('[AuthProvider] Error loading user data:', error);
-      // Don't show toast for every error, just log it
+      // Reset loading state on error
+      setDataLoaded(false);
     }
-  };
+  }, [dataLoaded]);
+
+  const refreshUserData = useCallback(async () => {
+    if (user) {
+      setDataLoaded(false);
+      await loadUserData(user);
+    }
+  }, [user, loadUserData]);
 
   useEffect(() => {
     console.log('[AuthProvider] Initializing auth state...');
     
     const initializeAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('[AuthProvider] Error getting session:', error);
+          setLoading(false);
+          return;
+        }
         
         if (session?.user) {
           console.log('[AuthProvider] Session found, setting user');
@@ -109,11 +137,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (event === 'SIGNED_IN' && session?.user) {
           setUser(session.user);
+          setDataLoaded(false); // Reset to allow data loading
           await loadUserData(session.user);
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
           setUserRole(null);
           setCompanyInfo(null);
+          setDataLoaded(false);
         }
         
         setLoading(false);
@@ -123,7 +153,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [loadUserData]);
 
   const signOut = async () => {
     try {
@@ -131,6 +161,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
       setUserRole(null);
       setCompanyInfo(null);
+      setDataLoaded(false);
     } catch (error: any) {
       console.error('[AuthProvider] Error signing out:', error);
       toast({
@@ -147,6 +178,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     companyInfo,
     loading,
     signOut,
+    refreshUserData,
   };
 
   return (

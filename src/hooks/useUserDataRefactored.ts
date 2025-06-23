@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/components/Auth/AuthProvider';
@@ -12,8 +12,10 @@ export const useUserDataRefactored = () => {
   const { toast } = useToast();
   const { companyInfo } = useAuth();
 
+  const companyId = useMemo(() => companyInfo?.id, [companyInfo?.id]);
+
   const loadUsers = useCallback(async (): Promise<void> => {
-    if (!companyInfo?.id) {
+    if (!companyId) {
       console.log('[useUserDataRefactored] No company ID available');
       setUsers([]);
       return;
@@ -23,63 +25,73 @@ export const useUserDataRefactored = () => {
       setLoading(true);
       setError(null);
       
-      console.log('[useUserDataRefactored] Loading users for company:', companyInfo.id);
+      console.log('[useUserDataRefactored] Loading users for company:', companyId);
       
-      const { data: profilesData, error: profilesError } = await supabase
+      // Optimized query with single JOIN
+      const { data: usersData, error: usersError } = await supabase
         .from('profiles')
-        .select('*')
-        .eq('company_id', companyInfo.id);
+        .select(`
+          id,
+          first_name,
+          last_name,
+          phone,
+          department,
+          position,
+          is_active,
+          last_login,
+          profile_id,
+          user_roles!inner(role),
+          access_profiles(name, description)
+        `)
+        .eq('company_id', companyId)
+        .order('first_name', { ascending: true });
 
-      if (profilesError) {
-        throw profilesError;
+      if (usersError) {
+        throw usersError;
       }
 
-      if (!profilesData || profilesData.length === 0) {
+      if (!usersData || usersData.length === 0) {
         setUsers([]);
         return;
       }
 
-      // Get user roles
-      const userIds = profilesData.map(p => p.id);
-      const { data: rolesData } = await supabase
-        .from('user_roles')
-        .select('user_id, role')
-        .in('user_id', userIds);
-
-      // Get access profiles
-      const profileIds = profilesData
-        .filter(p => p.profile_id)
-        .map(p => p.profile_id)
-        .filter(Boolean);
-
-      let accessProfilesData: any[] = [];
-      if (profileIds.length > 0) {
-        const { data } = await supabase
-          .from('access_profiles')
-          .select('id, name, description')
-          .in('id', profileIds);
+      const processedUsers: SimpleUser[] = usersData.map((user) => {
+        // Handle user_roles array properly
+        const userRole = Array.isArray(user.user_roles) && user.user_roles.length > 0 
+          ? user.user_roles[0].role 
+          : 'user';
         
-        accessProfilesData = data || [];
-      }
-
-      const processedUsers: SimpleUser[] = profilesData.map((profile) => {
-        const userRole = rolesData?.find(r => r.user_id === profile.id);
-        const accessProfile = profile.profile_id 
-          ? accessProfilesData.find(ap => ap.id === profile.profile_id)
-          : null;
+        // Handle access_profiles properly
+        let accessProfile: { name: string; description: string; } | null = null;
         
+        if (user.access_profiles) {
+          const profiles = user.access_profiles as any;
+          
+          if (Array.isArray(profiles) && profiles.length > 0) {
+            accessProfile = {
+              name: profiles[0]?.name || '',
+              description: profiles[0]?.description || ''
+            };
+          } else if (typeof profiles === 'object' && profiles.name) {
+            accessProfile = {
+              name: profiles.name || '',
+              description: profiles.description || ''
+            };
+          }
+        }
+
         return {
-          id: profile.id,
-          first_name: profile.first_name || '',
-          last_name: profile.last_name || '',
-          email: `user-${profile.id.substring(0, 8)}@sistema.local`,
-          role: userRole?.role || 'user',
-          is_active: profile.is_active ?? true,
-          last_login: profile.last_login || '',
-          department: profile.department || '',
-          position: profile.position || '',
-          profile_id: profile.profile_id || '',
-          company_id: profile.company_id || '',
+          id: user.id,
+          first_name: user.first_name || '',
+          last_name: user.last_name || '',
+          email: `user-${user.id.substring(0, 8)}@sistema.local`,
+          role: userRole,
+          is_active: user.is_active ?? true,
+          last_login: user.last_login || '',
+          department: user.department || '',
+          position: user.position || '',
+          profile_id: user.profile_id || '',
+          company_id: companyId,
           access_profile: accessProfile
         };
       });
@@ -89,20 +101,26 @@ export const useUserDataRefactored = () => {
       console.error('[useUserDataRefactored] Error loading users:', error);
       setError(error.message || "Erro ao carregar usuários");
       setUsers([]);
+      
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao carregar usuários",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
-  }, [companyInfo?.id, toast]);
+  }, [companyId, toast]);
 
   const refreshUsers = useCallback(async (): Promise<void> => {
     await loadUsers();
   }, [loadUsers]);
 
   useEffect(() => {
-    if (companyInfo?.id) {
+    if (companyId) {
       loadUsers();
     }
-  }, [companyInfo?.id, loadUsers]);
+  }, [companyId, loadUsers]);
 
   return {
     users,
