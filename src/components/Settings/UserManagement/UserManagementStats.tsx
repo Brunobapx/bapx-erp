@@ -2,10 +2,10 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, UserCheck, UserX } from 'lucide-react';
-import { SimpleUser } from '@/hooks/useSimpleUserManagement';
+import { UnifiedUser } from '@/hooks/useUnifiedUserManagement';
 
 interface UserManagementStatsProps {
-  users: SimpleUser[];
+  users: UnifiedUser[];
 }
 
 export const UserManagementStats: React.FC<UserManagementStatsProps> = ({ users }) => {

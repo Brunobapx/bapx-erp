@@ -1,13 +1,13 @@
 
 import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SimpleUser } from '@/hooks/useUserData';
+import { UnifiedUser } from '@/hooks/useUnifiedUserManagement';
 
 interface UserRoleSelectProps {
-  user: SimpleUser;
+  user: UnifiedUser;
   userRole: string;
   canManage: boolean;
-  onRoleChange: (userId: string, role: string) => void;
+  onRoleChange: (userId: string, role: string) => Promise<boolean>;
 }
 
 export const UserRoleSelect: React.FC<UserRoleSelectProps> = ({
@@ -25,11 +25,15 @@ export const UserRoleSelect: React.FC<UserRoleSelectProps> = ({
     }
   };
 
+  const handleRoleChange = async (role: string) => {
+    await onRoleChange(user.id, role);
+  };
+
   return (
     <Select
       value={user.role || 'user'}
       disabled={!canManage}
-      onValueChange={(role) => onRoleChange(user.id, role)}
+      onValueChange={handleRoleChange}
     >
       <SelectTrigger className="w-32">
         <SelectValue>

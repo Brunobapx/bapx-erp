@@ -1,13 +1,13 @@
 
 import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SimpleUser } from '@/hooks/useUserData';
+import { UnifiedUser } from '@/hooks/useUnifiedUserManagement';
 
 interface UserProfileSelectProps {
-  user: SimpleUser;
+  user: UnifiedUser;
   canManage: boolean;
   availableProfiles: Array<{id: string; name: string; description: string; is_active: boolean}>;
-  onProfileChange: (userId: string, profileId: string) => void;
+  onProfileChange: (userId: string, profileId: string) => Promise<boolean>;
   displayName: string;
 }
 
@@ -20,9 +20,9 @@ export const UserProfileSelect: React.FC<UserProfileSelectProps> = ({
   onProfileChange,
   displayName,
 }) => {
-  const handleProfileChange = (profileId: string) => {
+  const handleProfileChange = async (profileId: string) => {
     const actualProfileId = profileId === NO_PROFILE_VALUE ? '' : profileId;
-    onProfileChange(user.id, actualProfileId);
+    await onProfileChange(user.id, actualProfileId);
   };
 
   return (

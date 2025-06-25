@@ -2,20 +2,20 @@
 import React from 'react';
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { SimpleUser } from '@/hooks/useUserData';
+import { UnifiedUser } from '@/hooks/useUnifiedUserManagement';
 import { UserActionsMenu } from './UserActionsMenu';
 import { UserRoleSelect } from './UserRoleSelect';
 import { UserProfileSelect } from './UserProfileSelect';
 
 interface UserTableRowProps {
-  user: SimpleUser;
+  user: UnifiedUser;
   userRole: string;
   currentUserId?: string;
-  onStatusChange: (userId: string, isActive: boolean) => void;
-  onRoleChange: (userId: string, role: string) => void;
-  onProfileChange: (userId: string, profileId: string) => void;
+  onStatusChange: (userId: string, isActive: boolean) => Promise<boolean>;
+  onRoleChange: (userId: string, role: string) => Promise<boolean>;
+  onProfileChange: (userId: string, profileId: string) => Promise<boolean>;
   onDeleteUser: (userId: string, userName: string) => void;
-  onEditUser: (user: SimpleUser) => void;
+  onEditUser: (user: UnifiedUser) => void;
   availableProfiles: Array<{id: string; name: string; description: string; is_active: boolean}>;
 }
 
@@ -30,18 +30,18 @@ export const UserTableRow: React.FC<UserTableRowProps> = ({
   onEditUser,
   availableProfiles,
 }) => {
-  const getDisplayName = (user: SimpleUser) => {
+  const getDisplayName = (user: UnifiedUser) => {
     if (!user) return 'Usuário não identificado';
     const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
     return fullName || 'Nome não informado';
   };
 
-  const getProfileDisplayName = (user: SimpleUser) => {
+  const getProfileDisplayName = (user: UnifiedUser) => {
     if (!user || !user.access_profile?.name) return 'Sem perfil';
     return user.access_profile.name;
   };
 
-  const canManageUser = (user: SimpleUser) => {
+  const canManageUser = (user: UnifiedUser) => {
     if (!user || !userRole) return false;
     if (userRole === 'master') return true;
     if (userRole === 'admin' && user.role !== 'master') return true;

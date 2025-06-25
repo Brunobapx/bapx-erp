@@ -1,4 +1,3 @@
-
 interface CSPDirectives {
   'default-src'?: string[];
   'script-src'?: string[];
@@ -21,14 +20,14 @@ class ContentSecurityPolicy {
     'default-src': ["'self'"],
     'script-src': [
       "'self'",
-      "'unsafe-inline'", // Necessário para React em desenvolvimento
-      "'unsafe-eval'", // Necessário para desenvolvimento
+      "'unsafe-inline'",
+      "'unsafe-eval'",
       'https://cdn.jsdelivr.net',
       'https://unpkg.com'
     ],
     'style-src': [
       "'self'",
-      "'unsafe-inline'", // Necessário para Tailwind e componentes
+      "'unsafe-inline'",
       'https://fonts.googleapis.com'
     ],
     'img-src': [
@@ -99,13 +98,11 @@ class ContentSecurityPolicy {
 
   setDevelopmentMode(isDevelopment: boolean): void {
     if (isDevelopment) {
-      // Configurações mais permissivas para desenvolvimento
       this.addSource('script-src', "'unsafe-inline'");
       this.addSource('script-src', "'unsafe-eval'");
       this.addSource('connect-src', 'http://localhost:*');
       this.addSource('connect-src', 'ws://localhost:*');
     } else {
-      // Configurações mais restritivas para produção
       this.removeSource('script-src', "'unsafe-inline'");
       this.removeSource('script-src', "'unsafe-eval'");
       this.removeSource('connect-src', 'http://localhost:*');
@@ -114,16 +111,13 @@ class ContentSecurityPolicy {
   }
 
   applyToDocument(): void {
-    // Aplicar CSP via meta tag
     const cspHeader = this.generateCSPHeader();
     
-    // Remover meta tag existente se houver
     const existingMeta = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
     if (existingMeta) {
       existingMeta.remove();
     }
 
-    // Adicionar nova meta tag
     const meta = document.createElement('meta');
     meta.httpEquiv = 'Content-Security-Policy';
     meta.content = cspHeader;
@@ -133,7 +127,6 @@ class ContentSecurityPolicy {
   }
 
   reportViolations(): void {
-    // Escutar violações de CSP
     document.addEventListener('securitypolicyviolation', (event) => {
       console.warn('[CSP] Violação detectada:', {
         directive: event.violatedDirective,
@@ -142,33 +135,46 @@ class ContentSecurityPolicy {
         lineNumber: event.lineNumber
       });
 
-      // Enviar para audit log
-      auditSecurityEvent(
+      this.logSecurityEvent(
         'csp_violation',
         {
           directive: event.violatedDirective,
           blockedURI: event.blockedURI,
           sourceFile: event.sourceFile,
           lineNumber: event.lineNumber
-        },
-        undefined,
-        navigator.userAgent,
-        false,
-        `CSP violation: ${event.violatedDirective}`
+        }
       );
     });
+  }
+
+  private logSecurityEvent(type: string, details: any): void {
+    console.warn(`[Security Event] ${type}:`, details);
+    
+    try {
+      const events = JSON.parse(sessionStorage.getItem('security_events') || '[]');
+      events.push({
+        type,
+        details,
+        timestamp: Date.now(),
+        userAgent: navigator.userAgent
+      });
+      
+      if (events.length > 50) {
+        events.splice(0, events.length - 50);
+      }
+      
+      sessionStorage.setItem('security_events', JSON.stringify(events));
+    } catch (error) {
+      console.error('Failed to store security event:', error);
+    }
   }
 }
 
 export const csp = new ContentSecurityPolicy();
 
-// Inicializar CSP baseado no ambiente
 export const initializeCSP = () => {
   const isDevelopment = process.env.NODE_ENV === 'development';
   csp.setDevelopmentMode(isDevelopment);
   csp.applyToDocument();
   csp.reportViolations();
 };
-
-// Importar audit logger
-import { auditSecurityEvent } from './auditLogging';

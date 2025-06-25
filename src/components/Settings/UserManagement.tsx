@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/components/Auth/AuthProvider';
-import { useUserDataRefactored } from '@/hooks/useUserDataRefactored';
+import { useUnifiedUserManagement } from '@/hooks/useUnifiedUserManagement';
 import { useSimpleProfiles } from '@/hooks/useSimpleProfiles';
 import { useUserCrud } from '@/hooks/useUserCrud';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
@@ -18,9 +18,16 @@ import { UserManagementErrorBoundary } from '../ErrorBoundary/UserManagementErro
 export const UserManagement = () => {
   const { user, userRole } = useAuth();
   const currentUserId = user?.id;
-  const { users, loading, refreshUsers } = useUserDataRefactored();
+  const { 
+    users, 
+    loading, 
+    refreshUsers,
+    updateUserStatus,
+    updateUserRole,
+    updateUserProfile,
+    deleteUser
+  } = useUnifiedUserManagement();
   const { profiles: availableProfiles } = useSimpleProfiles();
-  const { deleteUser } = useUserCrud();
   const { hasPermission } = useUserPermissions();
   const { toast } = useToast();
 
@@ -58,9 +65,8 @@ export const UserManagement = () => {
 
   const confirmDeleteUser = async (userId) => {
     try {
-      const result = await deleteUser(userId);
-      if (result.success) {
-        await refreshUsers();
+      const success = await deleteUser(userId);
+      if (success) {
         setDeleteModalOpen(false);
         setUserToDelete({ id: '', name: '', email: '' });
       }
@@ -74,21 +80,6 @@ export const UserManagement = () => {
     setCreateModalOpen(false);
     setEditModalOpen(false);
     setSelectedUser(null);
-  };
-
-  const updateUserStatus = async (userId: string, isActive: boolean) => {
-    // Implementação será feita através dos novos hooks CRUD
-    console.log('updateUserStatus:', userId, isActive);
-  };
-
-  const updateUserRole = async (userId: string, role: string) => {
-    // Implementação será feita através dos novos hooks CRUD
-    console.log('updateUserRole:', userId, role);
-  };
-
-  const updateUserProfile = async (userId: string, profileId: string) => {
-    // Implementação será feita através dos novos hooks CRUD
-    console.log('updateUserProfile:', userId, profileId);
   };
 
   if (!userRole || !hasPermission('canViewUserDetails')) {

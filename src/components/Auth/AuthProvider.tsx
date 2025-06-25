@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from "@/integrations/supabase/client";
 
@@ -35,8 +35,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
 
-  const fetchUserData = async (userId: string) => {
+  // Debounce para evitar múltiplas chamadas
+  const [fetchingUserData, setFetchingUserData] = useState(false);
+
+  const fetchUserData = useCallback(async (userId: string) => {
+    if (fetchingUserData) {
+      console.log('[AuthProvider] Already fetching user data, skipping');
+      return;
+    }
+
     try {
+      setFetchingUserData(true);
       console.log('[AuthProvider] Fetching user data for:', userId);
       
       const { data: profileData, error: profileError } = await supabase
@@ -86,48 +95,67 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.error('[AuthProvider] Error fetching user data:', error);
       setUserRole('user');
       setCompanyInfo(null);
+    } finally {
+      setFetchingUserData(false);
     }
-  };
+  }, [fetchingUserData]);
 
   useEffect(() => {
+    let isSubscribed = true;
+    
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!isSubscribed) return;
+        
         console.log('[AuthProvider] Auth state changed:', event, session?.user?.email);
         
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Use setTimeout to avoid blocking the auth state change
+          // Usar setTimeout para evitar bloquear o auth state change
           setTimeout(() => {
-            fetchUserData(session.user.id);
-          }, 0);
+            if (isSubscribed) {
+              fetchUserData(session.user.id);
+            }
+          }, 100);
         } else {
           console.log('[AuthProvider] No user, clearing state');
           setUserRole(null);
           setCompanyInfo(null);
         }
         
-        setLoading(false);
+        if (isSubscribed) {
+          setLoading(false);
+        }
       }
     );
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isSubscribed) return;
+      
       console.log('[AuthProvider] Initial session check:', session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        fetchUserData(session.user.id);
+        setTimeout(() => {
+          if (isSubscribed) {
+            fetchUserData(session.user.id);
+          }
+        }, 100);
       }
       
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => {
+      isSubscribed = false;
+      subscription.unsubscribe();
+    };
+  }, [fetchUserData]);
 
   const signOut = async () => {
     try {
@@ -138,7 +166,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     } catch (error) {
       console.error('Sign out failed:', error);
-      // Don't re-throw, just log the error
     }
   };
 

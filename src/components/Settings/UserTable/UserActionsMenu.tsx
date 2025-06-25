@@ -2,15 +2,15 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2 } from 'lucide-react';
-import { SimpleUser } from '@/hooks/useUserData';
+import { UnifiedUser } from '@/hooks/useUnifiedUserManagement';
 
 interface UserActionsMenuProps {
-  user: SimpleUser;
+  user: UnifiedUser;
   currentUserId?: string;
   canManage: boolean;
-  onStatusChange: (userId: string, isActive: boolean) => void;
+  onStatusChange: (userId: string, isActive: boolean) => Promise<boolean>;
   onDeleteUser: (userId: string, userName: string) => void;
-  onEditUser: (user: SimpleUser) => void;
+  onEditUser: (user: UnifiedUser) => void;
   displayName: string;
 }
 
@@ -23,6 +23,10 @@ export const UserActionsMenu: React.FC<UserActionsMenuProps> = ({
   onEditUser,
   displayName,
 }) => {
+  const handleStatusChange = async () => {
+    await onStatusChange(user.id, !user.is_active);
+  };
+
   return (
     <div className="flex gap-2">
       <Button
@@ -37,7 +41,7 @@ export const UserActionsMenu: React.FC<UserActionsMenuProps> = ({
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => onStatusChange(user.id, !user.is_active)}
+        onClick={handleStatusChange}
         disabled={!canManage}
         title={user.is_active ? 'Desativar usuário' : 'Ativar usuário'}
       >

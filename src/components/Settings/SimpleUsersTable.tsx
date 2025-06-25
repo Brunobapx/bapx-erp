@@ -1,18 +1,18 @@
 
 import React from 'react';
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { SimpleUser } from '@/hooks/useUserData';
+import { UnifiedUser } from '@/hooks/useUnifiedUserManagement';
 import { UserTableRow } from './UserTable/UserTableRow';
 
 interface Props {
-  users: SimpleUser[];
+  users: UnifiedUser[];
   userRole: string;
   currentUserId?: string;
-  onStatusChange: (userId: string, isActive: boolean) => void;
-  onRoleChange: (userId: string, role: string) => void;
-  onProfileChange: (userId: string, profileId: string) => void;
+  onStatusChange: (userId: string, isActive: boolean) => Promise<boolean>;
+  onRoleChange: (userId: string, role: string) => Promise<boolean>;
+  onProfileChange: (userId: string, profileId: string) => Promise<boolean>;
   onDeleteUser: (userId: string, userName: string) => void;
-  onEditUser: (user: SimpleUser) => void;
+  onEditUser: (user: UnifiedUser) => void;
   loading?: boolean;
   availableProfiles?: Array<{id: string; name: string; description: string; is_active: boolean}>;
 }
