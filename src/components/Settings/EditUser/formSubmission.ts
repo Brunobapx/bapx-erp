@@ -1,63 +1,72 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { EditUserFormData, EditUserValidationErrors } from './types';
-import { SimpleUser } from '@/hooks/useSimpleUserManagement';
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/components/Auth/AuthProvider';
+import { UnifiedUser } from '@/hooks/useUnifiedUserManagement';
 
-export const submitUserUpdate = async (
-  user: SimpleUser,
-  formData: EditUserFormData,
-  userRole: string
-): Promise<{ success: boolean; errors?: EditUserValidationErrors }> => {
+interface FormData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  department: string;
+  position: string;
+  role: string;
+  profileId: string;
+  isActive: boolean;
+}
+
+export const submitUserForm = async (
+  user: UnifiedUser,
+  formData: FormData,
+  companyId: string | undefined,
+  toast: ReturnType<typeof useToast>['toast']
+): Promise<boolean> => {
   try {
-    // Atualizar dados do perfil
+    if (!companyId) {
+      throw new Error('Company ID não disponível');
+    }
+
+    // Atualizar perfil do usuário
     const { error: profileError } = await supabase
       .from('profiles')
       .update({
-        first_name: formData.first_name,
-        last_name: formData.last_name,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
         department: formData.department,
         position: formData.position,
-        profile_id: formData.profile_id || null,
+        is_active: formData.isActive,
+        profile_id: formData.profileId || null,
         updated_at: new Date().toISOString()
       })
       .eq('id', user.id);
 
     if (profileError) throw profileError;
 
-    // Atualizar role se mudou
-    if (formData.role !== user.role) {
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .update({ role: formData.role })
-        .eq('user_id', user.id);
-
-      if (roleError) throw roleError;
-    }
-
-    // Atualizar senha se fornecida
-    if (formData.new_password.trim()) {
-      const { error: functionError } = await supabase.functions.invoke('update-user-password', {
-        body: { 
-          userId: user.id, 
-          newPassword: formData.new_password 
-        },
-        headers: {
-          'x-requester-role': userRole,
-        },
+    // Atualizar role do usuário
+    const { error: roleError } = await supabase
+      .from('user_roles')
+      .upsert({
+        user_id: user.id,
+        role: formData.role,
+        company_id: companyId,
+        updated_at: new Date().toISOString()
       });
 
-      if (functionError) {
-        console.warn('Não foi possível atualizar a senha:', functionError);
-        // Continue with success but log the warning
-      }
-    }
+    if (roleError) throw roleError;
 
-    return { success: true };
+    toast({
+      title: "Sucesso",
+      description: "Usuário atualizado com sucesso!",
+    });
+
+    return true;
   } catch (error: any) {
     console.error('Erro ao atualizar usuário:', error);
-    return { 
-      success: false, 
-      errors: { general: error.message || "Erro ao atualizar usuário" }
-    };
+    toast({
+      title: "Erro",
+      description: error.message || "Erro ao atualizar usuário",
+      variant: "destructive",
+    });
+    return false;
   }
 };

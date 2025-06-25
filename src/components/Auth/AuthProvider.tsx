@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from "@/integrations/supabase/client";
 
@@ -35,130 +35,172 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
 
-  // Debounce para evitar múltiplas chamadas
-  const [fetchingUserData, setFetchingUserData] = useState(false);
+  // Controle de debounce e proteção contra loops
+  const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isFetchingRef = useRef(false);
+  const lastFetchedUserIdRef = useRef<string | null>(null);
 
   const fetchUserData = useCallback(async (userId: string) => {
-    if (fetchingUserData) {
-      console.log('[AuthProvider] Already fetching user data, skipping');
+    // Proteção contra loops - evitar múltiplas chamadas para o mesmo usuário
+    if (isFetchingRef.current && lastFetchedUserIdRef.current === userId) {
+      console.log('[AuthProvider] Fetch already in progress for user:', userId);
       return;
     }
 
-    try {
-      setFetchingUserData(true);
-      console.log('[AuthProvider] Fetching user data for:', userId);
-      
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select(`
-          company_id,
-          companies!inner(
-            id,
-            name,
-            status
-          )
-        `)
-        .eq('id', userId)
-        .single();
-
-      if (profileError) {
-        console.error('[AuthProvider] Error fetching profile:', profileError);
-        return;
-      }
-
-      if (profileData?.companies) {
-        const company = Array.isArray(profileData.companies) ? profileData.companies[0] : profileData.companies;
-        console.log('[AuthProvider] Company info:', company);
-        setCompanyInfo({
-          id: company.id,
-          name: company.name,
-          status: company.status
-        });
-      }
-
-      // Buscar role do usuário
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .single();
-      
-      if (roleError) {
-        console.error('[AuthProvider] Error fetching role:', roleError);
-        setUserRole('user'); // Default role
-      } else {
-        const role = roleData?.role || 'user';
-        console.log('[AuthProvider] User role:', role);
-        setUserRole(role);
-      }
-    } catch (error) {
-      console.error('[AuthProvider] Error fetching user data:', error);
-      setUserRole('user');
-      setCompanyInfo(null);
-    } finally {
-      setFetchingUserData(false);
+    // Cancelar fetch anterior se existir
+    if (fetchTimeoutRef.current) {
+      clearTimeout(fetchTimeoutRef.current);
     }
-  }, [fetchingUserData]);
+
+    // Debounce de 300ms
+    fetchTimeoutRef.current = setTimeout(async () => {
+      if (isFetchingRef.current) return;
+
+      try {
+        isFetchingRef.current = true;
+        lastFetchedUserIdRef.current = userId;
+        
+        console.log('[AuthProvider] Fetching user data for:', userId);
+        
+        // Usar Promise.allSettled para executar ambas queries em paralelo
+        const [profileResult, roleResult] = await Promise.allSettled([
+          supabase
+            .from('profiles')
+            .select(`
+              company_id,
+              companies!inner(
+                id,
+                name,
+                status
+              )
+            `)
+            .eq('id', userId)
+            .single(),
+          supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', userId)
+            .single()
+        ]);
+
+        // Processar resultado do perfil
+        if (profileResult.status === 'fulfilled' && profileResult.value.data?.companies) {
+          const company = Array.isArray(profileResult.value.data.companies) 
+            ? profileResult.value.data.companies[0] 
+            : profileResult.value.data.companies;
+          
+          console.log('[AuthProvider] Company info loaded:', company);
+          setCompanyInfo({
+            id: company.id,
+            name: company.name,
+            status: company.status
+          });
+        } else {
+          console.warn('[AuthProvider] No company info found');
+          setCompanyInfo(null);
+        }
+
+        // Processar resultado do role
+        if (roleResult.status === 'fulfilled' && roleResult.value.data) {
+          const role = roleResult.value.data.role || 'user';
+          console.log('[AuthProvider] User role loaded:', role);
+          setUserRole(role);
+        } else {
+          console.warn('[AuthProvider] No role found, setting default');
+          setUserRole('user');
+        }
+
+      } catch (error) {
+        console.error('[AuthProvider] Error fetching user data:', error);
+        setUserRole('user');
+        setCompanyInfo(null);
+      } finally {
+        isFetchingRef.current = false;
+      }
+    }, 300);
+  }, []);
+
+  // Cleanup function para cancelar requests pendentes
+  const cleanup = useCallback(() => {
+    if (fetchTimeoutRef.current) {
+      clearTimeout(fetchTimeoutRef.current);
+      fetchTimeoutRef.current = null;
+    }
+    isFetchingRef.current = false;
+    lastFetchedUserIdRef.current = null;
+  }, []);
 
   useEffect(() => {
-    let isSubscribed = true;
+    let isSubscriptionActive = true;
     
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (!isSubscribed) return;
+        if (!isSubscriptionActive) return;
         
         console.log('[AuthProvider] Auth state changed:', event, session?.user?.email);
         
+        // Sempre atualizar session e user primeiro
         setSession(session);
         setUser(session?.user ?? null);
         
-        if (session?.user) {
+        if (session?.user?.id) {
           // Usar setTimeout para evitar bloquear o auth state change
           setTimeout(() => {
-            if (isSubscribed) {
+            if (isSubscriptionActive) {
               fetchUserData(session.user.id);
             }
-          }, 100);
+          }, 50);
         } else {
           console.log('[AuthProvider] No user, clearing state');
+          cleanup();
           setUserRole(null);
           setCompanyInfo(null);
         }
         
-        if (isSubscribed) {
+        // Definir loading como false após processar
+        if (isSubscriptionActive) {
           setLoading(false);
         }
       }
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!isSubscribed) return;
-      
-      console.log('[AuthProvider] Initial session check:', session?.user?.email);
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        setTimeout(() => {
-          if (isSubscribed) {
-            fetchUserData(session.user.id);
-          }
-        }, 100);
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!isSubscriptionActive) return;
+        
+        console.log('[AuthProvider] Initial session check:', session?.user?.email);
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user?.id) {
+          fetchUserData(session.user.id);
+        }
+        
+        setLoading(false);
+      } catch (error) {
+        console.error('[AuthProvider] Error initializing auth:', error);
+        setLoading(false);
       }
-      
-      setLoading(false);
-    });
+    };
 
+    initializeAuth();
+
+    // Cleanup subscription
     return () => {
-      isSubscribed = false;
+      console.log('[AuthProvider] Cleaning up subscription');
+      isSubscriptionActive = false;
+      cleanup();
       subscription.unsubscribe();
     };
-  }, [fetchUserData]);
+  }, [fetchUserData, cleanup]);
 
   const signOut = async () => {
     try {
+      cleanup(); // Limpar requests pendentes
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error('Error signing out:', error);

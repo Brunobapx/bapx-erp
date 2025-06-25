@@ -1,31 +1,43 @@
 
-import { SimpleUser } from '@/hooks/useSimpleUserManagement';
+import { UnifiedUser } from '@/hooks/useUnifiedUserManagement';
 
 export interface EditUserFormData {
-  first_name: string;
-  last_name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   department: string;
   position: string;
   role: string;
-  profile_id: string;
-  new_password: string;
+  profileId: string;
+  isActive: boolean;
 }
 
-export interface EditUserValidationErrors {
-  first_name?: string;
-  last_name?: string;
+export interface EditUserFormValidationErrors {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
   department?: string;
   position?: string;
   role?: string;
-  profile_id?: string;
-  new_password?: string;
-  general?: string;
+  profileId?: string;
 }
 
-export interface UseEditUserFormProps {
-  user: SimpleUser | null;
+export interface EditUserFormProps {
+  user: UnifiedUser;
+  form: EditUserFormData;
+  validationErrors: EditUserFormValidationErrors;
+  loading: boolean;
+  availableProfiles: Array<{id: string; name: string; description: string; is_active: boolean}>;
   userRole: string;
+  onFieldChange: (field: string, value: string | boolean) => void;
+  onSubmit: () => void;
+}
+
+export interface EditUserModalProps {
+  user: UnifiedUser | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
-  onClose: () => void;
+  availableProfiles: Array<{id: string; name: string; description: string; is_active: boolean}>;
+  userRole: string;
 }

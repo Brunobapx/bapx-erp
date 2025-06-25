@@ -1,15 +1,14 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/components/Auth/AuthProvider';
-import { useOptimizedUserData } from '@/hooks/useOptimizedUserData';
+import { useUnifiedUserManagement } from '@/hooks/useUnifiedUserManagement';
 import { useSimpleProfiles } from '@/hooks/useSimpleProfiles';
-import { useUserCrud } from '@/hooks/useUserCrud';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { useToast } from "@/hooks/use-toast";
 
 import { UserManagementHeader } from './UserManagement/UserManagementHeader';
 import { UserManagementStats } from './UserManagement/UserManagementStats';
-import { OptimizedUsersTable } from './OptimizedUsersTable';
+import SimpleUsersTable from './SimpleUsersTable';
 import { CreateUserModal } from './CreateUser/CreateUserModal';
 import { EditUserModal } from './EditUserModal';
 import { DeleteUserModal } from './DeleteUserModal';
@@ -18,9 +17,16 @@ import { UserManagementErrorBoundary } from '../ErrorBoundary/UserManagementErro
 export const OptimizedUserManagement = () => {
   const { user, userRole } = useAuth();
   const currentUserId = user?.id;
-  const { users, loading, refreshUsers, invalidateCache } = useOptimizedUserData();
+  const { 
+    users, 
+    loading, 
+    refreshUsers,
+    updateUserStatus,
+    updateUserRole,
+    updateUserProfile,
+    deleteUser
+  } = useUnifiedUserManagement();
   const { profiles: availableProfiles } = useSimpleProfiles();
-  const { deleteUser, updateUserStatus } = useUserCrud();
   const { hasPermission } = useUserPermissions();
   const { toast } = useToast();
 
@@ -43,7 +49,7 @@ export const OptimizedUserManagement = () => {
     setEditModalOpen(true);
   };
 
-  const handleDeleteUser = (userId: string, userName: string, userEmail: string) => {
+  const handleDeleteUser = (userId, userName, userEmail = '') => {
     if (!hasPermission('canDeleteUsers')) {
       toast({
         title: "Erro",
@@ -56,12 +62,10 @@ export const OptimizedUserManagement = () => {
     setDeleteModalOpen(true);
   };
 
-  const confirmDeleteUser = async (userId: string) => {
+  const confirmDeleteUser = async (userId) => {
     try {
-      const result = await deleteUser(userId);
-      if (result.success) {
-        invalidateCache(); // Limpar cache
-        await refreshUsers();
+      const success = await deleteUser(userId);
+      if (success) {
         setDeleteModalOpen(false);
         setUserToDelete({ id: '', name: '', email: '' });
       }
@@ -71,28 +75,15 @@ export const OptimizedUserManagement = () => {
   };
 
   const handleModalSuccess = async () => {
-    invalidateCache(); // Limpar cache
     await refreshUsers();
     setCreateModalOpen(false);
     setEditModalOpen(false);
     setSelectedUser(null);
   };
 
-  const handleStatusChange = async (userId: string, isActive: boolean) => {
-    try {
-      const result = await updateUserStatus(userId, isActive);
-      if (result.success) {
-        invalidateCache(); // Limpar cache
-        await refreshUsers();
-      }
-    } catch (error) {
-      console.error('Erro ao atualizar status:', error);
-    }
-  };
-
   if (!userRole || !hasPermission('canViewUserDetails')) {
     return (
-      <div className="text-center p-8" role="alert">
+      <div className="text-center p-8">
         <p>Você não tem permissão para acessar esta funcionalidade.</p>
       </div>
     );
@@ -111,14 +102,17 @@ export const OptimizedUserManagement = () => {
 
         <UserManagementStats users={users} />
 
-        <OptimizedUsersTable
+        <SimpleUsersTable
           users={users}
-          loading={loading}
-          currentUserId={currentUserId}
           userRole={userRole}
-          onEditUser={handleEditUser}
+          currentUserId={currentUserId}
+          onStatusChange={updateUserStatus}
+          onRoleChange={updateUserRole}
+          onProfileChange={updateUserProfile}
           onDeleteUser={handleDeleteUser}
-          onStatusChange={handleStatusChange}
+          onEditUser={handleEditUser}
+          loading={loading}
+          availableProfiles={availableProfiles}
         />
 
         <CreateUserModal

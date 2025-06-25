@@ -1,85 +1,87 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { SimpleUser } from '@/hooks/useSimpleUserManagement';
-import { EditUserFormData, EditUserValidationErrors, UseEditUserFormProps } from './types';
-import { initializeFormData, sanitizeFormField } from './formUtils';
+import { useAuth } from '@/components/Auth/AuthProvider';
+import { UnifiedUser } from '@/hooks/useUnifiedUserManagement';
+import { EditUserFormData, EditUserFormValidationErrors } from './types';
+import { submitUserForm } from './formSubmission';
 import { validateEditUserForm } from './validation';
-import { canManageUser } from './permissions';
-import { submitUserUpdate } from './formSubmission';
 
-export const useEditUserForm = ({ user, userRole, onSuccess, onClose }: UseEditUserFormProps) => {
-  const [loading, setLoading] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<EditUserValidationErrors>({});
-  const [formData, setFormData] = useState<EditUserFormData>(initializeFormData(null));
+interface UseEditUserFormProps {
+  user: UnifiedUser | null;
+  onSuccess: () => void;
+  setOpen: (open: boolean) => void;
+}
+
+export const useEditUserForm = ({ user, onSuccess, setOpen }: UseEditUserFormProps) => {
   const { toast } = useToast();
+  const { companyInfo } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<EditUserFormValidationErrors>({});
+  
+  const [form, setForm] = useState<EditUserFormData>({
+    firstName: '',
+    lastName: '',
+    email: '',
+    department: '',
+    position: '',
+    role: 'user',
+    profileId: '',
+    isActive: true,
+  });
 
+  // Carregar dados do usuário quando o modal abrir
   useEffect(() => {
     if (user) {
-      setFormData(initializeFormData(user));
-      setValidationErrors({});
+      setForm({
+        firstName: user.first_name || '',
+        lastName: user.last_name || '',
+        email: user.email || '',
+        department: user.department || '',
+        position: user.position || '',
+        role: user.role || 'user',
+        profileId: user.profile_id || '',
+        isActive: user.is_active ?? true,
+      });
     }
   }, [user]);
 
-  const handleFormDataChange = (field: keyof EditUserFormData, value: string) => {
-    const sanitizedValue = sanitizeFormField(field, value);
-    
-    setFormData(prev => ({ ...prev, [field]: sanitizedValue }));
-    
-    // Limpar erro do campo
-    if (validationErrors[field]) {
+  const handleFieldChange = (field: string, value: string | boolean) => {
+    setForm(prev => ({ ...prev, [field]: value }));
+    // Limpar erro do campo quando o usuário começar a digitar
+    if (validationErrors[field as keyof EditUserFormValidationErrors]) {
       setValidationErrors(prev => ({ ...prev, [field]: undefined }));
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!user) return;
 
-    if (!canManageUser(userRole, user)) {
-      setValidationErrors({
-        general: "Você não tem permissão para editar este usuário"
-      });
-      return;
-    }
-
-    const validation = validateEditUserForm(formData, userRole);
-    if (!validation.isValid) {
-      setValidationErrors(validation.errors);
+    const errors = validateEditUserForm(form);
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
       return;
     }
 
     setLoading(true);
-
     try {
-      const result = await submitUserUpdate(user, formData, userRole);
-      
-      if (result.success) {
-        toast({
-          title: "Sucesso",
-          description: "Usuário atualizado com sucesso!",
-        });
+      const success = await submitUserForm(user, form, companyInfo?.id, toast);
+      if (success) {
+        setOpen(false);
         onSuccess();
-        onClose();
-      } else {
-        setValidationErrors(result.errors || {});
       }
-    } catch (error: any) {
-      console.error('Erro ao atualizar usuário:', error);
-      setValidationErrors({
-        general: error.message || "Erro ao atualizar usuário"
-      });
+    } catch (error) {
+      console.error('Erro ao salvar usuário:', error);
     } finally {
       setLoading(false);
     }
   };
 
   return {
-    formData,
-    loading,
+    form,
     validationErrors,
-    canManageUser: user ? canManageUser(userRole, user) : false,
-    handleFormDataChange,
+    loading,
+    handleFieldChange,
     handleSubmit,
   };
 };
