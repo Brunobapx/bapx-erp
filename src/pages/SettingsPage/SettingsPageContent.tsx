@@ -2,7 +2,7 @@
 import React from 'react';
 import { TabsContent } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { UserManagement } from '@/components/Settings/UserManagement';
+import { ConsolidatedUserManagement } from '@/components/Settings/ConsolidatedUserManagement';
 import { ProfileManagement } from '@/components/Settings/ProfileManagement';
 import { ProfilesManagement } from '@/components/Settings/ProfilesManagement';
 import { CompanySettings } from '@/components/Settings/CompanySettings';
@@ -53,7 +53,7 @@ export const SettingsPageContent: React.FC<SettingsPageContentProps> = ({ isAdmi
           </Alert>
         ) : (
           <TabContent tabName="Usuários">
-            <UserManagement />
+            <ConsolidatedUserManagement />
           </TabContent>
         )}
       </TabsContent>

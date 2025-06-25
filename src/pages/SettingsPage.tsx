@@ -1,26 +1,27 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Tabs } from "@/components/ui/tabs";
-import { useAuth } from '@/components/Auth/AuthProvider';
 import { Settings as SettingsIcon } from 'lucide-react';
 import { SettingsPageTabs } from './SettingsPage/SettingsPageTabs';
 import { SettingsPageContent } from './SettingsPage/SettingsPageContent';
+import { useSettingsState } from '@/hooks/useSettingsState';
 
 const SettingsPage = () => {
-  const { userRole, companyInfo } = useAuth();
-  const [activeTab, setActiveTab] = useState('profile');
-
-  const isAdmin = userRole === 'admin' || userRole === 'master';
+  const { 
+    activeTab, 
+    setActiveTab, 
+    isAdmin, 
+    isLoading 
+  } = useSettingsState();
 
   console.log('SettingsPage rendered:', { 
-    userRole, 
     isAdmin, 
-    companyId: companyInfo?.id,
+    isLoading,
     activeTab 
   });
 
   // Show loading if still getting auth info
-  if (!userRole || !companyInfo) {
+  if (isLoading) {
     return (
       <div className="container mx-auto p-6 space-y-6">
         <div className="flex items-center gap-3 mb-6">

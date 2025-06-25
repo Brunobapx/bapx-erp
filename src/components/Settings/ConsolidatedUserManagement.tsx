@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useAuth } from '@/components/Auth/AuthProvider';
 import { useUnifiedUserManagement } from '@/hooks/useUnifiedUserManagement';
 import { useSimpleProfiles } from '@/hooks/useSimpleProfiles';
@@ -10,11 +10,42 @@ import { UserManagementHeader } from './UserManagement/UserManagementHeader';
 import { UserManagementStats } from './UserManagement/UserManagementStats';
 import SimpleUsersTable from './SimpleUsersTable';
 import { CreateUserModal } from './CreateUser/CreateUserModal';
-import { EditUserModal } from './EditUserModal';
+import EditUserModal from './EditUserModal';
 import { DeleteUserModal } from './DeleteUserModal';
 import { UserManagementErrorBoundary } from '../ErrorBoundary/UserManagementErrorBoundary';
 
-export const OptimizedUserManagement = () => {
+// Hook customizado para gerenciar estados dos modais
+const useModalStates = () => {
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [userToDelete, setUserToDelete] = useState({ id: '', name: '', email: '' });
+
+  const resetStates = useCallback(() => {
+    setCreateModalOpen(false);
+    setEditModalOpen(false);
+    setDeleteModalOpen(false);
+    setSelectedUser(null);
+    setUserToDelete({ id: '', name: '', email: '' });
+  }, []);
+
+  return {
+    createModalOpen,
+    setCreateModalOpen,
+    editModalOpen,
+    setEditModalOpen,
+    deleteModalOpen,
+    setDeleteModalOpen,
+    selectedUser,
+    setSelectedUser,
+    userToDelete,
+    setUserToDelete,
+    resetStates,
+  };
+};
+
+export const ConsolidatedUserManagement = () => {
   const { user, userRole } = useAuth();
   const currentUserId = user?.id;
   const { 
@@ -30,13 +61,22 @@ export const OptimizedUserManagement = () => {
   const { hasPermission } = useUserPermissions();
   const { toast } = useToast();
 
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [userToDelete, setUserToDelete] = useState({ id: '', name: '', email: '' });
+  const {
+    createModalOpen,
+    setCreateModalOpen,
+    editModalOpen,
+    setEditModalOpen,
+    deleteModalOpen,
+    setDeleteModalOpen,
+    selectedUser,
+    setSelectedUser,
+    userToDelete,
+    setUserToDelete,
+    resetStates,
+  } = useModalStates();
 
-  const handleEditUser = (user) => {
+  // Handlers otimizados com useCallback
+  const handleEditUser = useCallback((user) => {
     if (!hasPermission('canEditUsers')) {
       toast({
         title: "Erro",
@@ -47,9 +87,9 @@ export const OptimizedUserManagement = () => {
     }
     setSelectedUser(user);
     setEditModalOpen(true);
-  };
+  }, [hasPermission, toast]);
 
-  const handleDeleteUser = (userId, userName, userEmail = '') => {
+  const handleDeleteUser = useCallback((userId, userName, userEmail = '') => {
     if (!hasPermission('canDeleteUsers')) {
       toast({
         title: "Erro",
@@ -60,9 +100,9 @@ export const OptimizedUserManagement = () => {
     }
     setUserToDelete({ id: userId, name: userName, email: userEmail });
     setDeleteModalOpen(true);
-  };
+  }, [hasPermission, toast]);
 
-  const confirmDeleteUser = async (userId) => {
+  const confirmDeleteUser = useCallback(async (userId) => {
     try {
       const success = await deleteUser(userId);
       if (success) {
@@ -72,16 +112,20 @@ export const OptimizedUserManagement = () => {
     } catch (error) {
       console.error('Erro ao excluir usuário:', error);
     }
-  };
+  }, [deleteUser]);
 
-  const handleModalSuccess = async () => {
+  const handleModalSuccess = useCallback(async () => {
     await refreshUsers();
-    setCreateModalOpen(false);
-    setEditModalOpen(false);
-    setSelectedUser(null);
-  };
+    resetStates();
+  }, [refreshUsers, resetStates]);
 
-  if (!userRole || !hasPermission('canViewUserDetails')) {
+  // Memoizar verificação de permissões
+  const canAccess = useMemo(() => 
+    userRole && hasPermission('canViewUserDetails'), 
+    [userRole, hasPermission]
+  );
+
+  if (!canAccess) {
     return (
       <div className="text-center p-8">
         <p>Você não tem permissão para acessar esta funcionalidade.</p>
