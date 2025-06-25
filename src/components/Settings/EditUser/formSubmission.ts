@@ -1,7 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from '@/components/Auth/AuthProvider';
 import { UnifiedUser } from '@/hooks/useUnifiedUserManagement';
 
 interface FormData {

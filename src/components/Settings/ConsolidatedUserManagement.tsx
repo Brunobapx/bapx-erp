@@ -5,14 +5,7 @@ import { useUnifiedUserManagement } from '@/hooks/useUnifiedUserManagement';
 import { useSimpleProfiles } from '@/hooks/useSimpleProfiles';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { useToast } from "@/hooks/use-toast";
-
-import { UserManagementHeader } from './UserManagement/UserManagementHeader';
-import { UserManagementStats } from './UserManagement/UserManagementStats';
-import SimpleUsersTable from './SimpleUsersTable';
-import { CreateUserModal } from './CreateUser/CreateUserModal';
-import EditUserModal from './EditUserModal';
-import { DeleteUserModal } from './DeleteUserModal';
-import { UserManagementErrorBoundary } from '../ErrorBoundary/UserManagementErrorBoundary';
+import { UserManagementContainer } from './UserManagement/UserManagementContainer';
 
 // Hook customizado para gerenciar estados dos modais
 const useModalStates = () => {
@@ -134,58 +127,29 @@ export const ConsolidatedUserManagement = () => {
   }
 
   return (
-    <UserManagementErrorBoundary>
-      <div className="space-y-6">
-        <UserManagementHeader
-          usersCount={users.length}
-          loading={loading}
-          onRefresh={refreshUsers}
-          onNewUser={() => setCreateModalOpen(true)}
-          canCreateUsers={hasPermission('canCreateUsers')}
-        />
-
-        <UserManagementStats users={users} />
-
-        <SimpleUsersTable
-          users={users}
-          userRole={userRole}
-          currentUserId={currentUserId}
-          onStatusChange={updateUserStatus}
-          onRoleChange={updateUserRole}
-          onProfileChange={updateUserProfile}
-          onDeleteUser={handleDeleteUser}
-          onEditUser={handleEditUser}
-          loading={loading}
-          availableProfiles={availableProfiles}
-        />
-
-        <CreateUserModal
-          open={createModalOpen}
-          setOpen={setCreateModalOpen}
-          onSuccess={handleModalSuccess}
-          availableProfiles={availableProfiles}
-          userRole={userRole}
-        />
-
-        <EditUserModal
-          user={selectedUser}
-          open={editModalOpen}
-          onOpenChange={setEditModalOpen}
-          onSuccess={handleModalSuccess}
-          availableProfiles={availableProfiles}
-          userRole={userRole}
-        />
-
-        <DeleteUserModal
-          userId={userToDelete.id}
-          userName={userToDelete.name}
-          userEmail={userToDelete.email}
-          open={deleteModalOpen}
-          onOpenChange={setDeleteModalOpen}
-          onConfirm={confirmDeleteUser}
-          currentUserId={currentUserId}
-        />
-      </div>
-    </UserManagementErrorBoundary>
+    <UserManagementContainer
+      users={users}
+      availableProfiles={availableProfiles}
+      userRole={userRole}
+      currentUserId={currentUserId}
+      loading={loading}
+      onRefresh={refreshUsers}
+      onStatusChange={updateUserStatus}
+      onRoleChange={updateUserRole}
+      onProfileChange={updateUserProfile}
+      onDeleteUser={handleDeleteUser}
+      onEditUser={handleEditUser}
+      createModalOpen={createModalOpen}
+      setCreateModalOpen={setCreateModalOpen}
+      editModalOpen={editModalOpen}
+      setEditModalOpen={setEditModalOpen}
+      selectedUser={selectedUser}
+      deleteModalOpen={deleteModalOpen}
+      setDeleteModalOpen={setDeleteModalOpen}
+      userToDelete={userToDelete}
+      onSuccess={handleModalSuccess}
+      onDeleteConfirm={confirmDeleteUser}
+      canCreateUsers={hasPermission('canCreateUsers')}
+    />
   );
 };
