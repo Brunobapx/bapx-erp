@@ -261,7 +261,7 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
       // Adicionar validação dos dados obrigatórios
       const validProductionEntries = productionEntries.map(entry => ({
         ...entry,
-        company_id: user.company_id || null,
+        company_id: null, // Será preenchido pela função padrão do banco
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }));
@@ -304,7 +304,7 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
       
       const validPackagingEntries = packagingEntries.map(entry => ({
         ...entry,
-        company_id: user.company_id || null,
+        company_id: null, // Será preenchido pela função padrão do banco
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }));
@@ -406,7 +406,7 @@ export const sendToProduction = async (orderId: string, deductIngredientsFromSto
       product_name: item.product_name,
       quantity_requested: item.quantity,
       status: 'pending',
-      company_id: user.company_id || null,
+      company_id: null, // Será preenchido pela função padrão do banco
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }));
