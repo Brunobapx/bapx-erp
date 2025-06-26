@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +22,18 @@ export const useProduction = () => {
           throw new Error('Usuário não autenticado');
         }
 
+        console.log('[PRODUCTION DEBUG] Iniciando busca de produções para usuário:', user.id);
+
+        // Primeiro, vamos verificar se existem registros na tabela production
+        const { data: allProductions, error: allError } = await supabase
+          .from('production')
+          .select('*')
+          .eq('user_id', user.id);
+          
+        console.log('[PRODUCTION DEBUG] Registros brutos na tabela production:', allProductions);
+        console.log('[PRODUCTION DEBUG] Erro na busca bruta:', allError);
+
+        // Agora vamos fazer a query com join
         const { data, error } = await supabase
           .from('production')
           .select(`
@@ -36,18 +49,27 @@ export const useProduction = () => {
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
         
+        console.log('[PRODUCTION DEBUG] Dados com JOIN:', data);
+        console.log('[PRODUCTION DEBUG] Erro no JOIN:', error);
+        
         if (error) throw error;
         
         // Mapear os dados para incluir order_number e client_name
-        const productionsWithOrderInfo = (data || []).map(prod => ({
-          ...prod,
-          order_number: prod.order_items?.orders?.order_number || '',
-          client_name: prod.order_items?.orders?.client_name || ''
-        }));
+        const productionsWithOrderInfo = (data || []).map(prod => {
+          console.log('[PRODUCTION DEBUG] Processando produção:', prod.id, 'Order items:', prod.order_items);
+          
+          return {
+            ...prod,
+            order_number: prod.order_items?.orders?.order_number || '',
+            client_name: prod.order_items?.orders?.client_name || ''
+          };
+        });
+        
+        console.log('[PRODUCTION DEBUG] Produções finais processadas:', productionsWithOrderInfo);
         
         setProductions(productionsWithOrderInfo);
       } catch (error: any) {
-        console.error('Erro ao carregar produção:', error);
+        console.error('[PRODUCTION DEBUG] Erro ao carregar produção:', error);
         setError(error.message || 'Erro ao carregar produção');
         toast.error('Erro ao carregar produção');
       } finally {
@@ -59,6 +81,7 @@ export const useProduction = () => {
   }, [refreshTrigger]);
 
   const refreshProductions = () => {
+    console.log('[PRODUCTION DEBUG] Refreshing productions...');
     setRefreshTrigger(prev => prev + 1);
   };
 
@@ -131,7 +154,7 @@ export const useProduction = () => {
       };
       
       if (status === 'in_progress') {
-        updateData.start_date = new Date().toISOString().split('T')[0];
+        updateData.start_date = new Date().toISOString().split('T')[0]; 
         
         // Quando inicia a produção, abater ingredientes do estoque
         if (quantityProduced && quantityProduced > 0) {

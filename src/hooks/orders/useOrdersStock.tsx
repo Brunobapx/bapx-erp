@@ -95,7 +95,10 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
       .eq('id', orderId)
       .single();
 
-    if (orderError) throw orderError;
+    if (orderError) {
+      console.error('[FLOW DEBUG] Erro ao buscar pedido:', orderError);
+      throw orderError;
+    }
     if (!order) throw new Error('Pedido não encontrado');
 
     console.log(`[FLOW DEBUG] Pedido encontrado:`, order);
@@ -263,7 +266,7 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
         throw productionError;
       }
 
-      console.log(`[FLOW DEBUG] Criadas ${productionEntries.length} entradas de produção`);
+      console.log(`[FLOW DEBUG] Criadas ${productionEntries.length} entradas de produção:`, createdProductions);
 
       for (const entry of productionEntries) {
         console.log(`[FLOW DEBUG] Abatendo ingredientes para produção de ${entry.quantity_requested} unidades de ${entry.product_name}`);
@@ -349,6 +352,8 @@ export const sendToProduction = async (orderId: string, deductIngredientsFromSto
       throw new Error('Usuário não autenticado');
     }
 
+    console.log(`[SEND TO PRODUCTION DEBUG] Enviando pedido ${orderId} para produção`);
+
     // Get order with items
     const { data: order, error: orderError } = await supabase
       .from('orders')
@@ -359,8 +364,14 @@ export const sendToProduction = async (orderId: string, deductIngredientsFromSto
       .eq('id', orderId)
       .single();
       
-    if (orderError) throw orderError;
+    if (orderError) {
+      console.error('[SEND TO PRODUCTION DEBUG] Erro ao buscar pedido:', orderError);
+      throw orderError;
+    }
     if (!order) throw new Error('Pedido não encontrado');
+
+    console.log(`[SEND TO PRODUCTION DEBUG] Pedido encontrado:`, order);
+    console.log(`[SEND TO PRODUCTION DEBUG] Itens do pedido:`, order.order_items);
 
     // Create production entries for each order item
     const productionEntries = order.order_items.map((item: OrderItem) => ({
@@ -372,12 +383,19 @@ export const sendToProduction = async (orderId: string, deductIngredientsFromSto
       status: 'pending'
     }));
 
+    console.log(`[SEND TO PRODUCTION DEBUG] Criando entradas de produção:`, productionEntries);
+
     const { data: createdProductions, error: productionError } = await supabase
       .from('production')
       .insert(productionEntries)
       .select();
       
-    if (productionError) throw productionError;
+    if (productionError) {
+      console.error('[SEND TO PRODUCTION DEBUG] Erro ao criar produção:', productionError);
+      throw productionError;
+    }
+
+    console.log(`[SEND TO PRODUCTION DEBUG] Produções criadas:`, createdProductions);
 
     // Abater ingredientes do estoque para cada item de produção criado
     for (const item of order.order_items) {
@@ -389,13 +407,13 @@ export const sendToProduction = async (orderId: string, deductIngredientsFromSto
         .single();
 
       if (productError) {
-        console.error('Erro ao verificar produto:', productError);
+        console.error('[SEND TO PRODUCTION DEBUG] Erro ao verificar produto:', productError);
         continue;
       }
 
       // Se for produto fabricado, abater ingredientes
       if (productData.is_manufactured) {
-        console.log(`Produto ${item.product_name} é fabricado, abatendo ingredientes...`);
+        console.log(`[SEND TO PRODUCTION DEBUG] Produto ${item.product_name} é fabricado, abatendo ingredientes...`);
           
         const stockUpdateSuccess = await deductIngredientsFromStock(
           item.product_id, 
@@ -405,10 +423,10 @@ export const sendToProduction = async (orderId: string, deductIngredientsFromSto
         if (!stockUpdateSuccess) {
           toast.error(`Aviso: Não foi possível atualizar completamente o estoque dos ingredientes para ${item.product_name}`);
         } else {
-          console.log(`Ingredientes abatidos com sucesso para ${item.product_name}`);
+          console.log(`[SEND TO PRODUCTION DEBUG] Ingredientes abatidos com sucesso para ${item.product_name}`);
         }
       } else {
-        console.log(`Produto ${item.product_name} não é fabricado, pulando abatimento de ingredientes`);
+        console.log(`[SEND TO PRODUCTION DEBUG] Produto ${item.product_name} não é fabricado, pulando abatimento de ingredientes`);
       }
     }
 
@@ -421,13 +439,18 @@ export const sendToProduction = async (orderId: string, deductIngredientsFromSto
       })
       .eq('id', orderId);
       
-    if (updateError) throw updateError;
+    if (updateError) {
+      console.error('[SEND TO PRODUCTION DEBUG] Erro ao atualizar status do pedido:', updateError);
+      throw updateError;
+    }
+
+    console.log(`[SEND TO PRODUCTION DEBUG] Status do pedido atualizado para 'in_production'`);
       
     toast.success('Pedido enviado para produção e ingredientes abatidos do estoque');
     refreshOrders();
     return true;
   } catch (error: any) {
-    console.error('Erro ao enviar para produção:', error);
+    console.error('[SEND TO PRODUCTION DEBUG] Erro ao enviar para produção:', error);
     toast.error('Erro ao enviar para produção');
     return false;
   }
