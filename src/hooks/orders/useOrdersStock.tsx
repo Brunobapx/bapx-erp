@@ -128,8 +128,9 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
 
       const currentStock = Number(productData.stock) || 0;
       const quantityNeeded = Number(item.quantity);
+      const isManufactured = Boolean(productData.is_manufactured);
 
-      console.log(`[FLOW DEBUG] Produto: ${item.product_name}, Estoque atual: ${currentStock}, Necessário: ${quantityNeeded}, É fabricado: ${productData.is_manufactured}`);
+      console.log(`[FLOW DEBUG] Produto: ${item.product_name}, Estoque atual: ${currentStock}, Necessário: ${quantityNeeded}, É fabricado: ${isManufactured}`);
 
       if (currentStock >= quantityNeeded) {
         // Todo o pedido pode ser enviado direto para embalagem
@@ -204,7 +205,7 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
         hasDirectPackaging = true;
 
         // Produzir o faltante se produto fabricado
-        if (productData.is_manufactured) {
+        if (isManufactured) {
           console.log(`[FLOW DEBUG] Enviando ${missingQty} de ${item.product_name} para produção`);
           productionEntries.push({
             user_id: user.id,
@@ -225,7 +226,7 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
           toast.error(`Produto ${item.product_name} tem estoque insuficiente e não é fabricado. Reposição manual necessária para ${missingQty} unidade(s).`);
         }
       }
-      else if (currentStock === 0 && productData.is_manufactured) {
+      else if (currentStock === 0 && isManufactured) {
         // Nenhum em estoque e produto fabricado: tudo para produção
         console.log(`[FLOW DEBUG] Enviando ${quantityNeeded} de ${item.product_name} totalmente para produção (estoque zero)`);
         productionEntries.push({
@@ -250,55 +251,76 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
     }
 
     console.log(`[FLOW DEBUG] Resumo: needsProduction=${needsProduction}, hasDirectPackaging=${hasDirectPackaging}`);
-    console.log(`[FLOW DEBUG] Entradas de produção:`, productionEntries);
-    console.log(`[FLOW DEBUG] Entradas de embalagem:`, packagingEntries);
+    console.log(`[FLOW DEBUG] Entradas de produção a serem criadas:`, productionEntries);
+    console.log(`[FLOW DEBUG] Entradas de embalagem a serem criadas:`, packagingEntries);
 
     // Criar entradas de produção se necessário
     if (productionEntries.length > 0) {
       console.log(`[FLOW DEBUG] Criando ${productionEntries.length} entradas de produção`);
+      
+      // Adicionar validação dos dados obrigatórios
+      const validProductionEntries = productionEntries.map(entry => ({
+        ...entry,
+        company_id: user.company_id || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }));
+
+      console.log(`[FLOW DEBUG] Dados de produção validados:`, validProductionEntries);
+
       const { data: createdProductions, error: productionError } = await supabase
         .from('production')
-        .insert(productionEntries)
+        .insert(validProductionEntries)
         .select();
 
       if (productionError) {
         console.error('[FLOW DEBUG] Erro ao criar produção:', productionError);
+        toast.error(`Erro ao criar registros de produção: ${productionError.message}`);
         throw productionError;
       }
 
-      console.log(`[FLOW DEBUG] Criadas ${productionEntries.length} entradas de produção:`, createdProductions);
+      console.log(`[FLOW DEBUG] Criadas ${createdProductions?.length || 0} entradas de produção:`, createdProductions);
 
-      for (const entry of productionEntries) {
-        console.log(`[FLOW DEBUG] Abatendo ingredientes para produção de ${entry.quantity_requested} unidades de ${entry.product_name}`);
+      // Abater ingredientes para cada entrada de produção criada
+      for (const production of createdProductions || []) {
+        console.log(`[FLOW DEBUG] Abatendo ingredientes para produção de ${production.quantity_requested} unidades de ${production.product_name}`);
 
         const stockUpdateSuccess = await deductIngredientsFromStock(
-          entry.product_id,
-          entry.quantity_requested
+          production.product_id,
+          production.quantity_requested
         );
 
         if (!stockUpdateSuccess) {
-          toast.error(`Aviso: Não foi possível atualizar completamente o estoque dos ingredientes para ${entry.product_name}`);
+          toast.error(`Aviso: Não foi possível atualizar completamente o estoque dos ingredientes para ${production.product_name}`);
         } else {
-          console.log(`[FLOW DEBUG] Ingredientes abatidos com sucesso para ${entry.product_name}`);
+          console.log(`[FLOW DEBUG] Ingredientes abatidos com sucesso para ${production.product_name}`);
         }
       }
-
     }
 
     // Criar entradas de embalagem se necessário
     if (packagingEntries.length > 0) {
       console.log(`[FLOW DEBUG] Criando ${packagingEntries.length} entradas de embalagem`);
+      
+      const validPackagingEntries = packagingEntries.map(entry => ({
+        ...entry,
+        company_id: user.company_id || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }));
+
       const { data: createdPackagings, error: packagingError } = await supabase
         .from('packaging')
-        .insert(packagingEntries)
+        .insert(validPackagingEntries)
         .select();
 
       if (packagingError) {
         console.error('[FLOW DEBUG] Erro ao criar entradas de embalagem:', packagingError);
+        toast.error(`Erro ao criar registros de embalagem: ${packagingError.message}`);
         throw packagingError;
       }
 
-      console.log(`[FLOW DEBUG] Criadas ${packagingEntries.length} entradas de embalagem`);
+      console.log(`[FLOW DEBUG] Criadas ${createdPackagings?.length || 0} entradas de embalagem`);
     }
 
     // Atualizar status do pedido baseado no que foi criado
@@ -315,7 +337,7 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
       newStatus = 'in_production';
       message = `Itens enviados para produção devido à falta de estoque:\n${packagingInfoMsgs.join('\n')}`;
     } else {
-      message = 'Pedido criado com sucesso!';
+      message = 'Pedido processado com sucesso!';
     }
 
     console.log(`[FLOW DEBUG] Atualizando status do pedido para: ${newStatus}`);
@@ -330,6 +352,9 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
 
     if (updateError) {
       console.error('[FLOW DEBUG] Erro ao atualizar status do pedido:', updateError);
+      toast.error(`Erro ao atualizar status do pedido: ${updateError.message}`);
+    } else {
+      console.log(`[FLOW DEBUG] Status do pedido atualizado com sucesso para: ${newStatus}`);
     }
 
     toast.success(message);
@@ -380,7 +405,10 @@ export const sendToProduction = async (orderId: string, deductIngredientsFromSto
       product_id: item.product_id,
       product_name: item.product_name,
       quantity_requested: item.quantity,
-      status: 'pending'
+      status: 'pending',
+      company_id: user.company_id || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }));
 
     console.log(`[SEND TO PRODUCTION DEBUG] Criando entradas de produção:`, productionEntries);
@@ -392,6 +420,7 @@ export const sendToProduction = async (orderId: string, deductIngredientsFromSto
       
     if (productionError) {
       console.error('[SEND TO PRODUCTION DEBUG] Erro ao criar produção:', productionError);
+      toast.error(`Erro ao criar registros de produção: ${productionError.message}`);
       throw productionError;
     }
 

@@ -1,8 +1,8 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/components/Auth/AuthProvider';
+import { checkStockAndSendToProduction, sendToProduction as sendToProductionStock } from './orders/useOrdersStock';
 
 export type OrderStatus = 
   | 'pending'
@@ -173,16 +173,17 @@ export const useOrders = () => {
 
   const refreshOrders = loadOrders;
 
-  // Helper functions for backward compatibility
+  // Usar a função corrigida do useOrdersStock
   const sendToProduction = async (orderId: string) => {
-    await updateOrder(orderId, { status: 'in_production' });
+    console.log('[useOrders] Usando checkStockAndSendToProduction para pedido:', orderId);
+    const success = await checkStockAndSendToProduction(orderId);
+    if (success) {
+      await loadOrders(); // Recarregar pedidos após sucesso
+    }
+    return success;
   };
 
-  const checkStockAndSendToProduction = async (orderId: string) => {
-    // Basic implementation - this can be expanded
-    await sendToProduction(orderId);
-  };
-
+  // Helper functions for backward compatibility
   const isOrderCompleted = (status: OrderStatus) => {
     return ['delivered', 'cancelled'].includes(status);
   };
