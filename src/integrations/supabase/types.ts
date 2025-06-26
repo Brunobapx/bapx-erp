@@ -202,76 +202,6 @@ export type Database = {
           },
         ]
       }
-      commission_payments: {
-        Row: {
-          amount: number
-          commission_id: string
-          id: string
-          notes: string | null
-          paid_at: string
-          payment_method: string | null
-        }
-        Insert: {
-          amount: number
-          commission_id: string
-          id?: string
-          notes?: string | null
-          paid_at?: string
-          payment_method?: string | null
-        }
-        Update: {
-          amount?: number
-          commission_id?: string
-          id?: string
-          notes?: string | null
-          paid_at?: string
-          payment_method?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "commission_payments_commission_id_fkey"
-            columns: ["commission_id"]
-            isOneToOne: false
-            referencedRelation: "salesperson_commissions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      commission_settings: {
-        Row: {
-          commission_type: string
-          commission_value: number
-          company_id: string
-          created_at: string
-          id: string
-          updated_at: string
-        }
-        Insert: {
-          commission_type?: string
-          commission_value?: number
-          company_id: string
-          created_at?: string
-          id?: string
-          updated_at?: string
-        }
-        Update: {
-          commission_type?: string
-          commission_value?: number
-          company_id?: string
-          created_at?: string
-          id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "commission_settings_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       companies: {
         Row: {
           billing_email: string | null
@@ -1024,41 +954,6 @@ export type Database = {
           },
         ]
       }
-      product_commissions: {
-        Row: {
-          commission_type: string
-          commission_value: number
-          created_at: string
-          id: string
-          product_id: string
-          updated_at: string
-        }
-        Insert: {
-          commission_type?: string
-          commission_value?: number
-          created_at?: string
-          id?: string
-          product_id: string
-          updated_at?: string
-        }
-        Update: {
-          commission_type?: string
-          commission_value?: number
-          created_at?: string
-          id?: string
-          product_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "product_commissions_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       product_recipes: {
         Row: {
           company_id: string
@@ -1749,50 +1644,6 @@ export type Database = {
             columns: ["salesperson_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      salesperson_commissions: {
-        Row: {
-          commission_rate: number
-          commission_type: string
-          commission_value: number
-          created_at: string
-          id: string
-          is_paid: boolean
-          paid_at: string | null
-          sale_id: string
-          salesperson_id: string
-        }
-        Insert: {
-          commission_rate: number
-          commission_type: string
-          commission_value: number
-          created_at?: string
-          id?: string
-          is_paid?: boolean
-          paid_at?: string | null
-          sale_id: string
-          salesperson_id: string
-        }
-        Update: {
-          commission_rate?: number
-          commission_type?: string
-          commission_value?: number
-          created_at?: string
-          id?: string
-          is_paid?: boolean
-          paid_at?: string | null
-          sale_id?: string
-          salesperson_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "salesperson_commissions_sale_id_fkey"
-            columns: ["sale_id"]
-            isOneToOne: false
-            referencedRelation: "sales"
             referencedColumns: ["id"]
           },
         ]

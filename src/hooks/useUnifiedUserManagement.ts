@@ -73,7 +73,7 @@ export const useUnifiedUserManagement = () => {
       
       console.log('[UnifiedUserManagement] Loading users from database');
       
-      // Query otimizada única
+      // Primeira consulta: buscar perfis
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select(`
@@ -85,7 +85,6 @@ export const useUnifiedUserManagement = () => {
           is_active,
           last_login,
           profile_id,
-          user_roles!inner(role),
           access_profiles(name, description)
         `)
         .eq('company_id', companyInfo.id)
@@ -96,11 +95,28 @@ export const useUnifiedUserManagement = () => {
         throw profilesError;
       }
 
+      // Segunda consulta: buscar roles dos usuários
+      const userIds = (profilesData || []).map(profile => profile.id);
+      const { data: rolesData, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id, role')
+        .in('user_id', userIds)
+        .eq('company_id', companyInfo.id);
+
+      if (rolesError) {
+        console.error('[UnifiedUserManagement] Error loading roles:', rolesError);
+        throw rolesError;
+      }
+
+      // Criar mapa de roles para fácil acesso
+      const rolesMap = new Map<string, string>();
+      (rolesData || []).forEach(roleData => {
+        rolesMap.set(roleData.user_id, roleData.role);
+      });
+
       const processedUsers: UnifiedUser[] = (profilesData || []).map((profile) => {
-        // Normalizar role
-        const userRole = Array.isArray(profile.user_roles) && profile.user_roles.length > 0 
-          ? profile.user_roles[0].role 
-          : 'user';
+        // Buscar role do usuário
+        const userRole = rolesMap.get(profile.id) || 'user';
         
         // Normalizar access_profile
         let accessProfile: { name: string; description: string; } | null = null;
