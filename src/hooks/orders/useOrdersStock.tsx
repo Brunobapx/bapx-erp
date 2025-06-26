@@ -1,3 +1,4 @@
+
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Order, OrderStatus, OrderItem } from "../useOrders";
@@ -7,7 +8,7 @@ import type { Order, OrderStatus, OrderItem } from "../useOrders";
  */
 export const deductIngredientsFromStock = async (productId: string, quantityProduced: number) => {
   try {
-    console.log(`Iniciando abatimento para produto ${productId}, quantidade: ${quantityProduced}`);
+    console.log(`[STOCK DEBUG] Iniciando abatimento para produto ${productId}, quantidade: ${quantityProduced}`);
       
     // Buscar a receita do produto
     const { data: recipe, error: recipeError } = await supabase
@@ -16,22 +17,22 @@ export const deductIngredientsFromStock = async (productId: string, quantityProd
       .eq('product_id', productId);
 
     if (recipeError) {
-      console.error('Erro ao buscar receita:', recipeError);
+      console.error('[STOCK DEBUG] Erro ao buscar receita:', recipeError);
       return false;
     }
 
     if (!recipe || recipe.length === 0) {
-      console.log('Produto não possui receita definida');
+      console.log('[STOCK DEBUG] Produto não possui receita definida');
       return true; // Não é erro se não tem receita
     }
 
-    console.log('Receita encontrada:', recipe);
+    console.log('[STOCK DEBUG] Receita encontrada:', recipe);
 
     // Para cada ingrediente da receita, abater do estoque
     for (const ingredient of recipe) {
       const quantityToDeduct = ingredient.quantity * quantityProduced;
         
-      console.log(`Abatendo ingrediente ${ingredient.ingredient_id}: ${quantityToDeduct}`);
+      console.log(`[STOCK DEBUG] Abatendo ingrediente ${ingredient.ingredient_id}: ${quantityToDeduct}`);
         
       // Buscar estoque atual do ingrediente
       const { data: product, error: productError } = await supabase
@@ -41,14 +42,14 @@ export const deductIngredientsFromStock = async (productId: string, quantityProd
         .single();
 
       if (productError) {
-        console.error('Erro ao buscar produto:', productError);
+        console.error('[STOCK DEBUG] Erro ao buscar produto:', productError);
         continue;
       }
 
       const currentStock = product.stock || 0;
       const newStock = Math.max(0, currentStock - quantityToDeduct);
 
-      console.log(`Estoque atual: ${currentStock}, novo estoque: ${newStock}`);
+      console.log(`[STOCK DEBUG] Estoque atual: ${currentStock}, novo estoque: ${newStock}`);
 
       // Atualizar estoque
       const { error: updateError } = await supabase
@@ -57,16 +58,16 @@ export const deductIngredientsFromStock = async (productId: string, quantityProd
         .eq('id', ingredient.ingredient_id);
 
       if (updateError) {
-        console.error('Erro ao atualizar estoque:', updateError);
+        console.error('[STOCK DEBUG] Erro ao atualizar estoque:', updateError);
         return false;
       }
 
-      console.log(`Estoque atualizado com sucesso para ${ingredient.ingredient_id}`);
+      console.log(`[STOCK DEBUG] Estoque atualizado com sucesso para ${ingredient.ingredient_id}`);
     }
 
     return true;
   } catch (error) {
-    console.error('Erro ao abater ingredientes do estoque:', error);
+    console.error('[STOCK DEBUG] Erro ao abater ingredientes do estoque:', error);
     return false;
   }
 };
@@ -82,7 +83,7 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
       throw new Error('Usuário não autenticado');
     }
 
-    console.log(`Verificando estoque para pedido ${orderId}`);
+    console.log(`[FLOW DEBUG] Verificando estoque para pedido ${orderId}`);
 
     // Get order with items
     const { data: order, error: orderError } = await supabase
@@ -97,6 +98,9 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
     if (orderError) throw orderError;
     if (!order) throw new Error('Pedido não encontrado');
 
+    console.log(`[FLOW DEBUG] Pedido encontrado:`, order);
+    console.log(`[FLOW DEBUG] Itens do pedido:`, order.order_items);
+
     let needsProduction = false;
     let hasDirectPackaging = false;
     const productionEntries = [];
@@ -105,7 +109,7 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
 
     // Para cada item do pedido, verificar estoque e dividir entre embalagem e produção se estoque for parcial
     for (const item of order.order_items) {
-      console.log(`Verificando item: ${item.product_name}, quantidade solicitada: ${item.quantity}`);
+      console.log(`[FLOW DEBUG] Verificando item: ${item.product_name}, quantidade solicitada: ${item.quantity}`);
 
       // Buscar dados do produto (estoque e se é fabricado)
       const { data: productData, error: productError } = await supabase
@@ -115,18 +119,18 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
         .single();
 
       if (productError) {
-        console.error('Erro ao buscar produto:', productError);
+        console.error('[FLOW DEBUG] Erro ao buscar produto:', productError);
         continue;
       }
 
       const currentStock = Number(productData.stock) || 0;
       const quantityNeeded = Number(item.quantity);
 
-      console.log(`Produto: ${item.product_name}, Estoque atual: ${currentStock}, Necessário: ${quantityNeeded}`);
+      console.log(`[FLOW DEBUG] Produto: ${item.product_name}, Estoque atual: ${currentStock}, Necessário: ${quantityNeeded}, É fabricado: ${productData.is_manufactured}`);
 
       if (currentStock >= quantityNeeded) {
         // Todo o pedido pode ser enviado direto para embalagem
-        console.log(`Enviando ${quantityNeeded} unidades de ${item.product_name} diretamente para embalagem`);
+        console.log(`[FLOW DEBUG] Enviando ${quantityNeeded} unidades de ${item.product_name} diretamente para embalagem`);
         packagingEntries.push({
           user_id: user.id,
           production_id: null,
@@ -150,10 +154,10 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
           .eq('id', item.product_id);
 
         if (stockUpdateError) {
-          console.error('Erro ao atualizar estoque do produto:', stockUpdateError);
+          console.error('[FLOW DEBUG] Erro ao atualizar estoque do produto:', stockUpdateError);
           toast.error(`Erro ao atualizar estoque do produto ${item.product_name}`);
         } else {
-          console.log(`Estoque do produto ${item.product_name} atualizado: ${currentStock} -> ${currentStock - quantityNeeded}`);
+          console.log(`[FLOW DEBUG] Estoque do produto ${item.product_name} atualizado: ${currentStock} -> ${currentStock - quantityNeeded}`);
         }
 
         hasDirectPackaging = true;
@@ -162,6 +166,8 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
       else if (currentStock > 0 && currentStock < quantityNeeded) {
         // Dividir: parte vai para embalagem (estoque), parte vai para produção
         const missingQty = quantityNeeded - currentStock;
+
+        console.log(`[FLOW DEBUG] Dividindo ${item.product_name}: ${currentStock} para embalagem, ${missingQty} para produção`);
 
         // Enviar o disponível para embalagem
         packagingEntries.push({
@@ -187,15 +193,16 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
           .eq('id', item.product_id);
 
         if (stockUpdateError) {
-          console.error('Erro ao atualizar estoque do produto:', stockUpdateError);
+          console.error('[FLOW DEBUG] Erro ao atualizar estoque do produto:', stockUpdateError);
           toast.error(`Erro ao atualizar estoque do produto ${item.product_name}`);
         } else {
-          console.log(`Estoque do produto ${item.product_name} atualizado: ${currentStock} -> 0`);
+          console.log(`[FLOW DEBUG] Estoque do produto ${item.product_name} atualizado: ${currentStock} -> 0`);
         }
         hasDirectPackaging = true;
 
         // Produzir o faltante se produto fabricado
         if (productData.is_manufactured) {
+          console.log(`[FLOW DEBUG] Enviando ${missingQty} de ${item.product_name} para produção`);
           productionEntries.push({
             user_id: user.id,
             order_item_id: item.id,
@@ -217,6 +224,7 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
       }
       else if (currentStock === 0 && productData.is_manufactured) {
         // Nenhum em estoque e produto fabricado: tudo para produção
+        console.log(`[FLOW DEBUG] Enviando ${quantityNeeded} de ${item.product_name} totalmente para produção (estoque zero)`);
         productionEntries.push({
           user_id: user.id,
           order_item_id: item.id,
@@ -230,6 +238,7 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
       }
       else {
         // Produto não fabricado, sem estoque
+        console.log(`[FLOW DEBUG] Produto ${item.product_name} não fabricado e sem estoque`);
         packagingInfoMsgs.push(
           `${item.product_name}: 0 em estoque, ${quantityNeeded} não pode ser produzido`
         );
@@ -237,19 +246,27 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
       }
     }
 
+    console.log(`[FLOW DEBUG] Resumo: needsProduction=${needsProduction}, hasDirectPackaging=${hasDirectPackaging}`);
+    console.log(`[FLOW DEBUG] Entradas de produção:`, productionEntries);
+    console.log(`[FLOW DEBUG] Entradas de embalagem:`, packagingEntries);
+
     // Criar entradas de produção se necessário
     if (productionEntries.length > 0) {
+      console.log(`[FLOW DEBUG] Criando ${productionEntries.length} entradas de produção`);
       const { data: createdProductions, error: productionError } = await supabase
         .from('production')
         .insert(productionEntries)
         .select();
 
-      if (productionError) throw productionError;
+      if (productionError) {
+        console.error('[FLOW DEBUG] Erro ao criar produção:', productionError);
+        throw productionError;
+      }
 
-      console.log(`Criadas ${productionEntries.length} entradas de produção`);
+      console.log(`[FLOW DEBUG] Criadas ${productionEntries.length} entradas de produção`);
 
       for (const entry of productionEntries) {
-        console.log(`Abatendo ingredientes para produção de ${entry.quantity_requested} unidades de ${entry.product_name}`);
+        console.log(`[FLOW DEBUG] Abatendo ingredientes para produção de ${entry.quantity_requested} unidades de ${entry.product_name}`);
 
         const stockUpdateSuccess = await deductIngredientsFromStock(
           entry.product_id,
@@ -259,7 +276,7 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
         if (!stockUpdateSuccess) {
           toast.error(`Aviso: Não foi possível atualizar completamente o estoque dos ingredientes para ${entry.product_name}`);
         } else {
-          console.log(`Ingredientes abatidos com sucesso para ${entry.product_name}`);
+          console.log(`[FLOW DEBUG] Ingredientes abatidos com sucesso para ${entry.product_name}`);
         }
       }
 
@@ -267,17 +284,18 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
 
     // Criar entradas de embalagem se necessário
     if (packagingEntries.length > 0) {
+      console.log(`[FLOW DEBUG] Criando ${packagingEntries.length} entradas de embalagem`);
       const { data: createdPackagings, error: packagingError } = await supabase
         .from('packaging')
         .insert(packagingEntries)
         .select();
 
       if (packagingError) {
-        console.error('Erro ao criar entradas de embalagem:', packagingError);
+        console.error('[FLOW DEBUG] Erro ao criar entradas de embalagem:', packagingError);
         throw packagingError;
       }
 
-      console.log(`Criadas ${packagingEntries.length} entradas de embalagem`);
+      console.log(`[FLOW DEBUG] Criadas ${packagingEntries.length} entradas de embalagem`);
     }
 
     // Atualizar status do pedido baseado no que foi criado
@@ -297,7 +315,9 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
       message = 'Pedido criado com sucesso!';
     }
 
-    await supabase
+    console.log(`[FLOW DEBUG] Atualizando status do pedido para: ${newStatus}`);
+
+    const { error: updateError } = await supabase
       .from('orders')
       .update({
         status: newStatus,
@@ -305,10 +325,14 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
       })
       .eq('id', orderId);
 
+    if (updateError) {
+      console.error('[FLOW DEBUG] Erro ao atualizar status do pedido:', updateError);
+    }
+
     toast.success(message);
     return true;
   } catch (error: any) {
-    console.error('Erro ao verificar estoque e processar pedido:', error);
+    console.error('[FLOW DEBUG] Erro ao verificar estoque e processar pedido:', error);
     toast.error('Erro ao processar verificação de estoque');
     return false;
   }

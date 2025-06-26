@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -108,7 +109,12 @@ const StockPage = () => {
   const totalProducts = products.length;
   const lowStockProducts = products.filter(p => p.stock <= 10).length;
   const outOfStockProducts = products.filter(p => p.stock <= 0).length;
-  const totalStockValue = products.reduce((sum, p) => sum + (p.stock * p.price), 0);
+  // Corrigir o cálculo para tratar valores nulos
+  const totalStockValue = products.reduce((sum, p) => {
+    const price = p.price || 0;
+    const stock = p.stock || 0;
+    return sum + (stock * price);
+  }, 0);
 
   if (loading) {
     return (
@@ -216,17 +222,21 @@ const StockPage = () => {
                 <TableBody>
                   {products.map((product) => {
                     const status = getStockStatus(product.stock);
+                    const price = product.price || 0;
+                    const cost = product.cost || 0;
+                    const stock = product.stock || 0;
+                    
                     return (
                       <TableRow key={product.id}>
                         <TableCell className="font-medium">{product.name}</TableCell>
                         <TableCell>{product.category || 'Sem Categoria'}</TableCell>
                         <TableCell className="text-right font-bold">
-                          {product.stock} {product.unit}
+                          {stock} {product.unit}
                         </TableCell>
-                        <TableCell className="text-right">R$ {product.price.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">R$ {product.cost.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">R$ {price.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">R$ {cost.toFixed(2)}</TableCell>
                         <TableCell className="text-right font-medium">
-                          R$ {(product.stock * product.price).toFixed(2)}
+                          R$ {(stock * price).toFixed(2)}
                         </TableCell>
                         <TableCell>
                           <Badge variant={status.variant}>{status.label}</Badge>
