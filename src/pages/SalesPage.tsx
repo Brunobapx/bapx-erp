@@ -86,10 +86,10 @@ const SalesPage = () => {
       total_amount: item.total_amount
     });
 
-    // Navegar para a página de roteirização na aba de rotas otimizadas
+    // Navegar para a página de roteirização na aba de otimização OpenRoute
     navigate('/rotas', { 
       state: { 
-        activeTab: 'rotas-otimizadas'
+        activeTab: 'otimizacao-roteiro'
       }
     });
   };
