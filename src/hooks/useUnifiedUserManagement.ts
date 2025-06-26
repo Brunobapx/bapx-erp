@@ -7,7 +7,7 @@ import { userCacheUtils } from './userManagement/userCache';
 import { userDataService } from './userManagement/userDataService';
 import { userActionsService } from './userManagement/userActionsService';
 
-export { UnifiedUser } from './userManagement/types';
+export type { UnifiedUser } from './userManagement/types';
 
 export const useUnifiedUserManagement = () => {
   const [users, setUsers] = useState<UnifiedUser[]>([]);
