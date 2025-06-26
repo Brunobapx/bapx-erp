@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -57,6 +58,16 @@ const App = () => (
                             </ModuleAccessCheck>
                           } />
                           <Route path="/pedidos/novo" element={
+                            <ModuleAccessCheck routePath="/pedidos">
+                              <OrderFormPage />
+                            </ModuleAccessCheck>
+                          } />
+                          <Route path="/pedidos/new" element={
+                            <ModuleAccessCheck routePath="/pedidos">
+                              <OrderFormPage />
+                            </ModuleAccessCheck>
+                          } />
+                          <Route path="/pedidos/:id" element={
                             <ModuleAccessCheck routePath="/pedidos">
                               <OrderFormPage />
                             </ModuleAccessCheck>
