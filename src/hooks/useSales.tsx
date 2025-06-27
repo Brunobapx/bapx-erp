@@ -135,6 +135,36 @@ export const useSales = () => {
       if (saleError) throw saleError;
       if (!sale) throw new Error('Venda não encontrada');
 
+      // Verificar se já existe um lançamento financeiro para esta venda
+      const { data: existingEntry, error: checkError } = await supabase
+        .from('financial_entries')
+        .select('id')
+        .eq('sale_id', saleId)
+        .maybeSingle();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw checkError;
+      }
+
+      // Se já existe um lançamento, apenas atualizar status da venda
+      if (existingEntry) {
+        const { error: updateError } = await supabase
+          .from('sales')
+          .update({
+            status: 'confirmed',
+            confirmed_at: new Date().toISOString(),
+            confirmed_by: user.email || 'Sistema',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', saleId);
+
+        if (updateError) throw updateError;
+        
+        toast.success('Venda aprovada (lançamento financeiro já existia)');
+        refreshSales();
+        return true;
+      }
+
       // Calcular data de vencimento baseada no prazo
       let dueDate = new Date();
       if (sale.payment_term) {
@@ -144,7 +174,7 @@ export const useSales = () => {
         dueDate.setDate(dueDate.getDate() + 30); // Padrão 30 dias
       }
 
-      // Atualizar status da venda
+      // Atualizar status da venda e criar lançamento financeiro em uma transação
       const { error: updateError } = await supabase
         .from('sales')
         .update({

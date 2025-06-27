@@ -36,7 +36,7 @@ export const useUnifiedFinancialEntries = () => {
           throw new Error('Usuário não autenticado');
         }
 
-        // Buscar todos os lançamentos financeiros
+        // Buscar apenas os lançamentos financeiros da tabela principal
         const { data: financialEntries, error: financialError } = await supabase
           .from('financial_entries')
           .select('*')
@@ -48,21 +48,9 @@ export const useUnifiedFinancialEntries = () => {
           throw financialError;
         }
 
-        // Buscar contas a pagar (accounts_payable) e converter para o formato unificado
-        const { data: accountsPayable, error: payableError } = await supabase
-          .from('accounts_payable')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('due_date', { ascending: true });
-
-        if (payableError) {
-          console.error('Erro ao buscar accounts_payable:', payableError);
-          // Não falhar aqui, apenas log o erro
-        }
-
         const unifiedEntries: UnifiedFinancialEntry[] = [];
 
-        // Adicionar lançamentos financeiros
+        // Processar apenas lançamentos financeiros (evita duplicação)
         if (financialEntries) {
           financialEntries.forEach(entry => {
             unifiedEntries.push({
@@ -84,37 +72,6 @@ export const useUnifiedFinancialEntries = () => {
               created_at: entry.created_at,
               updated_at: entry.updated_at
             });
-          });
-        }
-
-        // Adicionar contas a pagar (se existirem e não estiverem duplicadas)
-        if (accountsPayable) {
-          accountsPayable.forEach(payable => {
-            // Verificar se já existe um lançamento financeiro para este payable
-            const existingEntry = unifiedEntries.find(entry => 
-              entry.type === 'payable' && 
-              entry.description.includes(payable.description) &&
-              Math.abs(entry.amount - Number(payable.amount)) < 0.01
-            );
-
-            if (!existingEntry) {
-              unifiedEntries.push({
-                id: payable.id,
-                user_id: payable.user_id,
-                type: 'payable',
-                description: payable.description,
-                amount: Number(payable.amount),
-                due_date: payable.due_date,
-                payment_date: payable.payment_date,
-                payment_status: payable.status === 'paid' ? 'paid' : 'pending',
-                entry_number: payable.invoice_number || `PAY-${payable.id.slice(-6)}`,
-                category: payable.category,
-                account: payable.account,
-                notes: payable.notes,
-                created_at: payable.created_at,
-                updated_at: payable.updated_at
-              });
-            }
           });
         }
 
