@@ -44,7 +44,6 @@ export const sendToProduction = async (orderId: string, refreshOrders: any) => {
       product_name: item.product_name,
       quantity_requested: item.quantity,
       status: 'pending',
-      company_id: null, // Será preenchido pela função padrão do banco
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }));

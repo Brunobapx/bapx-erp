@@ -10,7 +10,6 @@ export interface ProductionEntry {
   product_name: string;
   quantity_requested: number;
   status: string;
-  company_id: null;
   created_at: string;
   updated_at: string;
 }
@@ -26,7 +25,6 @@ export interface PackagingEntry {
   order_id: string;
   client_id: string;
   client_name: string;
-  company_id: null;
   created_at: string;
   updated_at: string;
 }
@@ -79,7 +77,6 @@ export const processOrderItems = async (
         order_id: orderId,
         client_id: clientId,
         client_name: clientName,
-        company_id: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       });
@@ -121,7 +118,6 @@ export const processOrderItems = async (
         order_id: orderId,
         client_id: clientId,
         client_name: clientName,
-        company_id: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       });
@@ -153,7 +149,6 @@ export const processOrderItems = async (
           product_name: item.product_name,
           quantity_requested: missingQty,
           status: 'pending',
-          company_id: null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         });
@@ -178,7 +173,6 @@ export const processOrderItems = async (
         product_name: item.product_name,
         quantity_requested: quantityNeeded,
         status: 'pending',
-        company_id: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       });
