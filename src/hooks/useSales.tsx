@@ -135,34 +135,54 @@ export const useSales = () => {
       if (saleError) throw saleError;
       if (!sale) throw new Error('Venda não encontrada');
 
-      // Verificar se já existe um lançamento financeiro para esta venda
-      const { data: existingEntry, error: checkError } = await supabase
+      // Verificar se já existe um lançamento financeiro para esta venda específica
+      const { data: existingEntries, error: checkError } = await supabase
         .from('financial_entries')
-        .select('id')
+        .select('id, description')
         .eq('sale_id', saleId)
-        .maybeSingle();
+        .eq('user_id', user.id);
 
       if (checkError && checkError.code !== 'PGRST116') {
         throw checkError;
       }
 
-      // Se já existe um lançamento, apenas atualizar status da venda
-      if (existingEntry) {
-        const { error: updateError } = await supabase
-          .from('sales')
-          .update({
-            status: 'confirmed',
-            confirmed_at: new Date().toISOString(),
-            confirmed_by: user.email || 'Sistema',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', saleId);
-
-        if (updateError) throw updateError;
+      // Se já existem lançamentos, remover os incompletos e manter apenas um completo
+      if (existingEntries && existingEntries.length > 0) {
+        console.log('Lançamentos existentes encontrados:', existingEntries);
         
-        toast.success('Venda aprovada (lançamento financeiro já existia)');
-        refreshSales();
-        return true;
+        // Encontrar o lançamento mais completo (com nome do cliente)
+        const completeEntry = existingEntries.find(entry => 
+          entry.description.includes(sale.client_name)
+        );
+        
+        if (completeEntry) {
+          // Remover os lançamentos incompletos
+          const incompleteEntries = existingEntries.filter(entry => entry.id !== completeEntry.id);
+          
+          for (const entry of incompleteEntries) {
+            await supabase
+              .from('financial_entries')
+              .delete()
+              .eq('id', entry.id);
+          }
+          
+          // Apenas atualizar status da venda
+          const { error: updateError } = await supabase
+            .from('sales')
+            .update({
+              status: 'confirmed',
+              confirmed_at: new Date().toISOString(),
+              confirmed_by: user.email || 'Sistema',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', saleId);
+
+          if (updateError) throw updateError;
+          
+          toast.success('Venda aprovada e lançamentos duplicados removidos');
+          refreshSales();
+          return true;
+        }
       }
 
       // Calcular data de vencimento baseada no prazo
@@ -174,7 +194,7 @@ export const useSales = () => {
         dueDate.setDate(dueDate.getDate() + 30); // Padrão 30 dias
       }
 
-      // Atualizar status da venda e criar lançamento financeiro em uma transação
+      // Atualizar status da venda primeiro
       const { error: updateError } = await supabase
         .from('sales')
         .update({
@@ -187,7 +207,7 @@ export const useSales = () => {
 
       if (updateError) throw updateError;
 
-      // Criar lançamento em contas a receber
+      // Criar lançamento em contas a receber com descrição completa
       const { error: financialError } = await supabase
         .from('financial_entries')
         .insert({
@@ -201,7 +221,7 @@ export const useSales = () => {
           due_date: dueDate.toISOString().split('T')[0],
           payment_status: 'pending',
           account: sale.payment_method || '',
-          notes: sale.notes || ''
+          notes: `Venda aprovada em ${new Date().toLocaleDateString('pt-BR')}`
         });
 
       if (financialError) throw financialError;

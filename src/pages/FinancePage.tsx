@@ -15,6 +15,9 @@ import { FinanceHeader } from "@/components/Finance/FinanceHeader";
 import { FinanceOverviewFilters } from "@/components/Finance/FinanceOverviewFilters";
 import { FinanceOverviewTable } from "@/components/Finance/FinanceOverviewTable";
 import { FinancialProvider } from "@/contexts/FinancialContext";
+import { useFinancialCleanup } from '@/hooks/useFinancialCleanup';
+import { Button } from "@/components/ui/button";
+import { Trash2 } from 'lucide-react';
 
 const FinancePage = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -30,6 +33,7 @@ const FinancePage = () => {
   ]);
 
   const { entries, loading, error } = useUnifiedFinancialEntries();
+  const { cleanupDuplicateEntries, isCleaningUp } = useFinancialCleanup();
 
   if (loading) {
     return (
@@ -68,15 +72,34 @@ const FinancePage = () => {
     setAlerts(alerts.filter(alert => alert.id !== id));
   };
 
+  const handleCleanupDuplicates = async () => {
+    await cleanupDuplicateEntries();
+    // Recarregar a página ou atualizar os dados
+    window.location.reload();
+  };
+
   return (
     <FinancialProvider>
       <div className="p-4 sm:p-6 space-y-6">
-        <FinanceHeader
-          saldo={saldo}
-          totalReceitas={totalReceitas}
-          totalDespesas={totalDespesas}
-          onNewEntry={() => setShowModal(true)}
-        />
+        <div className="flex justify-between items-start">
+          <FinanceHeader
+            saldo={saldo}
+            totalReceitas={totalReceitas}
+            totalDespesas={totalDespesas}
+            onNewEntry={() => setShowModal(true)}
+          />
+          
+          <Button 
+            onClick={handleCleanupDuplicates}
+            disabled={isCleaningUp}
+            variant="outline"
+            size="sm"
+            className="ml-2"
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            {isCleaningUp ? 'Limpando...' : 'Limpar Duplicados'}
+          </Button>
+        </div>
 
         <StageAlert alerts={alerts} onDismiss={handleDismissAlert} />
 
