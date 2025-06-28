@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -129,10 +128,16 @@ export const useSales = () => {
 
       console.log(`[APPROVE_SALE] Usuário autenticado: ${user.id}`);
 
-      // Buscar dados completos da venda
+      // Buscar dados completos da venda com informações do cliente
       const { data: sale, error: saleError } = await supabase
         .from('sales')
-        .select('*')
+        .select(`
+          *,
+          orders!inner(
+            order_number,
+            client_name
+          )
+        `)
         .eq('id', saleId)
         .single();
 
@@ -194,74 +199,76 @@ export const useSales = () => {
 
       console.log(`[APPROVE_SALE] Data de vencimento calculada: ${dueDate.toISOString().split('T')[0]}`);
 
-      // Usar transação para garantir atomicidade
-      const { error: transactionError } = await supabase.rpc('begin');
-      if (transactionError) throw transactionError;
+      // Primeiro, atualizar o status da venda
+      const { error: updateError } = await supabase
+        .from('sales')
+        .update({
+          status: 'confirmed',
+          confirmed_at: new Date().toISOString(),
+          confirmed_by: user.email || 'Sistema',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', saleId);
 
-      try {
-        // Atualizar status da venda
-        const { error: updateError } = await supabase
+      if (updateError) {
+        console.error(`[APPROVE_SALE] Erro ao atualizar venda:`, updateError);
+        throw updateError;
+      }
+
+      // Criar descrição completa incluindo o nome do cliente
+      const clientName = sale.orders?.client_name || sale.client_name || 'Cliente não identificado';
+      const description = `Venda confirmada - ${sale.sale_number} - ${clientName}`;
+      
+      console.log(`[APPROVE_SALE] Criando lançamento financeiro com descrição: ${description}`);
+
+      // Tentar criar o lançamento financeiro
+      const { data: financialEntry, error: financialError } = await supabase
+        .from('financial_entries')
+        .insert({
+          user_id: user.id,
+          sale_id: saleId,
+          order_id: sale.order_id,
+          client_id: sale.client_id,
+          type: 'receivable',
+          description: description,
+          amount: sale.total_amount,
+          due_date: dueDate.toISOString().split('T')[0],
+          payment_status: 'pending',
+          account: sale.payment_method || '',
+          notes: `Venda aprovada em ${new Date().toLocaleDateString('pt-BR')} por ${user.email || 'Sistema'}`
+        })
+        .select()
+        .single();
+
+      if (financialError) {
+        console.error(`[APPROVE_SALE] Erro ao criar lançamento financeiro:`, financialError);
+        
+        // Se o erro for de constraint única (23505), significa que já existe um lançamento
+        if (financialError.code === '23505') {
+          console.log(`[APPROVE_SALE] Lançamento já existe devido à constraint única, operação bem-sucedida`);
+          toast.success('Venda aprovada com sucesso');
+          refreshSales();
+          return true;
+        }
+        
+        // Para outros erros, tentar reverter o status da venda
+        await supabase
           .from('sales')
           .update({
-            status: 'confirmed',
-            confirmed_at: new Date().toISOString(),
-            confirmed_by: user.email || 'Sistema',
+            status: 'pending',
+            confirmed_at: null,
+            confirmed_by: null,
             updated_at: new Date().toISOString()
           })
           .eq('id', saleId);
-
-        if (updateError) throw updateError;
-
-        // Criar lançamento financeiro com descrição completa
-        const description = `Venda confirmada - ${sale.sale_number} - ${sale.client_name}`;
         
-        console.log(`[APPROVE_SALE] Criando lançamento financeiro com descrição: ${description}`);
-
-        const { error: financialError } = await supabase
-          .from('financial_entries')
-          .insert({
-            user_id: user.id,
-            sale_id: saleId,
-            order_id: sale.order_id,
-            client_id: sale.client_id,
-            type: 'receivable',
-            description: description,
-            amount: sale.total_amount,
-            due_date: dueDate.toISOString().split('T')[0],
-            payment_status: 'pending',
-            account: sale.payment_method || '',
-            notes: `Venda aprovada em ${new Date().toLocaleDateString('pt-BR')} por ${user.email || 'Sistema'}`
-          });
-
-        if (financialError) {
-          console.error(`[APPROVE_SALE] Erro ao criar lançamento financeiro:`, financialError);
-          
-          // Se o erro for de constraint única, a venda já foi processada
-          if (financialError.code === '23505') {
-            console.log(`[APPROVE_SALE] Lançamento já existe (constraint única), operação bem-sucedida`);
-            await supabase.rpc('commit');
-            toast.success('Venda aprovada com sucesso');
-            refreshSales();
-            return true;
-          }
-          
-          throw financialError;
-        }
-
-        // Commit da transação
-        const { error: commitError } = await supabase.rpc('commit');
-        if (commitError) throw commitError;
-
-        console.log(`[APPROVE_SALE] Venda aprovada com sucesso - ID: ${saleId}`);
-        toast.success('Venda aprovada e lançamento criado em contas a receber');
-        refreshSales();
-        return true;
-
-      } catch (innerError) {
-        // Rollback em caso de erro
-        await supabase.rpc('rollback');
-        throw innerError;
+        throw financialError;
       }
+
+      console.log(`[APPROVE_SALE] Venda aprovada com sucesso - ID: ${saleId}`, financialEntry);
+      toast.success('Venda aprovada e lançamento criado em contas a receber');
+      refreshSales();
+      return true;
 
     } catch (error: any) {
       console.error(`[APPROVE_SALE] Erro ao aprovar venda ${saleId}:`, error);
