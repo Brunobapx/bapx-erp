@@ -17,7 +17,7 @@ import { FinanceOverviewTable } from "@/components/Finance/FinanceOverviewTable"
 import { FinancialProvider } from "@/contexts/FinancialContext";
 import { useFinancialCleanup } from '@/hooks/useFinancialCleanup';
 import { Button } from "@/components/ui/button";
-import { Trash2 } from 'lucide-react';
+import { Trash2, Loader2 } from 'lucide-react';
 
 const FinancePage = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -73,9 +73,11 @@ const FinancePage = () => {
   };
 
   const handleCleanupDuplicates = async () => {
-    await cleanupDuplicateEntries();
-    // Recarregar a página ou atualizar os dados
-    window.location.reload();
+    const cleanedCount = await cleanupDuplicateEntries();
+    if (cleanedCount > 0) {
+      // Recarregar dados após limpeza
+      window.location.reload();
+    }
   };
 
   return (
@@ -96,8 +98,17 @@ const FinancePage = () => {
             size="sm"
             className="ml-2"
           >
-            <Trash2 className="mr-2 h-4 w-4" />
-            {isCleaningUp ? 'Limpando...' : 'Limpar Duplicados'}
+            {isCleaningUp ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Limpando...
+              </>
+            ) : (
+              <>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Limpar Duplicados
+              </>
+            )}
           </Button>
         </div>
 
