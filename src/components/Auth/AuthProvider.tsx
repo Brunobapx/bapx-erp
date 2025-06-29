@@ -68,10 +68,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             .from('profiles')
             .select(`
               company_id,
+              profile_id,
               companies!inner(
                 id,
                 name,
                 status
+              ),
+              access_profiles(
+                id,
+                name,
+                description
               )
             `)
             .eq('id', userId)
@@ -90,6 +96,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             : profileResult.value.data.companies;
           
           console.log('[AuthProvider] Company info loaded:', company);
+          console.log('[AuthProvider] User profile:', profileResult.value.data.access_profiles);
+          
           setCompanyInfo({
             id: company.id,
             name: company.name,

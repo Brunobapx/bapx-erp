@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -7,13 +6,13 @@ import {
   FilePen, LogOut, Menu, X
 } from 'lucide-react';
 import { useAuth } from '@/components/Auth/AuthProvider';
-import { useSimplePermissions } from '@/hooks/useSimplePermissions';
+import { useProfilePermissions } from '@/hooks/useProfilePermissions';
 import { Button } from '@/components/ui/button';
 
 const Sidebar = () => {
   const location = useLocation();
   const { signOut } = useAuth();
-  const { getAllowedRoutes } = useSimplePermissions();
+  const { getAllowedRoutes } = useProfilePermissions();
   const [isOpen, setIsOpen] = useState(false);
 
   const menuItems = [
