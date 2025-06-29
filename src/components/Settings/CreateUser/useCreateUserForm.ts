@@ -56,32 +56,51 @@ export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUse
       // Limpar erros anteriores
       setValidationErrors({});
       
-      // Validar com Zod
-      createUserSchema.parse(form);
+      // Validações básicas obrigatórias
+      const errors: CreateUserFormValidationErrors = {};
+      
+      if (!form.firstName.trim()) {
+        errors.firstName = 'Nome é obrigatório';
+      }
+      
+      if (!form.lastName.trim()) {
+        errors.lastName = 'Sobrenome é obrigatório';
+      }
+      
+      if (!form.email.trim()) {
+        errors.email = 'Email é obrigatório';
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+        errors.email = 'Email inválido';
+      }
+      
+      if (!form.password) {
+        errors.password = 'Senha é obrigatória';
+      } else if (form.password.length < 8) {
+        errors.password = 'Senha deve ter pelo menos 8 caracteres';
+      }
+      
+      if (!form.profileId) {
+        errors.profileId = 'Perfil de acesso é obrigatório';
+      }
       
       // Validações adicionais específicas do contexto
       if (!companyInfo?.id) {
-        setValidationErrors({ general: 'Informações da empresa não disponíveis' });
-        return false;
+        errors.general = 'Informações da empresa não disponíveis';
       }
 
       if (userRole !== 'master' && form.role === 'master') {
-        setValidationErrors({ role: 'Apenas usuários master podem criar outros masters' });
+        errors.role = 'Apenas usuários master podem criar outros masters';
+      }
+
+      if (Object.keys(errors).length > 0) {
+        setValidationErrors(errors);
         return false;
       }
 
       return true;
     } catch (error: any) {
-      const errors: CreateUserFormValidationErrors = {};
-      
-      if (error.errors) {
-        error.errors.forEach((err: any) => {
-          const field = err.path[0];
-          errors[field as keyof CreateUserFormValidationErrors] = err.message;
-        });
-      }
-      
-      setValidationErrors(errors);
+      console.error('Validation error:', error);
+      setValidationErrors({ general: 'Erro na validação dos dados' });
       return false;
     }
   };
@@ -103,14 +122,23 @@ export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUse
     setLoading(true);
 
     try {
-      const { error } = await supabase.functions.invoke('create-user', {
+      console.log('Submitting user creation form:', {
+        email: form.email,
+        firstName: form.firstName,
+        lastName: form.lastName,
+        role: form.role,
+        profileId: form.profileId,
+        companyId: companyInfo?.id
+      });
+
+      const { data, error } = await supabase.functions.invoke('create-user', {
         body: {
           email: form.email,
           password: form.password,
           firstName: form.firstName,
           lastName: form.lastName,
           role: form.role,
-          profileId: form.profileId || null,
+          profileId: form.profileId,
           department: form.department || null,
           position: form.position || null,
           companyId: companyInfo?.id,
@@ -126,11 +154,15 @@ export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUse
         // Mapear erros específicos
         if (error.message?.includes('email')) {
           setValidationErrors({ email: 'Este email já está em uso' });
+        } else if (error.message?.includes('Permission denied')) {
+          setValidationErrors({ general: 'Você não tem permissão para criar usuários' });
         } else {
           setValidationErrors({ general: error.message || 'Erro ao criar usuário' });
         }
         return;
       }
+
+      console.log('User created successfully:', data);
 
       toast({
         title: "Sucesso",

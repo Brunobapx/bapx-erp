@@ -20,59 +20,114 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    
     if (!supabaseUrl || !serviceRoleKey || !anonKey) {
+      console.error("Missing environment variables:", { supabaseUrl: !!supabaseUrl, serviceRoleKey: !!serviceRoleKey, anonKey: !!anonKey });
       return buildErrorResponse("Configuração do servidor inválida", 500);
     }
 
     const requestData = await req.json();
-    const { email, password, profile_id, company_id, firstName, lastName } = requestData;
-    if (!email || !password || !profile_id || !company_id) {
-      return buildErrorResponse("Email, senha, perfil e empresa são obrigatórios", 400);
+    console.log("Request data received:", requestData);
+    
+    const { 
+      email, 
+      password, 
+      firstName, 
+      lastName, 
+      profileId,
+      role = 'user',
+      department,
+      position,
+      companyId 
+    } = requestData;
+
+    // Validação de campos obrigatórios
+    if (!email || !password || !firstName || !lastName) {
+      console.error("Missing required fields:", { email: !!email, password: !!password, firstName: !!firstName, lastName: !!lastName });
+      return buildErrorResponse("Email, senha, nome e sobrenome são obrigatórios", 400);
     }
 
     const requesterRole = req.headers.get("x-requester-role");
+    console.log("Requester role:", requesterRole);
+    
     if (requesterRole !== "admin" && requesterRole !== "master") {
       return buildErrorResponse("Permissão negada. Apenas admin/master podem criar usuários.", 403);
     }
 
     const supabaseServiceRole = createClient(supabaseUrl, serviceRoleKey);
 
-    const requesterContext = await getRequesterContext(req, supabaseUrl, anonKey, supabaseServiceRole);
-    if ("error" in requesterContext) return requesterContext.error;
+    // Se companyId não foi fornecido, obter do contexto do solicitante
+    let finalCompanyId = companyId;
+    if (!finalCompanyId) {
+      const requesterContext = await getRequesterContext(req, supabaseUrl, anonKey, supabaseServiceRole);
+      if ("error" in requesterContext) {
+        console.error("Error getting requester context:", requesterContext.error);
+        return requesterContext.error;
+      }
+      finalCompanyId = requesterContext.companyId;
+    }
 
+    if (!finalCompanyId) {
+      return buildErrorResponse("Company ID não disponível", 400);
+    }
+
+    console.log("Creating user with company ID:", finalCompanyId);
+
+    // Criar usuário no Supabase Auth
     const newUserResult = await createSupabaseUser(supabaseServiceRole, email, password);
-    if ("error" in newUserResult) return newUserResult.error;
+    if ("error" in newUserResult) {
+      console.error("Error creating user:", newUserResult.error);
+      return newUserResult.error;
+    }
     const newUserId = newUserResult.user.id;
+    console.log("User created with ID:", newUserId);
 
-    // Criar perfil do usuário com profile_id
+    // Criar perfil do usuário
     const profileCreateError = await upsertUserProfile(
       supabaseServiceRole, 
       newUserId, 
-      company_id, 
-      profile_id,
+      finalCompanyId, 
+      profileId || null,
       firstName,
-      lastName
+      lastName,
+      department || null,
+      position || null
     );
+    
     if (profileCreateError) {
+      console.error("Error creating profile:", profileCreateError);
       await deleteSupabaseUser(supabaseServiceRole, newUserId);
       return buildErrorResponse("Erro ao criar perfil do usuário: " + profileCreateError.message, 500);
     }
 
-    // Criar role baseada no perfil (usuário comum por padrão)
-    const roleCreateError = await insertUserRole(supabaseServiceRole, newUserId, 'user', company_id);
+    console.log("Profile created successfully");
+
+    // Criar role do usuário
+    const roleCreateError = await insertUserRole(supabaseServiceRole, newUserId, role, finalCompanyId);
     if (roleCreateError) {
+      console.error("Error creating role:", roleCreateError);
       await deleteSupabaseUser(supabaseServiceRole, newUserId);
       return buildErrorResponse("Erro ao definir função do usuário: " + roleCreateError.message, 500);
     }
 
+    console.log("User role created successfully");
+
     return buildSuccessResponse({
       success: true,
-      user: newUserResult.user,
-      company_id: company_id,
-      profile_id: profile_id,
-      message: "Usuário criado com sucesso e associado à empresa!"
+      user: {
+        id: newUserId,
+        email: email,
+        firstName: firstName,
+        lastName: lastName,
+        role: role
+      },
+      company_id: finalCompanyId,
+      profile_id: profileId,
+      message: "Usuário criado com sucesso!"
     });
+    
   } catch (error) {
+    console.error("Unexpected error in create-user function:", error);
     return buildErrorResponse("Erro interno do servidor: " + (error?.message || "Erro desconhecido"), 500);
   }
 });
