@@ -9,8 +9,7 @@ export async function insertUserRole(supabaseServiceRole: any, userId: string, r
         user_id: userId,
         role: role,
         company_id: companyId,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: new Date().toISOString()
       });
 
     if (error) {

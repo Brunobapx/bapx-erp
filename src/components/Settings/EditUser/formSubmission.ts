@@ -47,8 +47,7 @@ export const submitUserForm = async (
       .upsert({
         user_id: user.id,
         role: formData.role,
-        company_id: companyId,
-        updated_at: new Date().toISOString()
+        company_id: companyId
       });
 
     if (roleError) throw roleError;
