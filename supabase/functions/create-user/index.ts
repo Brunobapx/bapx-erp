@@ -97,20 +97,26 @@ serve(async (req) => {
     if (profileCreateError) {
       console.error("Error creating profile:", profileCreateError);
       await deleteSupabaseUser(supabaseServiceRole, newUserId);
-      return buildErrorResponse("Erro ao criar perfil do usuário: " + profileCreateError.message, 500);
+      return buildErrorResponse("Erro ao criar perfil do usuário: " + (profileCreateError.message || "Erro desconhecido"), 500);
     }
 
     console.log("Profile created successfully");
 
-    // Criar role do usuário
+    // Criar/atualizar role do usuário
     const roleCreateError = await insertUserRole(supabaseServiceRole, newUserId, role, finalCompanyId);
     if (roleCreateError) {
-      console.error("Error creating role:", roleCreateError);
-      await deleteSupabaseUser(supabaseServiceRole, newUserId);
-      return buildErrorResponse("Erro ao definir função do usuário: " + roleCreateError.message, 500);
+      console.error("Error creating/updating role:", roleCreateError);
+      
+      // Se for erro de constraint única, não é crítico - continuar
+      if (roleCreateError.code === '23505' && roleCreateError.message?.includes('user_roles_user_id_role_key')) {
+        console.log("User role already exists, continuing...");
+      } else {
+        await deleteSupabaseUser(supabaseServiceRole, newUserId);
+        return buildErrorResponse("Erro ao definir função do usuário: " + (roleCreateError.message || "Erro desconhecido"), 500);
+      }
     }
 
-    console.log("User role created successfully");
+    console.log("User role created/updated successfully");
 
     return buildSuccessResponse({
       success: true,

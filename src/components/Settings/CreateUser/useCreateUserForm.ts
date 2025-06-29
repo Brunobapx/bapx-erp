@@ -151,11 +151,13 @@ export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUse
       if (error) {
         console.error('Erro na função create-user:', error);
         
-        // Mapear erros específicos
-        if (error.message?.includes('email')) {
+        // Mapear diferentes tipos de erro
+        if (error.message?.includes('User already registered') || error.message?.includes('email')) {
           setValidationErrors({ email: 'Este email já está em uso' });
-        } else if (error.message?.includes('Permission denied')) {
+        } else if (error.message?.includes('Permission denied') || error.message?.includes('Permissão negada')) {
           setValidationErrors({ general: 'Você não tem permissão para criar usuários' });
+        } else if (error.message?.includes('duplicate key value violates unique constraint')) {
+          setValidationErrors({ general: 'Usuário já possui esta função no sistema' });
         } else {
           setValidationErrors({ general: error.message || 'Erro ao criar usuário' });
         }
@@ -185,7 +187,17 @@ export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUse
       setOpen(false);
     } catch (error: any) {
       console.error('Erro inesperado ao criar usuário:', error);
-      setValidationErrors({ general: 'Erro inesperado ao criar usuário' });
+      
+      // Tratamento específico para diferentes tipos de erro
+      let errorMessage = 'Erro inesperado ao criar usuário';
+      
+      if (error.message?.includes('Edge Function returned a non-2xx status code')) {
+        errorMessage = 'Erro no servidor. Verifique se todos os campos estão preenchidos corretamente.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setValidationErrors({ general: errorMessage });
     } finally {
       setLoading(false);
     }
