@@ -2,23 +2,24 @@
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from '@/components/Auth/AuthProvider';
 
 export const useFinancialCleanup = () => {
   const [isCleaningUp, setIsCleaningUp] = useState(false);
+  const { user, companyInfo } = useAuth();
 
   const cleanupDuplicateEntries = async () => {
     try {
       setIsCleaningUp(true);
       console.log('[CLEANUP] Iniciando limpeza de lançamentos duplicados...');
       
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado');
+      if (!user || !companyInfo) throw new Error('Usuário não autenticado ou empresa não encontrada');
 
       // Buscar lançamentos duplicados usando a mesma lógica da constraint
       const { data: duplicates, error } = await supabase
         .from('financial_entries')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('company_id', companyInfo.id) // Mudança aqui: usar company_id
         .eq('type', 'receivable')
         .not('sale_id', 'is', null)
         .order('created_at', { ascending: true });

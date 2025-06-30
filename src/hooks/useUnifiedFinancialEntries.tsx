@@ -2,6 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from '@/components/Auth/AuthProvider';
 
 export type UnifiedFinancialEntry = {
   id: string;
@@ -24,23 +25,23 @@ export type UnifiedFinancialEntry = {
 };
 
 export const useUnifiedFinancialEntries = () => {
+  const { user, companyInfo } = useAuth();
+
   const { data: entries = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['financial_entries'],
+    queryKey: ['financial_entries', companyInfo?.id],
     queryFn: async (): Promise<UnifiedFinancialEntry[]> => {
       try {
         console.log('Fetching unified financial entries...');
         
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
-        if (userError || !user) {
-          throw new Error('Usuário não autenticado');
+        if (!user || !companyInfo) {
+          throw new Error('Usuário não autenticado ou empresa não encontrada');
         }
 
-        // Buscar apenas os lançamentos financeiros da tabela principal
+        // Buscar apenas os lançamentos financeiros da empresa
         const { data: financialEntries, error: financialError } = await supabase
           .from('financial_entries')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('company_id', companyInfo.id) // Mudança aqui: usar company_id
           .order('due_date', { ascending: true });
 
         if (financialError) {
@@ -83,6 +84,7 @@ export const useUnifiedFinancialEntries = () => {
         throw new Error(err.message || 'Erro ao carregar lançamentos financeiros');
       }
     },
+    enabled: !!user && !!companyInfo,
     staleTime: 30 * 1000, // 30 segundos
     retry: 2
   });

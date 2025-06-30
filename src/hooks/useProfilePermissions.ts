@@ -12,7 +12,7 @@ interface ModulePermission {
 }
 
 export const useProfilePermissions = () => {
-  const { user, userRole } = useAuth();
+  const { user, userRole, companyInfo } = useAuth();
   const [permissions, setPermissions] = useState<ModulePermission[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -36,44 +36,46 @@ export const useProfilePermissions = () => {
     try {
       console.log('[useProfilePermissions] Fetching permissions for user:', user?.id);
       
-      const { data, error } = await supabase
+      // Buscar o perfil do usuário
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select(`
-          profile_id,
-          access_profiles!inner(
-            id,
-            name,
-            is_active,
-            profile_modules(
-              can_view,
-              can_edit,
-              can_delete,
-              system_modules!inner(
-                id,
-                route_path,
-                is_active
-              )
-            )
-          )
-        `)
+        .select('profile_id')
         .eq('id', user?.id)
         .single();
 
-      if (error) {
-        console.error('[useProfilePermissions] Error fetching permissions:', error);
+      if (profileError || !profile?.profile_id) {
+        console.log('[useProfilePermissions] No profile found for user');
         setPermissions([]);
         return;
       }
 
-      if (!data?.access_profiles?.profile_modules) {
-        console.log('[useProfilePermissions] No profile or modules found for user');
+      // Buscar módulos do perfil
+      const { data: profileModules, error: modulesError } = await supabase
+        .from('profile_modules')
+        .select(`
+          can_view,
+          can_edit,
+          can_delete,
+          system_modules!inner(
+            id,
+            route_path,
+            is_active
+          )
+        `)
+        .eq('profile_id', profile.profile_id);
+
+      if (modulesError) {
+        console.error('[useProfilePermissions] Error fetching modules:', modulesError);
         setPermissions([]);
         return;
       }
 
-      // Access the profile_modules from the access_profiles object
-      const profileModules = data.access_profiles.profile_modules;
-      
+      if (!profileModules) {
+        console.log('[useProfilePermissions] No modules found for profile');
+        setPermissions([]);
+        return;
+      }
+
       const modulePermissions: ModulePermission[] = profileModules
         .filter((pm: any) => pm.system_modules?.is_active && pm.can_view)
         .map((pm: any) => ({

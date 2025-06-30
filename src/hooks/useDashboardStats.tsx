@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from '@/components/Auth/AuthProvider';
 
 export type DashboardStats = {
   orders: number;
@@ -28,6 +29,7 @@ export type RecentOrder = {
 };
 
 export const useDashboardStats = () => {
+  const { user, companyInfo } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     orders: 0,
     production: 0,
@@ -52,65 +54,63 @@ export const useDashboardStats = () => {
         setLoading(true);
         setError(null);
 
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
-        if (userError || !user) {
-          throw new Error('Usuário não autenticado');
+        if (!user || !companyInfo) {
+          throw new Error('Usuário não autenticado ou empresa não encontrada');
         }
 
-        // Buscar estatísticas de pedidos
+        // Buscar estatísticas de pedidos da empresa
         const { data: ordersData, error: ordersError } = await supabase
           .from('orders')
           .select('status')
-          .eq('user_id', user.id);
+          .eq('company_id', companyInfo.id); // Mudança aqui: usar company_id
 
         if (ordersError) throw ordersError;
 
-        // Buscar estatísticas de produção
+        // Buscar estatísticas de produção da empresa
         const { data: productionData, error: productionError } = await supabase
           .from('production')
           .select('status')
-          .eq('user_id', user.id);
+          .eq('company_id', companyInfo.id); // Mudança aqui: usar company_id
 
         if (productionError) throw productionError;
 
-        // Buscar estatísticas de embalagem
+        // Buscar estatísticas de embalagem da empresa
         const { data: packagingData, error: packagingError } = await supabase
           .from('packaging')
           .select('status')
-          .eq('user_id', user.id);
+          .eq('company_id', companyInfo.id); // Mudança aqui: usar company_id
 
         if (packagingError) throw packagingError;
 
-        // Buscar estatísticas de vendas
+        // Buscar estatísticas de vendas da empresa
         const { data: salesData, error: salesError } = await supabase
           .from('sales')
           .select('status')
-          .eq('user_id', user.id);
+          .eq('company_id', companyInfo.id); // Mudança aqui: usar company_id
 
         if (salesError) throw salesError;
 
-        // Buscar estatísticas financeiras
+        // Buscar estatísticas financeiras da empresa
         const { data: financeData, error: financeError } = await supabase
           .from('financial_entries')
           .select('payment_status')
-          .eq('user_id', user.id);
+          .eq('company_id', companyInfo.id); // Mudança aqui: usar company_id
 
         if (financeError) throw financeError;
 
-        // Buscar estatísticas de rotas
+        // Buscar estatísticas de rotas da empresa
         const { data: routesData, error: routesError } = await supabase
           .from('delivery_routes')
           .select('status')
-          .eq('user_id', user.id);
+          .eq('company_id', companyInfo.id); // Mudança aqui: usar company_id
 
         if (routesError) throw routesError;
 
-        // Buscar pedidos recentes
+        // Buscar pedidos recentes da empresa
         const { data: recentOrdersData, error: recentOrdersError } = await supabase
           .from('orders')
           .select('id, order_number, client_name, total_amount, status, created_at')
-          .eq('user_id', user.id)
+          .eq('company_id', companyInfo.id) // Mudança aqui: usar company_id
           .order('created_at', { ascending: false })
           .limit(5);
 
@@ -145,7 +145,7 @@ export const useDashboardStats = () => {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [user, companyInfo]);
 
   return {
     stats,

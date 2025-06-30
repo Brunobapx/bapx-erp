@@ -66,7 +66,7 @@ export const AccountsPayableTab = () => {
       const { data, error } = await supabase
         .from('accounts_payable')
         .select('*')
-        .eq('company_id', companyInfo.id)
+        .eq('company_id', companyInfo.id) // Mudança aqui: usar company_id
         .order('due_date', { ascending: true });
 
       if (error) throw error;

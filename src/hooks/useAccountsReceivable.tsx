@@ -1,7 +1,9 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from '@/components/Auth/AuthProvider';
 
 export type AccountReceivable = {
   id: string;
@@ -20,21 +22,25 @@ export type AccountReceivable = {
 };
 
 export const useAccountsReceivable = () => {
+  const { user, companyInfo } = useAuth();
+
   const fetchAccountsReceivable = async (): Promise<AccountReceivable[]> => {
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) throw new Error('Usuário não autenticado');
+      if (!user || !companyInfo) throw new Error('Usuário não autenticado ou empresa não encontrada');
+
       const { data, error } = await supabase
         .from('financial_entries')
         .select(`
           *,
           clients(name)
         `)
-        .eq('user_id', user.id)
+        .eq('company_id', companyInfo.id) // Mudança aqui: usar company_id
         .eq('type', 'receivable')
         .order('due_date', { ascending: true })
         .limit(500);
+
       if (error) throw error;
+
       const today = new Date().toISOString().split('T')[0];
       return (data || []).map(entry => {
         let status: 'pendente' | 'recebido' | 'vencido' = 'pendente';
@@ -62,8 +68,9 @@ export const useAccountsReceivable = () => {
   };
 
   const { data: accountsReceivable = [], isLoading: loading, error, refetch } = useQuery({
-    queryKey: ['accountsReceivable'],
+    queryKey: ['accountsReceivable', companyInfo?.id],
     queryFn: fetchAccountsReceivable,
+    enabled: !!user && !!companyInfo,
     staleTime: 3 * 60 * 1000 // 3 minutos
   });
 

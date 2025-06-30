@@ -1,6 +1,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from '@/components/Auth/AuthProvider';
 
 export type CashFlowEntry = {
   id: string;
@@ -16,20 +17,21 @@ export type CashFlowEntry = {
 };
 
 export const useCashFlow = () => {
+  const { user, companyInfo } = useAuth();
+
   const { data: cashFlowData = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['cashFlow'],
+    queryKey: ['cashFlow', companyInfo?.id],
     queryFn: async (): Promise<CashFlowEntry[]> => {
       try {
         console.log('Calculando fluxo de caixa unificado...');
         
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) throw new Error('Usuário não autenticado');
+        if (!user || !companyInfo) throw new Error('Usuário não autenticado ou empresa não encontrada');
 
-        // Buscar todos os lançamentos financeiros pagos
+        // Buscar todos os lançamentos financeiros pagos da empresa
         const { data: financialEntries, error: financialError } = await supabase
           .from('financial_entries')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('company_id', companyInfo.id) // Mudança aqui: usar company_id
           .eq('payment_status', 'paid')
           .order('payment_date', { ascending: true });
 
@@ -38,11 +40,11 @@ export const useCashFlow = () => {
           throw financialError;
         }
 
-        // Buscar contas a pagar pagas
+        // Buscar contas a pagar pagas da empresa
         const { data: accountsPayable, error: payableError } = await supabase
           .from('accounts_payable')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('company_id', companyInfo.id) // Mudança aqui: usar company_id
           .eq('status', 'paid')
           .order('payment_date', { ascending: true });
 
@@ -121,6 +123,7 @@ export const useCashFlow = () => {
         throw new Error(err.message || 'Erro ao carregar fluxo de caixa');
       }
     },
+    enabled: !!user && !!companyInfo,
     staleTime: 30 * 1000, // 30 segundos
     retry: 2
   });
