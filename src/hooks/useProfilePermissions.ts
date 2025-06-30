@@ -71,7 +71,7 @@ export const useProfilePermissions = () => {
         return;
       }
 
-      // Since we're using .single(), data.access_profiles is a single object, not an array
+      // Access the profile_modules from the access_profiles object
       const profileModules = data.access_profiles.profile_modules;
       
       const modulePermissions: ModulePermission[] = profileModules
