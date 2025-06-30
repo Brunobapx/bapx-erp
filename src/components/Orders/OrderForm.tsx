@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -57,6 +58,11 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
   // Helper functions
   const updateFormData = (updates: any) => {
     setFormData(prev => ({ ...prev, ...updates }));
+  };
+
+  // Calculate total amount from items
+  const calculateTotalAmount = () => {
+    return formData.items.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -141,8 +147,9 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
         </CardHeader>
         <CardContent className="space-y-4">
           <OrderProductSection
-            formData={formData}
-            onUpdateFormData={updateFormData}
+            selectedProductId=""
+            selectedProductName=""
+            onProductSelect={() => {}}
             openProductCombobox={openProductCombobox}
             setOpenProductCombobox={setOpenProductCombobox}
           />
@@ -157,6 +164,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
           <OrderPaymentSection
             formData={formData}
             onUpdateFormData={updateFormData}
+            totalAmount={calculateTotalAmount()}
           />
         </CardContent>
       </Card>
@@ -174,10 +182,9 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
       </Card>
 
       <OrderFormActions
-        onClose={() => onClose(false)}
+        onCancel={() => onClose(false)}
         isSubmitting={isSubmitting}
-        hasItems={formData.items.length > 0}
-        hasClient={!!formData.client_id}
+        isEditing={!!orderData?.id}
       />
     </form>
   );
