@@ -51,14 +51,14 @@ export const useOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, companyInfo } = useAuth();
 
   const loadOrders = async () => {
-    if (!user) return;
+    if (!user || !companyInfo) return;
     
     try {
       setLoading(true);
-      console.log('[useOrders] Carregando pedidos da empresa');
+      console.log('[useOrders] Carregando pedidos da empresa:', companyInfo.id);
       
       const { data, error } = await supabase
         .from('orders')
@@ -66,6 +66,7 @@ export const useOrders = () => {
           *,
           order_items (*)
         `)
+        .eq('company_id', companyInfo.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -173,17 +174,15 @@ export const useOrders = () => {
 
   const refreshOrders = loadOrders;
 
-  // Usar a função corrigida do useOrdersStock
   const sendToProduction = async (orderId: string) => {
     console.log('[useOrders] Usando checkStockAndSendToProduction para pedido:', orderId);
     const success = await checkStockAndSendToProduction(orderId);
     if (success) {
-      await loadOrders(); // Recarregar pedidos após sucesso
+      await loadOrders();
     }
     return success;
   };
 
-  // Helper functions for backward compatibility
   const isOrderCompleted = (status: OrderStatus) => {
     return ['delivered', 'cancelled'].includes(status);
   };
@@ -209,7 +208,7 @@ export const useOrders = () => {
 
   useEffect(() => {
     loadOrders();
-  }, [user]);
+  }, [user, companyInfo]);
 
   return {
     orders,

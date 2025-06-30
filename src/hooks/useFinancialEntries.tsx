@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from '@/components/Auth/AuthProvider';
 
 export type FinancialEntry = {
   id: string;
@@ -27,6 +28,7 @@ export const useFinancialEntries = () => {
   const [entries, setEntries] = useState<FinancialEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { user, companyInfo } = useAuth();
 
   const fetchEntries = async () => {
     try {
@@ -35,24 +37,17 @@ export const useFinancialEntries = () => {
       
       console.log('useFinancialEntries - Iniciando busca de lançamentos financeiros...');
       
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError) {
-        console.error('useFinancialEntries - Erro de autenticação:', userError);
+      if (!user || !companyInfo) {
+        console.error('useFinancialEntries - Usuário ou empresa não encontrados');
         throw new Error('Usuário não autenticado');
       }
       
-      if (!user) {
-        console.error('useFinancialEntries - Usuário não encontrado');
-        throw new Error('Usuário não encontrado');
-      }
-      
-      console.log('useFinancialEntries - Usuário autenticado:', user.id);
+      console.log('useFinancialEntries - Buscando lançamentos da empresa:', companyInfo.id);
 
       const { data, error } = await supabase
         .from('financial_entries')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('company_id', companyInfo.id)
         .order('due_date', { ascending: true });
 
       if (error) {
@@ -88,7 +83,7 @@ export const useFinancialEntries = () => {
 
   useEffect(() => {
     fetchEntries();
-  }, []);
+  }, [user, companyInfo]);
 
   return {
     entries,

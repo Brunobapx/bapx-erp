@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +21,7 @@ import { AccountsPayableTable } from "./AccountsPayableTable";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { useActiveFinancialAccounts } from "@/hooks/useActiveFinancialAccounts";
 import { useFinancialCategories } from "@/hooks/useFinancialCategories";
+import { useAuth } from '@/components/Auth/AuthProvider';
 
 interface AccountPayable {
   id: string;
@@ -53,20 +53,20 @@ export const AccountsPayableTab = () => {
   const [categoryFilter, setCategoryFilter] = useState<string>('');
   const { accounts: bankAccounts, loading: accountsLoading } = useActiveFinancialAccounts();
   const { items: categories, loading: categoriesLoading } = useFinancialCategories();
+  const { user, companyInfo } = useAuth();
 
   useEffect(() => {
     loadAccountsPayable();
-  }, []);
+  }, [user, companyInfo]);
 
   const loadAccountsPayable = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user || !companyInfo) return;
 
       const { data, error } = await supabase
         .from('accounts_payable')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('company_id', companyInfo.id)
         .order('due_date', { ascending: true });
 
       if (error) throw error;
