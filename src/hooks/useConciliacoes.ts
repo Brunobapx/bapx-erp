@@ -3,15 +3,21 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useFinancialContext } from "@/contexts/FinancialContext";
+import { useAuth } from '@/components/Auth/AuthProvider';
 
 export function useConciliacoes() {
   const [criandoLancamento, setCriandoLancamento] = useState(false);
   const { refreshAllFinancialData } = useFinancialContext();
+  const { user, companyInfo } = useAuth();
 
   async function conciliarComLancamento(transacaoId: string, lancamentoId: string) {
     setCriandoLancamento(true);
     try {
       console.log('Iniciando conciliação:', { transacaoId, lancamentoId });
+      
+      if (!user || !companyInfo) {
+        throw new Error('Usuário não autenticado ou empresa não encontrada');
+      }
       
       // Buscar dados da transação e do lançamento
       const { data: transacao } = await supabase
@@ -34,6 +40,7 @@ export function useConciliacoes() {
         .from("financial_entries")
         .select("*")
         .eq("id", lancamentoId)
+        .eq("company_id", companyInfo.id)
         .single();
 
       if (financialEntry) {
@@ -45,6 +52,7 @@ export function useConciliacoes() {
           .from("accounts_payable")
           .select("*")
           .eq("id", lancamentoId)
+          .eq("company_id", companyInfo.id)
           .single();
         
         if (payableEntry) {
@@ -110,7 +118,8 @@ export function useConciliacoes() {
             payment_status: "paid", 
             payment_date: transacao.data 
           })
-          .eq("id", lancamentoId);
+          .eq("id", lancamentoId)
+          .eq("company_id", companyInfo.id);
 
         if (updateLancamentoError) {
           console.error('Erro ao atualizar financial_entry:', updateLancamentoError);
@@ -123,7 +132,8 @@ export function useConciliacoes() {
             status: "paid", 
             payment_date: transacao.data 
           })
-          .eq("id", lancamentoId);
+          .eq("id", lancamentoId)
+          .eq("company_id", companyInfo.id);
 
         if (updatePayableError) {
           console.error('Erro ao atualizar accounts_payable:', updatePayableError);
@@ -147,8 +157,9 @@ export function useConciliacoes() {
     try {
       console.log('Criando novo lançamento para conciliação:', transacao);
       
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado");
+      if (!user || !companyInfo) {
+        throw new Error("Usuário não autenticado ou empresa não encontrada");
+      }
 
       // Determinar tipo correto: débito = saída = payable, crédito = entrada = receivable
       const entryType = transacao.tipo === 'credito' ? "receivable" : "payable";
@@ -158,6 +169,7 @@ export function useConciliacoes() {
         .from("financial_entries")
         .insert([{
           user_id: user.id,
+          company_id: companyInfo.id,
           type: entryType,
           description: transacao.descricao,
           amount: Math.abs(Number(transacao.valor)),
@@ -191,6 +203,10 @@ export function useConciliacoes() {
     try {
       console.log('Desconciliando transação:', transacaoId);
       
+      if (!user || !companyInfo) {
+        throw new Error("Usuário não autenticado ou empresa não encontrada");
+      }
+      
       // Buscar conciliação
       const { data: conciliacao } = await supabase
         .from("conciliacoes")
@@ -209,6 +225,7 @@ export function useConciliacoes() {
         .from("financial_entries")
         .select("id")
         .eq("id", conciliacao.id_lancamento_interno)
+        .eq("company_id", companyInfo.id)
         .single();
 
       if (financialEntry) {
@@ -218,7 +235,8 @@ export function useConciliacoes() {
             payment_status: "pending", 
             payment_date: null 
           })
-          .eq("id", conciliacao.id_lancamento_interno);
+          .eq("id", conciliacao.id_lancamento_interno)
+          .eq("company_id", companyInfo.id);
       } else {
         // Se não encontrou em financial_entries, tentar accounts_payable
         await supabase
@@ -227,7 +245,8 @@ export function useConciliacoes() {
             status: "pending", 
             payment_date: null 
           })
-          .eq("id", conciliacao.id_lancamento_interno);
+          .eq("id", conciliacao.id_lancamento_interno)
+          .eq("company_id", companyInfo.id);
       }
 
       // Atualizar status da transação

@@ -1,44 +1,36 @@
 
-import React from "react";
-import { Label } from "@/components/ui/label";
+import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { useActiveFinancialAccounts } from "@/hooks/useActiveFinancialAccounts";
 
-type ReceivableBankAccountSelectProps = {
+interface ReceivableBankAccountSelectProps {
   value: string;
-  onValueChange: (val: string) => void;
-};
+  onValueChange: (value: string) => void;
+  required?: boolean;
+}
 
-const ReceivableBankAccountSelect: React.FC<ReceivableBankAccountSelectProps> = ({ value, onValueChange }) => {
+const ReceivableBankAccountSelect = ({ value, onValueChange, required = true }: ReceivableBankAccountSelectProps) => {
   const { accounts, loading } = useActiveFinancialAccounts();
+
+  // Remover duplicatas baseado no nome da conta
+  const uniqueAccounts = accounts.filter((account, index, self) => 
+    index === self.findIndex(a => a.name === account.name)
+  );
 
   return (
     <div>
-      <Label htmlFor="account">Conta Bancária *</Label>
-      <Select
-        value={value}
-        onValueChange={(val) => {
-          // não permitir seleção do valor de "no-accounts"
-          if (val === "no-accounts") return;
-          onValueChange(val);
-        }}
-        disabled={loading || (accounts && accounts.length === 0)}
-      >
-        <SelectTrigger id="account">
-          <SelectValue placeholder={loading ? "Carregando contas..." : "Selecione a conta bancária"} />
+      <Label htmlFor="account">Conta Bancária/Caixa {required && '*'}</Label>
+      <Select value={value} onValueChange={onValueChange} disabled={loading}>
+        <SelectTrigger>
+          <SelectValue placeholder={loading ? "Carregando contas..." : "Selecione a conta"} />
         </SelectTrigger>
         <SelectContent>
-          {accounts?.length === 0 ? (
-            <SelectItem value="no-accounts" disabled>
-              Nenhuma conta ativa encontrada
+          {uniqueAccounts.map(account => (
+            <SelectItem key={account.id} value={account.name}>
+              {account.name} ({account.account_type})
             </SelectItem>
-          ) : (
-            accounts && accounts.map(acc => (
-              <SelectItem key={acc.id} value={acc.name}>
-                {acc.name}
-              </SelectItem>
-            ))
-          )}
+          ))}
         </SelectContent>
       </Select>
     </div>

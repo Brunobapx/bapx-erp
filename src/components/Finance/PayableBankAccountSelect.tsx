@@ -1,32 +1,34 @@
 
-import React from "react";
-import { Label } from "@/components/ui/label";
+import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { useActiveFinancialAccounts } from "@/hooks/useActiveFinancialAccounts";
 
-type PayableBankAccountSelectProps = {
+interface PayableBankAccountSelectProps {
   value: string;
-  onValueChange: (val: string) => void;
-};
+  onValueChange: (value: string) => void;
+  required?: boolean;
+}
 
-const PayableBankAccountSelect: React.FC<PayableBankAccountSelectProps> = ({ value, onValueChange }) => {
+const PayableBankAccountSelect = ({ value, onValueChange, required = true }: PayableBankAccountSelectProps) => {
   const { accounts, loading } = useActiveFinancialAccounts();
+
+  // Remover duplicatas baseado no nome da conta
+  const uniqueAccounts = accounts.filter((account, index, self) => 
+    index === self.findIndex(a => a.name === account.name)
+  );
 
   return (
     <div>
-      <Label htmlFor="bank-account">Contas bancárias/Caixa *</Label>
-      <Select
-        value={value}
-        onValueChange={onValueChange}
-        disabled={loading}
-      >
-        <SelectTrigger id="bank-account">
+      <Label htmlFor="account">Conta Bancária/Caixa {required && '*'}</Label>
+      <Select value={value} onValueChange={onValueChange} disabled={loading}>
+        <SelectTrigger>
           <SelectValue placeholder={loading ? "Carregando contas..." : "Selecione a conta"} />
         </SelectTrigger>
         <SelectContent>
-          {accounts.map(acc => (
-            <SelectItem value={acc.name} key={acc.id}>
-              {acc.name}
+          {uniqueAccounts.map(account => (
+            <SelectItem key={account.id} value={account.name}>
+              {account.name} ({account.account_type})
             </SelectItem>
           ))}
         </SelectContent>
