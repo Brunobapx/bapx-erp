@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompanies } from "./useCompanies";
+import { useUserProfile } from "./useUserProfile";
 
 export type OrderFormData = {
   client_id: string;
@@ -24,20 +25,39 @@ export type OrderFormData = {
 export const useOrderInsert = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { getUserCompanyId } = useCompanies();
+  const { hasValidProfile, error: profileError, companyId } = useUserProfile();
 
   const createOrder = async (orderData: OrderFormData) => {
     setIsSubmitting(true);
+    
     try {
+      // Verificar se o usuário tem perfil válido antes de prosseguir
+      if (!hasValidProfile) {
+        const errorMessage = profileError || 'Perfil do usuário inválido';
+        console.error('Erro de perfil ao criar pedido:', errorMessage);
+        toast.error(`Não é possível criar pedido: ${errorMessage}`);
+        throw new Error(errorMessage);
+      }
+
+      if (!companyId) {
+        const errorMessage = 'Usuário não está associado a uma empresa';
+        console.error('Erro de empresa ao criar pedido:', errorMessage);
+        toast.error(`Não é possível criar pedido: ${errorMessage}`);
+        throw new Error(errorMessage);
+      }
+
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (userError || !user) {
         throw new Error('Usuário não autenticado');
       }
 
-      const companyId = await getUserCompanyId();
-      if (!companyId) {
-        throw new Error('Company ID não encontrado');
-      }
+      console.log('Criando pedido com dados:', {
+        userId: user.id,
+        companyId: companyId,
+        clientId: orderData.client_id,
+        itemsCount: orderData.items.length
+      });
 
       const totalAmount = orderData.items.reduce((sum, item) => sum + item.total_price, 0);
 
@@ -60,7 +80,22 @@ export const useOrderInsert = () => {
         .select()
         .single();
 
-      if (orderError) throw orderError;
+      if (orderError) {
+        console.error('Erro ao criar pedido:', orderError);
+        
+        // Tratar erros específicos
+        if (orderError.code === '23505') {
+          throw new Error('Erro de duplicação de dados. Tente novamente.');
+        } else if (orderError.code === '23503') {
+          throw new Error('Dados de referência inválidos. Verifique cliente e produtos.');
+        } else if (orderError.code === '23502') {
+          throw new Error('Dados obrigatórios não fornecidos.');
+        }
+        
+        throw orderError;
+      }
+
+      console.log('Pedido criado com sucesso:', order.id);
 
       // Criar os itens do pedido
       const orderItems = orderData.items.map(item => ({
@@ -78,14 +113,25 @@ export const useOrderInsert = () => {
         .from('order_items')
         .insert(orderItems);
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        console.error('Erro ao criar itens do pedido:', itemsError);
+        
+        // Tentar excluir o pedido criado se houve erro nos itens
+        await supabase.from('orders').delete().eq('id', order.id);
+        
+        throw new Error('Erro ao criar itens do pedido: ' + itemsError.message);
+      }
 
+      console.log('Itens do pedido criados com sucesso');
       toast.success('Pedido criado com sucesso!');
       return order.id;
       
     } catch (error: any) {
-      console.error('Erro ao criar pedido:', error);
-      toast.error('Erro ao criar pedido: ' + (error.message || 'Erro desconhecido'));
+      console.error('Erro completo ao criar pedido:', error);
+      
+      // Mostrar mensagem de erro mais específica
+      const errorMessage = error.message || 'Erro desconhecido ao criar pedido';
+      toast.error('Erro ao criar pedido: ' + errorMessage);
       throw error;
     } finally {
       setIsSubmitting(false);
@@ -94,6 +140,8 @@ export const useOrderInsert = () => {
 
   return {
     createOrder,
-    isSubmitting
+    isSubmitting,
+    hasValidProfile,
+    profileError
   };
 };

@@ -1,20 +1,17 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { useOrderFormState } from '@/hooks/orders/useOrderFormState';
-import { useOrderFormActions } from '@/hooks/orders/useOrderFormActions';
-import { useOrderFormUI } from '@/hooks/orders/useOrderFormUI';
+import { useOrderInsert } from '@/hooks/useOrderInsert';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { OrderClientSection } from './Form/OrderClientSection';
-import { OrderItemsSection } from './Form/OrderItemsSection';
+import { OrderProductSection } from './Form/OrderProductSection';
 import { OrderPaymentSection } from './Form/OrderPaymentSection';
 import { OrderDeliverySection } from './Form/OrderDeliverySection';
 import { OrderFormActions } from './Form/OrderFormActions';
-import { useOrders } from '@/hooks/useOrders';
+import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle, Loader2 } from "lucide-react";
 
 interface OrderFormProps {
   orderData?: any;
@@ -23,154 +20,165 @@ interface OrderFormProps {
 
 export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
   const navigate = useNavigate();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { checkStockAndSendToProduction } = useOrders();
+  const { createOrder, isSubmitting, hasValidProfile, profileError } = useOrderInsert();
+  const { loading: profileLoading } = useUserProfile();
   
-  const {
-    formData,
-    items,
-    totalAmount,
-    setFormData,
-    updateFormData,
-    addItem,
-    removeItem,
-    updateItem,
-    initializeFormData,
-    updateFormattedTotal,
-    isNewOrder
-  } = useOrderFormState(orderData);
-
-  const {
-    handleSubmit: handleFormSubmit,
-    validateForm,
-    handleChange,
-    handleClientSelect,
-    handleDateSelect
-  } = useOrderFormActions({
-    formData,
-    setFormData,
-    updateFormattedTotal,
-    isNewOrder,
-    onClose,
-    items
+  // State management
+  const [formData, setFormData] = useState({
+    client_id: '',
+    client_name: '',
+    seller: '',
+    delivery_deadline: '',
+    payment_method: '',
+    payment_term: '',
+    notes: '',
+    items: []
   });
 
-  const {
-    openClientCombobox,
-    setOpenClientCombobox,
-    openProductCombobox,
-    setOpenProductCombobox
-  } = useOrderFormUI();
+  const [openClientCombobox, setOpenClientCombobox] = useState(false);
+  const [openProductCombobox, setOpenProductCombobox] = useState(false);
 
+  // useEffect for orderData
   useEffect(() => {
     if (orderData) {
-      initializeFormData(orderData);
+      setFormData({
+        client_id: orderData.client_id || '',
+        client_name: orderData.client_name || '',
+        seller: orderData.seller || '',
+        delivery_deadline: orderData.delivery_deadline || '',
+        payment_method: orderData.payment_method || '',
+        payment_term: orderData.payment_term || '',
+        notes: orderData.notes || '',
+        items: orderData.items || []
+      });
     }
-  }, [orderData, initializeFormData]);
+  }, [orderData]);
 
-  const checkIfHasDirectSaleProducts = async (orderItems: any[]) => {
-    try {
-      const productIds = orderItems.map(item => item.product_id);
-      const { data: products, error } = await supabase
-        .from('products')
-        .select('id, is_direct_sale')
-        .in('id', productIds);
-
-      if (error) {
-        console.error('Erro ao verificar produtos de venda direta:', error);
-        return false;
-      }
-
-      return products?.some(product => product.is_direct_sale) || false;
-    } catch (error) {
-      console.error('Erro ao verificar produtos de venda direta:', error);
-      return false;
-    }
+  // Helper functions
+  const updateFormData = (updates: any) => {
+    setFormData(prev => ({ ...prev, ...updates }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting) return;
+    
+    // Verificar se o perfil é válido antes de tentar criar o pedido
+    if (!hasValidProfile) {
+      toast.error(`Não é possível criar pedido: ${profileError || 'Perfil inválido'}`);
+      return;
+    }
 
-    setIsSubmitting(true);
+    if (!formData.client_id || formData.items.length === 0) {
+      toast.error('Selecione um cliente e adicione pelo menos um produto');
+      return;
+    }
+
     try {
-      const orderId = await handleFormSubmit();
-      
-      if (orderId) {
-        // Se é um novo pedido (não edição), verificar se tem produtos de venda direta
-        if (!orderData) {
-          const hasDirectSaleProducts = await checkIfHasDirectSaleProducts(items);
-          
-          // Se não tem produtos de venda direta, verificar estoque normalmente
-          if (!hasDirectSaleProducts) {
-            console.log('Novo pedido criado, verificando estoque automaticamente...');
-            await checkStockAndSendToProduction(orderId);
-          }
-          // Se tem produtos de venda direta, a lógica de criação de venda já foi executada no hook
-        }
-        
-        onClose(true);
-      }
+      const orderId = await createOrder(formData);
+      onClose(true);
     } catch (error) {
-      console.error('Erro ao processar pedido:', error);
-    } finally {
-      setIsSubmitting(false);
+      console.error('Erro ao enviar formulário:', error);
     }
   };
 
-  const handleCancel = () => {
-    onClose(false);
-  };
+  // Mostrar loading enquanto verifica perfil
+  if (profileLoading) {
+    return (
+      <Card className="w-full max-w-4xl mx-auto">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-center space-x-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Verificando permissões...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
-  const isEditing = !!orderData;
+  // Mostrar erro se perfil inválido
+  if (!hasValidProfile) {
+    return (
+      <Card className="w-full max-w-4xl mx-auto">
+        <CardContent className="p-6">
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Não é possível criar pedidos:</strong> {profileError}
+              <br />
+              <br />
+              Entre em contato com o administrador do sistema para resolver este problema.
+            </AlertDescription>
+          </Alert>
+          <div className="mt-4">
+            <Button variant="outline" onClick={() => onClose(false)}>
+              Voltar
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle>{isEditing ? 'Editar Pedido' : 'Novo Pedido'}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Informações do Cliente</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
           <OrderClientSection
             formData={formData}
             onUpdateFormData={updateFormData}
             openClientCombobox={openClientCombobox}
             setOpenClientCombobox={setOpenClientCombobox}
           />
+        </CardContent>
+      </Card>
 
-          <Separator />
-
-          <OrderItemsSection
-            items={items}
-            onAddItem={addItem}
-            onRemoveItem={removeItem}
-            onUpdateItem={updateItem}
+      <Card>
+        <CardHeader>
+          <CardTitle>Produtos</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <OrderProductSection
+            formData={formData}
+            onUpdateFormData={updateFormData}
             openProductCombobox={openProductCombobox}
             setOpenProductCombobox={setOpenProductCombobox}
           />
+        </CardContent>
+      </Card>
 
-          <Separator />
-
+      <Card>
+        <CardHeader>
+          <CardTitle>Pagamento</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
           <OrderPaymentSection
             formData={formData}
             onUpdateFormData={updateFormData}
-            totalAmount={totalAmount}
           />
+        </CardContent>
+      </Card>
 
-          <Separator />
-
+      <Card>
+        <CardHeader>
+          <CardTitle>Entrega</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
           <OrderDeliverySection
             formData={formData}
             onUpdateFormData={updateFormData}
           />
+        </CardContent>
+      </Card>
 
-          <OrderFormActions
-            onCancel={handleCancel}
-            isSubmitting={isSubmitting}
-            isEditing={isEditing}
-          />
-        </form>
-      </CardContent>
-    </Card>
+      <OrderFormActions
+        onClose={() => onClose(false)}
+        isSubmitting={isSubmitting}
+        hasItems={formData.items.length > 0}
+        hasClient={!!formData.client_id}
+      />
+    </form>
   );
 };
