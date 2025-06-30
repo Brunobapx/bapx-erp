@@ -71,7 +71,10 @@ export const useProfilePermissions = () => {
         return;
       }
 
-      const modulePermissions: ModulePermission[] = data.access_profiles.profile_modules
+      // Since we're using .single(), data.access_profiles is a single object, not an array
+      const profileModules = data.access_profiles.profile_modules;
+      
+      const modulePermissions: ModulePermission[] = profileModules
         .filter((pm: any) => pm.system_modules?.is_active && pm.can_view)
         .map((pm: any) => ({
           module_id: pm.system_modules.id,
