@@ -138,7 +138,7 @@ export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUse
           firstName: form.firstName.trim(),
           lastName: form.lastName.trim(),
           role: form.role,
-          profileId: form.profileId,
+          profileId: form.profileId || null,
           department: form.department?.trim() || null,
           position: form.position?.trim() || null,
           companyId: companyInfo?.id,
@@ -146,6 +146,7 @@ export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUse
         headers: {
           'x-requester-role': userRole,
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
         },
       });
 

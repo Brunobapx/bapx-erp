@@ -73,10 +73,27 @@ serve(async (req) => {
       return buildErrorResponse("Senha deve ter pelo menos 8 caracteres", 400);
     }
 
-    const requesterRole = req.headers.get("x-requester-role");
-    console.log("Requester role:", requesterRole);
+    // Verificar autorização do usuário via token JWT
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      return buildErrorResponse("Token de autorização não fornecido", 401);
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: userData, error: userError } = await supabaseServiceRole.auth.getUser(token);
     
-    if (requesterRole !== "admin" && requesterRole !== "master") {
+    if (userError || !userData.user) {
+      return buildErrorResponse("Token inválido ou usuário não encontrado", 401);
+    }
+
+    // Verificar role do usuário solicitante
+    const { data: userRole, error: roleError } = await supabaseServiceRole
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userData.user.id)
+      .single();
+
+    if (roleError || !userRole || (userRole.role !== 'admin' && userRole.role !== 'master')) {
       return buildErrorResponse("Permissão negada. Apenas admin/master podem criar usuários.", 403);
     }
 

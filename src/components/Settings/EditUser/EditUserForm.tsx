@@ -145,12 +145,12 @@ const EditUserForm: React.FC<EditUserFormProps> = ({
 
       <div className="space-y-2">
         <Label htmlFor="profileId">Perfil de Acesso</Label>
-        <Select value={form.profileId} onValueChange={profileId => onFieldChange('profileId', profileId)}>
+        <Select value={form.profileId || "no-profile"} onValueChange={profileId => onFieldChange('profileId', profileId === "no-profile" ? "" : profileId)}>
           <SelectTrigger className={validationErrors.profileId ? 'border-red-500' : ''}>
             <SelectValue placeholder="Selecionar perfil" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Sem perfil</SelectItem>
+            <SelectItem value="no-profile">Sem perfil</SelectItem>
             {availableProfiles
               .filter(profile => profile.is_active)
               .map(profile => (
