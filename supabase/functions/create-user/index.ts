@@ -91,14 +91,24 @@ serve(async (req) => {
     }
 
     // Verificar role do usuário solicitante
-    const { data: userRole, error: roleError } = await supabaseServiceRole
+    const { data: userRoles, error: roleError } = await supabaseServiceRole
       .from('user_roles')
       .select('role')
-      .eq('user_id', userData.user.id)
-      .single();
+      .eq('user_id', userData.user.id);
 
-    if (roleError || !userRole || (userRole.role !== 'admin' && userRole.role !== 'master')) {
+    if (roleError) {
       console.error("Role verification error:", roleError);
+      return buildErrorResponse("Erro ao verificar permissões do usuário.", 500);
+    }
+
+    if (!userRoles || userRoles.length === 0) {
+      console.error("User has no roles assigned");
+      return buildErrorResponse("Usuário não possui permissões atribuídas.", 403);
+    }
+
+    const hasAdminRole = userRoles.some(r => r.role === 'admin' || r.role === 'master');
+    if (!hasAdminRole) {
+      console.error("User does not have admin/master role");
       return buildErrorResponse("Permissão negada. Apenas admin/master podem criar usuários.", 403);
     }
 
