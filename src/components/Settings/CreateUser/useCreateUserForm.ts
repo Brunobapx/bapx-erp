@@ -133,34 +133,52 @@ export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUse
 
       const { data, error } = await supabase.functions.invoke('create-user', {
         body: {
-          email: form.email,
+          email: form.email.trim().toLowerCase(),
           password: form.password,
-          firstName: form.firstName,
-          lastName: form.lastName,
+          firstName: form.firstName.trim(),
+          lastName: form.lastName.trim(),
           role: form.role,
           profileId: form.profileId,
-          department: form.department || null,
-          position: form.position || null,
+          department: form.department?.trim() || null,
+          position: form.position?.trim() || null,
           companyId: companyInfo?.id,
         },
         headers: {
           'x-requester-role': userRole,
+          'Content-Type': 'application/json',
         },
       });
 
       if (error) {
         console.error('Erro na função create-user:', error);
         
-        // Mapear diferentes tipos de erro
-        if (error.message?.includes('User already registered') || error.message?.includes('email')) {
-          setValidationErrors({ email: 'Este email já está em uso' });
-        } else if (error.message?.includes('Permission denied') || error.message?.includes('Permissão negada')) {
-          setValidationErrors({ general: 'Você não tem permissão para criar usuários' });
+        // Mapear diferentes tipos de erro com mensagens mais específicas
+        let errorMessage = 'Erro ao criar usuário';
+        
+        if (error.message?.includes('User already registered') || 
+            error.message?.includes('email_exists') ||
+            error.message?.includes('A user with this email address has already been registered')) {
+          setValidationErrors({ email: 'Este email já está cadastrado no sistema' });
+          return;
+        } else if (error.message?.includes('Permission denied') || 
+                   error.message?.includes('Permissão negada') ||
+                   error.message?.includes('admin/master')) {
+          errorMessage = 'Você não tem permissão para criar usuários';
         } else if (error.message?.includes('duplicate key value violates unique constraint')) {
-          setValidationErrors({ general: 'Usuário já possui esta função no sistema' });
-        } else {
-          setValidationErrors({ general: error.message || 'Erro ao criar usuário' });
+          errorMessage = 'Usuário já possui esta função no sistema';
+        } else if (error.message?.includes('Company ID não disponível')) {
+          errorMessage = 'Informações da empresa não encontradas. Tente fazer login novamente.';
+        } else if (error.message) {
+          errorMessage = error.message;
         }
+        
+        setValidationErrors({ general: errorMessage });
+        
+        toast({
+          title: "Erro",
+          description: errorMessage,
+          variant: "destructive",
+        });
         return;
       }
 
@@ -168,7 +186,7 @@ export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUse
 
       toast({
         title: "Sucesso",
-        description: "Usuário criado com sucesso!",
+        description: `Usuário ${form.firstName} ${form.lastName} criado com sucesso!`,
       });
 
       // Resetar formulário
@@ -192,12 +210,20 @@ export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUse
       let errorMessage = 'Erro inesperado ao criar usuário';
       
       if (error.message?.includes('Edge Function returned a non-2xx status code')) {
-        errorMessage = 'Erro no servidor. Verifique se todos os campos estão preenchidos corretamente.';
+        errorMessage = 'Erro no servidor. Verifique sua conexão e tente novamente.';
+      } else if (error.message?.includes('network')) {
+        errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
       } else if (error.message) {
         errorMessage = error.message;
       }
       
       setValidationErrors({ general: errorMessage });
+      
+      toast({
+        title: "Erro",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }

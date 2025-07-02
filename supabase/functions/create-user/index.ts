@@ -27,7 +27,14 @@ serve(async (req) => {
     }
 
     const requestData = await req.json();
-    console.log("Request data received:", requestData);
+    console.log("Request data received (sanitized):", {
+      email: requestData.email ? "***" : undefined,
+      firstName: requestData.firstName,
+      lastName: requestData.lastName,
+      role: requestData.role,
+      hasPassword: !!requestData.password,
+      companyId: requestData.companyId
+    });
     
     const { 
       email, 
@@ -43,8 +50,27 @@ serve(async (req) => {
 
     // Validação de campos obrigatórios
     if (!email || !password || !firstName || !lastName) {
-      console.error("Missing required fields:", { email: !!email, password: !!password, firstName: !!firstName, lastName: !!lastName });
+      console.error("Missing required fields:", { 
+        email: !!email, 
+        password: !!password, 
+        firstName: !!firstName, 
+        lastName: !!lastName 
+      });
       return buildErrorResponse("Email, senha, nome e sobrenome são obrigatórios", 400);
+    }
+
+    // Sanitizar dados de entrada
+    const sanitizedEmail = email.trim().toLowerCase();
+    const sanitizedFirstName = firstName.trim();
+    const sanitizedLastName = lastName.trim();
+
+    // Validações básicas
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sanitizedEmail)) {
+      return buildErrorResponse("Email inválido", 400);
+    }
+
+    if (password.length < 8) {
+      return buildErrorResponse("Senha deve ter pelo menos 8 caracteres", 400);
     }
 
     const requesterRole = req.headers.get("x-requester-role");
@@ -74,7 +100,7 @@ serve(async (req) => {
     console.log("Creating user with company ID:", finalCompanyId);
 
     // Criar usuário no Supabase Auth
-    const newUserResult = await createSupabaseUser(supabaseServiceRole, email, password);
+    const newUserResult = await createSupabaseUser(supabaseServiceRole, sanitizedEmail, password);
     if ("error" in newUserResult) {
       console.error("Error creating user:", newUserResult.error);
       return newUserResult.error;
@@ -88,10 +114,10 @@ serve(async (req) => {
       newUserId, 
       finalCompanyId, 
       profileId || null,
-      firstName,
-      lastName,
-      department || null,
-      position || null
+      sanitizedFirstName,
+      sanitizedLastName,
+      department?.trim() || null,
+      position?.trim() || null
     );
     
     if (profileCreateError) {
