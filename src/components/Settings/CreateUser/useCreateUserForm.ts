@@ -131,6 +131,15 @@ export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUse
         companyId: companyInfo?.id
       });
 
+      // Obter o token de autenticação
+      const { data: session, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session.session?.access_token) {
+        console.error('Session error:', sessionError);
+        setValidationErrors({ general: 'Erro de autenticação. Faça login novamente.' });
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('create-user', {
         body: {
           email: form.email.trim().toLowerCase(),
@@ -144,9 +153,8 @@ export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUse
           companyId: companyInfo?.id,
         },
         headers: {
-          'x-requester-role': userRole,
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Authorization': `Bearer ${session.session.access_token}`,
         },
       });
 
@@ -158,7 +166,8 @@ export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUse
         
         if (error.message?.includes('User already registered') || 
             error.message?.includes('email_exists') ||
-            error.message?.includes('A user with this email address has already been registered')) {
+            error.message?.includes('A user with this email address has already been registered') ||
+            error.message?.includes('Este email já está cadastrado')) {
           setValidationErrors({ email: 'Este email já está cadastrado no sistema' });
           return;
         } else if (error.message?.includes('Permission denied') || 
@@ -169,6 +178,8 @@ export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUse
           errorMessage = 'Usuário já possui esta função no sistema';
         } else if (error.message?.includes('Company ID não disponível')) {
           errorMessage = 'Informações da empresa não encontradas. Tente fazer login novamente.';
+        } else if (error.message?.includes('Token de autorização') || error.message?.includes('Token inválido')) {
+          errorMessage = 'Sessão expirada. Faça login novamente.';
         } else if (error.message) {
           errorMessage = error.message;
         }

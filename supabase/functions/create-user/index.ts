@@ -26,6 +26,9 @@ serve(async (req) => {
       return buildErrorResponse("Configuração do servidor inválida", 500);
     }
 
+    // Inicializar cliente Supabase PRIMEIRO
+    const supabaseServiceRole = createClient(supabaseUrl, serviceRoleKey);
+
     const requestData = await req.json();
     console.log("Request data received (sanitized):", {
       email: requestData.email ? "***" : undefined,
@@ -83,6 +86,7 @@ serve(async (req) => {
     const { data: userData, error: userError } = await supabaseServiceRole.auth.getUser(token);
     
     if (userError || !userData.user) {
+      console.error("Auth error:", userError);
       return buildErrorResponse("Token inválido ou usuário não encontrado", 401);
     }
 
@@ -94,10 +98,9 @@ serve(async (req) => {
       .single();
 
     if (roleError || !userRole || (userRole.role !== 'admin' && userRole.role !== 'master')) {
+      console.error("Role verification error:", roleError);
       return buildErrorResponse("Permissão negada. Apenas admin/master podem criar usuários.", 403);
     }
-
-    const supabaseServiceRole = createClient(supabaseUrl, serviceRoleKey);
 
     // Se companyId não foi fornecido, obter do contexto do solicitante
     let finalCompanyId = companyId;
