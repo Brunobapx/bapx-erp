@@ -25,38 +25,49 @@ export const useProduction = () => {
         console.log('[PRODUCTION DEBUG] Iniciando busca de produções para usuário:', user.id);
 
         // Primeiro, vamos verificar se existem registros na tabela production
-        const { data: allProductions, error: allError } = await supabase
+        const { data: rawProductions, error: allError } = await supabase
           .from('production')
           .select('*')
           .eq('user_id', user.id);
           
-        console.log('[PRODUCTION DEBUG] Registros brutos na tabela production:', allProductions);
+        console.log('[PRODUCTION DEBUG] Registros brutos na tabela production:', rawProductions);
         console.log('[PRODUCTION DEBUG] Erro na busca bruta:', allError);
 
-        // Agora vamos fazer a query com join
-        const { data, error } = await supabase
+        // Buscar produções com pedidos (left join para incluir internas também)
+        const { data: ordersProductions, error: ordersError } = await supabase
           .from('production')
           .select(`
             *,
-            order_items!inner(
+            order_items(
               order_id,
-              orders!inner(
+              orders(
                 order_number,
                 client_name
               )
             )
           `)
           .eq('user_id', user.id)
+          .not('order_item_id', 'is', null)
+          .order('created_at', { ascending: false });
+
+        // Buscar produções internas (sem order_item_id)
+        const { data: internalProductions, error: internalError } = await supabase
+          .from('production')
+          .select('*')
+          .eq('user_id', user.id)
+          .is('order_item_id', null)
           .order('created_at', { ascending: false });
         
-        console.log('[PRODUCTION DEBUG] Dados com JOIN:', data);
-        console.log('[PRODUCTION DEBUG] Erro no JOIN:', error);
+        console.log('[PRODUCTION DEBUG] Produções com pedidos:', ordersProductions);
+        console.log('[PRODUCTION DEBUG] Produções internas:', internalProductions);
+        console.log('[PRODUCTION DEBUG] Erros:', { ordersError, internalError });
         
-        if (error) throw error;
+        if (ordersError) throw ordersError;
+        if (internalError) throw internalError;
         
-        // Mapear os dados para incluir order_number e client_name
-        const productionsWithOrderInfo = (data || []).map(prod => {
-          console.log('[PRODUCTION DEBUG] Processando produção:', prod.id, 'Order items:', prod.order_items);
+        // Mapear produções de pedidos para incluir order_number e client_name
+        const productionsWithOrderInfo = (ordersProductions || []).map(prod => {
+          console.log('[PRODUCTION DEBUG] Processando produção de pedido:', prod.id, 'Order items:', prod.order_items);
           
           return {
             ...prod,
@@ -64,10 +75,21 @@ export const useProduction = () => {
             client_name: prod.order_items?.orders?.client_name || ''
           };
         });
+
+        // Mapear produções internas
+        const internalProductionsWithInfo = (internalProductions || []).map(prod => ({
+          ...prod,
+          order_number: 'PRODUÇÃO INTERNA',
+          client_name: 'Estoque'
+        }));
+
+        // Combinar todas as produções
+        const allProductions = [...productionsWithOrderInfo, ...internalProductionsWithInfo]
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         
-        console.log('[PRODUCTION DEBUG] Produções finais processadas:', productionsWithOrderInfo);
+        console.log('[PRODUCTION DEBUG] Produções finais processadas:', allProductions);
         
-        setProductions(productionsWithOrderInfo);
+        setProductions(allProductions);
       } catch (error: any) {
         console.error('[PRODUCTION DEBUG] Erro ao carregar produção:', error);
         setError(error.message || 'Erro ao carregar produção');
@@ -223,6 +245,9 @@ export const useProduction = () => {
           console.error('Erro ao buscar dados da produção:', fetchError);
           throw fetchError;
         }
+
+        // Verificar se é produção interna (order_item_id é null)
+        const isInternalProduction = !productionData.order_item_id;
         
         // Buscar estoque atual do produto
         const { data: productData, error: productError } = await supabase
@@ -237,7 +262,32 @@ export const useProduction = () => {
         }
         
         const currentStock = productData.stock || 0;
+
+        if (isInternalProduction) {
+          // Para produção interna, adicionar direto ao estoque
+          const newStock = currentStock + finalQuantityProduced;
+          
+          const { error: stockUpdateError } = await supabase
+            .from('products')
+            .update({ 
+              stock: newStock,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', productionData.product_id);
+          
+          if (stockUpdateError) {
+            console.error('Erro ao atualizar estoque do produto:', stockUpdateError);
+            toast.error('Erro ao atualizar estoque do produto');
+          } else {
+            console.log(`Produção interna aprovada. ${finalQuantityProduced} unidades adicionadas ao estoque. Novo estoque: ${newStock}`);
+            toast.success(`Produção interna aprovada! ${finalQuantityProduced} unidades adicionadas ao estoque.`);
+          }
+          
+          refreshProductions();
+          return true;
+        }
         
+        // Para produção de pedidos, continuar com o fluxo normal de embalagem
         // Calcular quantidade total para embalagem (estoque anterior + produzido)
         const totalQuantityForPackaging = currentStock + finalQuantityProduced;
         

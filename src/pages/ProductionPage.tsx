@@ -7,6 +7,7 @@ import StageAlert from '@/components/Alerts/StageAlert';
 import { ProductionFilters } from '@/components/Production/ProductionFilters';
 import { ProductionTable } from '@/components/Production/ProductionTable';
 import { ProductionSummaryTable } from '@/components/Production/ProductionSummaryTable';
+import { InternalProductionTab } from '@/components/Production/InternalProductionTab';
 import { useProduction } from '@/hooks/useProduction';
 import { useProductionSummary } from '@/hooks/useProductionSummary';
 import { useProductionFilters } from '@/hooks/useProductionFilters';
@@ -139,8 +140,9 @@ const ProductionPage = () => {
       <StageAlert alerts={alerts} onDismiss={handleDismissAlert} />
 
       <Tabs defaultValue="individual" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="individual">Produções Individuais</TabsTrigger>
+          <TabsTrigger value="internal">Produção Interna</TabsTrigger>
           <TabsTrigger value="summary">Resumo por Produto</TabsTrigger>
         </TabsList>
 
@@ -164,6 +166,10 @@ const ProductionPage = () => {
             onSendToPackaging={handleSendToPackaging}
             canSendToPackaging={canSendToPackaging}
           />
+        </TabsContent>
+
+        <TabsContent value="internal" className="space-y-6">
+          <InternalProductionTab />
         </TabsContent>
 
         <TabsContent value="summary" className="space-y-6">
