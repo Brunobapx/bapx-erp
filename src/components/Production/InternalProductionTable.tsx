@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle, Clock, Package } from 'lucide-react';
+import { CheckCircle, Clock, Package, Edit2, FileText } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -26,25 +26,59 @@ interface InternalProduction {
   completion_date?: string;
 }
 
-export const InternalProductionTable = () => {
+interface InternalProductionTableProps {
+  searchQuery?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+  statusFilter?: string;
+  onEditProduction?: (production: InternalProduction) => void;
+}
+
+export const InternalProductionTable = ({
+  searchQuery = '',
+  dateFrom,
+  dateTo,
+  statusFilter = 'all',
+  onEditProduction
+}: InternalProductionTableProps) => {
   const [productions, setProductions] = useState<InternalProduction[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchInternalProductions();
-  }, []);
+  }, [searchQuery, dateFrom, dateTo, statusFilter]);
 
   const fetchInternalProductions = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('production')
         .select('*')
         .eq('user_id', user.id)
-        .is('order_item_id', null) // Produção interna não tem order_item_id
-        .order('created_at', { ascending: false });
+        .is('order_item_id', null); // Produção interna não tem order_item_id
+
+      // Aplicar filtros
+      if (searchQuery) {
+        query = query.ilike('product_name', `%${searchQuery}%`);
+      }
+
+      if (dateFrom) {
+        query = query.gte('created_at', dateFrom.toISOString().split('T')[0]);
+      }
+
+      if (dateTo) {
+        query = query.lte('created_at', dateTo.toISOString().split('T')[0]);
+      }
+
+      if (statusFilter !== 'all') {
+        query = query.eq('status', statusFilter);
+      }
+
+      query = query.order('created_at', { ascending: false });
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setProductions(data || []);
@@ -182,29 +216,49 @@ export const InternalProductionTable = () => {
                 <TableCell>
                   <div className="flex justify-center gap-1">
                     {production.status === 'pending' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleStartProduction(production.id, production.quantity_requested)}
-                      >
-                        <Clock className="h-4 w-4 mr-1" />
-                        Iniciar
-                      </Button>
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleStartProduction(production.id, production.quantity_requested)}
+                        >
+                          <Clock className="h-4 w-4 mr-1" />
+                          Iniciar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onEditProduction?.(production)}
+                        >
+                          <Edit2 className="h-4 w-4 mr-1" />
+                          Editar
+                        </Button>
+                      </>
                     )}
                     {production.status === 'in_progress' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-green-600 hover:text-green-700"
-                        onClick={() => handleCompleteProduction(
-                          production.id, 
-                          production.product_id, 
-                          production.quantity_produced || production.quantity_requested
-                        )}
-                      >
-                        <CheckCircle className="h-4 w-4 mr-1" />
-                        Concluir
-                      </Button>
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-green-600 hover:text-green-700"
+                          onClick={() => handleCompleteProduction(
+                            production.id, 
+                            production.product_id, 
+                            production.quantity_produced || production.quantity_requested
+                          )}
+                        >
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          Concluir
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onEditProduction?.(production)}
+                        >
+                          <Edit2 className="h-4 w-4 mr-1" />
+                          Editar
+                        </Button>
+                      </>
                     )}
                   </div>
                 </TableCell>
