@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { useOrderInsert } from '@/hooks/useOrderInsert';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { OrderClientSection } from './Form/OrderClientSection';
-import { OrderProductSection } from './Form/OrderProductSection';
+import { OrderItemsSection } from './Form/OrderItemsSection';
 import { OrderPaymentSection } from './Form/OrderPaymentSection';
 import { OrderDeliverySection } from './Form/OrderDeliverySection';
 import { OrderFormActions } from './Form/OrderFormActions';
+import { useOrderForm } from '@/hooks/useOrderForm';
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, Loader2 } from "lucide-react";
@@ -21,51 +22,27 @@ interface OrderFormProps {
 
 export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
   const navigate = useNavigate();
-  const { createOrder, isSubmitting, hasValidProfile, profileError } = useOrderInsert();
-  const { loading: profileLoading } = useUserProfile();
+  const { hasValidProfile, error: profileError, loading: profileLoading } = useUserProfile();
   
-  // State management
-  const [formData, setFormData] = useState({
-    client_id: '',
-    client_name: '',
-    seller: '',
-    delivery_deadline: '',
-    payment_method: '',
-    payment_term: '',
-    notes: '',
-    items: []
-  });
+  // Use the comprehensive order form hook
+  const {
+    formData,
+    items,
+    totalAmount,
+    isSubmitting,
+    openClientCombobox,
+    setOpenClientCombobox,
+    openProductCombobox,
+    setOpenProductCombobox,
+    addItem,
+    removeItem,
+    updateItem,
+    updateFormData,
+    handleSubmit,
+    validateForm
+  } = useOrderForm({ orderData, onClose });
 
-  const [openClientCombobox, setOpenClientCombobox] = useState(false);
-  const [openProductCombobox, setOpenProductCombobox] = useState(false);
-
-  // useEffect for orderData
-  useEffect(() => {
-    if (orderData) {
-      setFormData({
-        client_id: orderData.client_id || '',
-        client_name: orderData.client_name || '',
-        seller: orderData.seller || '',
-        delivery_deadline: orderData.delivery_deadline || '',
-        payment_method: orderData.payment_method || '',
-        payment_term: orderData.payment_term || '',
-        notes: orderData.notes || '',
-        items: orderData.items || []
-      });
-    }
-  }, [orderData]);
-
-  // Helper functions
-  const updateFormData = (updates: any) => {
-    setFormData(prev => ({ ...prev, ...updates }));
-  };
-
-  // Calculate total amount from items
-  const calculateTotalAmount = () => {
-    return formData.items.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Verificar se o perfil é válido antes de tentar criar o pedido
@@ -74,17 +51,8 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
       return;
     }
 
-    if (!formData.client_id || formData.items.length === 0) {
-      toast.error('Selecione um cliente e adicione pelo menos um produto');
-      return;
-    }
-
-    try {
-      const orderId = await createOrder(formData);
-      onClose(true);
-    } catch (error) {
-      console.error('Erro ao enviar formulário:', error);
-    }
+    // Usar a validação e submissão do hook
+    await handleSubmit();
   };
 
   // Mostrar loading enquanto verifica perfil
@@ -126,7 +94,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleFormSubmit} className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Informações do Cliente</CardTitle>
@@ -146,10 +114,11 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
           <CardTitle>Produtos</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <OrderProductSection
-            selectedProductId=""
-            selectedProductName=""
-            onProductSelect={() => {}}
+          <OrderItemsSection
+            items={items}
+            onAddItem={addItem}
+            onRemoveItem={removeItem}
+            onUpdateItem={updateItem}
             openProductCombobox={openProductCombobox}
             setOpenProductCombobox={setOpenProductCombobox}
           />
@@ -164,7 +133,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
           <OrderPaymentSection
             formData={formData}
             onUpdateFormData={updateFormData}
-            totalAmount={calculateTotalAmount()}
+            totalAmount={totalAmount}
           />
         </CardContent>
       </Card>
