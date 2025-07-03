@@ -120,19 +120,28 @@ export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUse
     }
 
     setLoading(true);
+    console.log('=== FRONTEND USER CREATION STARTED ===');
 
     try {
-      console.log('Submitting user creation form:', {
+      console.log('Form data:', {
         email: form.email,
         firstName: form.firstName,
         lastName: form.lastName,
         role: form.role,
         profileId: form.profileId,
-        companyId: companyInfo?.id
+        companyId: companyInfo?.id,
+        hasPassword: !!form.password
       });
 
-      // Obter o token de autenticação
+      console.log('=== GETTING SESSION ===');
       const { data: session, error: sessionError } = await supabase.auth.getSession();
+      
+      console.log('Session status:', {
+        hasSession: !!session.session,
+        hasToken: !!session.session?.access_token,
+        tokenLength: session.session?.access_token?.length || 0,
+        error: sessionError
+      });
       
       if (sessionError || !session.session?.access_token) {
         console.error('Session error:', sessionError);
@@ -140,50 +149,73 @@ export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUse
         return;
       }
 
+      console.log('=== CALLING EDGE FUNCTION ===');
+      const requestBody = {
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        role: form.role,
+        profileId: form.profileId || null,
+        department: form.department?.trim() || null,
+        position: form.position?.trim() || null,
+        companyId: companyInfo?.id,
+      };
+
+      console.log('Request body:', requestBody);
+
       const { data, error } = await supabase.functions.invoke('create-user', {
-        body: {
-          email: form.email.trim().toLowerCase(),
-          password: form.password,
-          firstName: form.firstName.trim(),
-          lastName: form.lastName.trim(),
-          role: form.role,
-          profileId: form.profileId || null,
-          department: form.department?.trim() || null,
-          position: form.position?.trim() || null,
-          companyId: companyInfo?.id,
-        },
+        body: requestBody,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.session.access_token}`,
         },
       });
 
+      console.log('Edge function response:', { data, error });
+
       if (error) {
-        console.error('Erro na função create-user:', error);
+        console.error('=== ERROR FROM EDGE FUNCTION ===');
+        console.error('Full error object:', error);
+        console.error('Error message:', error.message);
+        console.error('Error details:', error.details);
+        console.error('Error hint:', error.hint);
+        console.error('Error code:', error.code);
         
         // Mapear diferentes tipos de erro com mensagens mais específicas
         let errorMessage = 'Erro ao criar usuário';
         
+        // Tratar erros específicos baseados no conteúdo da mensagem
         if (error.message?.includes('User already registered') || 
             error.message?.includes('email_exists') ||
             error.message?.includes('A user with this email address has already been registered') ||
             error.message?.includes('Este email já está cadastrado')) {
+          console.log('Email already exists error detected');
           setValidationErrors({ email: 'Este email já está cadastrado no sistema' });
           return;
         } else if (error.message?.includes('Permission denied') || 
                    error.message?.includes('Permissão negada') ||
                    error.message?.includes('admin/master')) {
+          console.log('Permission error detected');
           errorMessage = 'Você não tem permissão para criar usuários';
         } else if (error.message?.includes('duplicate key value violates unique constraint')) {
+          console.log('Duplicate constraint error detected');
           errorMessage = 'Usuário já possui esta função no sistema';
         } else if (error.message?.includes('Company ID não disponível')) {
+          console.log('Company ID error detected');
           errorMessage = 'Informações da empresa não encontradas. Tente fazer login novamente.';
         } else if (error.message?.includes('Token de autorização') || error.message?.includes('Token inválido')) {
+          console.log('Auth token error detected');
           errorMessage = 'Sessão expirada. Faça login novamente.';
+        } else if (error.message?.includes('Edge Function returned a non-2xx status code')) {
+          console.log('Edge function status error detected');
+          errorMessage = 'Erro interno do servidor. Verifique os logs para mais detalhes.';
         } else if (error.message) {
+          console.log('Generic error with message:', error.message);
           errorMessage = error.message;
         }
         
+        console.log('Final error message:', errorMessage);
         setValidationErrors({ general: errorMessage });
         
         toast({

@@ -9,34 +9,51 @@ import { insertUserRole } from "./insertUserRole.ts";
 import { deleteSupabaseUser } from "./deleteSupabaseUser.ts";
 
 serve(async (req) => {
+  console.log("=== CREATE USER FUNCTION STARTED ===");
+  console.log("Request method:", req.method);
+  console.log("Request headers:", Object.fromEntries(req.headers.entries()));
+
   if (req.method === "OPTIONS") {
+    console.log("Handling OPTIONS request");
     return new Response(null, { headers: corsHeaders });
   }
+  
   if (req.method !== "POST") {
+    console.log("Invalid method:", req.method);
     return buildErrorResponse("Método não permitido", 405);
   }
 
   try {
+    console.log("=== ENVIRONMENT VALIDATION ===");
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
     
+    console.log("Environment check:", { 
+      hasUrl: !!supabaseUrl, 
+      hasServiceKey: !!serviceRoleKey, 
+      hasAnonKey: !!anonKey 
+    });
+    
     if (!supabaseUrl || !serviceRoleKey || !anonKey) {
-      console.error("Missing environment variables:", { supabaseUrl: !!supabaseUrl, serviceRoleKey: !!serviceRoleKey, anonKey: !!anonKey });
+      console.error("Missing environment variables");
       return buildErrorResponse("Configuração do servidor inválida", 500);
     }
 
-    // Inicializar cliente Supabase PRIMEIRO
+    console.log("=== SUPABASE CLIENT INITIALIZATION ===");
     const supabaseServiceRole = createClient(supabaseUrl, serviceRoleKey);
+    console.log("Supabase client created successfully");
 
+    console.log("=== REQUEST DATA PARSING ===");
     const requestData = await req.json();
-    console.log("Request data received (sanitized):", {
-      email: requestData.email ? "***" : undefined,
+    console.log("Request data received:", {
+      email: requestData.email ? "***@" + requestData.email.split('@')[1] : undefined,
       firstName: requestData.firstName,
       lastName: requestData.lastName,
       role: requestData.role,
       hasPassword: !!requestData.password,
-      companyId: requestData.companyId
+      companyId: requestData.companyId,
+      profileId: requestData.profileId
     });
     
     const { 
@@ -51,7 +68,7 @@ serve(async (req) => {
       companyId 
     } = requestData;
 
-    // Validação de campos obrigatórios
+    console.log("=== FIELD VALIDATION ===");
     if (!email || !password || !firstName || !lastName) {
       console.error("Missing required fields:", { 
         email: !!email, 
@@ -67,22 +84,33 @@ serve(async (req) => {
     const sanitizedFirstName = firstName.trim();
     const sanitizedLastName = lastName.trim();
 
+    console.log("Sanitized data:", {
+      email: sanitizedEmail,
+      firstName: sanitizedFirstName,
+      lastName: sanitizedLastName
+    });
+
     // Validações básicas
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sanitizedEmail)) {
+      console.error("Invalid email format:", sanitizedEmail);
       return buildErrorResponse("Email inválido", 400);
     }
 
     if (password.length < 8) {
+      console.error("Password too short:", password.length);
       return buildErrorResponse("Senha deve ter pelo menos 8 caracteres", 400);
     }
 
-    // Verificar autorização do usuário via token JWT
+    console.log("=== AUTHENTICATION VALIDATION ===");
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
+      console.error("No authorization header");
       return buildErrorResponse("Token de autorização não fornecido", 401);
     }
 
     const token = authHeader.replace('Bearer ', '');
+    console.log("Token extracted, length:", token.length);
+    
     const { data: userData, error: userError } = await supabaseServiceRole.auth.getUser(token);
     
     if (userError || !userData.user) {
@@ -90,11 +118,15 @@ serve(async (req) => {
       return buildErrorResponse("Token inválido ou usuário não encontrado", 401);
     }
 
-    // Verificar role do usuário solicitante
+    console.log("User authenticated:", userData.user.id);
+
+    console.log("=== ROLE VERIFICATION ===");
     const { data: userRoles, error: roleError } = await supabaseServiceRole
       .from('user_roles')
       .select('role')
       .eq('user_id', userData.user.id);
+
+    console.log("Role query result:", { userRoles, roleError });
 
     if (roleError) {
       console.error("Role verification error:", roleError);
@@ -107,27 +139,37 @@ serve(async (req) => {
     }
 
     const hasAdminRole = userRoles.some(r => r.role === 'admin' || r.role === 'master');
+    console.log("User roles:", userRoles.map(r => r.role));
+    console.log("Has admin role:", hasAdminRole);
+    
     if (!hasAdminRole) {
       console.error("User does not have admin/master role");
       return buildErrorResponse("Permissão negada. Apenas admin/master podem criar usuários.", 403);
     }
 
-    // Se companyId não foi fornecido, obter do contexto do solicitante
+    console.log("=== COMPANY ID VALIDATION ===");
     let finalCompanyId = companyId;
+    console.log("Provided company ID:", finalCompanyId);
+    
     if (!finalCompanyId) {
+      console.log("No company ID provided, getting from requester context");
       const requesterContext = await getRequesterContext(req, supabaseUrl, anonKey, supabaseServiceRole);
       if ("error" in requesterContext) {
         console.error("Error getting requester context:", requesterContext.error);
         return requesterContext.error;
       }
       finalCompanyId = requesterContext.companyId;
+      console.log("Company ID from context:", finalCompanyId);
     }
 
     if (!finalCompanyId) {
+      console.error("No company ID available");
       return buildErrorResponse("Company ID não disponível", 400);
     }
 
-    console.log("Creating user with company ID:", finalCompanyId);
+    console.log("Final company ID:", finalCompanyId);
+
+    console.log("=== USER CREATION PROCESS ===");
 
     // Criar usuário no Supabase Auth
     const newUserResult = await createSupabaseUser(supabaseServiceRole, sanitizedEmail, password);
