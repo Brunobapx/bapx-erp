@@ -2104,6 +2104,23 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_user_data: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      create_user_with_profile: {
+        Args: {
+          user_email: string
+          user_password: string
+          first_name: string
+          last_name: string
+          user_role?: Database["public"]["Enums"]["app_role"]
+          profile_id?: string
+          user_department?: string
+          user_position?: string
+        }
+        Returns: Json
+      }
       generate_sequence_number: {
         Args: { prefix: string; table_name: string; user_id: string }
         Returns: string

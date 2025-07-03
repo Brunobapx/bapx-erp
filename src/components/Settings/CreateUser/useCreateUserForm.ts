@@ -1,8 +1,6 @@
-
 import { useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { createUserSchema, type CreateUserData } from '@/lib/userValidation';
+import { useSimpleUserCreate, type SimpleCreateUserData, type SimpleCreateUserErrors } from '@/hooks/useSimpleUserCreate';
 import { useAuth } from '@/components/Auth/AuthProvider';
 
 interface UseCreateUserFormProps {
@@ -37,7 +35,7 @@ export interface CreateUserFormValidationErrors {
 export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUserFormProps) => {
   const { toast } = useToast();
   const { companyInfo } = useAuth();
-  const [loading, setLoading] = useState(false);
+  const { createUser, loading } = useSimpleUserCreate();
   const [validationErrors, setValidationErrors] = useState<CreateUserFormValidationErrors>({});
 
   const [form, setForm] = useState<CreateUserFormState>({
@@ -51,60 +49,6 @@ export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUse
     position: '',
   });
 
-  const validateForm = (): boolean => {
-    try {
-      // Limpar erros anteriores
-      setValidationErrors({});
-      
-      // Validações básicas obrigatórias
-      const errors: CreateUserFormValidationErrors = {};
-      
-      if (!form.firstName.trim()) {
-        errors.firstName = 'Nome é obrigatório';
-      }
-      
-      if (!form.lastName.trim()) {
-        errors.lastName = 'Sobrenome é obrigatório';
-      }
-      
-      if (!form.email.trim()) {
-        errors.email = 'Email é obrigatório';
-      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-        errors.email = 'Email inválido';
-      }
-      
-      if (!form.password) {
-        errors.password = 'Senha é obrigatória';
-      } else if (form.password.length < 8) {
-        errors.password = 'Senha deve ter pelo menos 8 caracteres';
-      }
-      
-      if (!form.profileId) {
-        errors.profileId = 'Perfil de acesso é obrigatório';
-      }
-      
-      // Validações adicionais específicas do contexto
-      if (!companyInfo?.id) {
-        errors.general = 'Informações da empresa não disponíveis';
-      }
-
-      if (userRole !== 'master' && form.role === 'master') {
-        errors.role = 'Apenas usuários master podem criar outros masters';
-      }
-
-      if (Object.keys(errors).length > 0) {
-        setValidationErrors(errors);
-        return false;
-      }
-
-      return true;
-    } catch (error: any) {
-      console.error('Validation error:', error);
-      setValidationErrors({ general: 'Erro na validação dos dados' });
-      return false;
-    }
-  };
-
   const handleChange = (field: keyof CreateUserFormState, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }));
     
@@ -115,124 +59,34 @@ export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUse
   };
 
   const handleSubmit = async () => {
-    if (!validateForm()) {
+    console.log('=== NOVO SISTEMA DE CRIAÇÃO DE USUÁRIO ===');
+    
+    // Limpar erros anteriores
+    setValidationErrors({});
+
+    // Validação específica de roles
+    if (userRole !== 'master' && form.role === 'master') {
+      setValidationErrors({ role: 'Apenas usuários master podem criar outros masters' });
       return;
     }
 
-    setLoading(true);
-    console.log('=== FRONTEND USER CREATION STARTED ===');
+    // Preparar dados para o novo sistema
+    const userData: SimpleCreateUserData = {
+      firstName: form.firstName,
+      lastName: form.lastName,
+      email: form.email,
+      password: form.password,
+      profileId: form.profileId || undefined,
+      role: form.role,
+      department: form.department || undefined,
+      position: form.position || undefined,
+    };
 
-    try {
-      console.log('Form data:', {
-        email: form.email,
-        firstName: form.firstName,
-        lastName: form.lastName,
-        role: form.role,
-        profileId: form.profileId,
-        companyId: companyInfo?.id,
-        hasPassword: !!form.password
-      });
+    console.log('Dados do usuário:', userData);
 
-      console.log('=== GETTING SESSION ===');
-      const { data: session, error: sessionError } = await supabase.auth.getSession();
-      
-      console.log('Session status:', {
-        hasSession: !!session.session,
-        hasToken: !!session.session?.access_token,
-        tokenLength: session.session?.access_token?.length || 0,
-        error: sessionError
-      });
-      
-      if (sessionError || !session.session?.access_token) {
-        console.error('Session error:', sessionError);
-        setValidationErrors({ general: 'Erro de autenticação. Faça login novamente.' });
-        return;
-      }
+    const result = await createUser(userData);
 
-      console.log('=== CALLING EDGE FUNCTION ===');
-      const requestBody = {
-        email: form.email.trim().toLowerCase(),
-        password: form.password,
-        firstName: form.firstName.trim(),
-        lastName: form.lastName.trim(),
-        role: form.role,
-        profileId: form.profileId || null,
-        department: form.department?.trim() || null,
-        position: form.position?.trim() || null,
-        companyId: companyInfo?.id,
-      };
-
-      console.log('Request body:', requestBody);
-
-      const { data, error } = await supabase.functions.invoke('create-user', {
-        body: requestBody,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.session.access_token}`,
-        },
-      });
-
-      console.log('Edge function response:', { data, error });
-
-      if (error) {
-        console.error('=== ERROR FROM EDGE FUNCTION ===');
-        console.error('Full error object:', error);
-        console.error('Error message:', error.message);
-        console.error('Error details:', error.details);
-        console.error('Error hint:', error.hint);
-        console.error('Error code:', error.code);
-        
-        // Mapear diferentes tipos de erro com mensagens mais específicas
-        let errorMessage = 'Erro ao criar usuário';
-        
-        // Tratar erros específicos baseados no conteúdo da mensagem
-        if (error.message?.includes('User already registered') || 
-            error.message?.includes('email_exists') ||
-            error.message?.includes('A user with this email address has already been registered') ||
-            error.message?.includes('Este email já está cadastrado')) {
-          console.log('Email already exists error detected');
-          setValidationErrors({ email: 'Este email já está cadastrado no sistema' });
-          return;
-        } else if (error.message?.includes('Permission denied') || 
-                   error.message?.includes('Permissão negada') ||
-                   error.message?.includes('admin/master')) {
-          console.log('Permission error detected');
-          errorMessage = 'Você não tem permissão para criar usuários';
-        } else if (error.message?.includes('duplicate key value violates unique constraint')) {
-          console.log('Duplicate constraint error detected');
-          errorMessage = 'Usuário já possui esta função no sistema';
-        } else if (error.message?.includes('Company ID não disponível')) {
-          console.log('Company ID error detected');
-          errorMessage = 'Informações da empresa não encontradas. Tente fazer login novamente.';
-        } else if (error.message?.includes('Token de autorização') || error.message?.includes('Token inválido')) {
-          console.log('Auth token error detected');
-          errorMessage = 'Sessão expirada. Faça login novamente.';
-        } else if (error.message?.includes('Edge Function returned a non-2xx status code')) {
-          console.log('Edge function status error detected');
-          errorMessage = 'Erro interno do servidor. Verifique os logs para mais detalhes.';
-        } else if (error.message) {
-          console.log('Generic error with message:', error.message);
-          errorMessage = error.message;
-        }
-        
-        console.log('Final error message:', errorMessage);
-        setValidationErrors({ general: errorMessage });
-        
-        toast({
-          title: "Erro",
-          description: errorMessage,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      console.log('User created successfully:', data);
-
-      toast({
-        title: "Sucesso",
-        description: `Usuário ${form.firstName} ${form.lastName} criado com sucesso!`,
-      });
-
+    if (result.success) {
       // Resetar formulário
       setForm({
         firstName: '',
@@ -247,29 +101,30 @@ export const useCreateUserForm = ({ onSuccess, setOpen, userRole }: UseCreateUse
 
       onSuccess();
       setOpen(false);
-    } catch (error: any) {
-      console.error('Erro inesperado ao criar usuário:', error);
+    } else if (result.errors) {
+      // Mapear erros do novo sistema para o formato antigo
+      const mappedErrors: CreateUserFormValidationErrors = {};
       
-      // Tratamento específico para diferentes tipos de erro
-      let errorMessage = 'Erro inesperado ao criar usuário';
+      if (result.errors.firstName) mappedErrors.firstName = result.errors.firstName;
+      if (result.errors.lastName) mappedErrors.lastName = result.errors.lastName;
+      if (result.errors.email) mappedErrors.email = result.errors.email;
+      if (result.errors.password) mappedErrors.password = result.errors.password;
+      if (result.errors.profileId) mappedErrors.profileId = result.errors.profileId;
+      if (result.errors.role) mappedErrors.role = result.errors.role;
+      if (result.errors.department) mappedErrors.department = result.errors.department;
+      if (result.errors.position) mappedErrors.position = result.errors.position;
+      if (result.errors.general) mappedErrors.general = result.errors.general;
+
+      setValidationErrors(mappedErrors);
       
-      if (error.message?.includes('Edge Function returned a non-2xx status code')) {
-        errorMessage = 'Erro no servidor. Verifique sua conexão e tente novamente.';
-      } else if (error.message?.includes('network')) {
-        errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
-      } else if (error.message) {
-        errorMessage = error.message;
+      // Mostrar toast apenas para erros gerais
+      if (result.errors.general) {
+        toast({
+          title: "Erro",
+          description: result.errors.general,
+          variant: "destructive",
+        });
       }
-      
-      setValidationErrors({ general: errorMessage });
-      
-      toast({
-        title: "Erro",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
     }
   };
 
