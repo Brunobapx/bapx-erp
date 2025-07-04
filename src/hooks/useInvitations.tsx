@@ -74,7 +74,8 @@ export const useInvitations = () => {
         return false;
       }
 
-      const { error } = await supabase
+      // Criar o convite no banco
+      const { data: invitationData, error } = await supabase
         .from('user_invitations')
         .insert({
           email,
@@ -83,14 +84,44 @@ export const useInvitations = () => {
           invited_by: (await supabase.auth.getUser()).data.user?.id || '',
           status: 'pending',
           expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 dias
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
-      toast({
-        title: "Sucesso",
-        description: "Convite criado com sucesso!",
-      });
+      // Enviar email de convite
+      try {
+        const { error: emailError } = await supabase.functions.invoke('send-invitation-email', {
+          body: {
+            email,
+            invitationId: invitationData.id,
+            companyName: companyInfo.name || 'Empresa',
+            role
+          }
+        });
+
+        if (emailError) {
+          console.error('Erro ao enviar email:', emailError);
+          toast({
+            title: "Convite criado",
+            description: "Convite criado, mas houve erro no envio do email. Você pode reenviá-lo.",
+            variant: "default",
+          });
+        } else {
+          toast({
+            title: "Sucesso",
+            description: "Convite criado e email enviado com sucesso!",
+          });
+        }
+      } catch (emailError) {
+        console.error('Erro ao enviar email:', emailError);
+        toast({
+          title: "Convite criado",
+          description: "Convite criado, mas houve erro no envio do email. Você pode reenviá-lo.",
+          variant: "default",
+        });
+      }
 
       await loadInvitations();
       return true;
@@ -132,6 +163,16 @@ export const useInvitations = () => {
 
   const resendInvitation = async (invitationId: string) => {
     try {
+      // Buscar dados do convite
+      const { data: invitation, error: fetchError } = await supabase
+        .from('user_invitations')
+        .select('*')
+        .eq('id', invitationId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Atualizar data de expiração
       const { error } = await supabase
         .from('user_invitations')
         .update({ 
@@ -141,10 +182,38 @@ export const useInvitations = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Sucesso",
-        description: "Convite reenviado com sucesso!",
-      });
+      // Reenviar email
+      try {
+        const { error: emailError } = await supabase.functions.invoke('send-invitation-email', {
+          body: {
+            email: invitation.email,
+            invitationId: invitation.id,
+            companyName: companyInfo?.name || 'Empresa',
+            role: invitation.role
+          }
+        });
+
+        if (emailError) {
+          console.error('Erro ao reenviar email:', emailError);
+          toast({
+            title: "Convite atualizado",
+            description: "Convite atualizado, mas houve erro no envio do email.",
+            variant: "default",
+          });
+        } else {
+          toast({
+            title: "Sucesso",
+            description: "Convite reenviado com sucesso!",
+          });
+        }
+      } catch (emailError) {
+        console.error('Erro ao reenviar email:', emailError);
+        toast({
+          title: "Convite atualizado",
+          description: "Convite atualizado, mas houve erro no envio do email.",
+          variant: "default",
+        });
+      }
 
       await loadInvitations();
     } catch (error: any) {
