@@ -46,17 +46,26 @@ export const InviteAcceptPage: React.FC = () => {
     if (!inviteId) return;
 
     try {
+      console.log('Loading invitation with ID:', inviteId);
+      
       const { data, error } = await supabase
         .from('user_invitations')
         .select('*')
         .eq('id', inviteId)
         .eq('status', 'pending')
-        .single();
+        .maybeSingle();
 
-      if (error || !data) {
+      console.log('Invitation data:', data, 'Error:', error);
+
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
+
+      if (!data) {
         toast({
-          title: "Erro",
-          description: "Convite não encontrado ou já foi utilizado",
+          title: "Convite não encontrado",
+          description: "Este convite não existe ou já foi utilizado",
           variant: "destructive",
         });
         navigate('/auth');
@@ -75,11 +84,11 @@ export const InviteAcceptPage: React.FC = () => {
       }
 
       setInvitation(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao carregar convite:', error);
       toast({
         title: "Erro",
-        description: "Erro ao carregar convite",
+        description: "Erro ao carregar convite: " + (error.message || 'Erro desconhecido'),
         variant: "destructive",
       });
       navigate('/auth');
@@ -88,18 +97,23 @@ export const InviteAcceptPage: React.FC = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!invitation) return;
-
-    if (formData.password !== formData.confirmPassword) {
+  const validateForm = () => {
+    if (!formData.firstName.trim()) {
       toast({
         title: "Erro",
-        description: "As senhas não coincidem",
+        description: "Nome é obrigatório",
         variant: "destructive",
       });
-      return;
+      return false;
+    }
+
+    if (!formData.lastName.trim()) {
+      toast({
+        title: "Erro",
+        description: "Sobrenome é obrigatório",
+        variant: "destructive",
+      });
+      return false;
     }
 
     if (formData.password.length < 8) {
@@ -108,13 +122,40 @@ export const InviteAcceptPage: React.FC = () => {
         description: "A senha deve ter pelo menos 8 caracteres",
         variant: "destructive",
       });
-      return;
+      return false;
     }
+
+    if (formData.password !== formData.confirmPassword) {
+      toast({
+        title: "Erro",
+        description: "As senhas não coincidem",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!invitation) return;
+    if (!validateForm()) return;
 
     setSubmitting(true);
 
     try {
-      // Criar usuário
+      console.log('Starting user creation process...');
+
+      // Verificar se o email já está em uso
+      const { data: existingUser } = await supabase.auth.admin.getUserByEmail(invitation.email);
+      if (existingUser) {
+        throw new Error('Este email já possui uma conta cadastrada');
+      }
+
+      // Criar usuário no Auth
+      console.log('Creating auth user...');
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: invitation.email,
         password: formData.password,
@@ -126,43 +167,40 @@ export const InviteAcceptPage: React.FC = () => {
         }
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Erro ao criar usuário');
+      if (authError) {
+        console.error('Auth error:', authError);
+        throw authError;
+      }
+      
+      if (!authData.user) {
+        throw new Error('Falha ao criar usuário');
+      }
 
-      // Criar perfil
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: authData.user.id,
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          company_id: invitation.company_id,
-          is_active: true
-        });
+      console.log('Auth user created:', authData.user.id);
 
-      if (profileError) throw profileError;
+      // Aguardar um momento para garantir que o usuário foi criado
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Criar role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: authData.user.id,
-          role: invitation.role as any,
-          company_id: invitation.company_id
-        });
+      // Usar uma transação para criar perfil e role
+      const { error: transactionError } = await supabase.rpc('create_user_profile_and_role', {
+        p_user_id: authData.user.id,
+        p_first_name: formData.firstName,
+        p_last_name: formData.lastName,
+        p_company_id: invitation.company_id,
+        p_role: invitation.role,
+        p_invitation_id: invitation.id
+      });
 
-      if (roleError) throw roleError;
+      if (transactionError) {
+        console.error('Transaction error:', transactionError);
+        // Se a função não existir, fazer manualmente
+        await createProfileAndRoleManually(authData.user.id);
+      }
 
-      // Marcar convite como aceito
-      const { error: inviteError } = await supabase
-        .from('user_invitations')
-        .update({ status: 'accepted' })
-        .eq('id', invitation.id);
-
-      if (inviteError) throw inviteError;
+      console.log('User creation completed successfully');
 
       toast({
-        title: "Sucesso",
+        title: "Sucesso!",
         description: "Conta criada com sucesso! Faça login para continuar.",
       });
 
@@ -170,14 +208,73 @@ export const InviteAcceptPage: React.FC = () => {
 
     } catch (error: any) {
       console.error('Erro ao criar conta:', error);
+      
+      let errorMessage = "Erro ao criar conta";
+      if (error.message?.includes('Email already')) {
+        errorMessage = "Este email já possui uma conta cadastrada";
+      } else if (error.message?.includes('Password')) {
+        errorMessage = "Senha muito fraca. Use pelo menos 8 caracteres";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
       toast({
         title: "Erro",
-        description: error.message || "Erro ao criar conta",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const createProfileAndRoleManually = async (userId: string) => {
+    if (!invitation) return;
+
+    console.log('Creating profile and role manually...');
+
+    // Criar perfil
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert({
+        id: userId,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        company_id: invitation.company_id,
+        is_active: true
+      });
+
+    if (profileError) {
+      console.error('Profile error:', profileError);
+      throw new Error('Erro ao criar perfil: ' + profileError.message);
+    }
+
+    // Criar role
+    const { error: roleError } = await supabase
+      .from('user_roles')
+      .insert({
+        user_id: userId,
+        role: invitation.role as any,
+        company_id: invitation.company_id
+      });
+
+    if (roleError) {
+      console.error('Role error:', roleError);
+      throw new Error('Erro ao criar permissões: ' + roleError.message);
+    }
+
+    // Marcar convite como aceito
+    const { error: inviteError } = await supabase
+      .from('user_invitations')
+      .update({ status: 'accepted' })
+      .eq('id', invitation.id);
+
+    if (inviteError) {
+      console.error('Invite update error:', inviteError);
+      // Não bloquear o processo se não conseguir atualizar o convite
+    }
+
+    console.log('Profile and role created successfully');
   };
 
   const handleChange = (field: string, value: string) => {
@@ -230,21 +327,23 @@ export const InviteAcceptPage: React.FC = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="firstName">Nome</Label>
+                <Label htmlFor="firstName">Nome *</Label>
                 <Input
                   id="firstName"
                   value={formData.firstName}
                   onChange={(e) => handleChange('firstName', e.target.value)}
                   required
+                  placeholder="Seu nome"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="lastName">Sobrenome</Label>
+                <Label htmlFor="lastName">Sobrenome *</Label>
                 <Input
                   id="lastName"
                   value={formData.lastName}
                   onChange={(e) => handleChange('lastName', e.target.value)}
                   required
+                  placeholder="Seu sobrenome"
                 />
               </div>
             </div>
@@ -261,7 +360,7 @@ export const InviteAcceptPage: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
+              <Label htmlFor="password">Senha *</Label>
               <Input
                 id="password"
                 type="password"
@@ -269,11 +368,12 @@ export const InviteAcceptPage: React.FC = () => {
                 onChange={(e) => handleChange('password', e.target.value)}
                 required
                 minLength={8}
+                placeholder="Mínimo 8 caracteres"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar Senha</Label>
+              <Label htmlFor="confirmPassword">Confirmar Senha *</Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -281,6 +381,7 @@ export const InviteAcceptPage: React.FC = () => {
                 onChange={(e) => handleChange('confirmPassword', e.target.value)}
                 required
                 minLength={8}
+                placeholder="Confirme sua senha"
               />
             </div>
 

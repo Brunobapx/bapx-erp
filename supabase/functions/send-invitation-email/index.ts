@@ -27,7 +27,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Sending invitation email to:", email);
 
-    const inviteUrl = `${Deno.env.get("SUPABASE_URL")?.replace('/rest/v1', '')}/convite?invite=${invitationId}`;
+    // Usar o domínio da aplicação para o convite
+    const appUrl = Deno.env.get("APP_URL") || "https://gtqmwlxzszttzriswoxj.supabase.co";
+    const inviteUrl = `${appUrl}/convite?invite=${invitationId}`;
+    
+    console.log("Generated invite URL:", inviteUrl);
     
     const roleTranslation = {
       'admin': 'Administrador',

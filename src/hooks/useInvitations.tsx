@@ -56,14 +56,30 @@ export const useInvitations = () => {
     }
 
     try {
+      // Validar formato do email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        toast({
+          title: "Erro",
+          description: "Por favor, insira um email válido",
+          variant: "destructive",
+        });
+        return false;
+      }
+
       // Verificar se já existe convite para este email
-      const { data: existing } = await supabase
+      const { data: existing, error: checkError } = await supabase
         .from('user_invitations')
         .select('id')
         .eq('email', email)
         .eq('company_id', companyInfo.id)
         .eq('status', 'pending')
-        .single();
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('Erro ao verificar convite existente:', checkError);
+        throw checkError;
+      }
 
       if (existing) {
         toast({
