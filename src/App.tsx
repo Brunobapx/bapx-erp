@@ -26,6 +26,7 @@ import PurchasesPage from "./pages/PurchasesPage";
 import StockPage from "./pages/StockPage";
 import FiscalEmissionPage from "./pages/FiscalEmissionPage";
 import ServiceOrdersPage from "./pages/ServiceOrdersPage";
+import InviteAcceptPage from "./pages/InviteAcceptPage";
 import NotFound from "./pages/NotFound";
 import { FinancialProvider } from "./contexts/FinancialContext";
 
@@ -41,6 +42,7 @@ const App = () => (
           <FinancialProvider>
             <Routes>
               <Route path="/auth" element={<AuthPage />} />
+              <Route path="/convite" element={<InviteAcceptPage />} />
               <Route
                 path="/*"
                 element={

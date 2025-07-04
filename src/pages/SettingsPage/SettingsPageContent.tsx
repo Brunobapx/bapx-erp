@@ -6,6 +6,7 @@ import { ConsolidatedUserManagement } from '@/components/Settings/ConsolidatedUs
 import { ProfileManagement } from '@/components/Settings/ProfileManagement';
 import { ProfilesManagement } from '@/components/Settings/ProfilesManagement';
 import { CompanySettings } from '@/components/Settings/CompanySettings';
+import { InvitationManagement } from '@/components/Settings/InvitationManagement';
 
 interface TabContentProps {
   tabName: string;
@@ -42,6 +43,20 @@ export const SettingsPageContent: React.FC<SettingsPageContentProps> = ({ isAdmi
         <TabContent tabName="Perfil">
           <ProfileManagement />
         </TabContent>
+      </TabsContent>
+
+      <TabsContent value="invites">
+        {!isAdmin ? (
+          <Alert>
+            <AlertDescription>
+              Você não tem permissão para acessar esta seção. Acesso restrito a administradores.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <TabContent tabName="Convites">
+            <InvitationManagement />
+          </TabContent>
+        )}
       </TabsContent>
 
       <TabsContent value="users">
