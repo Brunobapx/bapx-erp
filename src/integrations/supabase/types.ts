@@ -2108,6 +2108,17 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      create_user_profile_and_role: {
+        Args: {
+          p_user_id: string
+          p_first_name: string
+          p_last_name: string
+          p_company_id: string
+          p_role: Database["public"]["Enums"]["app_role"]
+          p_invitation_id: string
+        }
+        Returns: undefined
+      }
       create_user_with_profile: {
         Args: {
           user_email: string

@@ -148,11 +148,7 @@ export const InviteAcceptPage: React.FC = () => {
     try {
       console.log('Starting user creation process...');
 
-      // Verificar se o email já está em uso
-      const { data: existingUser } = await supabase.auth.admin.getUserByEmail(invitation.email);
-      if (existingUser) {
-        throw new Error('Este email já possui uma conta cadastrada');
-      }
+      // O auth.signUp já verifica se o email existe e retorna erro apropriado
 
       // Criar usuário no Auth
       console.log('Creating auth user...');
