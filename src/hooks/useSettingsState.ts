@@ -4,18 +4,14 @@ import { useAuth } from '@/components/Auth/AuthProvider';
 
 export const useSettingsState = () => {
   const { userRole, companyInfo } = useAuth();
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeTab, setActiveTab] = useState('company');
   const [loading, setLoading] = useState(false);
 
-  const isAdmin = useMemo(() => 
-    userRole === 'admin' || userRole === 'master', 
-    [userRole]
-  );
+  // Sem sistema de usuários, sempre admin
+  const isAdmin = true;
 
-  const isLoading = useMemo(() => 
-    !userRole || !companyInfo, 
-    [userRole, companyInfo]
-  );
+  // Sem sistema de usuários, sempre permitir acesso
+  const isLoading = false;
 
   const handleTabChange = useCallback((tab: string) => {
     setActiveTab(tab);

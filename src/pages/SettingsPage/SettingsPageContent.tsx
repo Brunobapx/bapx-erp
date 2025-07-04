@@ -2,11 +2,7 @@
 import React from 'react';
 import { TabsContent } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ConsolidatedUserManagement } from '@/components/Settings/ConsolidatedUserManagement';
-import { ProfileManagement } from '@/components/Settings/ProfileManagement';
-import { ProfilesManagement } from '@/components/Settings/ProfilesManagement';
 import { CompanySettings } from '@/components/Settings/CompanySettings';
-import { InvitationManagement } from '@/components/Settings/InvitationManagement';
 
 interface TabContentProps {
   tabName: string;
@@ -39,53 +35,6 @@ interface SettingsPageContentProps {
 export const SettingsPageContent: React.FC<SettingsPageContentProps> = ({ isAdmin }) => {
   return (
     <>
-      <TabsContent value="profile">
-        <TabContent tabName="Perfil">
-          <ProfileManagement />
-        </TabContent>
-      </TabsContent>
-
-      <TabsContent value="invites">
-        {!isAdmin ? (
-          <Alert>
-            <AlertDescription>
-              Você não tem permissão para acessar esta seção. Acesso restrito a administradores.
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <TabContent tabName="Convites">
-            <InvitationManagement />
-          </TabContent>
-        )}
-      </TabsContent>
-
-      <TabsContent value="users">
-        {!isAdmin ? (
-          <Alert>
-            <AlertDescription>
-              Você não tem permissão para acessar esta seção. Acesso restrito a administradores.
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <TabContent tabName="Usuários">
-            <ConsolidatedUserManagement />
-          </TabContent>
-        )}
-      </TabsContent>
-
-      <TabsContent value="profiles">
-        {!isAdmin ? (
-          <Alert>
-            <AlertDescription>
-              Você não tem permissão para acessar esta seção. Acesso restrito a administradores.
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <TabContent tabName="Perfis de Acesso">
-            <ProfilesManagement />
-          </TabContent>
-        )}
-      </TabsContent>
 
       <TabsContent value="company">
         {!isAdmin ? (

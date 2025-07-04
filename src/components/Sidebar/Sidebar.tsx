@@ -6,13 +6,11 @@ import {
   FilePen, LogOut, Menu, X
 } from 'lucide-react';
 import { useAuth } from '@/components/Auth/AuthProvider';
-import { useProfilePermissions } from '@/hooks/useProfilePermissions';
 import { Button } from '@/components/ui/button';
 
 const Sidebar = () => {
   const location = useLocation();
   const { signOut } = useAuth();
-  const { getAllowedRoutes } = useProfilePermissions();
   const [isOpen, setIsOpen] = useState(false);
 
   const menuItems = [
@@ -34,11 +32,8 @@ const Sidebar = () => {
     { icon: Settings, label: 'Configurações', href: '/configuracoes' }
   ];
 
-  const allowedRoutes = getAllowedRoutes();
-  console.log('[Sidebar] Allowed routes:', allowedRoutes);
-  
-  const filteredMenuItems = menuItems.filter(item => allowedRoutes.includes(item.href));
-  console.log('[Sidebar] Filtered menu items:', filteredMenuItems.map(item => ({ label: item.label, href: item.href })));
+  // Sem sistema de usuários, mostrar todos os itens
+  const filteredMenuItems = menuItems;
 
   const handleSignOut = async () => {
     try {
