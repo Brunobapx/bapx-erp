@@ -53,20 +53,19 @@ export const AccountsPayableTab = () => {
   const [categoryFilter, setCategoryFilter] = useState<string>('');
   const { accounts: bankAccounts, loading: accountsLoading } = useActiveFinancialAccounts();
   const { items: categories, loading: categoriesLoading } = useFinancialCategories();
-  const { user, companyInfo } = useAuth();
+  const { user } = useAuth();
 
   useEffect(() => {
     loadAccountsPayable();
-  }, [user, companyInfo]);
+  }, [user]);
 
   const loadAccountsPayable = async () => {
     try {
-      if (!user || !companyInfo) return;
+      if (!user) return;
 
       const { data, error } = await supabase
         .from('accounts_payable')
         .select('*')
-        .eq('company_id', companyInfo.id) // Mudança aqui: usar company_id
         .order('due_date', { ascending: true });
 
       if (error) throw error;

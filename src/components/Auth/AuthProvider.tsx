@@ -2,19 +2,12 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from "@/integrations/supabase/client";
 
-interface CompanyInfo {
-  id: string;
-  name: string;
-  status: string;
-}
-
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
   signOut: () => Promise<void>;
   userRole: string | null;
-  companyInfo: CompanyInfo | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,11 +27,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   
   // Valores fixos sem sistema de usuários
   const userRole = 'admin';
-  const companyInfo: CompanyInfo = {
-    id: 'default-company',
-    name: 'Empresa Padrão',
-    status: 'active'
-  };
 
   useEffect(() => {
     // Set up auth state listener
@@ -90,7 +78,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     loading,
     signOut,
     userRole,
-    companyInfo,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

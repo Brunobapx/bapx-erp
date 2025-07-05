@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/Auth/AuthProvider";
@@ -11,7 +10,6 @@ export type ExtratoTransacao = {
   tipo: string,
   status: string,
   user_id: string,
-  company_id?: string,
   arquivo_origem?: string,
   created_at: string,
 };
@@ -20,15 +18,15 @@ export function useExtratoConciliado() {
   const [transacoes, setTransacoes] = useState<ExtratoTransacao[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { user, companyInfo } = useAuth();
+  const { user } = useAuth();
 
   const fetchTransacoes = async () => {
     setLoading(true);
     setError(null);
     try {
-      if (!user || !companyInfo) throw new Error("Usuário não autenticado");
+      if (!user) throw new Error("Usuário não autenticado");
       
-      console.log('Buscando transações do extrato para empresa:', companyInfo.id);
+      console.log('Buscando transações do extrato para usuário:', user.id);
       
       const { data, error } = await supabase
         .from("extrato_bancario_importado")
@@ -54,7 +52,7 @@ export function useExtratoConciliado() {
 
   useEffect(() => { 
     fetchTransacoes(); 
-  }, [user, companyInfo]);
+  }, [user]);
 
   return {
     transacoes,

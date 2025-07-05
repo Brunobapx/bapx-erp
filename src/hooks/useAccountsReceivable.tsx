@@ -22,11 +22,11 @@ export type AccountReceivable = {
 };
 
 export const useAccountsReceivable = () => {
-  const { user, companyInfo } = useAuth();
+  const { user } = useAuth();
 
   const fetchAccountsReceivable = async (): Promise<AccountReceivable[]> => {
     try {
-      if (!user || !companyInfo) throw new Error('Usuário não autenticado ou empresa não encontrada');
+      if (!user) throw new Error('Usuário não autenticado');
 
       const { data, error } = await supabase
         .from('financial_entries')
@@ -34,7 +34,6 @@ export const useAccountsReceivable = () => {
           *,
           clients(name)
         `)
-        .eq('company_id', companyInfo.id) // Mudança aqui: usar company_id
         .eq('type', 'receivable')
         .order('due_date', { ascending: true })
         .limit(500);
@@ -68,9 +67,9 @@ export const useAccountsReceivable = () => {
   };
 
   const { data: accountsReceivable = [], isLoading: loading, error, refetch } = useQuery({
-    queryKey: ['accountsReceivable', companyInfo?.id],
+    queryKey: ['accountsReceivable'],
     queryFn: fetchAccountsReceivable,
-    enabled: !!user && !!companyInfo,
+    enabled: !!user,
     staleTime: 3 * 60 * 1000 // 3 minutos
   });
 

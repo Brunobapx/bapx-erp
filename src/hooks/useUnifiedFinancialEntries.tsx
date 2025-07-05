@@ -25,23 +25,22 @@ export type UnifiedFinancialEntry = {
 };
 
 export const useUnifiedFinancialEntries = () => {
-  const { user, companyInfo } = useAuth();
+  const { user } = useAuth();
 
   const { data: entries = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['financial_entries', companyInfo?.id],
+    queryKey: ['financial_entries'],
     queryFn: async (): Promise<UnifiedFinancialEntry[]> => {
       try {
         console.log('Fetching unified financial entries...');
         
-        if (!user || !companyInfo) {
-          throw new Error('Usuário não autenticado ou empresa não encontrada');
+        if (!user) {
+          throw new Error('Usuário não autenticado');
         }
 
-        // Buscar apenas os lançamentos financeiros da empresa
+        // Buscar todos os lançamentos financeiros (gestão colaborativa)
         const { data: financialEntries, error: financialError } = await supabase
           .from('financial_entries')
           .select('*')
-          .eq('company_id', companyInfo.id) // Mudança aqui: usar company_id
           .order('due_date', { ascending: true });
 
         if (financialError) {
@@ -84,7 +83,7 @@ export const useUnifiedFinancialEntries = () => {
         throw new Error(err.message || 'Erro ao carregar lançamentos financeiros');
       }
     },
-    enabled: !!user && !!companyInfo,
+    enabled: !!user,
     staleTime: 30 * 1000, // 30 segundos
     retry: 2
   });

@@ -17,21 +17,20 @@ export type CashFlowEntry = {
 };
 
 export const useCashFlow = () => {
-  const { user, companyInfo } = useAuth();
+  const { user } = useAuth();
 
   const { data: cashFlowData = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['cashFlow', companyInfo?.id],
+    queryKey: ['cashFlow'],
     queryFn: async (): Promise<CashFlowEntry[]> => {
       try {
         console.log('Calculando fluxo de caixa unificado...');
         
-        if (!user || !companyInfo) throw new Error('Usuário não autenticado ou empresa não encontrada');
+        if (!user) throw new Error('Usuário não autenticado');
 
-        // Buscar todos os lançamentos financeiros pagos da empresa
+        // Buscar todos os lançamentos financeiros pagos (gestão colaborativa)
         const { data: financialEntries, error: financialError } = await supabase
           .from('financial_entries')
           .select('*')
-          .eq('company_id', companyInfo.id) // Mudança aqui: usar company_id
           .eq('payment_status', 'paid')
           .order('payment_date', { ascending: true });
 
@@ -40,11 +39,10 @@ export const useCashFlow = () => {
           throw financialError;
         }
 
-        // Buscar contas a pagar pagas da empresa
+        // Buscar todas as contas a pagar pagas (gestão colaborativa)
         const { data: accountsPayable, error: payableError } = await supabase
           .from('accounts_payable')
           .select('*')
-          .eq('company_id', companyInfo.id) // Mudança aqui: usar company_id
           .eq('status', 'paid')
           .order('payment_date', { ascending: true });
 
@@ -123,7 +121,7 @@ export const useCashFlow = () => {
         throw new Error(err.message || 'Erro ao carregar fluxo de caixa');
       }
     },
-    enabled: !!user && !!companyInfo,
+    enabled: !!user,
     staleTime: 30 * 1000, // 30 segundos
     retry: 2
   });

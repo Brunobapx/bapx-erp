@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -8,15 +7,15 @@ import { useAuth } from '@/components/Auth/AuthProvider';
 export function useConciliacoes() {
   const [criandoLancamento, setCriandoLancamento] = useState(false);
   const { refreshAllFinancialData } = useFinancialContext();
-  const { user, companyInfo } = useAuth();
+  const { user } = useAuth();
 
   async function conciliarComLancamento(transacaoId: string, lancamentoId: string) {
     setCriandoLancamento(true);
     try {
       console.log('Iniciando conciliação:', { transacaoId, lancamentoId });
       
-      if (!user || !companyInfo) {
-        throw new Error('Usuário não autenticado ou empresa não encontrada');
+      if (!user) {
+        throw new Error('Usuário não autenticado');
       }
       
       // Buscar dados da transação e do lançamento
@@ -30,74 +29,28 @@ export function useConciliacoes() {
         throw new Error("Transação não encontrada");
       }
 
-      console.log('Transação encontrada:', transacao);
-
-      // Tentar buscar primeiro em financial_entries
-      let lancamento = null;
-      let source = '';
-      
-      const { data: financialEntry } = await supabase
+      // Buscar lançamento financeiro
+      const { data: lancamento } = await supabase
         .from("financial_entries")
         .select("*")
         .eq("id", lancamentoId)
-        .eq("company_id", companyInfo.id)
         .single();
-
-      if (financialEntry) {
-        lancamento = financialEntry;
-        source = 'financial_entries';
-      } else {
-        // Se não encontrou, buscar em accounts_payable
-        const { data: payableEntry } = await supabase
-          .from("accounts_payable")
-          .select("*")
-          .eq("id", lancamentoId)
-          .eq("company_id", companyInfo.id)
-          .single();
-        
-        if (payableEntry) {
-          lancamento = payableEntry;
-          source = 'accounts_payable';
-        }
-      }
 
       if (!lancamento) {
         throw new Error("Lançamento não encontrado");
       }
 
-      console.log('Lançamento encontrado:', lancamento, 'source:', source);
-
-      // CORRIGIR a verificação de compatibilidade de tipo
-      let lancamentoType = '';
-      if (source === 'financial_entries') {
-        lancamentoType = lancamento.type;
-      } else {
-        lancamentoType = 'payable'; // accounts_payable são sempre payable
-      }
-
-      // CORRIGIR: débito é compatível com payable, crédito com receivable
-      const tipoCompativel = (transacao.tipo === 'debito' && lancamentoType === 'payable') ||
-                            (transacao.tipo === 'credito' && lancamentoType === 'receivable');
-      
-      if (!tipoCompativel) {
-        console.warn(`Aviso: Tipo da transação (${transacao.tipo}) pode não ser compatível com o lançamento (${lancamentoType}), mas prosseguindo com a conciliação`);
-        // REMOVER o throw error - permitir conciliação mesmo com tipos diferentes
-      }
-
-      // Inserir na tabela de conciliações
+      // Criar conciliação
       const { error: conciliacaoError } = await supabase
         .from("conciliacoes")
         .insert({
           id_transacao_banco: transacaoId,
           id_lancamento_interno: lancamentoId,
-          tipo_lancamento: transacao.tipo === 'credito' ? "conta_a_receber" : "conta_a_pagar",
-          metodo_conciliacao: "manual",
+          tipo_lancamento: lancamento.type,
+          metodo_conciliacao: "manual"
         });
 
-      if (conciliacaoError) {
-        console.error('Erro ao criar conciliação:', conciliacaoError);
-        throw conciliacaoError;
-      }
+      if (conciliacaoError) throw conciliacaoError;
 
       // Atualizar status da transação
       const { error: updateTransacaoError } = await supabase
@@ -105,175 +58,205 @@ export function useConciliacoes() {
         .update({ status: "conciliado" })
         .eq("id", transacaoId);
 
-      if (updateTransacaoError) {
-        console.error('Erro ao atualizar transação:', updateTransacaoError);
-        throw updateTransacaoError;
-      }
+      if (updateTransacaoError) throw updateTransacaoError;
 
-      // Atualizar status do lançamento baseado na fonte
-      if (source === 'financial_entries') {
-        const { error: updateLancamentoError } = await supabase
-          .from("financial_entries")
-          .update({ 
-            payment_status: "paid", 
-            payment_date: transacao.data 
-          })
-          .eq("id", lancamentoId)
-          .eq("company_id", companyInfo.id);
+      // Atualizar status do lançamento
+      const { error: updateLancamentoError } = await supabase
+        .from("financial_entries")
+        .update({ payment_status: "paid", payment_date: transacao.data })
+        .eq("id", lancamentoId);
 
-        if (updateLancamentoError) {
-          console.error('Erro ao atualizar financial_entry:', updateLancamentoError);
-          throw updateLancamentoError;
-        }
-      } else {
-        const { error: updatePayableError } = await supabase
-          .from("accounts_payable")
-          .update({ 
-            status: "paid", 
-            payment_date: transacao.data 
-          })
-          .eq("id", lancamentoId)
-          .eq("company_id", companyInfo.id);
+      if (updateLancamentoError) throw updateLancamentoError;
 
-        if (updatePayableError) {
-          console.error('Erro ao atualizar accounts_payable:', updatePayableError);
-          throw updatePayableError;
-        }
-      }
-
-      toast.success("Transação conciliada com sucesso!");
-      refreshAllFinancialData();
-
-    } catch (err: any) {
-      console.error("Erro ao conciliar:", err);
-      toast.error("Erro ao conciliar: " + err.message);
+      await refreshAllFinancialData();
+      toast.success("Conciliação realizada com sucesso!");
+      
+    } catch (error: any) {
+      console.error("Erro na conciliação:", error);
+      toast.error(`Erro na conciliação: ${error.message}`);
     } finally {
       setCriandoLancamento(false);
     }
   }
 
-  async function conciliarCriandoLancamento(transacao: any) {
+  async function conciliarComNovoLancamento(
+    transacaoId: string, 
+    novoLancamento: {
+      description: string;
+      amount: number;
+      type: 'receivable' | 'payable';
+      category?: string;
+    }
+  ) {
     setCriandoLancamento(true);
     try {
-      console.log('Criando novo lançamento para conciliação:', transacao);
-      
-      if (!user || !companyInfo) {
-        throw new Error("Usuário não autenticado ou empresa não encontrada");
+      if (!user) {
+        throw new Error('Usuário não autenticado');
       }
 
-      // Determinar tipo correto: débito = saída = payable, crédito = entrada = receivable
-      const entryType = transacao.tipo === 'credito' ? "receivable" : "payable";
-
-      // Criar novo lançamento financeiro
-      const { data: novoLancamento, error: lancamentoError } = await supabase
-        .from("financial_entries")
-        .insert([{
-          user_id: user.id,
-          company_id: companyInfo.id,
-          type: entryType,
-          description: transacao.descricao,
-          amount: Math.abs(Number(transacao.valor)),
-          due_date: transacao.data,
-          payment_status: "paid",
-          payment_date: transacao.data,
-          account: "",
-          notes: "Criado via conciliação bancária",
-        }])
-        .select("id")
+      // Buscar dados da transação
+      const { data: transacao } = await supabase
+        .from("extrato_bancario_importado")
+        .select("*")
+        .eq("id", transacaoId)
         .single();
 
-      if (lancamentoError) {
-        console.error('Erro ao criar lançamento:', lancamentoError);
-        throw lancamentoError;
+      if (!transacao) {
+        throw new Error("Transação não encontrada");
       }
 
-      console.log('Novo lançamento criado:', novoLancamento);
+      // Criar novo lançamento financeiro
+      const { data: lancamento, error: lancamentoError } = await supabase
+        .from("financial_entries")
+        .insert({
+          user_id: user.id,
+          description: novoLancamento.description,
+          amount: novoLancamento.amount,
+          type: novoLancamento.type,
+          category: novoLancamento.category,
+          due_date: transacao.data,
+          payment_date: transacao.data,
+          payment_status: "paid"
+        })
+        .select()
+        .single();
 
-      // Agora conciliar com o novo lançamento
-      await conciliarComLancamento(transacao.id, novoLancamento.id);
+      if (lancamentoError) throw lancamentoError;
 
-    } catch (err: any) {
-      console.error("Erro ao criar e conciliar:", err);
-      toast.error("Erro ao criar lançamento: " + err.message);
+      // Criar conciliação
+      const { error: conciliacaoError } = await supabase
+        .from("conciliacoes")
+        .insert({
+          id_transacao_banco: transacaoId,
+          id_lancamento_interno: lancamento.id,
+          tipo_lancamento: novoLancamento.type,
+          metodo_conciliacao: "criacao_automatica"
+        });
+
+      if (conciliacaoError) throw conciliacaoError;
+
+      // Atualizar status da transação
+      const { error: updateTransacaoError } = await supabase
+        .from("extrato_bancario_importado")
+        .update({ status: "conciliado" })
+        .eq("id", transacaoId);
+
+      if (updateTransacaoError) throw updateTransacaoError;
+
+      await refreshAllFinancialData();
+      toast.success("Lançamento criado e conciliação realizada com sucesso!");
+      
+    } catch (error: any) {
+      console.error("Erro ao criar lançamento e conciliar:", error);
+      toast.error(`Erro ao criar lançamento: ${error.message}`);
+    } finally {
       setCriandoLancamento(false);
     }
   }
 
-  async function desconciliar(transacaoId: string) {
+  async function desfazerConciliacao(transacaoId: string) {
     try {
-      console.log('Desconciliando transação:', transacaoId);
-      
-      if (!user || !companyInfo) {
-        throw new Error("Usuário não autenticado ou empresa não encontrada");
+      if (!user) {
+        throw new Error('Usuário não autenticado');
       }
       
       // Buscar conciliação
-      const { data: conciliacao } = await supabase
+      const { data: conciliacao, error: conciliacaoError } = await supabase
         .from("conciliacoes")
         .select("*")
         .eq("id_transacao_banco", transacaoId)
         .single();
 
-      if (!conciliacao) {
+      if (conciliacaoError || !conciliacao) {
         throw new Error("Conciliação não encontrada");
       }
 
-      console.log('Conciliação encontrada:', conciliacao);
-
-      // Tentar atualizar financial_entries primeiro
-      const { data: financialEntry } = await supabase
+      // Atualizar status do lançamento
+      const { error: updateLancamentoError } = await supabase
         .from("financial_entries")
-        .select("id")
-        .eq("id", conciliacao.id_lancamento_interno)
-        .eq("company_id", companyInfo.id)
-        .single();
+        .update({ payment_status: "pending", payment_date: null })
+        .eq("id", conciliacao.id_lancamento_interno);
 
-      if (financialEntry) {
-        await supabase
-          .from("financial_entries")
-          .update({ 
-            payment_status: "pending", 
-            payment_date: null 
-          })
-          .eq("id", conciliacao.id_lancamento_interno)
-          .eq("company_id", companyInfo.id);
-      } else {
-        // Se não encontrou em financial_entries, tentar accounts_payable
-        await supabase
-          .from("accounts_payable")
-          .update({ 
-            status: "pending", 
-            payment_date: null 
-          })
-          .eq("id", conciliacao.id_lancamento_interno)
-          .eq("company_id", companyInfo.id);
-      }
+      if (updateLancamentoError) throw updateLancamentoError;
 
       // Atualizar status da transação
-      await supabase
+      const { error: updateTransacaoError } = await supabase
         .from("extrato_bancario_importado")
         .update({ status: "nao_conciliado" })
         .eq("id", transacaoId);
 
+      if (updateTransacaoError) throw updateTransacaoError;
+
       // Remover conciliação
-      await supabase
+      const { error: deleteConciliacaoError } = await supabase
         .from("conciliacoes")
         .delete()
-        .eq("id_transacao_banco", transacaoId);
+        .eq("id", conciliacao.id);
 
-      toast.success("Transação desconciliada com sucesso!");
-      refreshAllFinancialData();
+      if (deleteConciliacaoError) throw deleteConciliacaoError;
 
-    } catch (err: any) {
-      console.error("Erro ao desconciliar:", err);
-      toast.error("Erro ao desconciliar: " + err.message);
+      await refreshAllFinancialData();
+      toast.success("Conciliação desfeita com sucesso!");
+      
+    } catch (error: any) {
+      console.error("Erro ao desfazer conciliação:", error);
+      toast.error(`Erro ao desfazer conciliação: ${error.message}`);
     }
   }
 
-  return { 
+  async function buscarLancamentosDisponiveis(
+    tipo: 'entrada' | 'saida',
+    valor?: number,
+    dataInicio?: string,
+    dataFim?: string
+  ) {
+    try {
+      if (!user) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      const tipoFinanceiro = tipo === 'entrada' ? 'receivable' : 'payable';
+      let query = supabase
+        .from("financial_entries")
+        .select("*")
+        .eq("type", tipoFinanceiro)
+        .eq("payment_status", "pending")
+        .order("due_date", { ascending: false });
+
+      // Filtros opcionais
+      if (valor) {
+        const margem = valor * 0.05; // 5% de margem
+        query = query
+          .gte("amount", valor - margem)
+          .lte("amount", valor + margem);
+      }
+
+      if (dataInicio) {
+        query = query.gte("due_date", dataInicio);
+      }
+
+      if (dataFim) {
+        query = query.lte("due_date", dataFim);
+      }
+
+      const { data, error } = await query.limit(50);
+
+      if (error) throw error;
+
+      return data || [];
+      
+    } catch (error: any) {
+      console.error("Erro ao buscar lançamentos:", error);
+      toast.error(`Erro ao buscar lançamentos: ${error.message}`);
+      return [];
+    }
+  }
+
+  return {
     conciliarComLancamento,
-    conciliarCriandoLancamento,
-    desconciliar,
-    criandoLancamento 
+    conciliarComNovoLancamento,
+    desfazerConciliacao,
+    buscarLancamentosDisponiveis,
+    criandoLancamento
   };
 }

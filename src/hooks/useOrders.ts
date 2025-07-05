@@ -51,14 +51,14 @@ export const useOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const { user, companyInfo } = useAuth();
+  const { user } = useAuth();
 
   const loadOrders = async () => {
-    if (!user || !companyInfo) return;
+    if (!user) return;
     
     try {
       setLoading(true);
-      console.log('[useOrders] Carregando pedidos da empresa:', companyInfo.id);
+      console.log('[useOrders] Carregando todos os pedidos (gestão colaborativa)');
       
       const { data, error } = await supabase
         .from('orders')
@@ -66,7 +66,6 @@ export const useOrders = () => {
           *,
           order_items (*)
         `)
-        .eq('company_id', companyInfo.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -208,7 +207,7 @@ export const useOrders = () => {
 
   useEffect(() => {
     loadOrders();
-  }, [user, companyInfo]);
+  }, [user]);
 
   return {
     orders,

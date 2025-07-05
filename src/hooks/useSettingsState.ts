@@ -3,7 +3,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { useAuth } from '@/components/Auth/AuthProvider';
 
 export const useSettingsState = () => {
-  const { userRole, companyInfo } = useAuth();
+  const { userRole } = useAuth();
   const [activeTab, setActiveTab] = useState('company');
   const [loading, setLoading] = useState(false);
 
@@ -29,6 +29,5 @@ export const useSettingsState = () => {
     loading,
     setLoading: setLoadingState,
     userRole,
-    companyInfo,
   };
 };
