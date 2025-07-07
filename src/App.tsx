@@ -79,11 +79,11 @@ const App = () => (
                               <ProductsPage />
                             </ModuleAccessCheck>
                           } />
-                          <Route path="/clientes" element={
-                            <ModuleAccessCheck routePath="/clientes">
-                              <ClientsPage />
-                            </ModuleAccessCheck>
-                          } />
+                           <Route path="/clientes" element={
+                             <ModuleAccessCheck routePath="/clientes">
+                               <ClientsPage />
+                             </ModuleAccessCheck>
+                           } />
                           <Route path="/producao" element={
                             <ModuleAccessCheck routePath="/producao">
                               <ProductionPage />

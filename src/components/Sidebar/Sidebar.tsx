@@ -6,34 +6,49 @@ import {
   FilePen, LogOut, Menu, X
 } from 'lucide-react';
 import { useAuth } from '@/components/Auth/AuthProvider';
+import { useModuleAccess } from '@/hooks/useModuleAccess';
 import { Button } from '@/components/ui/button';
 
 const Sidebar = () => {
   const location = useLocation();
-  const { signOut } = useAuth();
+  const { signOut, userRole } = useAuth();
+  const { hasAccess, loading: accessLoading } = useModuleAccess();
   const [isOpen, setIsOpen] = useState(false);
 
   const menuItems = [
-    { icon: ChartBar, label: 'Dashboard', href: '/' },
-    { icon: Users, label: 'Clientes', href: '/clientes' },
-    { icon: Package, label: 'Produtos', href: '/produtos' },
-    { icon: Users, label: 'Fornecedores', href: '/fornecedores' },
-    { icon: ShoppingCart, label: 'Compras', href: '/compras' },
-    { icon: Warehouse, label: 'Estoque', href: '/estoque' },
-    { icon: Package, label: 'Pedidos', href: '/pedidos' },
-    { icon: Box, label: 'Produção', href: '/producao' },
-    { icon: Box, label: 'Embalagem', href: '/embalagem' },
-    { icon: DollarSign, label: 'Vendas', href: '/vendas' },
-    { icon: FilePen, label: 'Emissão Fiscal', href: '/emissao-fiscal' },
-    { icon: DollarSign, label: 'Financeiro', href: '/financeiro' },
-    { icon: Truck, label: 'Rotas', href: '/rotas' },
-    { icon: Calendar, label: 'Calendário', href: '/calendario' },
-    { icon: FilePen, label: 'Ordens de Serviço', href: '/ordens-servico' },
-    { icon: Settings, label: 'Configurações', href: '/configuracoes' }
+    { icon: ChartBar, label: 'Dashboard', href: '/', route: '/' },
+    { icon: Users, label: 'Clientes', href: '/clientes', route: '/clientes' },
+    { icon: Package, label: 'Produtos', href: '/produtos', route: '/produtos' },
+    { icon: Users, label: 'Fornecedores', href: '/fornecedores', route: '/fornecedores' },
+    { icon: ShoppingCart, label: 'Compras', href: '/compras', route: '/compras' },
+    { icon: Warehouse, label: 'Estoque', href: '/estoque', route: '/estoque' },
+    { icon: Package, label: 'Pedidos', href: '/pedidos', route: '/pedidos' },
+    { icon: Box, label: 'Produção', href: '/producao', route: '/producao' },
+    { icon: Box, label: 'Embalagem', href: '/embalagem', route: '/embalagem' },
+    { icon: DollarSign, label: 'Vendas', href: '/vendas', route: '/vendas' },
+    { icon: FilePen, label: 'Emissão Fiscal', href: '/emissao-fiscal', route: '/emissao-fiscal' },
+    { icon: DollarSign, label: 'Financeiro', href: '/financeiro', route: '/financeiro' },
+    { icon: Truck, label: 'Rotas', href: '/rotas', route: '/rotas' },
+    { icon: Calendar, label: 'Calendário', href: '/calendario', route: '/calendario' },
+    { icon: FilePen, label: 'Ordens de Serviço', href: '/ordens-servico', route: '/ordens-servico' },
+    { icon: Settings, label: 'Configurações', href: '/configuracoes', route: '/configuracoes' }
   ];
 
-  // Sem sistema de usuários, mostrar todos os itens
-  const filteredMenuItems = menuItems;
+  // Filtrar itens baseado nas permissões do usuário
+  const filteredMenuItems = menuItems.filter(item => {
+    // Admin e Master veem todos os itens
+    if (userRole === 'admin' || userRole === 'master') {
+      return true;
+    }
+
+    // Dashboard e Configurações sempre visíveis para usuários logados
+    if (item.route === '/' || item.route === '/configuracoes') {
+      return true;
+    }
+
+    // Para outros módulos, verificar permissão específica
+    return hasAccess(item.route);
+  });
 
   const handleSignOut = async () => {
     try {

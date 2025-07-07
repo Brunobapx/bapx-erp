@@ -8,16 +8,19 @@ import { Plus, Trash2, Users, Edit } from 'lucide-react';
 import { useUserManagement } from '@/hooks/useUserManagement';
 import { CreateUserModal } from './CreateUserModal';
 import { EditUserModal } from './EditUserModal';
+import { useAuth } from '@/components/Auth/AuthProvider';
 import type { User as UserType } from '@/hooks/useUserManagement';
 
 export const UserManagement = () => {
   const { users, loading, refetch, updateUser, deleteUser } = useUserManagement();
+  const { refreshUserData } = useAuth();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserType | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const handleCreateSuccess = () => {
     refetch();
+    refreshUserData();
   };
 
   const handleDelete = async (userId: string, userEmail: string) => {
@@ -35,6 +38,7 @@ export const UserManagement = () => {
     setEditingUser(null);
     setIsEditModalOpen(false);
     refetch();
+    refreshUserData();
   };
 
   const getRoleBadgeVariant = (role: string) => {

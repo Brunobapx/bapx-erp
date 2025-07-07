@@ -3,15 +3,15 @@ import { useState, useCallback, useMemo } from 'react';
 import { useAuth } from '@/components/Auth/AuthProvider';
 
 export const useSettingsState = () => {
-  const { userRole } = useAuth();
+  const { userRole, loading: authLoading, isAdmin, isMaster } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(false);
 
-  // Sem sistema de usuários, sempre admin
-  const isAdmin = true;
+  // Sistema real de usuários
+  const userIsAdmin = isAdmin || isMaster;
 
-  // Sem sistema de usuários, sempre permitir acesso
-  const isLoading = false;
+  // Loading do auth
+  const isLoading = authLoading;
 
   const handleTabChange = useCallback((tab: string) => {
     setActiveTab(tab);
@@ -24,7 +24,7 @@ export const useSettingsState = () => {
   return {
     activeTab,
     setActiveTab: handleTabChange,
-    isAdmin,
+    isAdmin: userIsAdmin,
     isLoading,
     loading,
     setLoading: setLoadingState,

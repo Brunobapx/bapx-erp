@@ -11,6 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useSystemModules } from '@/hooks/useSystemModules';
+import { useAuth } from '@/components/Auth/AuthProvider';
 import { User, Shield, Loader2 } from 'lucide-react';
 
 interface CreateUserModalProps {
@@ -25,7 +26,7 @@ export const CreateUserModal = ({ open, onOpenChange, onSuccess }: CreateUserMod
     password: '',
     firstName: '',
     lastName: '',
-    userType: 'user' as 'admin' | 'user',
+    userType: 'user' as 'admin' | 'user' | 'master',
     moduleIds: [] as string[]
   });
   
@@ -58,7 +59,7 @@ export const CreateUserModal = ({ open, onOpenChange, onSuccess }: CreateUserMod
     }
 
     if (form.userType === 'user' && form.moduleIds.length === 0) {
-      setError('Usuários não-admin devem ter pelo menos um módulo selecionado');
+      setError('Usuários normais devem ter pelo menos um módulo selecionado');
       return;
     }
 
@@ -72,7 +73,7 @@ export const CreateUserModal = ({ open, onOpenChange, onSuccess }: CreateUserMod
           firstName: form.firstName,
           lastName: form.lastName,
           userType: form.userType,
-          moduleIds: form.userType === 'admin' ? [] : form.moduleIds
+          moduleIds: (form.userType === 'admin' || form.userType === 'master') ? [] : form.moduleIds
         }
       });
 
@@ -231,6 +232,12 @@ export const CreateUserModal = ({ open, onOpenChange, onSuccess }: CreateUserMod
                       Administrador
                     </div>
                   </SelectItem>
+                  <SelectItem value="master">
+                    <div className="flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-red-500" />
+                      Master
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -276,11 +283,14 @@ export const CreateUserModal = ({ open, onOpenChange, onSuccess }: CreateUserMod
               </Card>
             )}
 
-            {form.userType === 'admin' && (
+            {(form.userType === 'admin' || form.userType === 'master') && (
               <Alert>
                 <Shield className="h-4 w-4" />
                 <AlertDescription>
-                  Administradores têm acesso completo a todos os módulos do sistema.
+                  {form.userType === 'master' 
+                    ? 'Usuários Master têm acesso completo ao sistema, incluindo configurações avançadas.'
+                    : 'Administradores têm acesso completo a todos os módulos do sistema.'
+                  }
                 </AlertDescription>
               </Alert>
             )}

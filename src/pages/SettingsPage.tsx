@@ -1,27 +1,25 @@
-
 import React from 'react';
 import { Tabs } from "@/components/ui/tabs";
 import { Settings as SettingsIcon } from 'lucide-react';
 import { SettingsPageTabs } from './SettingsPage/SettingsPageTabs';
 import { SettingsPageContent } from './SettingsPage/SettingsPageContent';
-import { useSettingsState } from '@/hooks/useSettingsState';
+import { useAuth } from '@/components/Auth/AuthProvider';
 
 const SettingsPage = () => {
   const { 
-    activeTab, 
-    setActiveTab, 
-    isAdmin, 
-    isLoading 
-  } = useSettingsState();
+    loading,
+    isAdmin,
+    isMaster
+  } = useAuth();
 
   console.log('SettingsPage rendered:', { 
     isAdmin, 
-    isLoading,
-    activeTab 
+    isMaster,
+    loading
   });
 
   // Show loading if still getting auth info
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="container mx-auto p-6 space-y-6">
         <div className="flex items-center gap-3 mb-6">
@@ -36,6 +34,8 @@ const SettingsPage = () => {
     );
   }
 
+  const userIsAdmin = isAdmin || isMaster;
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center gap-3 mb-6">
@@ -43,9 +43,9 @@ const SettingsPage = () => {
         <h1 className="text-3xl font-bold">Configurações</h1>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6" defaultValue="profile">
-        <SettingsPageTabs isAdmin={isAdmin} />
-        <SettingsPageContent isAdmin={isAdmin} />
+      <Tabs defaultValue="profile" className="space-y-6">
+        <SettingsPageTabs isAdmin={userIsAdmin} />
+        <SettingsPageContent isAdmin={userIsAdmin} />
       </Tabs>
     </div>
   );
