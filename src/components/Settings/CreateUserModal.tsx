@@ -76,11 +76,20 @@ export const CreateUserModal = ({ open, onOpenChange, onSuccess }: CreateUserMod
         }
       });
 
-      if (createError) throw createError;
+      if (createError) {
+        console.error('Edge function error:', createError);
+        throw createError;
+      }
+
+      // Verificar se a resposta contém erro
+      if (data && data.error) {
+        console.error('Response contains error:', data.error);
+        throw new Error(data.error);
+      }
 
       toast({
         title: "Sucesso",
-        description: "Usuário criado com sucesso!",
+        description: data?.message || "Usuário criado com sucesso!",
       });
 
       // Reset form
@@ -97,7 +106,34 @@ export const CreateUserModal = ({ open, onOpenChange, onSuccess }: CreateUserMod
       onSuccess();
     } catch (err: any) {
       console.error('Erro ao criar usuário:', err);
-      setError(err.error || err.message || 'Erro ao criar usuário');
+      
+      // Melhor tratamento de erros baseado no tipo
+      let errorMessage = 'Erro ao criar usuário';
+      
+      if (err.message) {
+        errorMessage = err.message;
+      } else if (err.error) {
+        errorMessage = err.error;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+
+      // Tratar erros específicos
+      if (errorMessage.includes('User already registered')) {
+        errorMessage = 'Este email já está cadastrado no sistema';
+      } else if (errorMessage.includes('Permission denied')) {
+        errorMessage = 'Você não tem permissão para criar usuários';
+      } else if (errorMessage.includes('Configuração do servidor')) {
+        errorMessage = 'Erro de configuração do servidor. Contate o administrador.';
+      }
+
+      setError(errorMessage);
+      
+      toast({
+        title: "Erro",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }

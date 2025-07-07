@@ -13,38 +13,67 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+    // Verificar se as variáveis de ambiente estão configuradas
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    const { email, password, firstName, lastName, userType, moduleIds } = await req.json()
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error('Missing environment variables:', { 
+        hasUrl: !!supabaseUrl, 
+        hasServiceKey: !!serviceRoleKey 
+      });
+      throw new Error('Configuração do servidor incompleta');
+    }
 
-    console.log('Creating user:', { 
+    const supabaseClient = createClient(supabaseUrl, serviceRoleKey)
+
+    const requestBody = await req.json();
+    const { email, password, firstName, lastName, userType, moduleIds } = requestBody;
+
+    console.log('Creating user request:', { 
       email, 
       firstName, 
       lastName, 
       userType, 
-      moduleCount: moduleIds?.length 
+      moduleCount: moduleIds?.length,
+      hasPassword: !!password
     })
 
-    // Verificar se o usuário que está fazendo a requisição é admin
+    // Validação dos dados de entrada
+    if (!email || !email.includes('@')) {
+      throw new Error('Email inválido');
+    }
+
+    if (!password || password.length < 6) {
+      throw new Error('Senha deve ter pelo menos 6 caracteres');
+    }
+
+    if (!firstName || !lastName) {
+      throw new Error('Nome e sobrenome são obrigatórios');
+    }
+
+    if (!userType || !['admin', 'user'].includes(userType)) {
+      throw new Error('Tipo de usuário inválido');
+    }
+
+    // Verificar se o usuário que está fazendo a requisição é admin/master
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
-      throw new Error('Authorization header missing')
+      console.error('No authorization header found');
+      throw new Error('Token de autorização não encontrado');
     }
 
     const token = authHeader.replace('Bearer ', '')
     const { data: { user: requestingUser }, error: userError } = await supabaseClient.auth.getUser(token)
 
     if (userError || !requestingUser) {
-      console.error('Error getting user:', userError)
-      throw new Error('Invalid token')
+      console.error('Error getting requesting user:', userError)
+      throw new Error('Token de autorização inválido');
     }
 
-    console.log('Requesting user:', requestingUser.id)
+    console.log('Requesting user ID:', requestingUser.id)
 
-    // Verificar se é admin - buscar na tabela user_roles
+    // Verificar se é admin ou master - buscar na tabela user_roles
     const { data: adminCheck, error: adminError } = await supabaseClient
       .from('user_roles')
       .select('role')
@@ -55,11 +84,12 @@ serve(async (req) => {
 
     if (adminError) {
       console.error('Error checking admin status:', adminError)
-      throw new Error('Error checking permissions')
+      throw new Error('Erro ao verificar permissões');
     }
 
-    if (!adminCheck || adminCheck.role !== 'admin') {
-      throw new Error('Permission denied: Only admins can create users')
+    if (!adminCheck || !['admin', 'master'].includes(adminCheck.role)) {
+      console.error('Permission denied for user:', requestingUser.id, 'Role:', adminCheck?.role);
+      throw new Error('Permissão negada: Apenas administradores podem criar usuários');
     }
 
     // Criar usuário no auth
