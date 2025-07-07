@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CompanySettings } from '@/components/Settings/CompanySettings';
 import { UserManagement } from '@/components/Settings/UserManagement';
 import { CurrentUserProfile } from '@/components/Settings/CurrentUserProfile';
+import { DatabaseReset } from '@/components/Settings/DatabaseReset';
 
 interface TabContentProps {
   tabName: string;
@@ -60,7 +61,10 @@ export const SettingsPageContent: React.FC<SettingsPageContentProps> = ({ isAdmi
       {isAdmin && (
         <TabsContent value="users">
           <TabContent tabName="Usuários">
-            <UserManagement />
+            <div className="space-y-6">
+              <UserManagement />
+              <DatabaseReset />
+            </div>
           </TabContent>
         </TabsContent>
       )}
