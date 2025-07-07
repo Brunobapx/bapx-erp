@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useOrderInsert } from '@/hooks/useOrderInsert';
-import { useUserProfile } from '@/hooks/useUserProfile';
+
 import { OrderClientSection } from './Form/OrderClientSection';
 import { OrderItemsSection } from './Form/OrderItemsSection';
 import { OrderPaymentSection } from './Form/OrderPaymentSection';
@@ -22,7 +22,6 @@ interface OrderFormProps {
 
 export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
   const navigate = useNavigate();
-  const { hasValidProfile, error: profileError, loading: profileLoading } = useUserProfile();
   
   // Use the comprehensive order form hook
   const {
@@ -45,53 +44,9 @@ export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Verificar se o perfil é válido antes de tentar criar o pedido
-    if (!hasValidProfile) {
-      toast.error(`Não é possível criar pedido: ${profileError || 'Perfil inválido'}`);
-      return;
-    }
-
     // Usar a validação e submissão do hook
     await handleSubmit();
   };
-
-  // Mostrar loading enquanto verifica perfil
-  if (profileLoading) {
-    return (
-      <Card className="w-full max-w-4xl mx-auto">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-center space-x-2">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Verificando permissões...</span>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Mostrar erro se perfil inválido
-  if (!hasValidProfile) {
-    return (
-      <Card className="w-full max-w-4xl mx-auto">
-        <CardContent className="p-6">
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              <strong>Não é possível criar pedidos:</strong> {profileError}
-              <br />
-              <br />
-              Entre em contato com o administrador do sistema para resolver este problema.
-            </AlertDescription>
-          </Alert>
-          <div className="mt-4">
-            <Button variant="outline" onClick={() => onClose(false)}>
-              Voltar
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <form onSubmit={handleFormSubmit} className="space-y-6">

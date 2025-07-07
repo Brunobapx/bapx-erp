@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
-import { useUserProfile } from "./useUserProfile";
+
 
 export type OrderFormData = {
   client_id: string;
@@ -24,28 +24,11 @@ export type OrderFormData = {
 
 export const useOrderInsert = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const { hasValidProfile, error: profileError, companyId } = useUserProfile();
 
   const createOrder = async (orderData: OrderFormData) => {
     setIsSubmitting(true);
     
     try {
-      // Verificar se o usuário tem perfil válido antes de prosseguir
-      if (!hasValidProfile) {
-        const errorMessage = profileError || 'Perfil do usuário inválido';
-        console.error('Erro de perfil ao criar pedido:', errorMessage);
-        toast.error(`Não é possível criar pedido: ${errorMessage}`);
-        throw new Error(errorMessage);
-      }
-
-      if (!companyId) {
-        const errorMessage = 'Usuário não está associado a uma empresa';
-        console.error('Erro de empresa ao criar pedido:', errorMessage);
-        toast.error(`Não é possível criar pedido: ${errorMessage}`);
-        throw new Error(errorMessage);
-      }
-
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (userError || !user) {
@@ -54,7 +37,6 @@ export const useOrderInsert = () => {
 
       console.log('Criando pedido com dados:', {
         userId: user.id,
-        companyId: companyId,
         clientId: orderData.client_id,
         itemsCount: orderData.items.length
       });
@@ -138,8 +120,6 @@ export const useOrderInsert = () => {
 
   return {
     createOrder,
-    isSubmitting,
-    hasValidProfile,
-    profileError
+    isSubmitting
   };
 };
