@@ -3,13 +3,18 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Users } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Plus, Trash2, Users, Edit } from 'lucide-react';
 import { useUserManagement } from '@/hooks/useUserManagement';
 import { CreateUserModal } from './CreateUserModal';
+import { EditUserModal } from './EditUserModal';
+import type { User as UserType } from '@/hooks/useUserManagement';
 
 export const UserManagement = () => {
-  const { users, loading, refetch, deleteUser } = useUserManagement();
+  const { users, loading, refetch, updateUser, deleteUser } = useUserManagement();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserType | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const handleCreateSuccess = () => {
     refetch();
@@ -18,6 +23,33 @@ export const UserManagement = () => {
   const handleDelete = async (userId: string, userEmail: string) => {
     if (window.confirm(`Tem certeza que deseja remover o usuário ${userEmail}?`)) {
       await deleteUser(userId);
+    }
+  };
+
+  const handleEdit = (user: UserType) => {
+    setEditingUser(user);
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSuccess = () => {
+    setEditingUser(null);
+    setIsEditModalOpen(false);
+    refetch();
+  };
+
+  const getRoleBadgeVariant = (role: string) => {
+    switch (role) {
+      case 'master': return 'default';
+      case 'admin': return 'secondary';
+      default: return 'outline';
+    }
+  };
+
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'master': return 'Master';
+      case 'admin': return 'Administrador';
+      default: return 'Usuário';
     }
   };
 
@@ -70,38 +102,59 @@ export const UserManagement = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nome</TableHead>
+                  <TableHead>Usuário</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Módulos</TableHead>
                   <TableHead>Criado em</TableHead>
-                  <TableHead className="w-[100px]">Ações</TableHead>
+                  <TableHead className="w-[150px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {users.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">
-                      {user.user_metadata.first_name} {user.user_metadata.last_name}
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={user.user_metadata.avatar_url} />
+                          <AvatarFallback>
+                            {user.user_metadata.first_name?.charAt(0)}
+                            {user.user_metadata.last_name?.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium">
+                            {user.user_metadata.first_name} {user.user_metadata.last_name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {user.id.slice(0, 8)}...
+                          </p>
+                        </div>
+                      </div>
                     </TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>
-                      <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                        {user.role === 'admin' ? 'Administrador' : 'Usuário'}
+                      <Badge variant={getRoleBadgeVariant(user.role || 'user')}>
+                        {getRoleLabel(user.role || 'user')}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {user.role === 'admin' ? (
+                        {['admin', 'master'].includes(user.role || '') ? (
                           <Badge variant="outline" className="text-xs">
                             Todos os módulos
                           </Badge>
                         ) : (
-                          user.modules?.map((module, index) => (
+                          user.modules?.slice(0, 2).map((module, index) => (
                             <Badge key={index} variant="outline" className="text-xs">
                               {module}
                             </Badge>
                           ))
+                        )}
+                        {user.role === 'user' && user.modules && user.modules.length > 2 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{user.modules.length - 2}
+                          </Badge>
                         )}
                       </div>
                     </TableCell>
@@ -109,14 +162,23 @@ export const UserManagement = () => {
                       {new Date(user.created_at).toLocaleDateString('pt-BR')}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(user.id, user.email)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(user)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(user.id, user.email)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -130,6 +192,13 @@ export const UserManagement = () => {
         open={isCreateModalOpen}
         onOpenChange={setIsCreateModalOpen}
         onSuccess={handleCreateSuccess}
+      />
+
+      <EditUserModal
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        user={editingUser}
+        onSuccess={handleEditSuccess}
       />
     </>
   );

@@ -4,6 +4,7 @@ import { TabsContent } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CompanySettings } from '@/components/Settings/CompanySettings';
 import { UserManagement } from '@/components/Settings/UserManagement';
+import { CurrentUserProfile } from '@/components/Settings/CurrentUserProfile';
 
 interface TabContentProps {
   tabName: string;
@@ -36,6 +37,12 @@ interface SettingsPageContentProps {
 export const SettingsPageContent: React.FC<SettingsPageContentProps> = ({ isAdmin }) => {
   return (
     <>
+      <TabsContent value="profile">
+        <TabContent tabName="Perfil">
+          <CurrentUserProfile />
+        </TabContent>
+      </TabsContent>
+
       <TabsContent value="company">
         {!isAdmin ? (
           <Alert>

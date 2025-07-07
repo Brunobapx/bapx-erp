@@ -8,10 +8,12 @@ export interface User {
   user_metadata: {
     first_name?: string;
     last_name?: string;
+    avatar_url?: string;
   };
   created_at: string;
-  role?: 'admin' | 'user';
+  role?: 'admin' | 'user' | 'master';
   modules?: string[];
+  moduleIds?: string[];
 }
 
 export const useUserManagement = () => {
@@ -25,52 +27,51 @@ export const useUserManagement = () => {
       setLoading(true);
       setError(null);
 
-      // Buscar usuários com suas roles
-      const { data: userRoles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id, role');
+      // Usar a edge function para buscar usuários reais
+      const { data, error: fetchError } = await supabase.functions.invoke('get-users');
 
-      if (rolesError) throw rolesError;
+      if (fetchError) throw fetchError;
 
-      // Buscar permissões de módulos para cada usuário
-      const { data: userPermissions, error: permissionsError } = await supabase
-        .from('user_module_permissions')
-        .select(`
-          user_id,
-          system_modules (
-            id,
-            name,
-            route_path
-          )
-        `);
+      if (data.error) throw new Error(data.error);
 
-      if (permissionsError) throw permissionsError;
-
-      // Combinar dados
-      const enrichedUsers = userRoles?.map(userRole => {
-        const userModulePermissions = userPermissions?.filter(
-          (up: any) => up.user_id === userRole.user_id
-        ) || [];
-
-        return {
-          id: userRole.user_id,
-          email: `user${userRole.user_id.slice(0, 8)}@example.com`, // Placeholder
-          user_metadata: {
-            first_name: 'Nome',
-            last_name: 'Sobrenome'
-          },
-          created_at: new Date().toISOString(),
-          role: userRole.role,
-          modules: userModulePermissions.map((ump: any) => ump.system_modules?.name).filter(Boolean)
-        };
-      }) || [];
-
-      setUsers(enrichedUsers);
+      setUsers(data.users || []);
     } catch (err: any) {
       console.error('Erro ao buscar usuários:', err);
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const updateUser = async (userId: string, updates: any, moduleIds?: string[]) => {
+    try {
+      const { data, error: updateError } = await supabase.functions.invoke('update-user', {
+        body: {
+          userId,
+          updates,
+          moduleIds
+        }
+      });
+
+      if (updateError) throw updateError;
+
+      if (data.error) throw new Error(data.error);
+
+      toast({
+        title: "Sucesso",
+        description: data.message || "Usuário atualizado com sucesso!",
+      });
+
+      fetchUsers();
+      return true;
+    } catch (err: any) {
+      console.error('Erro ao atualizar usuário:', err);
+      toast({
+        title: "Erro",
+        description: err.message,
+        variant: "destructive",
+      });
+      return false;
     }
   };
 
@@ -115,6 +116,7 @@ export const useUserManagement = () => {
     loading,
     error,
     refetch: fetchUsers,
+    updateUser,
     deleteUser
   };
 };

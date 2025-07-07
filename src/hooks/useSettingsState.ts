@@ -4,7 +4,7 @@ import { useAuth } from '@/components/Auth/AuthProvider';
 
 export const useSettingsState = () => {
   const { userRole } = useAuth();
-  const [activeTab, setActiveTab] = useState('company');
+  const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(false);
 
   // Sem sistema de usuários, sempre admin

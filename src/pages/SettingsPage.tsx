@@ -43,7 +43,7 @@ const SettingsPage = () => {
         <h1 className="text-3xl font-bold">Configurações</h1>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6" defaultValue="profile">
         <SettingsPageTabs isAdmin={isAdmin} />
         <SettingsPageContent isAdmin={isAdmin} />
       </Tabs>
