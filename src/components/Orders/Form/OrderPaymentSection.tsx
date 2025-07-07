@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { 
@@ -9,6 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useAuth } from "@/components/Auth/AuthProvider";
+import { useUserDepartments } from "@/hooks/useUserDepartments";
 
 interface OrderPaymentSectionProps {
   formData: any;
@@ -21,6 +23,9 @@ export const OrderPaymentSection: React.FC<OrderPaymentSectionProps> = ({
   onUpdateFormData,
   totalAmount
 }) => {
+  const { user } = useAuth();
+  const { hasAccess, loading: departmentsLoading } = useUserDepartments();
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     onUpdateFormData({ [name]: value });
@@ -36,6 +41,24 @@ export const OrderPaymentSection: React.FC<OrderPaymentSectionProps> = ({
       currency: 'BRL'
     }).format(value);
   };
+
+  // Auto-preencher vendedor se o usuário for do departamento de vendas
+  useEffect(() => {
+    if (!departmentsLoading && user && !formData.seller) {
+      const isSalesUser = hasAccess('vendas');
+      
+      if (isSalesUser) {
+        // Extrair nome e sobrenome do user metadata
+        const firstName = user.user_metadata?.first_name || '';
+        const lastName = user.user_metadata?.last_name || '';
+        const fullName = `${firstName} ${lastName}`.trim();
+        
+        if (fullName) {
+          onUpdateFormData({ seller: fullName });
+        }
+      }
+    }
+  }, [user, departmentsLoading, hasAccess, formData.seller, onUpdateFormData]);
 
   return (
     <>
