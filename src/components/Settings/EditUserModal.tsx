@@ -360,7 +360,7 @@ export const EditUserModal = ({ open, onOpenChange, user, onSuccess, isCurrentUs
                     <CardHeader>
                       <CardTitle className="text-sm">Permissões de Módulos</CardTitle>
                       <CardDescription className="text-xs">
-                        Selecione quais módulos este usuário poderá acessar
+                        Selecione quais módulos este usuário poderá acessar. Apenas usuários com tipo "Usuário" precisam de permissões específicas.
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
