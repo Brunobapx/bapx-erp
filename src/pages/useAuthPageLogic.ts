@@ -76,7 +76,7 @@ export const useAuthPageLogic = () => {
 
         toast.success("Login realizado com sucesso!");
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
           options: {
@@ -85,6 +85,20 @@ export const useAuthPageLogic = () => {
         });
 
         if (error) throw error;
+
+        // Se o usuário foi criado com sucesso e é um email de admin/teste, adicionar role
+        if (data.user && (email.includes('admin') || email.includes('teste'))) {
+          const { error: roleError } = await supabase
+            .from('user_roles')
+            .insert({
+              user_id: data.user.id,
+              role: 'admin'
+            });
+          
+          if (roleError) {
+            console.error('Erro ao definir role de admin:', roleError);
+          }
+        }
 
         toast.success("Cadastro realizado com sucesso!");
       }
