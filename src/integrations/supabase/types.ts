@@ -1710,7 +1710,7 @@ export type Database = {
         | "approved"
         | "rejected"
       sale_status: "pending" | "confirmed" | "invoiced" | "cancelled"
-      user_type: "admin" | "user"
+      user_type: "admin" | "user" | "master"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1884,7 +1884,7 @@ export const Constants = {
         "rejected",
       ],
       sale_status: ["pending", "confirmed", "invoiced", "cancelled"],
-      user_type: ["admin", "user"],
+      user_type: ["admin", "user", "master"],
     },
   },
 } as const
