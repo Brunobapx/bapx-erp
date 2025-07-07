@@ -20,7 +20,13 @@ serve(async (req) => {
 
     const { email, password, firstName, lastName, userType, moduleIds } = await req.json()
 
-    console.log('Creating user:', { email, firstName, lastName, userType, moduleCount: moduleIds?.length })
+    console.log('Creating user:', { 
+      email, 
+      firstName, 
+      lastName, 
+      userType, 
+      moduleCount: moduleIds?.length 
+    })
 
     // Verificar se o usuário que está fazendo a requisição é admin
     const authHeader = req.headers.get('Authorization')
