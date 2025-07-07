@@ -25,31 +25,34 @@ export const useUserManagement = () => {
       setLoading(true);
       setError(null);
 
-      // Buscar usuários com suas roles e permissões
+      // Buscar usuários com suas roles
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
-        .select(`
-          user_id,
-          role,
-          user_module_permissions (
-            module_id,
-            system_modules (
-              id,
-              name,
-              route_path
-            )
-          )
-        `);
+        .select('user_id, role');
 
       if (rolesError) throw rolesError;
 
-      // Para cada usuário, buscar dados do auth.users via admin API
-      const userIds = userRoles?.map(ur => ur.user_id) || [];
-      
-      if (userIds.length > 0) {
-        // Como não podemos acessar auth.users diretamente, vamos simular os dados
-        // Em produção, isso seria feito via edge function administrativa
-        const enrichedUsers = userRoles?.map(userRole => ({
+      // Buscar permissões de módulos para cada usuário
+      const { data: userPermissions, error: permissionsError } = await supabase
+        .from('user_module_permissions')
+        .select(`
+          user_id,
+          system_modules (
+            id,
+            name,
+            route_path
+          )
+        `);
+
+      if (permissionsError) throw permissionsError;
+
+      // Combinar dados
+      const enrichedUsers = userRoles?.map(userRole => {
+        const userModulePermissions = userPermissions?.filter(
+          (up: any) => up.user_id === userRole.user_id
+        ) || [];
+
+        return {
           id: userRole.user_id,
           email: `user${userRole.user_id.slice(0, 8)}@example.com`, // Placeholder
           user_metadata: {
@@ -58,11 +61,11 @@ export const useUserManagement = () => {
           },
           created_at: new Date().toISOString(),
           role: userRole.role,
-          modules: userRole.user_module_permissions?.map((ump: any) => ump.system_modules?.name) || []
-        })) || [];
+          modules: userModulePermissions.map((ump: any) => ump.system_modules?.name).filter(Boolean)
+        };
+      }) || [];
 
-        setUsers(enrichedUsers);
-      }
+      setUsers(enrichedUsers);
     } catch (err: any) {
       console.error('Erro ao buscar usuários:', err);
       setError(err.message);

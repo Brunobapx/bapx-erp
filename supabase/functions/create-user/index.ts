@@ -29,18 +29,28 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user: requestingUser } } = await supabaseClient.auth.getUser(token)
+    const { data: { user: requestingUser }, error: userError } = await supabaseClient.auth.getUser(token)
 
-    if (!requestingUser) {
+    if (userError || !requestingUser) {
+      console.error('Error getting user:', userError)
       throw new Error('Invalid token')
     }
 
-    // Verificar se é admin
-    const { data: adminCheck } = await supabaseClient
+    console.log('Requesting user:', requestingUser.id)
+
+    // Verificar se é admin - buscar na tabela user_roles
+    const { data: adminCheck, error: adminError } = await supabaseClient
       .from('user_roles')
       .select('role')
       .eq('user_id', requestingUser.id)
-      .single()
+      .maybeSingle()
+
+    console.log('Admin check result:', adminCheck, 'Error:', adminError)
+
+    if (adminError) {
+      console.error('Error checking admin status:', adminError)
+      throw new Error('Error checking permissions')
+    }
 
     if (!adminCheck || adminCheck.role !== 'admin') {
       throw new Error('Permission denied: Only admins can create users')

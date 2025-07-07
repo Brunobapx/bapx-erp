@@ -68,9 +68,14 @@ export const CompanySettings = () => {
       if (error) throw error;
 
       const settings = data?.reduce((acc, setting) => {
-        acc[setting.key] = typeof setting.value === 'string' 
-          ? JSON.parse(setting.value) 
-          : setting.value;
+        try {
+          acc[setting.key] = typeof setting.value === 'string' && setting.value.trim() !== ''
+            ? JSON.parse(setting.value) 
+            : setting.value;
+        } catch (parseError) {
+          console.warn(`Error parsing setting ${setting.key}:`, parseError);
+          acc[setting.key] = setting.value; // Use raw value if parsing fails
+        }
         return acc;
       }, {} as any) || {};
 
