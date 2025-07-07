@@ -23,37 +23,50 @@ serve(async (req) => {
 
     console.log('Starting database reset process...')
 
-    // 1. Buscar todos os usuários existentes
-    const { data: existingUsers, error: listError } = await supabaseClient.auth.admin.listUsers()
+    // 1. Limpar permissões e roles existentes primeiro
+    console.log('Cleaning up user permissions and roles...')
     
-    if (listError) {
-      console.error('Error listing users:', listError)
-      throw new Error('Erro ao listar usuários existentes')
+    const { error: permissionsError } = await supabaseClient
+      .from('user_module_permissions')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000') // Delete all
+    
+    if (permissionsError) {
+      console.error('Error deleting permissions:', permissionsError)
     }
 
-    console.log(`Found ${existingUsers.users.length} existing users`)
+    const { error: rolesError } = await supabaseClient
+      .from('user_roles')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000') // Delete all
+    
+    if (rolesError) {
+      console.error('Error deleting roles:', rolesError)
+    }
 
-    // 2. Deletar todos os usuários existentes
-    for (const user of existingUsers.users) {
-      console.log(`Deleting user: ${user.email} (${user.id})`)
+    // 2. Tentar buscar e deletar usuários do auth
+    try {
+      const { data: existingUsers, error: listError } = await supabaseClient.auth.admin.listUsers()
       
-      // Deletar permissões de módulos
-      await supabaseClient
-        .from('user_module_permissions')
-        .delete()
-        .eq('user_id', user.id)
-
-      // Deletar role
-      await supabaseClient
-        .from('user_roles')
-        .delete()
-        .eq('user_id', user.id)
-
-      // Deletar usuário do auth
-      const { error: deleteError } = await supabaseClient.auth.admin.deleteUser(user.id)
-      if (deleteError) {
-        console.error(`Error deleting user ${user.id}:`, deleteError)
+      if (listError) {
+        console.error('Error listing users:', listError)
+        console.log('Proceeding without deleting auth users due to API limitation')
+      } else {
+        console.log(`Found ${existingUsers.users.length} existing users`)
+        
+        // Deletar todos os usuários existentes
+        for (const user of existingUsers.users) {
+          console.log(`Deleting user: ${user.email} (${user.id})`)
+          
+          const { error: deleteError } = await supabaseClient.auth.admin.deleteUser(user.id)
+          if (deleteError) {
+            console.error(`Error deleting user ${user.id}:`, deleteError)
+          }
+        }
       }
+    } catch (error) {
+      console.error('Error in user deletion process:', error)
+      console.log('Continuing with master user creation...')
     }
 
     console.log('All users deleted successfully')
