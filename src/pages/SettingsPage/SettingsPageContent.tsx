@@ -3,6 +3,7 @@ import React from 'react';
 import { TabsContent } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CompanySettings } from '@/components/Settings/CompanySettings';
+import { UserManagement } from '@/components/Settings/UserManagement';
 
 interface TabContentProps {
   tabName: string;
@@ -35,7 +36,6 @@ interface SettingsPageContentProps {
 export const SettingsPageContent: React.FC<SettingsPageContentProps> = ({ isAdmin }) => {
   return (
     <>
-
       <TabsContent value="company">
         {!isAdmin ? (
           <Alert>
@@ -49,6 +49,14 @@ export const SettingsPageContent: React.FC<SettingsPageContentProps> = ({ isAdmi
           </TabContent>
         )}
       </TabsContent>
+
+      {isAdmin && (
+        <TabsContent value="users">
+          <TabContent tabName="Usuários">
+            <UserManagement />
+          </TabContent>
+        </TabsContent>
+      )}
     </>
   );
 };

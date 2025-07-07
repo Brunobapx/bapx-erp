@@ -1495,6 +1495,59 @@ export type Database = {
         }
         Relationships: []
       }
+      user_module_permissions: {
+        Row: {
+          created_at: string
+          id: string
+          module_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          module_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          module_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_module_permissions_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "system_modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["user_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["user_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["user_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       vehicles: {
         Row: {
           capacity: number
@@ -1598,6 +1651,14 @@ export type Database = {
         Args: { table_name: string }
         Returns: number
       }
+      has_module_permission: {
+        Args: { user_id: string; module_route: string }
+        Returns: boolean
+      }
+      is_admin: {
+        Args: { user_id?: string }
+        Returns: boolean
+      }
       validate_cnpj: {
         Args: { cnpj: string }
         Returns: boolean
@@ -1649,6 +1710,7 @@ export type Database = {
         | "approved"
         | "rejected"
       sale_status: "pending" | "confirmed" | "invoiced" | "cancelled"
+      user_type: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1822,6 +1884,7 @@ export const Constants = {
         "rejected",
       ],
       sale_status: ["pending", "confirmed", "invoiced", "cancelled"],
+      user_type: ["admin", "user"],
     },
   },
 } as const
