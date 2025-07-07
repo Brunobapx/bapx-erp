@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useCompanies } from "./useCompanies";
+
 import { useUserProfile } from "./useUserProfile";
 
 export type OrderFormData = {
@@ -24,7 +24,7 @@ export type OrderFormData = {
 
 export const useOrderInsert = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { getUserCompanyId } = useCompanies();
+  
   const { hasValidProfile, error: profileError, companyId } = useUserProfile();
 
   const createOrder = async (orderData: OrderFormData) => {
@@ -66,7 +66,6 @@ export const useOrderInsert = () => {
         .from('orders')
         .insert({
           user_id: user.id,
-          company_id: companyId,
           client_id: orderData.client_id,
           client_name: orderData.client_name,
           seller: orderData.seller,
@@ -100,7 +99,6 @@ export const useOrderInsert = () => {
       // Criar os itens do pedido
       const orderItems = orderData.items.map(item => ({
         user_id: user.id,
-        company_id: companyId,
         order_id: order.id,
         product_id: item.product_id,
         product_name: item.product_name,

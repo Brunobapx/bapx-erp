@@ -1,5 +1,5 @@
 
-export function buildClientData(formData: any, userId: string, companyId: string) {
+export function buildClientData(formData: any, userId: string) {
   return {
     name: formData.name,
     type: formData.type as 'Física' | 'Jurídica',
@@ -17,7 +17,5 @@ export function buildClientData(formData: any, userId: string, companyId: string
     number: formData.number || null,
     complement: formData.complement || null,
     user_id: userId,
-    company_id: companyId,
-    // Agora inclui bairro, number e complement pois já existem na tabela!
   };
 }

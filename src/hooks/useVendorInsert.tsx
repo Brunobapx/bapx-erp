@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useCompanies } from "./useCompanies";
+
 
 export type VendorFormData = {
   name: string;
@@ -19,7 +19,7 @@ export type VendorFormData = {
 
 export const useVendorInsert = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { getUserCompanyId } = useCompanies();
+  
 
   const createVendor = async (vendorData: VendorFormData) => {
     setIsSubmitting(true);
@@ -30,16 +30,10 @@ export const useVendorInsert = () => {
         throw new Error('Usuário não autenticado');
       }
 
-      const companyId = await getUserCompanyId();
-      if (!companyId) {
-        throw new Error('Company ID não encontrado');
-      }
-
       const { data: vendor, error: vendorError } = await supabase
         .from('vendors')
         .insert({
           user_id: user.id,
-          company_id: companyId,
           ...vendorData
         })
         .select()

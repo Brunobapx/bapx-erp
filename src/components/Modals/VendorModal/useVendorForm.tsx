@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useCompanies } from "@/hooks/useCompanies";
+
 import { buildVendorData } from "./buildVendorData";
 import { validateVendorForm } from "./useVendorFormValidation";
 
@@ -34,7 +34,7 @@ export const useVendorForm = (vendorData: any | null, onClose: (refresh?: boolea
     notes: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { getUserCompanyId } = useCompanies();
+  
 
   const isNewVendor = !vendorData?.id;
 
@@ -90,13 +90,7 @@ export const useVendorForm = (vendorData: any | null, onClose: (refresh?: boolea
         return;
       }
 
-      const companyId = await getUserCompanyId();
-      if (!companyId) {
-        toast.error("Empresa não encontrada.");
-        return;
-      }
-
-      const vendorDataObj = buildVendorData(formData, user.id, companyId);
+      const vendorDataObj = buildVendorData(formData, user.id);
 
       if (isNewVendor) {
         const { error } = await supabase

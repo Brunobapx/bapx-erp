@@ -1,5 +1,5 @@
 
-export function buildVendorData(formData: any, userId: string, companyId: string) {
+export function buildVendorData(formData: any, userId: string) {
   return {
     name: formData.name,
     cnpj: formData.cnpj || null,
@@ -12,6 +12,5 @@ export function buildVendorData(formData: any, userId: string, companyId: string
     contact_person: formData.contact_person || null,
     notes: formData.notes || null,
     user_id: userId,
-    company_id: companyId,
   };
 }

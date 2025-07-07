@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useCompanies } from "./useCompanies";
+
 
 export type PurchaseFormData = {
   vendor_id?: string;
@@ -27,7 +27,7 @@ export type PurchaseFormData = {
 
 export const usePurchaseInsert = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { getUserCompanyId } = useCompanies();
+  
 
   const createPurchase = async (purchaseData: PurchaseFormData) => {
     setIsSubmitting(true);
@@ -38,17 +38,11 @@ export const usePurchaseInsert = () => {
         throw new Error('Usuário não autenticado');
       }
 
-      const companyId = await getUserCompanyId();
-      if (!companyId) {
-        throw new Error('Company ID não encontrado');
-      }
-
       // Criar a compra
       const { data: purchase, error: purchaseError } = await supabase
         .from('purchases')
         .insert({
           user_id: user.id,
-          company_id: companyId,
           vendor_id: purchaseData.vendor_id,
           vendor_name: purchaseData.vendor_name,
           invoice_number: purchaseData.invoice_number,
@@ -67,7 +61,6 @@ export const usePurchaseInsert = () => {
       // Criar os itens da compra
       const purchaseItems = purchaseData.items.map(item => ({
         user_id: user.id,
-        company_id: companyId,
         purchase_id: purchase.id,
         product_id: item.product_id,
         product_code: item.product_code,

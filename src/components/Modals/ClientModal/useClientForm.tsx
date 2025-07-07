@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Client } from '@/hooks/useClients';
 import { validateClientForm } from "./useClientFormValidation";
 import { buildClientData } from "./buildClientData";
-import { useCompanies } from "@/hooks/useCompanies";
+
 
 interface FormData {
   id: string;
@@ -46,7 +46,7 @@ export const useClientForm = (clientData: Client | null, onClose: (refresh?: boo
     bairro: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { getUserCompanyId } = useCompanies();
+  
 
   const isNewClient = !clientData?.id;
 
@@ -120,15 +120,8 @@ export const useClientForm = (clientData: Client | null, onClose: (refresh?: boo
         return;
       }
 
-      // buscar o company_id antes do cadastro
-      const companyId = await getUserCompanyId();
-      if (!companyId) {
-        toast.error("Empresa não encontrada. Associe um perfil a uma empresa.");
-        return;
-      }
-
       // construir dados apenas com os campos permitidos pela tabela
-      const clientDataObj = buildClientData(formData, user.id, companyId);
+      const clientDataObj = buildClientData(formData, user.id);
 
       if (isNewClient) {
         const { error } = await supabase
