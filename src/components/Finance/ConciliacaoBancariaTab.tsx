@@ -31,7 +31,7 @@ export default function ConciliacaoBancariaTab() {
   const [selectedTransaction, setSelectedTransaction] = useState<ExtratoTransacao | null>(null);
   
   const { transacoes, loading, error, refreshExtrato } = useExtratoConciliado();
-  const { conciliarComLancamento, conciliarCriandoLancamento, desconciliar, criandoLancamento } = useConciliacoes();
+  const { conciliarComLancamento, conciliarComNovoLancamento, desfazerConciliacao, criandoLancamento } = useConciliacoes();
   const { refreshReconciliation } = useFinancialContext();
 
   // Aplicar filtros
@@ -57,7 +57,12 @@ export default function ConciliacaoBancariaTab() {
     }
 
     if (createNew) {
-      await conciliarCriandoLancamento(transaction);
+      await conciliarComNovoLancamento(transactionId, {
+        description: transaction.descricao,
+        amount: Math.abs(transaction.valor),
+        type: transaction.tipo === 'credito' ? 'receivable' : 'payable',
+        category: 'Conciliação Bancária'
+      });
     } else if (entryId) {
       await conciliarComLancamento(transactionId, entryId);
     }
@@ -69,7 +74,7 @@ export default function ConciliacaoBancariaTab() {
 
   const handleDesconciliar = async (transactionId: string) => {
     console.log('Desconciliando transação:', transactionId);
-    await desconciliar(transactionId);
+    await desfazerConciliacao(transactionId);
     refreshExtrato();
     refreshReconciliation();
   };

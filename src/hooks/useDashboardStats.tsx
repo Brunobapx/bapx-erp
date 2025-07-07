@@ -13,6 +13,14 @@ export interface DashboardStats {
   overdue_receivables: number;
   total_receivables_amount: number;
   total_payables_amount: number;
+  finance: number;
+  routes: number;
+  pendingOrders?: number;
+  pendingProduction?: number;
+  pendingPackaging?: number;
+  pendingSales?: number;
+  pendingFinance?: number;
+  pendingRoutes?: number;
 }
 
 export interface RecentOrder {
@@ -37,9 +45,12 @@ export const useDashboardStats = () => {
     overdue_receivables: 0,
     total_receivables_amount: 0,
     total_payables_amount: 0,
+    finance: 0,
+    routes: 0,
   });
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const loadStats = async () => {
     if (!user) return;
@@ -91,6 +102,11 @@ export const useDashboardStats = () => {
         .order('created_at', { ascending: false })
         .limit(5);
 
+      // Buscar dados de delivery routes
+      const { count: routesCount } = await supabase
+        .from('delivery_routes')
+        .select('*', { count: 'exact', head: true });
+
       setStats({
         orders: ordersCount || 0,
         production: productionCount || 0,
@@ -102,12 +118,15 @@ export const useDashboardStats = () => {
         overdue_receivables: overdueReceivablesCount || 0,
         total_receivables_amount: totalReceivablesAmount,
         total_payables_amount: totalPayablesAmount,
+        finance: pendingReceivablesCount || 0,
+        routes: routesCount || 0,
       });
 
       setRecentOrders(recentOrdersData || []);
 
     } catch (error: any) {
       console.error('Error loading dashboard stats:', error);
+      setError(error.message || 'Erro ao carregar estatísticas');
     } finally {
       setLoading(false);
     }
@@ -121,6 +140,7 @@ export const useDashboardStats = () => {
     stats,
     recentOrders,
     loading,
+    error,
     refreshStats: loadStats,
   };
 };
