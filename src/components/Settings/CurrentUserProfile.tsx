@@ -5,12 +5,14 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { EditUserModal } from './EditUserModal';
+import { POSITION_LABELS, UserPosition } from '@/hooks/useUserPositions';
 import { User, Edit } from 'lucide-react';
 import { useEffect } from 'react';
 import type { User as UserType } from '@/hooks/useUserManagement';
 
 export const CurrentUserProfile = () => {
   const [currentUser, setCurrentUser] = useState<UserType | null>(null);
+  const [userPosition, setUserPosition] = useState<UserPosition | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
@@ -43,6 +45,15 @@ export const CurrentUserProfile = () => {
 
       const userModules = permissions?.map((p: any) => p.system_modules?.name).filter(Boolean) || [];
       const moduleIds = permissions?.map((p: any) => p.system_modules?.id).filter(Boolean) || [];
+
+      // Buscar cargo do usuário
+      const { data: positionData } = await supabase
+        .from('user_positions')
+        .select('position')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      setUserPosition(positionData?.position as UserPosition || null);
 
       setCurrentUser({
         id: user.id,
@@ -150,10 +161,16 @@ export const CurrentUserProfile = () => {
                 <p className="text-muted-foreground">{currentUser.email}</p>
               </div>
               
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Badge variant={getRoleBadgeVariant(currentUser.role || 'user')}>
                   {getRoleLabel(currentUser.role || 'user')}
                 </Badge>
+
+                {userPosition && (
+                  <Badge variant="secondary">
+                    {POSITION_LABELS[userPosition]}
+                  </Badge>
+                )}
                 
                 {currentUser.role === 'user' && currentUser.modules && currentUser.modules.length > 0 && (
                   <div className="flex flex-wrap gap-1">

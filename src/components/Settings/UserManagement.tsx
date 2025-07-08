@@ -5,7 +5,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Plus, Trash2, Users, Edit } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { useUserManagement } from '@/hooks/useUserManagement';
+import { POSITION_LABELS, UserPosition } from '@/hooks/useUserPositions';
 import { CreateUserModal } from './CreateUserModal';
 import { EditUserModal } from './EditUserModal';
 import { useAuth } from '@/components/Auth/AuthProvider';
@@ -17,6 +19,30 @@ export const UserManagement = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserType | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [userPositions, setUserPositions] = useState<Record<string, UserPosition>>({});
+
+  // Buscar cargos dos usuários
+  const fetchUserPositions = async () => {
+    try {
+      const userIds = users.map(user => user.id);
+      if (userIds.length === 0) return;
+
+      const { data, error } = await supabase
+        .from('user_positions')
+        .select('user_id, position')
+        .in('user_id', userIds);
+
+      if (!error && data) {
+        const positionsMap = data.reduce((acc, item) => {
+          acc[item.user_id] = item.position;
+          return acc;
+        }, {} as Record<string, UserPosition>);
+        setUserPositions(positionsMap);
+      }
+    } catch (error) {
+      console.error('Error fetching user positions:', error);
+    }
+  };
 
   const handleCreateSuccess = () => {
     refetch();
@@ -39,7 +65,15 @@ export const UserManagement = () => {
     setIsEditModalOpen(false);
     refetch();
     refreshUserData();
+    fetchUserPositions();
   };
+
+  // Buscar cargos quando os usuários mudarem
+  React.useEffect(() => {
+    if (users.length > 0) {
+      fetchUserPositions();
+    }
+  }, [users]);
 
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
@@ -109,6 +143,7 @@ export const UserManagement = () => {
                   <TableHead>Usuário</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Tipo</TableHead>
+                  <TableHead>Cargo</TableHead>
                   <TableHead>Módulos</TableHead>
                   <TableHead>Criado em</TableHead>
                   <TableHead className="w-[150px]">Ações</TableHead>
@@ -141,6 +176,15 @@ export const UserManagement = () => {
                       <Badge variant={getRoleBadgeVariant(user.role || 'user')}>
                         {getRoleLabel(user.role || 'user')}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {userPositions[user.id] ? (
+                        <Badge variant="outline">
+                          {POSITION_LABELS[userPositions[user.id]]}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">

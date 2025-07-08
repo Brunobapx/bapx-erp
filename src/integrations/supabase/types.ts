@@ -1524,6 +1524,30 @@ export type Database = {
           },
         ]
       }
+      user_positions: {
+        Row: {
+          created_at: string | null
+          id: string
+          position: Database["public"]["Enums"]["user_position_type"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          position: Database["public"]["Enums"]["user_position_type"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          position?: Database["public"]["Enums"]["user_position_type"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1710,6 +1734,14 @@ export type Database = {
         | "approved"
         | "rejected"
       sale_status: "pending" | "confirmed" | "invoiced" | "cancelled"
+      user_position_type:
+        | "vendedor"
+        | "administrativo"
+        | "entregador"
+        | "gerente"
+        | "financeiro"
+        | "producao"
+        | "estoque"
       user_type: "admin" | "user" | "master"
     }
     CompositeTypes: {
@@ -1884,6 +1916,15 @@ export const Constants = {
         "rejected",
       ],
       sale_status: ["pending", "confirmed", "invoiced", "cancelled"],
+      user_position_type: [
+        "vendedor",
+        "administrativo",
+        "entregador",
+        "gerente",
+        "financeiro",
+        "producao",
+        "estoque",
+      ],
       user_type: ["admin", "user", "master"],
     },
   },

@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/components/Auth/AuthProvider";
-import { useUserDepartments } from "@/hooks/useUserDepartments";
+import { useUserPositions } from "@/hooks/useUserPositions";
 
 interface OrderPaymentSectionProps {
   formData: any;
@@ -24,7 +24,7 @@ export const OrderPaymentSection: React.FC<OrderPaymentSectionProps> = ({
   totalAmount
 }) => {
   const { user } = useAuth();
-  const { hasAccess, loading: departmentsLoading } = useUserDepartments();
+  const { isVendedor, loading } = useUserPositions();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -42,23 +42,19 @@ export const OrderPaymentSection: React.FC<OrderPaymentSectionProps> = ({
     }).format(value);
   };
 
-  // Auto-preencher vendedor se o usuário for do departamento de vendas
+  // Auto-preencher vendedor se o usuário tiver cargo de vendedor
   useEffect(() => {
-    if (!departmentsLoading && user && !formData.seller) {
-      const isSalesUser = hasAccess('vendas');
+    if (!loading && user && !formData.seller && isVendedor) {
+      // Extrair nome e sobrenome do user metadata
+      const firstName = user.user_metadata?.first_name || '';
+      const lastName = user.user_metadata?.last_name || '';
+      const fullName = `${firstName} ${lastName}`.trim();
       
-      if (isSalesUser) {
-        // Extrair nome e sobrenome do user metadata
-        const firstName = user.user_metadata?.first_name || '';
-        const lastName = user.user_metadata?.last_name || '';
-        const fullName = `${firstName} ${lastName}`.trim();
-        
-        if (fullName) {
-          onUpdateFormData({ seller: fullName });
-        }
+      if (fullName) {
+        onUpdateFormData({ seller: fullName });
       }
     }
-  }, [user, departmentsLoading, hasAccess, formData.seller, onUpdateFormData]);
+  }, [user, loading, isVendedor, formData.seller, onUpdateFormData]);
 
   return (
     <>

@@ -28,7 +28,7 @@ serve(async (req) => {
     const supabaseClient = createClient(supabaseUrl, serviceRoleKey)
 
     const requestBody = await req.json();
-    const { email, password, firstName, lastName, userType, moduleIds } = requestBody;
+    const { email, password, firstName, lastName, userType, position, moduleIds } = requestBody;
 
     console.log('Creating user request:', { 
       email, 
@@ -128,6 +128,23 @@ serve(async (req) => {
     }
 
     console.log('User role created:', userType)
+
+    // Criar cargo do usuário se fornecido
+    if (position) {
+      const { error: positionError } = await supabaseClient
+        .from('user_positions')
+        .insert({
+          user_id: newUser.user.id,
+          position: position
+        })
+
+      if (positionError) {
+        console.error('Error creating user position:', positionError)
+        throw positionError
+      }
+
+      console.log('User position created:', position)
+    }
 
     // Criar permissões de módulos se fornecidas
     if (moduleIds && moduleIds.length > 0) {

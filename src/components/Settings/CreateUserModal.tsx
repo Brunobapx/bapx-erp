@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useSystemModules } from '@/hooks/useSystemModules';
 import { useAuth } from '@/components/Auth/AuthProvider';
+import { POSITION_LABELS, UserPosition } from '@/hooks/useUserPositions';
 import { User, Shield, Loader2 } from 'lucide-react';
 
 interface CreateUserModalProps {
@@ -27,6 +28,7 @@ export const CreateUserModal = ({ open, onOpenChange, onSuccess }: CreateUserMod
     firstName: '',
     lastName: '',
     userType: 'user' as 'admin' | 'user' | 'master',
+    position: '' as string,
     moduleIds: [] as string[]
   });
   
@@ -63,6 +65,11 @@ export const CreateUserModal = ({ open, onOpenChange, onSuccess }: CreateUserMod
       return;
     }
 
+    if (!form.position) {
+      setError('Por favor, selecione um cargo para o usuário');
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -73,6 +80,7 @@ export const CreateUserModal = ({ open, onOpenChange, onSuccess }: CreateUserMod
           firstName: form.firstName,
           lastName: form.lastName,
           userType: form.userType,
+          position: form.position,
           moduleIds: (form.userType === 'admin' || form.userType === 'master') ? [] : form.moduleIds
         }
       });
@@ -100,6 +108,7 @@ export const CreateUserModal = ({ open, onOpenChange, onSuccess }: CreateUserMod
         firstName: '',
         lastName: '',
         userType: 'user',
+        position: '',
         moduleIds: []
       });
 
@@ -213,33 +222,51 @@ export const CreateUserModal = ({ open, onOpenChange, onSuccess }: CreateUserMod
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>Tipo de Usuário *</Label>
-              <Select value={form.userType} onValueChange={(value) => handleChange('userType', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="user">
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      Usuário
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="admin">
-                    <div className="flex items-center gap-2">
-                      <Shield className="h-4 w-4" />
-                      Administrador
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="master">
-                    <div className="flex items-center gap-2">
-                      <Shield className="h-4 w-4 text-red-500" />
-                      Master
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Tipo de Usuário *</Label>
+                <Select value={form.userType} onValueChange={(value) => handleChange('userType', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        Usuário
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="admin">
+                      <div className="flex items-center gap-2">
+                        <Shield className="h-4 w-4" />
+                        Administrador
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="master">
+                      <div className="flex items-center gap-2">
+                        <Shield className="h-4 w-4 text-red-500" />
+                        Master
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Cargo/Função *</Label>
+                <Select value={form.position} onValueChange={(value) => handleChange('position', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o cargo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(POSITION_LABELS).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {form.userType === 'user' && (

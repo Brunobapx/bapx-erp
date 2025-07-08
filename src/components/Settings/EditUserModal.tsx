@@ -11,6 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useSystemModules } from '@/hooks/useSystemModules';
+import { POSITION_LABELS, UserPosition } from '@/hooks/useUserPositions';
 import { User, Shield, Loader2, Edit, Lock, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -31,6 +32,7 @@ export const EditUserModal = ({ open, onOpenChange, user, onSuccess, isCurrentUs
     email: '',
     password: '',
     confirmPassword: '',
+    position: '',
     moduleIds: [] as string[]
   });
   
@@ -39,21 +41,43 @@ export const EditUserModal = ({ open, onOpenChange, user, onSuccess, isCurrentUs
   const [showPassword, setShowPassword] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [userPosition, setUserPosition] = useState<UserPosition | null>(null);
   const { toast } = useToast();
   const { modules, loading: modulesLoading } = useSystemModules();
 
   useEffect(() => {
     if (user && open) {
+      // Buscar cargo do usuário
+      const fetchUserPosition = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('user_positions')
+            .select('position')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          if (!error && data) {
+            setUserPosition(data.position as UserPosition);
+            setForm(prev => ({ ...prev, position: data.position }));
+          }
+        } catch (error) {
+          console.error('Error fetching user position:', error);
+        }
+      };
+
       setForm({
         firstName: user.user_metadata.first_name || '',
         lastName: user.user_metadata.last_name || '',
         email: user.email,
         password: '',
         confirmPassword: '',
+        position: '',
         moduleIds: user.moduleIds || []
       });
       setAvatarPreview(user.user_metadata.avatar_url || null);
       setError(null);
+      
+      fetchUserPosition();
     }
   }, [user, open]);
 
@@ -149,6 +173,22 @@ export const EditUserModal = ({ open, onOpenChange, user, onSuccess, isCurrentUs
       // Para admins editando outros usuários, podem alterar email
       if (!isCurrentUser) {
         updates.email = form.email;
+      }
+
+      // Atualizar cargo se mudou e não é usuário atual
+      if (!isCurrentUser && form.position && form.position !== userPosition) {
+        const { error: positionError } = await supabase
+          .from('user_positions')
+          .upsert({
+            user_id: user.id,
+            position: form.position,
+            updated_at: new Date().toISOString()
+          });
+
+        if (positionError) {
+          console.error('Error updating position:', positionError);
+          throw new Error('Erro ao atualizar cargo');
+        }
       }
 
       // Chamar a edge function para atualizar
@@ -282,6 +322,36 @@ export const EditUserModal = ({ open, onOpenChange, user, onSuccess, isCurrentUs
                   </p>
                 )}
               </div>
+
+              {!isCurrentUser && (
+                <div className="space-y-2">
+                  <Label htmlFor="position">Cargo/Função</Label>
+                  <Select value={form.position} onValueChange={(value) => handleChange('position', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o cargo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(POSITION_LABELS).map(([key, label]) => (
+                        <SelectItem key={key} value={key}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {isCurrentUser && userPosition && (
+                <div className="space-y-2">
+                  <Label>Seu Cargo</Label>
+                  <div className="p-3 border rounded bg-muted">
+                    {POSITION_LABELS[userPosition]}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Entre em contato com um administrador para alterar seu cargo
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-4">
                 <div className="space-y-2">
