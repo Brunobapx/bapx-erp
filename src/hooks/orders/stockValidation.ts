@@ -10,6 +10,7 @@ export interface ProductionEntry {
   product_name: string;
   quantity_requested: number;
   status: string;
+  production_number: string;
   created_at: string;
   updated_at: string;
 }
@@ -149,6 +150,7 @@ export const processOrderItems = async (
           product_name: item.product_name,
           quantity_requested: missingQty,
           status: 'pending',
+          production_number: '', // Será gerado pelo trigger
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         });
@@ -173,6 +175,7 @@ export const processOrderItems = async (
         product_name: item.product_name,
         quantity_requested: quantityNeeded,
         status: 'pending',
+        production_number: '', // Será gerado pelo trigger
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       });

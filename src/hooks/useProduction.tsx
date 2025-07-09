@@ -38,9 +38,9 @@ export const useProduction = () => {
           .from('production')
           .select(`
             *,
-            order_items(
+            order_items!left(
               order_id,
-              orders(
+              orders!left(
                 order_number,
                 client_name
               )
