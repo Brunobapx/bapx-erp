@@ -20,6 +20,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ClientModal } from '@/components/Modals/ClientModal';
 import { useClients } from '@/hooks/useClients';
+import { ImportExportButtons } from '@/components/ImportExport/ImportExportButtons';
+import { ImportModal } from '@/components/ImportExport/ImportModal';
+import { ExportModal } from '@/components/ImportExport/ExportModal';
+import { useClientImportExport } from '@/hooks/useClientImportExport';
 
 const ClientsPage = () => {
   const [showModal, setShowModal] = useState(false);
@@ -33,6 +37,19 @@ const ClientsPage = () => {
     setSearchQuery, 
     refreshClients 
   } = useClients();
+
+  const {
+    isImportModalOpen,
+    setIsImportModalOpen,
+    isExportModalOpen,
+    setIsExportModalOpen,
+    clientHeaders,
+    exportData,
+    validateClient,
+    importClients,
+    exportClients,
+    downloadTemplate
+  } = useClientImportExport();
 
   console.log('ClientsPage - Estado atual:', {
     loading,
@@ -106,6 +123,11 @@ const ClientsPage = () => {
         </div>
         
         <div className="flex items-center gap-2">
+          <ImportExportButtons
+            onImport={() => setIsImportModalOpen(true)}
+            onExport={exportClients}
+            disabled={loading}
+          />
           <Button variant="outline" size="sm" onClick={refreshClients}>
             Atualizar
           </Button>
@@ -138,13 +160,6 @@ const ClientsPage = () => {
         </div>
       </div>
       
-      {/* Debug info - remove in production */}
-      <div className="text-xs text-gray-500 p-2 bg-gray-50 rounded">
-        Debug: Loading: {loading ? 'Sim' : 'Não'} | 
-        Erro: {error || 'Nenhum'} | 
-        Total clientes: {allClients?.length || 0} | 
-        Filtrados: {safeFilteredClients.length}
-      </div>
       
       <Card>
         <CardContent className="p-0">
@@ -228,6 +243,25 @@ const ClientsPage = () => {
         isOpen={showModal}
         onClose={handleModalClose}
         clientData={selectedClient}
+      />
+
+      <ImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        title="Importar Clientes"
+        onImport={importClients}
+        validator={validateClient}
+        templateDownload={downloadTemplate}
+        acceptedFormats=".xlsx,.csv"
+      />
+
+      <ExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        title="Exportar Clientes"
+        data={exportData}
+        defaultHeaders={clientHeaders}
+        defaultFilename="clientes"
       />
     </div>
   );
