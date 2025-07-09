@@ -1,6 +1,21 @@
 
 project_id = "gtqmwlxzszttzriswoxj"
 
+[functions.api-auth]
+verify_jwt = false
+
+[functions.api-clients]
+verify_jwt = false
+
+[functions.api-orders]
+verify_jwt = false
+
+[functions.api-products]
+verify_jwt = false
+
+[functions.api-dashboard]
+verify_jwt = false
+
 [api]
 enabled = true
 port = 54321
