@@ -55,10 +55,10 @@ const StockPage = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Sistema colaborativo - buscar produtos de todos os usuários
       const { data, error } = await supabase
         .from('products')
         .select('*')
-        .eq('user_id', user.id)
         .order('name');
 
       if (error) throw error;
