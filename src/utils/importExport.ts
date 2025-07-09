@@ -253,6 +253,60 @@ const exportToCSV = (data: any[], headers: string[], filename: string): void => 
   toast.success('Arquivo CSV exportado com sucesso!');
 };
 
+// Função para criar template de exemplo
+export const createTemplate = (data: any[], filename: string) => {
+  const workbook = XLSX.utils.book_new();
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Template');
+  
+  // Fazer download do template
+  XLSX.writeFile(workbook, filename);
+};
+
+// Função para importar arquivo
+export const importFromFile = async <T = any>(file: File): Promise<T[]> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        
+        // Pegar a primeira aba
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        
+        // Converter para JSON
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        
+        if (jsonData.length < 2) {
+          reject(new Error('Arquivo deve conter pelo menos um cabeçalho e uma linha de dados'));
+          return;
+        }
+        
+        const headers = jsonData[0] as string[];
+        const rows = jsonData.slice(1) as any[][];
+        
+        const result = rows.map(row => {
+          const obj: any = {};
+          headers.forEach((header, index) => {
+            obj[header] = row[index];
+          });
+          return obj;
+        });
+        
+        resolve(result);
+      } catch (error) {
+        reject(error);
+      }
+    };
+    
+    reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
+    reader.readAsArrayBuffer(file);
+  });
+};
+
 // Função para criar template de clientes
 export const createClientTemplate = (): void => {
   const headers = [

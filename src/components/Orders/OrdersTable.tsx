@@ -9,6 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, Edit, Trash2, Factory } from 'lucide-react';
 import { Order } from '@/hooks/useOrders';
 
@@ -21,6 +22,9 @@ interface OrdersTableProps {
   onOrderClick: (order: Order) => void;
   onSendToProduction?: (e: React.MouseEvent, order: Order) => void;
   translateStatus: (status: string) => string;
+  showCheckboxes?: boolean;
+  selectedOrders?: string[];
+  onOrderSelect?: (orderId: string, selected: boolean) => void;
 }
 
 export const OrdersTable: React.FC<OrdersTableProps> = ({
@@ -31,7 +35,10 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
   onDeleteOrder,
   onOrderClick,
   onSendToProduction,
-  translateStatus
+  translateStatus,
+  showCheckboxes = false,
+  selectedOrders = [],
+  onOrderSelect
 }) => {
   const getFirstOrderItem = (order: Order) => {
     return order.order_items?.[0] || null;
@@ -60,6 +67,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
     <Table>
       <TableHeader>
         <TableRow>
+          {showCheckboxes && <TableHead className="w-12">Sel.</TableHead>}
           <TableHead>Pedido</TableHead>
           <TableHead>Cliente</TableHead>
           <TableHead>Produto</TableHead>
@@ -79,6 +87,16 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
               className="cursor-pointer hover:bg-accent/5"
               onClick={() => onOrderClick(order)}
             >
+              {showCheckboxes && (
+                <TableCell onClick={(e) => e.stopPropagation()}>
+                  <Checkbox
+                    checked={selectedOrders.includes(order.id)}
+                    onCheckedChange={(checked) => 
+                      onOrderSelect?.(order.id, checked as boolean)
+                    }
+                  />
+                </TableCell>
+              )}
               <TableCell className="font-medium">{order.order_number}</TableCell>
               <TableCell>{order.client_name}</TableCell>
               <TableCell>{firstItem?.product_name || 'N/A'}</TableCell>
@@ -139,14 +157,14 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
         })}
         {orders.length === 0 && !loading && (
           <TableRow>
-            <TableCell colSpan={8} className="h-24 text-center">
+            <TableCell colSpan={showCheckboxes ? 9 : 8} className="h-24 text-center">
               Nenhum pedido encontrado.
             </TableCell>
           </TableRow>
         )}
         {loading && (
           <TableRow>
-            <TableCell colSpan={8} className="h-24 text-center">
+            <TableCell colSpan={showCheckboxes ? 9 : 8} className="h-24 text-center">
               Carregando pedidos...
             </TableCell>
           </TableRow>
