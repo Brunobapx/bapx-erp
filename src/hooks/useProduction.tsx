@@ -24,11 +24,10 @@ export const useProduction = () => {
 
         console.log('[PRODUCTION DEBUG] Iniciando busca de produções para usuário:', user.id);
 
-        // Primeiro, vamos verificar se existem registros na tabela production
+        // Sistema colaborativo - buscar produções de todos os usuários
         const { data: rawProductions, error: allError } = await supabase
           .from('production')
-          .select('*')
-          .eq('user_id', user.id);
+          .select('*');
           
         console.log('[PRODUCTION DEBUG] Registros brutos na tabela production:', rawProductions);
         console.log('[PRODUCTION DEBUG] Erro na busca bruta:', allError);
@@ -46,7 +45,6 @@ export const useProduction = () => {
               )
             )
           `)
-          .eq('user_id', user.id)
           .not('order_item_id', 'is', null)
           .order('created_at', { ascending: false });
 
@@ -54,7 +52,6 @@ export const useProduction = () => {
         const { data: internalProductions, error: internalError } = await supabase
           .from('production')
           .select('*')
-          .eq('user_id', user.id)
           .is('order_item_id', null)
           .order('created_at', { ascending: false });
         

@@ -56,7 +56,6 @@ export const useSales = () => {
               client_name
             )
           `)
-          .eq('user_id', user.id)
           .order('created_at', { ascending: false });
         
         if (error) throw error;

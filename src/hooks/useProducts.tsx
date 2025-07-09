@@ -38,6 +38,7 @@ async function fetchProducts() {
     throw new Error('Usuário não autenticado');
   }
 
+  // Sistema colaborativo - buscar produtos de todos os usuários
   const { data, error } = await supabase
     .from('products')
     .select('*')

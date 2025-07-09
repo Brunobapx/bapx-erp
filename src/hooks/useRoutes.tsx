@@ -62,7 +62,6 @@ export const useRoutes = () => {
             capacity
           )
         `)
-        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -84,7 +83,7 @@ export const useRoutes = () => {
       const { data: routeItems, error: routeItemsError } = await supabase
         .from('route_items')
         .select('order_id')
-        .eq('user_id', user.id);
+;
 
       if (routeItemsError) throw routeItemsError;
 
@@ -107,7 +106,7 @@ export const useRoutes = () => {
             sale_number
           )
         `)
-        .eq('user_id', user.id);
+        ;
 
       // Se um pedido específico foi solicitado, incluí-lo sempre
       if (specificOrderId) {
