@@ -164,7 +164,11 @@ Deno.serve(async (req) => {
         .select(`
           *,
           orders!inner(
-            *
+            *,
+            order_items(
+              *,
+              products(*)
+            )
           ),
           clients(*)
         `)
@@ -172,26 +176,8 @@ Deno.serve(async (req) => {
         .single()
 
       if (saleError) {
-        console.error('Erro ao buscar venda:', saleError)
         throw new Error('Erro ao buscar dados da venda: ' + saleError.message)
       }
-
-      // Buscar itens do pedido separadamente
-      const { data: orderItems, error: itemsError } = await supabase
-        .from('order_items')
-        .select(`
-          *,
-          products(*)
-        `)
-        .eq('order_id', sale.order_id)
-
-      if (itemsError) {
-        console.error('Erro ao buscar itens:', itemsError)
-        throw new Error('Erro ao buscar itens do pedido: ' + itemsError.message)
-      }
-
-      // Adicionar itens à estrutura da venda
-      sale.orders.order_items = orderItems
 
       // Buscar configurações da empresa
       const { data: companySettings, error: companyError } = await supabase
@@ -212,30 +198,6 @@ Deno.serve(async (req) => {
         return acc
       }, {} as Record<string, any>)
 
-      console.log('=== EMITINDO NFE ===')
-      console.log('Sale data:', JSON.stringify(sale, null, 2))
-      
-      // Validar dados básicos
-      if (!data.sale_id) {
-        throw new Error('ID da venda é obrigatório')
-      }
-      
-      if (!data.invoice_number) {
-        throw new Error('Número da nota fiscal é obrigatório')
-      }
-
-      // Validar dados do cliente
-      if (!sale.clients) {
-        throw new Error('Dados do cliente não encontrados')
-      }
-
-      // Validar itens
-      if (!sale.orders?.order_items || sale.orders.order_items.length === 0) {
-        throw new Error('Nenhum item encontrado na venda')
-      }
-
-      console.log('Itens encontrados:', sale.orders.order_items.length)
-
       // Montar dados da NFe para Focus NFe usando dados reais da empresa
       const nfeData = {
         natureza_operacao: "VENDA",
@@ -244,7 +206,7 @@ Deno.serve(async (req) => {
         tipo_documento: 1, // Saída
         finalidade_emissao: 1, // Normal
         local_destino: 1, // Operação interna (mesmo estado)
-        consumidor_final: sale.clients?.type === 'Física' || !sale.clients?.ie ? 1 : 0, // 1=PF ou PJ sem IE (consumidor final), 0=PJ com IE (não consumidor final)
+        consumidor_final: sale.clients?.type === 'pf' || !sale.clients?.ie ? 1 : 0, // 1=PF ou PJ sem IE (consumidor final), 0=PJ com IE (não consumidor final)
         presenca_comprador: 1, // Operação presencial
         
         // Dados do emitente (ARTISAN BREAD)
@@ -272,7 +234,10 @@ Deno.serve(async (req) => {
         municipio_destinatario: sale.clients?.city,
         uf_destinatario: sale.clients?.state,
         cep_destinatario: sale.clients?.zip?.replace(/[^\d]/g, ''),
-        indicador_ie_destinatario: sale.clients?.ie ? 1 : (sale.clients?.type === 'Física' ? 2 : 9), // 1=Contribuinte, 2=Isento, 9=Não contribuinte
+        indicador_ie_destinatario: sale.clients?.ie ? 1 : (sale.clients?.type === 'pf' ? 2 : 9), // 1=Contribuinte, 2=Isento, 9=Não contribuinte
+        
+        // Modalidade de frete
+        modalidade_frete: 3, // Por conta do destinatário
 
         // Itens da nota
         itens: sale.orders.order_items.map((item: any, index: number) => ({
@@ -312,65 +277,21 @@ Deno.serve(async (req) => {
           indicador_total: 1 // Sim, compõe o valor total
         })),
 
-        // Calcular totais de impostos
-        valor_pis: sale.orders.order_items.reduce((total: number, item: any) => {
-          return total + (item.total_price * 0.0165);
-        }, 0),
-        valor_cofins: sale.orders.order_items.reduce((total: number, item: any) => {
-          return total + (item.total_price * 0.076);
-        }, 0),
-        valor_total_tributos: sale.orders.order_items.reduce((total: number, item: any) => {
-          return total + (item.total_price * 0.0925);
-        }, 0),
-
-        // Peso total da nota
-        peso_liquido: sale.orders.order_items.reduce((total: number, item: any) => {
-          const weight = item.products?.weight || 1;
-          return total + (weight * item.quantity);
-        }, 0),
-        peso_bruto: sale.orders.order_items.reduce((total: number, item: any) => {
-          const weight = item.products?.weight || 1;
-          return total + (weight * item.quantity);
-        }, 0),
-
         // Totais calculados
         valor_produtos: sale.total_amount,
         valor_total: sale.total_amount,
         
-        // Informações de frete
-        modalidade_frete: 0, // 0=Por conta do emitente, 1=Por conta do destinatário
-        valor_frete: 0,
-        valor_seguro: 0,
-        valor_desconto: 0,
-        valor_outras_despesas: 0,
-
-        // Dados da fatura/cobrança
-        numero_fatura: sale.sale_number,
-        valor_original_fatura: sale.total_amount,
-        valor_desconto_fatura: 0,
-        valor_liquido_fatura: sale.total_amount,
-        
-        // Duplicatas (parcelas)
-        duplicatas: [{
-          numero_duplicata: sale.sale_number + "-01",
-          valor_duplicata: sale.total_amount,
-          data_vencimento: sale.orders.payment_term ? 
-            new Date(Date.now() + (parseInt(sale.orders.payment_term.replace(/\D/g, '')) || 30) * 24 * 60 * 60 * 1000).toISOString().split('T')[0] :
-            new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-        }],
+        // Peso total da nota (somar peso dos produtos)
+        peso_liquido: sale.orders.order_items.reduce((total: number, item: any) => {
+          const weight = item.products?.weight || 1; // Peso padrão se não informado
+          return total + (weight * item.quantity);
+        }, 0),
 
         // Observações
         informacoes_adicionais_contribuinte: data.observations || `Venda ${sale.sale_number} - Pedido ${sale.orders.order_number}.`
       }
 
-      console.log('=== DADOS DA NFE SENDO ENVIADOS ===')
-      console.log(JSON.stringify(nfeData, null, 2))
-
       // Enviar para Focus NFe
-      console.log('=== ENVIANDO PARA FOCUS NFE ===')
-      console.log('URL:', `${focusApiUrl}/v2/nfe?ref=${sale.sale_number}`)
-      console.log('Token (primeiros 10 chars):', configMap.focus_nfe_token?.substring(0, 10))
-
       const focusResponse = await fetch(`${focusApiUrl}/v2/nfe?ref=${sale.sale_number}`, {
         method: 'POST',
         headers: {
@@ -380,39 +301,11 @@ Deno.serve(async (req) => {
         body: JSON.stringify(nfeData)
       })
 
-      console.log('=== RESPOSTA FOCUS NFE ===')
-      console.log('Status:', focusResponse.status)
-      console.log('Status Text:', focusResponse.statusText)
-      console.log('Headers:', Object.fromEntries(focusResponse.headers.entries()))
-
-      let focusResult: any
-      try {
-        const responseText = await focusResponse.text()
-        console.log('Response Text:', responseText)
-        focusResult = JSON.parse(responseText)
-      } catch (parseError) {
-        console.error('Erro ao fazer parse da resposta:', parseError)
-        throw new Error(`Erro de comunicação com Focus NFe: resposta inválida (status ${focusResponse.status})`)
-      }
-
-      console.log('Resposta parsed:', JSON.stringify(focusResult, null, 2))
+      const focusResult = await focusResponse.json()
 
       if (!focusResponse.ok) {
-        console.error('Erro Focus NFe (status não ok):', focusResult)
-        let errorMessage = `Erro HTTP ${focusResponse.status}: ${focusResponse.statusText}`
-        
-        if (focusResult.erro_principal) {
-          errorMessage = focusResult.erro_principal
-        } else if (focusResult.erros && Array.isArray(focusResult.erros)) {
-          errorMessage = focusResult.erros.join(', ')
-        } else if (focusResult.erros) {
-          errorMessage = focusResult.erros
-        } else if (focusResult.mensagem) {
-          errorMessage = focusResult.mensagem
-        }
-        
-        console.error('Mensagem de erro final:', errorMessage)
-        throw new Error(errorMessage)
+        console.error('Erro Focus NFe:', focusResult)
+        throw new Error(focusResult.erro_principal || 'Erro ao comunicar com Focus NFe')
       }
 
       // Salvar NFe na tabela fiscal_invoices
