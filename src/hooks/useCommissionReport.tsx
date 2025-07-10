@@ -38,44 +38,40 @@ export const useCommissionReport = () => {
     try {
       setLoading(true);
       
-      // Buscar vendas confirmadas no período
+      // Buscar pedidos no período
       let query = supabase
-        .from('sales')
+        .from('orders')
         .select(`
           id,
-          sale_number,
-          order_id,
+          order_number,
           client_name,
           total_amount,
           status,
           created_at,
-          orders!inner (
-            order_number,
-            salesperson_id,
-            order_items (
-              product_id,
-              product_name,
-              quantity,
-              unit_price,
-              total_price,
-              products (
-                commission_type,
-                commission_value
-              )
+          salesperson_id,
+          order_items (
+            product_id,
+            product_name,
+            quantity,
+            unit_price,
+            total_price,
+            products (
+              commission_type,
+              commission_value
             )
           )
         `)
         .gte('created_at', `${filters.startDate}T00:00:00`)
         .lte('created_at', `${filters.endDate}T23:59:59`)
-        .in('status', ['confirmed', 'invoiced']); // Removido 'delivered' que não existe no enum
+        .in('status', ['confirmed', 'approved']);
 
       // Se for vendedor, filtrar por seus pedidos
       if (userRole === 'seller') {
-        query = query.eq('orders.salesperson_id', user?.id);
+        query = query.eq('salesperson_id', user?.id);
       } 
       // Se filtro de vendedor especificado (para admins)
       else if (filters.sellerId) {
-        query = query.eq('orders.salesperson_id', filters.sellerId);
+        query = query.eq('salesperson_id', filters.sellerId);
       }
       // Se busca por nome do vendedor (para admins)
       else if (filters.sellerName && userRole !== 'seller') {
@@ -95,14 +91,14 @@ export const useCommissionReport = () => {
             .maybeSingle();
             
           if (userRole) {
-            query = query.eq('orders.salesperson_id', matchingUser.id);
+            query = query.eq('salesperson_id', matchingUser.id);
           } else {
             // Se não for vendedor, não retornar nenhum resultado
-            query = query.eq('orders.salesperson_id', 'no-match');
+            query = query.eq('salesperson_id', 'no-match');
           }
         } else {
           // Se não encontrar usuário, não retornar nenhum resultado
-          query = query.eq('orders.salesperson_id', 'no-match');
+          query = query.eq('salesperson_id', 'no-match');
         }
       }
 
@@ -110,15 +106,14 @@ export const useCommissionReport = () => {
 
       if (error) throw error;
 
-      // Calcular comissões para cada venda
+      // Calcular comissões para cada pedido
       const commissionsData: CommissionData[] = [];
 
-      for (const sale of data || []) {
+      for (const order of data || []) {
         let totalCommission = 0;
         const items = [];
 
         // Calcular comissão para cada item do pedido
-        const order = Array.isArray(sale.orders) ? sale.orders[0] : sale.orders;
         for (const item of order?.order_items || []) {
           const product = Array.isArray(item.products) ? item.products[0] : item.products;
           let commissionAmount = 0;
@@ -152,16 +147,16 @@ export const useCommissionReport = () => {
         }
 
         commissionsData.push({
-          id: sale.id,
-          sale_number: sale.sale_number,
-          order_number: order?.order_number || '',
-          client_name: sale.client_name,
+          id: order.id,
+          sale_number: order.order_number,
+          order_number: order.order_number,
+          client_name: order.client_name,
           seller_name: sellerName,
-          sale_date: sale.created_at,
-          total_amount: sale.total_amount,
+          sale_date: order.created_at,
+          total_amount: order.total_amount,
           commission_amount: totalCommission,
-          commission_percentage: sale.total_amount > 0 ? (totalCommission / sale.total_amount) * 100 : 0,
-          status: sale.status,
+          commission_percentage: order.total_amount > 0 ? (totalCommission / order.total_amount) * 100 : 0,
+          status: order.status,
           items
         });
       }
