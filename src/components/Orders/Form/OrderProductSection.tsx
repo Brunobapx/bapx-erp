@@ -19,12 +19,12 @@ export const OrderProductSection: React.FC<OrderProductSectionProps> = ({
   setOpenProductCombobox
 }) => {
   const { products: allProducts } = useProducts();
-  
+
   // Filtrar apenas produtos ativos para pedidos
   const products = React.useMemo(() => {
     return allProducts.filter((product: any) => {
-      // Só incluir produtos que não estão explicitamente desativados
-      return product.is_active !== false;
+      // Só incluir produtos ativos (is_active === true)
+      return product.is_active === true;
     });
   }, [allProducts]);
 
