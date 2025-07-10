@@ -392,6 +392,8 @@ Deno.serve(async (req) => {
 
     } else if (action === 'get_danfe_pdf') {
       // Baixar DANFE em PDF
+      console.log('Baixando DANFE para referência:', data.reference)
+      
       const focusResponse = await fetch(`${focusApiUrl}/v2/nfe/${data.reference}/danfe`, {
         method: 'GET',
         headers: {
@@ -399,22 +401,36 @@ Deno.serve(async (req) => {
         }
       })
 
+      console.log('Status da resposta Focus DANFE:', focusResponse.status)
+
       if (!focusResponse.ok) {
-        throw new Error('Erro ao baixar DANFE')
+        const errorText = await focusResponse.text()
+        console.error('Erro ao baixar DANFE:', errorText)
+        throw new Error(`Erro ao baixar DANFE: ${errorText}`)
       }
 
       const pdfBuffer = await focusResponse.arrayBuffer()
+      console.log('Tamanho do PDF recebido:', pdfBuffer.byteLength)
       
-      return new Response(pdfBuffer, {
+      // Converter para Base64 para garantir transferência correta
+      const base64Pdf = btoa(String.fromCharCode(...new Uint8Array(pdfBuffer)))
+      
+      return new Response(JSON.stringify({
+        success: true,
+        fileData: base64Pdf,
+        fileName: `DANFE-${data.reference}.pdf`,
+        contentType: 'application/pdf'
+      }), {
         headers: { 
           ...corsHeaders, 
-          'Content-Type': 'application/pdf',
-          'Content-Disposition': `attachment; filename="DANFE-${data.reference}.pdf"`
+          'Content-Type': 'application/json'
         }
       })
 
     } else if (action === 'get_xml') {
       // Baixar XML da NFe
+      console.log('Baixando XML para referência:', data.reference)
+      
       const focusResponse = await fetch(`${focusApiUrl}/v2/nfe/${data.reference}/xml`, {
         method: 'GET',
         headers: {
@@ -422,17 +438,32 @@ Deno.serve(async (req) => {
         }
       })
 
+      console.log('Status da resposta Focus XML:', focusResponse.status)
+
       if (!focusResponse.ok) {
-        throw new Error('Erro ao baixar XML')
+        const errorText = await focusResponse.text()
+        console.error('Erro ao baixar XML:', errorText)
+        throw new Error(`Erro ao baixar XML: ${errorText}`)
       }
 
       const xmlContent = await focusResponse.text()
+      console.log('Tamanho do XML recebido:', xmlContent.length)
       
-      return new Response(xmlContent, {
+      // Validar se é um XML válido
+      if (!xmlContent.includes('<?xml') || !xmlContent.includes('<NFe')) {
+        console.error('XML inválido recebido:', xmlContent.substring(0, 200))
+        throw new Error('XML recebido está inválido')
+      }
+      
+      return new Response(JSON.stringify({
+        success: true,
+        fileData: xmlContent,
+        fileName: `NFe-${data.reference}.xml`,
+        contentType: 'application/xml'
+      }), {
         headers: { 
           ...corsHeaders, 
-          'Content-Type': 'application/xml',
-          'Content-Disposition': `attachment; filename="NFe-${data.reference}.xml"`
+          'Content-Type': 'application/json'
         }
       })
 

@@ -107,6 +107,18 @@ const useFiscalEmissionFilters = () => {
         throw new Error('Usuário não autenticado');
       }
 
+      // Verificar se a NFe está autorizada
+      if (invoice.status !== 'Autorizada') {
+        toast({ 
+          title: "Aviso", 
+          description: "Só é possível baixar DANFE de NFe autorizada",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      toast({ title: "Download", description: "Preparando DANFE para download..." });
+
       const { data, error } = await supabase.functions.invoke('focus-nfe-emission', {
         body: {
           action: 'get_danfe_pdf',
@@ -121,12 +133,27 @@ const useFiscalEmissionFilters = () => {
 
       if (error) throw new Error(error.message);
 
-      // Criar link para download
-      const blob = new Blob([data], { type: 'application/pdf' });
+      if (!data.success) {
+        throw new Error(data.error || 'Erro ao baixar DANFE');
+      }
+
+      // Validar dados recebidos
+      if (!data.fileData || !data.fileName) {
+        throw new Error('Dados do arquivo inválidos');
+      }
+
+      // Decodificar Base64 e criar blob
+      const binaryString = atob(data.fileData);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      
+      const blob = new Blob([bytes], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `DANFE-${invoice.id}.pdf`;
+      a.download = data.fileName;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -137,7 +164,7 @@ const useFiscalEmissionFilters = () => {
       console.error('Erro ao baixar DANFE:', error);
       toast({ 
         title: "Erro", 
-        description: "Erro ao baixar DANFE",
+        description: error.message || "Erro ao baixar DANFE",
         variant: "destructive"
       });
     }
@@ -149,6 +176,18 @@ const useFiscalEmissionFilters = () => {
       if (!session) {
         throw new Error('Usuário não autenticado');
       }
+
+      // Verificar se a NFe está autorizada
+      if (invoice.status !== 'Autorizada') {
+        toast({ 
+          title: "Aviso", 
+          description: "Só é possível baixar XML de NFe autorizada",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      toast({ title: "Download", description: "Preparando XML para download..." });
 
       const { data, error } = await supabase.functions.invoke('focus-nfe-emission', {
         body: {
@@ -164,12 +203,26 @@ const useFiscalEmissionFilters = () => {
 
       if (error) throw new Error(error.message);
 
-      // Criar link para download
-      const blob = new Blob([data], { type: 'application/xml' });
+      if (!data.success) {
+        throw new Error(data.error || 'Erro ao baixar XML');
+      }
+
+      // Validar dados recebidos
+      if (!data.fileData || !data.fileName) {
+        throw new Error('Dados do arquivo inválidos');
+      }
+
+      // Validar se o conteúdo é um XML válido
+      if (!data.fileData.includes('<?xml') || !data.fileData.includes('<NFe')) {
+        throw new Error('Arquivo XML inválido recebido');
+      }
+
+      // Criar blob com o XML
+      const blob = new Blob([data.fileData], { type: 'application/xml' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `NFe-${invoice.id}.xml`;
+      a.download = data.fileName;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -180,7 +233,7 @@ const useFiscalEmissionFilters = () => {
       console.error('Erro ao baixar XML:', error);
       toast({ 
         title: "Erro", 
-        description: "Erro ao baixar XML",
+        description: error.message || "Erro ao baixar XML",
         variant: "destructive"
       });
     }
