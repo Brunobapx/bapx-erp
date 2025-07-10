@@ -173,11 +173,18 @@ Deno.serve(async (req) => {
           clients(*)
         `)
         .eq('id', data.sale_id)
-        .single()
+        .maybeSingle()
 
       if (saleError) {
+        console.error('Erro ao buscar dados da venda:', saleError)
         throw new Error('Erro ao buscar dados da venda: ' + saleError.message)
       }
+
+      if (!sale) {
+        throw new Error('Venda não encontrada')
+      }
+
+      console.log('Dados da venda encontrados:', sale)
 
       // Buscar configurações da empresa
       const { data: companySettings, error: companyError } = await supabase
@@ -240,7 +247,7 @@ Deno.serve(async (req) => {
         modalidade_frete: 3, // Por conta do destinatário
 
         // Itens da nota
-        itens: sale.orders.order_items.map((item: any, index: number) => ({
+        itens: sale.orders?.order_items?.map((item: any, index: number) => ({
           numero_item: index + 1,
           codigo_produto: item.products?.code || item.product_id,
           codigo_ean: "SEM GTIN", // Código de barras padrão
@@ -282,13 +289,13 @@ Deno.serve(async (req) => {
         valor_total: sale.total_amount,
         
         // Peso total da nota (somar peso dos produtos)
-        peso_liquido: sale.orders.order_items.reduce((total: number, item: any) => {
+        peso_liquido: sale.orders?.order_items?.reduce((total: number, item: any) => {
           const weight = item.products?.weight || 1; // Peso padrão se não informado
           return total + (weight * item.quantity);
-        }, 0),
+        }, 0) || 0,
 
         // Observações
-        informacoes_adicionais_contribuinte: data.observations || `Venda ${sale.sale_number} - Pedido ${sale.orders.order_number}.`
+        informacoes_adicionais_contribuinte: data.observations || `Venda ${sale.sale_number} - Pedido ${sale.orders?.order_number || ''}.`
       }
 
       // Enviar para Focus NFe
