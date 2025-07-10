@@ -15,13 +15,47 @@ export const useSellerUsers = () => {
   const [loading, setLoading] = useState(false);
 
   const enrichUserData = async (users: { user_id: string; position: string; created_at: string }[]): Promise<SellerUser[]> => {
-    // Por enquanto, vamos retornar uma identificação mais amigável usando parte do ID
-    // Em uma implementação futura, podemos adicionar uma tabela de perfis de usuário
-    return users.map((user, index) => ({
-      ...user,
-      email: undefined,
-      display_name: `Vendedor ${index + 1} (${user.user_id.substring(0, 8)})`
-    }));
+    const enrichedUsers: SellerUser[] = [];
+    
+    for (const user of users) {
+      try {
+        // Buscar informações do usuário através da API
+        const { data: userData, error } = await supabase.auth.admin.getUserById(user.user_id);
+        
+        if (!error && userData.user) {
+          const email = userData.user.email;
+          // Extrair nome do email (parte antes do @) ou usar user_metadata se disponível
+          const emailName = email ? email.split('@')[0] : '';
+          const displayName = userData.user.user_metadata?.name || 
+                             userData.user.user_metadata?.display_name || 
+                             userData.user.user_metadata?.full_name ||
+                             emailName ||
+                             `Vendedor ${user.user_id.substring(0, 8)}`;
+          
+          enrichedUsers.push({
+            ...user,
+            email: email,
+            display_name: displayName
+          });
+        } else {
+          // Se não conseguir buscar, usar dados básicos
+          enrichedUsers.push({
+            ...user,
+            email: undefined,
+            display_name: `Vendedor ${user.user_id.substring(0, 8)}`
+          });
+        }
+      } catch (error) {
+        console.log(`Erro ao buscar usuário ${user.user_id}:`, error);
+        enrichedUsers.push({
+          ...user,
+          email: undefined,
+          display_name: `Vendedor ${user.user_id.substring(0, 8)}`
+        });
+      }
+    }
+    
+    return enrichedUsers;
   };
 
   const loadSellers = async () => {
