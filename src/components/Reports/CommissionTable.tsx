@@ -64,8 +64,6 @@ export const CommissionTable: React.FC<CommissionTableProps> = ({
         return <Badge variant="secondary">Confirmada</Badge>;
       case 'invoiced':
         return <Badge variant="default">Faturada</Badge>;
-      case 'delivered':
-        return <Badge variant="outline">Entregue</Badge>;
       default:
         return <Badge variant="destructive">Pendente</Badge>;
     }

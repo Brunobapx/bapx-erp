@@ -67,7 +67,7 @@ export const useCommissionReport = () => {
         `)
         .gte('created_at', `${filters.startDate}T00:00:00`)
         .lte('created_at', `${filters.endDate}T23:59:59`)
-        .in('status', ['confirmed', 'invoiced', 'delivered']);
+        .in('status', ['confirmed', 'invoiced']); // Removido 'delivered' que não existe no enum
 
       // Se for vendedor, filtrar por seus pedidos
       if (userRole === 'seller') {
@@ -77,17 +77,32 @@ export const useCommissionReport = () => {
       else if (filters.sellerId) {
         query = query.eq('orders.salesperson_id', filters.sellerId);
       }
-      // Se busca por nome do vendedor
+      // Se busca por nome do vendedor (para admins)
       else if (filters.sellerName && userRole !== 'seller') {
-        // Buscar vendedor por email/nome
-        const { data: userRoles } = await supabase
-          .from('user_roles')
-          .select('user_id')
-          .eq('role', 'seller');
+        // Primeiro buscar o user_id baseado no email
+        const { data: authUsers } = await supabase.auth.admin.listUsers();
+        const matchingUser = authUsers.users.find((u: any) => 
+          u.email?.toLowerCase().includes(filters.sellerName.toLowerCase())
+        );
         
-        if (userRoles && userRoles.length > 0) {
-          const sellerIds = userRoles.map(ur => ur.user_id);
-          query = query.in('orders.salesperson_id', sellerIds);
+        if (matchingUser) {
+          // Verificar se o usuário é vendedor
+          const { data: userRole } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', matchingUser.id)
+            .eq('role', 'seller')
+            .maybeSingle();
+            
+          if (userRole) {
+            query = query.eq('orders.salesperson_id', matchingUser.id);
+          } else {
+            // Se não for vendedor, não retornar nenhum resultado
+            query = query.eq('orders.salesperson_id', 'no-match');
+          }
+        } else {
+          // Se não encontrar usuário, não retornar nenhum resultado
+          query = query.eq('orders.salesperson_id', 'no-match');
         }
       }
 
