@@ -198,6 +198,9 @@ Deno.serve(async (req) => {
         return acc
       }, {} as Record<string, any>)
 
+      console.log('=== EMITINDO NFE ===')
+      console.log('Sale data:', JSON.stringify(sale, null, 2))
+      
       // Montar dados da NFe para Focus NFe usando dados reais da empresa
       const nfeData = {
         natureza_operacao: "VENDA",
@@ -235,9 +238,6 @@ Deno.serve(async (req) => {
         uf_destinatario: sale.clients?.state,
         cep_destinatario: sale.clients?.zip?.replace(/[^\d]/g, ''),
         indicador_ie_destinatario: sale.clients?.ie ? 1 : (sale.clients?.type === 'pf' ? 2 : 9), // 1=Contribuinte, 2=Isento, 9=Não contribuinte
-        
-        // Modalidade de frete
-        modalidade_frete: 3, // Por conta do destinatário
 
         // Itens da nota
         itens: sale.orders.order_items.map((item: any, index: number) => ({
@@ -328,6 +328,9 @@ Deno.serve(async (req) => {
         informacoes_adicionais_contribuinte: data.observations || `Venda ${sale.sale_number} - Pedido ${sale.orders.order_number}.`
       }
 
+      console.log('=== DADOS DA NFE SENDO ENVIADOS ===')
+      console.log(JSON.stringify(nfeData, null, 2))
+
       // Enviar para Focus NFe
       const focusResponse = await fetch(`${focusApiUrl}/v2/nfe?ref=${sale.sale_number}`, {
         method: 'POST',
@@ -338,11 +341,22 @@ Deno.serve(async (req) => {
         body: JSON.stringify(nfeData)
       })
 
+      console.log('=== RESPOSTA FOCUS NFE ===')
+      console.log('Status:', focusResponse.status)
+      console.log('Headers:', Object.fromEntries(focusResponse.headers.entries()))
+
       const focusResult = await focusResponse.json()
+      console.log('Resposta completa:', JSON.stringify(focusResult, null, 2))
 
       if (!focusResponse.ok) {
         console.error('Erro Focus NFe:', focusResult)
-        throw new Error(focusResult.erro_principal || 'Erro ao comunicar com Focus NFe')
+        let errorMessage = 'Erro ao comunicar com Focus NFe'
+        if (focusResult.erro_principal) {
+          errorMessage = focusResult.erro_principal
+        } else if (focusResult.erros) {
+          errorMessage = Array.isArray(focusResult.erros) ? focusResult.erros.join(', ') : focusResult.erros
+        }
+        throw new Error(errorMessage)
       }
 
       // Salvar NFe na tabela fiscal_invoices

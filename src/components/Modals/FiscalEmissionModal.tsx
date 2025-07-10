@@ -65,10 +65,12 @@ export const FiscalEmissionModal = ({
       });
 
       if (error) {
-        throw new Error(error.message);
+        console.error('Erro da edge function:', error);
+        throw new Error(`Erro na comunicação: ${error.message}`);
       }
 
       if (!data.success) {
+        console.error('Erro retornado pela API:', data);
         throw new Error(data.error || 'Erro ao emitir nota fiscal');
       }
 
