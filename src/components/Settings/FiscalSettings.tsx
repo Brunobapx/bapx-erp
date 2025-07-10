@@ -98,6 +98,9 @@ export const FiscalSettings = () => {
 
     setLoading(true);
     try {
+      console.log('Testando conexão com token:', settings.focus_nfe_token?.substring(0, 10) + '...');
+      console.log('Ambiente:', settings.focus_nfe_environment);
+      
       const { data, error } = await supabase.functions.invoke('focus-nfe-emission', {
         body: {
           action: 'test_connection',
@@ -106,20 +109,24 @@ export const FiscalSettings = () => {
         }
       });
 
+      console.log('Resposta da edge function:', { data, error });
+
       if (error) {
         console.error('Erro ao testar conexão:', error);
-        toast.error('Erro ao testar conexão com Focus NFe');
+        toast.error(`Erro ao testar conexão: ${error.message || 'Erro desconhecido'}`);
         return;
       }
 
-      if (data.success) {
+      if (data && data.success) {
         toast.success('Conexão com Focus NFe estabelecida com sucesso!');
       } else {
-        toast.error(data.error || 'Erro na conexão com Focus NFe. Verifique o token.');
+        const errorMsg = data?.error || 'Erro na conexão com Focus NFe. Verifique o token.';
+        console.error('Erro na resposta:', errorMsg);
+        toast.error(errorMsg);
       }
     } catch (error) {
       console.error('Erro ao testar conexão:', error);
-      toast.error('Erro ao testar conexão com Focus NFe');
+      toast.error(`Erro ao testar conexão: ${error.message || 'Erro desconhecido'}`);
     } finally {
       setLoading(false);
     }

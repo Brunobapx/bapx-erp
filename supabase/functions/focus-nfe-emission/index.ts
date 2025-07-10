@@ -79,11 +79,17 @@ Deno.serve(async (req) => {
       : 'https://homologacao.focusnfe.com.br'
 
     if (action === 'test_connection') {
+      console.log('=== TESTE DE CONEXÃO INICIADO ===')
+      
       // Teste simples de conexão
       const testToken = data.token || configMap.focus_nfe_token
       const testEnvironment = data.environment || configMap.focus_nfe_environment
       
+      console.log('Token recebido (primeiros 10 caracteres):', testToken?.substring(0, 10))
+      console.log('Ambiente:', testEnvironment)
+      
       if (!testToken) {
+        console.error('Token não fornecido')
         throw new Error('Token não fornecido')
       }
 
@@ -91,23 +97,37 @@ Deno.serve(async (req) => {
         ? 'https://api.focusnfe.com.br'
         : 'https://homologacao.focusnfe.com.br'
 
-      const focusResponse = await fetch(`${focusApiUrl}/v2/empresas`, {
-        method: 'GET',
-        headers: {
-          'Authorization': 'Basic ' + btoa(testToken + ':')
-        }
-      })
+      console.log('URL da API Focus:', focusApiUrl)
 
-      if (focusResponse.ok) {
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Conexão estabelecida com sucesso'
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      try {
+        const focusResponse = await fetch(`${focusApiUrl}/v2/empresas`, {
+          method: 'GET',
+          headers: {
+            'Authorization': 'Basic ' + btoa(testToken + ':')
+          }
         })
-      } else {
-        const errorData = await focusResponse.text()
-        throw new Error(`Erro ${focusResponse.status}: ${errorData}`)
+
+        console.log('Status da resposta Focus:', focusResponse.status)
+        console.log('Headers da resposta:', Object.fromEntries(focusResponse.headers.entries()))
+
+        if (focusResponse.ok) {
+          const responseData = await focusResponse.text()
+          console.log('Dados da resposta (sucesso):', responseData)
+          
+          return new Response(JSON.stringify({
+            success: true,
+            message: 'Conexão estabelecida com sucesso'
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
+        } else {
+          const errorData = await focusResponse.text()
+          console.error('Erro da API Focus (status', focusResponse.status, '):', errorData)
+          throw new Error(`Erro ${focusResponse.status}: ${errorData}`)
+        }
+      } catch (fetchError) {
+        console.error('Erro na requisição para Focus NFe:', fetchError)
+        throw new Error(`Erro na requisição: ${fetchError.message}`)
       }
 
     } else if (action === 'emit_nfe') {
