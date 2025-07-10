@@ -394,38 +394,57 @@ Deno.serve(async (req) => {
       // Baixar DANFE em PDF
       console.log('Baixando DANFE para referência:', data.reference)
       
-      const focusResponse = await fetch(`${focusApiUrl}/v2/nfe/${data.reference}/danfe_pdf`, {
+      // Primeiro, verificar se a NFe existe e está autorizada
+      const statusResponse = await fetch(`${focusApiUrl}/v2/nfe/${data.reference}`, {
         method: 'GET',
         headers: {
           'Authorization': 'Basic ' + btoa(configMap.focus_nfe_token + ':')
         }
       })
 
-      console.log('Status da resposta Focus DANFE:', focusResponse.status)
+      console.log('Status da consulta NFe:', statusResponse.status)
 
-      if (!focusResponse.ok) {
-        const errorText = await focusResponse.text()
-        console.error('Erro ao baixar DANFE:', errorText)
-        throw new Error(`Erro ao baixar DANFE: ${errorText}`)
+      if (!statusResponse.ok) {
+        const errorText = await statusResponse.text()
+        console.error('Erro ao consultar NFe:', errorText)
+        throw new Error(`NFe não encontrada ou erro na consulta: ${errorText}`)
       }
 
-      const pdfBuffer = await focusResponse.arrayBuffer()
-      console.log('Tamanho do PDF recebido:', pdfBuffer.byteLength)
-      
-      // Converter para Base64 para garantir transferência correta
-      const base64Pdf = btoa(String.fromCharCode(...new Uint8Array(pdfBuffer)))
-      
-      return new Response(JSON.stringify({
-        success: true,
-        fileData: base64Pdf,
-        fileName: `DANFE-${data.reference}.pdf`,
-        contentType: 'application/pdf'
-      }), {
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json'
+      const nfeData = await statusResponse.json()
+      console.log('Dados da NFe:', nfeData)
+
+      // Verificar se a NFe está autorizada
+      if (nfeData.status !== 'autorizado') {
+        throw new Error(`NFe não está autorizada. Status atual: ${nfeData.status}`)
+      }
+
+      // Se a NFe tem uma URL do DANFE, usar essa URL
+      if (nfeData.danfe_pdf) {
+        console.log('Usando URL do DANFE da NFe:', nfeData.danfe_pdf)
+        const danfeResponse = await fetch(nfeData.danfe_pdf)
+        
+        if (!danfeResponse.ok) {
+          throw new Error('Erro ao baixar DANFE da URL fornecida')
         }
-      })
+
+        const pdfBuffer = await danfeResponse.arrayBuffer()
+        const base64Pdf = btoa(String.fromCharCode(...new Uint8Array(pdfBuffer)))
+        
+        return new Response(JSON.stringify({
+          success: true,
+          fileData: base64Pdf,
+          fileName: `DANFE-${data.reference}.pdf`,
+          contentType: 'application/pdf'
+        }), {
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json'
+          }
+        })
+      }
+
+      // Caso não tenha URL, tentar gerar o DANFE
+      throw new Error('DANFE não disponível para download. A NFe pode não estar processada completamente.')
 
     } else if (action === 'get_xml') {
       // Baixar XML da NFe
