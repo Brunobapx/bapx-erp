@@ -13,7 +13,11 @@ const FiscalEmissionPage = () => {
     filteredInvoices,
     handleEmitInvoice,
     handleCreateInvoice,
-    formatCurrency
+    formatCurrency,
+    downloadDANFE,
+    downloadXML,
+    checkStatus,
+    loading
   } = useFiscalEmissionFilters();
 
   return (
@@ -33,6 +37,10 @@ const FiscalEmissionPage = () => {
         filteredInvoices={filteredInvoices}
         formatCurrency={formatCurrency}
         handleEmitInvoice={handleEmitInvoice}
+        downloadDANFE={downloadDANFE}
+        downloadXML={downloadXML}
+        checkStatus={checkStatus}
+        loading={loading}
       />
     </div>
   );

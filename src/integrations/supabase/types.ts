@@ -452,6 +452,112 @@ export type Database = {
           },
         ]
       }
+      fiscal_invoices: {
+        Row: {
+          authorization_date: string | null
+          client_id: string | null
+          created_at: string
+          danfe_url: string | null
+          error_message: string | null
+          focus_message: string | null
+          focus_reference: string | null
+          focus_response: Json | null
+          focus_status: string | null
+          id: string
+          invoice_key: string | null
+          invoice_number: string
+          invoice_type: string
+          issue_date: string
+          observations: string | null
+          order_id: string | null
+          protocol_number: string | null
+          sale_id: string | null
+          series_number: number | null
+          status: string
+          tax_amount: number | null
+          total_amount: number
+          updated_at: string
+          user_id: string
+          xml_url: string | null
+        }
+        Insert: {
+          authorization_date?: string | null
+          client_id?: string | null
+          created_at?: string
+          danfe_url?: string | null
+          error_message?: string | null
+          focus_message?: string | null
+          focus_reference?: string | null
+          focus_response?: Json | null
+          focus_status?: string | null
+          id?: string
+          invoice_key?: string | null
+          invoice_number: string
+          invoice_type?: string
+          issue_date?: string
+          observations?: string | null
+          order_id?: string | null
+          protocol_number?: string | null
+          sale_id?: string | null
+          series_number?: number | null
+          status?: string
+          tax_amount?: number | null
+          total_amount: number
+          updated_at?: string
+          user_id: string
+          xml_url?: string | null
+        }
+        Update: {
+          authorization_date?: string | null
+          client_id?: string | null
+          created_at?: string
+          danfe_url?: string | null
+          error_message?: string | null
+          focus_message?: string | null
+          focus_reference?: string | null
+          focus_response?: Json | null
+          focus_status?: string | null
+          id?: string
+          invoice_key?: string | null
+          invoice_number?: string
+          invoice_type?: string
+          issue_date?: string
+          observations?: string | null
+          order_id?: string | null
+          protocol_number?: string | null
+          sale_id?: string | null
+          series_number?: number | null
+          status?: string
+          tax_amount?: number | null
+          total_amount?: number
+          updated_at?: string
+          user_id?: string
+          xml_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fiscal_invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiscal_invoices_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiscal_invoices_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       markup_settings: {
         Row: {
           created_at: string | null

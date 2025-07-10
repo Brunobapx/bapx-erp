@@ -194,7 +194,7 @@ Deno.serve(async (req) => {
       }
 
       const companyData = companySettings.reduce((acc, setting) => {
-        acc[setting.key] = JSON.parse(setting.value as string)
+        acc[setting.key] = safeJsonParse(setting.value as string)
         return acc
       }, {} as Record<string, any>)
 
@@ -293,6 +293,32 @@ Deno.serve(async (req) => {
         throw new Error(focusResult.erro_principal || 'Erro ao comunicar com Focus NFe')
       }
 
+      // Salvar NFe na tabela fiscal_invoices
+      const { data: fiscalInvoice, error: invoiceError } = await supabase
+        .from('fiscal_invoices')
+        .insert({
+          user_id: user.id,
+          sale_id: data.sale_id,
+          order_id: sale.order_id,
+          client_id: sale.client_id,
+          invoice_number: data.invoice_number,
+          invoice_type: 'NFe',
+          status: focusResult.status === 'erro' ? 'rejected' : 'pending',
+          total_amount: sale.total_amount,
+          focus_reference: sale.sale_number,
+          focus_status: focusResult.status,
+          focus_message: focusResult.mensagem_sefaz || focusResult.erro_principal,
+          focus_response: focusResult,
+          observations: data.observations,
+          error_message: focusResult.erro_principal
+        })
+        .select()
+        .single()
+
+      if (invoiceError) {
+        console.error('Erro ao salvar NFe:', invoiceError)
+      }
+
       // Atualizar venda com dados da NFe
       await supabase
         .from('sales')
@@ -308,7 +334,8 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({
         success: true,
         message: 'NFe enviada para processamento',
-        focus_result: focusResult
+        focus_result: focusResult,
+        fiscal_invoice: fiscalInvoice
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -323,10 +350,97 @@ Deno.serve(async (req) => {
       })
 
       const focusResult = await focusResponse.json()
+      
+      // Atualizar status na tabela fiscal_invoices se fornecido
+      if (data.fiscal_invoice_id) {
+        await supabase
+          .from('fiscal_invoices')
+          .update({
+            status: focusResult.status === 'autorizado' ? 'authorized' : 
+                   focusResult.status === 'rejeitado' ? 'rejected' : 'pending',
+            focus_status: focusResult.status,
+            focus_message: focusResult.mensagem_sefaz,
+            invoice_key: focusResult.chave_nfe,
+            protocol_number: focusResult.numero_protocolo,
+            authorization_date: focusResult.status === 'autorizado' ? new Date().toISOString() : null,
+            focus_response: focusResult
+          })
+          .eq('id', data.fiscal_invoice_id)
+      }
 
       return new Response(JSON.stringify({
         success: true,
         status: focusResult
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+
+    } else if (action === 'get_danfe_pdf') {
+      // Baixar DANFE em PDF
+      const focusResponse = await fetch(`${focusApiUrl}/v2/nfe/${data.reference}/danfe`, {
+        method: 'GET',
+        headers: {
+          'Authorization': 'Basic ' + btoa(configMap.focus_nfe_token + ':')
+        }
+      })
+
+      if (!focusResponse.ok) {
+        throw new Error('Erro ao baixar DANFE')
+      }
+
+      const pdfBuffer = await focusResponse.arrayBuffer()
+      
+      return new Response(pdfBuffer, {
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="DANFE-${data.reference}.pdf"`
+        }
+      })
+
+    } else if (action === 'get_xml') {
+      // Baixar XML da NFe
+      const focusResponse = await fetch(`${focusApiUrl}/v2/nfe/${data.reference}/xml`, {
+        method: 'GET',
+        headers: {
+          'Authorization': 'Basic ' + btoa(configMap.focus_nfe_token + ':')
+        }
+      })
+
+      if (!focusResponse.ok) {
+        throw new Error('Erro ao baixar XML')
+      }
+
+      const xmlContent = await focusResponse.text()
+      
+      return new Response(xmlContent, {
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/xml',
+          'Content-Disposition': `attachment; filename="NFe-${data.reference}.xml"`
+        }
+      })
+
+    } else if (action === 'list_invoices') {
+      // Listar NFes do usuário
+      const { data: invoices, error } = await supabase
+        .from('fiscal_invoices')
+        .select(`
+          *,
+          sales(sale_number, client_name),
+          orders(order_number),
+          clients(name)
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        throw new Error('Erro ao listar NFes: ' + error.message)
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        invoices: invoices
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
