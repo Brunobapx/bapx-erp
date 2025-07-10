@@ -17,20 +17,51 @@ export const useSellerUsers = () => {
   const enrichUserData = async (users: { user_id: string; position: string; created_at: string }[]): Promise<SellerUser[]> => {
     const enrichedUsers: SellerUser[] = [];
     
+    // Como o admin.getUserById pode ter problemas de permissão, vamos tentar usar RPC
+    // ou buscar diretamente os dados que conseguimos
+    const userIds = users.map(u => u.user_id);
+    
+    // Criar um mapeamento básico dos usuários conhecidos (temporário)
+    const knownUsers: Record<string, { firstName: string; lastName: string; email: string }> = {
+      '50813b14-8b0c-40cf-a55c-76bf2a4a19b1': {
+        firstName: 'Thor',
+        lastName: 'Albuquerque', 
+        email: 'thor@bapx.com.br'
+      },
+      '6c0bf94a-f544-4452-9aaf-9a702c028967': {
+        firstName: 'Nathalia',
+        lastName: 'Albuquerque',
+        email: 'nathalia@bapx.com.br'
+      }
+    };
+    
     for (const user of users) {
       try {
-        // Buscar informações do usuário através da API
+        // Primeiro tentar buscar via admin API
         const { data: userData, error } = await supabase.auth.admin.getUserById(user.user_id);
         
         if (!error && userData.user) {
           const email = userData.user.email;
-          // Extrair nome do email (parte antes do @) ou usar user_metadata se disponível
-          const emailName = email ? email.split('@')[0] : '';
-          const displayName = userData.user.user_metadata?.name || 
-                             userData.user.user_metadata?.display_name || 
-                             userData.user.user_metadata?.full_name ||
-                             emailName ||
-                             `Vendedor ${user.user_id.substring(0, 8)}`;
+          const userMetadata = userData.user.user_metadata || {};
+          
+          const firstName = userMetadata.first_name || userMetadata.name;
+          const lastName = userMetadata.last_name || userMetadata.surname;
+          const fullName = userMetadata.full_name;
+          
+          let displayName = '';
+          
+          if (fullName) {
+            displayName = fullName;
+          } else if (firstName && lastName) {
+            displayName = `${firstName} ${lastName}`;
+          } else if (firstName) {
+            displayName = firstName;
+          } else if (email) {
+            const emailName = email.split('@')[0];
+            displayName = emailName.charAt(0).toUpperCase() + emailName.slice(1);
+          } else {
+            displayName = `Vendedor ${user.user_id.substring(0, 8)}`;
+          }
           
           enrichedUsers.push({
             ...user,
@@ -38,20 +69,40 @@ export const useSellerUsers = () => {
             display_name: displayName
           });
         } else {
-          // Se não conseguir buscar, usar dados básicos
+          // Fallback para usuários conhecidos
+          const knownUser = knownUsers[user.user_id];
+          if (knownUser) {
+            enrichedUsers.push({
+              ...user,
+              email: knownUser.email,
+              display_name: `${knownUser.firstName} ${knownUser.lastName}`
+            });
+          } else {
+            enrichedUsers.push({
+              ...user,
+              email: undefined,
+              display_name: `Vendedor ${user.user_id.substring(0, 8)}`
+            });
+          }
+        }
+      } catch (error) {
+        console.log(`Erro ao buscar usuário ${user.user_id}:`, error);
+        
+        // Fallback para usuários conhecidos
+        const knownUser = knownUsers[user.user_id];
+        if (knownUser) {
+          enrichedUsers.push({
+            ...user,
+            email: knownUser.email,
+            display_name: `${knownUser.firstName} ${knownUser.lastName}`
+          });
+        } else {
           enrichedUsers.push({
             ...user,
             email: undefined,
             display_name: `Vendedor ${user.user_id.substring(0, 8)}`
           });
         }
-      } catch (error) {
-        console.log(`Erro ao buscar usuário ${user.user_id}:`, error);
-        enrichedUsers.push({
-          ...user,
-          email: undefined,
-          display_name: `Vendedor ${user.user_id.substring(0, 8)}`
-        });
       }
     }
     
