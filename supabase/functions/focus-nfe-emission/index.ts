@@ -450,41 +450,62 @@ Deno.serve(async (req) => {
       // Baixar XML da NFe
       console.log('Baixando XML para referência:', data.reference)
       
-      const focusResponse = await fetch(`${focusApiUrl}/v2/nfe/${data.reference}/xml`, {
+      // Primeiro, verificar se a NFe existe e está autorizada
+      const statusResponse = await fetch(`${focusApiUrl}/v2/nfe/${data.reference}`, {
         method: 'GET',
         headers: {
           'Authorization': 'Basic ' + btoa(configMap.focus_nfe_token + ':')
         }
       })
 
-      console.log('Status da resposta Focus XML:', focusResponse.status)
+      console.log('Status da consulta NFe para XML:', statusResponse.status)
 
-      if (!focusResponse.ok) {
-        const errorText = await focusResponse.text()
-        console.error('Erro ao baixar XML:', errorText)
-        throw new Error(`Erro ao baixar XML: ${errorText}`)
+      if (!statusResponse.ok) {
+        const errorText = await statusResponse.text()
+        console.error('Erro ao consultar NFe:', errorText)
+        throw new Error(`NFe não encontrada ou erro na consulta: ${errorText}`)
       }
 
-      const xmlContent = await focusResponse.text()
-      console.log('Tamanho do XML recebido:', xmlContent.length)
-      
-      // Validar se é um XML válido
-      if (!xmlContent.includes('<?xml') || !xmlContent.includes('<NFe')) {
-        console.error('XML inválido recebido:', xmlContent.substring(0, 200))
-        throw new Error('XML recebido está inválido')
+      const nfeData = await statusResponse.json()
+      console.log('Dados da NFe para XML:', nfeData)
+
+      // Verificar se a NFe está autorizada
+      if (nfeData.status !== 'autorizado') {
+        throw new Error(`NFe não está autorizada. Status atual: ${nfeData.status}`)
       }
-      
-      return new Response(JSON.stringify({
-        success: true,
-        fileData: xmlContent,
-        fileName: `NFe-${data.reference}.xml`,
-        contentType: 'application/xml'
-      }), {
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json'
+
+      // Se a NFe tem uma URL do XML, usar essa URL
+      if (nfeData.caminho_xml_nota_fiscal) {
+        console.log('Usando URL do XML da NFe:', nfeData.caminho_xml_nota_fiscal)
+        const xmlResponse = await fetch(nfeData.caminho_xml_nota_fiscal)
+        
+        if (!xmlResponse.ok) {
+          throw new Error('Erro ao baixar XML da URL fornecida')
         }
-      })
+
+        const xmlContent = await xmlResponse.text()
+        
+        // Validar se é um XML válido
+        if (!xmlContent.includes('<?xml') || !xmlContent.includes('<NFe')) {
+          console.error('XML inválido recebido:', xmlContent.substring(0, 200))
+          throw new Error('XML recebido está inválido')
+        }
+        
+        return new Response(JSON.stringify({
+          success: true,
+          fileData: xmlContent,
+          fileName: `NFe-${data.reference}.xml`,
+          contentType: 'application/xml'
+        }), {
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json'
+          }
+        })
+      }
+
+      // Caso não tenha URL, tentar o endpoint direto
+      throw new Error('XML não disponível para download. A NFe pode não estar processada completamente.')
 
     } else if (action === 'list_invoices') {
       // Listar NFes do usuário
