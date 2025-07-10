@@ -277,15 +277,52 @@ Deno.serve(async (req) => {
           indicador_total: 1 // Sim, compõe o valor total
         })),
 
+        // Calcular totais de impostos
+        valor_pis: sale.orders.order_items.reduce((total: number, item: any) => {
+          return total + (item.total_price * 0.0165);
+        }, 0),
+        valor_cofins: sale.orders.order_items.reduce((total: number, item: any) => {
+          return total + (item.total_price * 0.076);
+        }, 0),
+        valor_total_tributos: sale.orders.order_items.reduce((total: number, item: any) => {
+          return total + (item.total_price * 0.0925);
+        }, 0),
+
+        // Peso total da nota
+        peso_liquido: sale.orders.order_items.reduce((total: number, item: any) => {
+          const weight = item.products?.weight || 1;
+          return total + (weight * item.quantity);
+        }, 0),
+        peso_bruto: sale.orders.order_items.reduce((total: number, item: any) => {
+          const weight = item.products?.weight || 1;
+          return total + (weight * item.quantity);
+        }, 0),
+
         // Totais calculados
         valor_produtos: sale.total_amount,
         valor_total: sale.total_amount,
         
-        // Peso total da nota (somar peso dos produtos)
-        peso_liquido: sale.orders.order_items.reduce((total: number, item: any) => {
-          const weight = item.products?.weight || 1; // Peso padrão se não informado
-          return total + (weight * item.quantity);
-        }, 0),
+        // Informações de frete
+        modalidade_frete: 0, // 0=Por conta do emitente, 1=Por conta do destinatário
+        valor_frete: 0,
+        valor_seguro: 0,
+        valor_desconto: 0,
+        valor_outras_despesas: 0,
+
+        // Dados da fatura/cobrança
+        numero_fatura: sale.sale_number,
+        valor_original_fatura: sale.total_amount,
+        valor_desconto_fatura: 0,
+        valor_liquido_fatura: sale.total_amount,
+        
+        // Duplicatas (parcelas)
+        duplicatas: [{
+          numero_duplicata: sale.sale_number + "-01",
+          valor_duplicata: sale.total_amount,
+          data_vencimento: sale.orders.payment_term ? 
+            new Date(Date.now() + (parseInt(sale.orders.payment_term.replace(/\D/g, '')) || 30) * 24 * 60 * 60 * 1000).toISOString().split('T')[0] :
+            new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        }],
 
         // Observações
         informacoes_adicionais_contribuinte: data.observations || `Venda ${sale.sale_number} - Pedido ${sale.orders.order_number}.`
