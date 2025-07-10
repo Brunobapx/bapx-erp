@@ -54,11 +54,11 @@ export const useCompanyFiscalSettings = () => {
     icms_cst: "60", // ICMS cobrado por substituição tributária
     icms_origem: 0, // Nacional
     
-    // PIS/COFINS - Regime cumulativo
+    // PIS/COFINS - Regime cumulativo (corrigido conforme XML)
     pis_cst: "01", // Operação tributável com alíquota básica
-    pis_aliquota: 0.65, // 0,65%
+    pis_aliquota: 1.65, // 1,65% - corrigido
     cofins_cst: "01", // Operação tributável com alíquota básica  
-    cofins_aliquota: 3.00 // 3%
+    cofins_aliquota: 7.60 // 7,60% - corrigido
   });
 
   const [loading, setLoading] = useState(false);
@@ -136,8 +136,8 @@ export const useCompanyFiscalSettings = () => {
                          settings.tax_regime === 2 ? 'Simples Nacional - Excesso' : 'Regime Normal',
       cfop_description: 'Venda de mercadoria adquirida (com substituição tributária)',
       icms_description: 'ICMS por Substituição Tributária (já retido anteriormente)',
-      pis_cofins_description: 'Regime Cumulativo - PIS 0,65% + COFINS 3%',
-      total_tax_rate: settings.pis_aliquota + settings.cofins_aliquota // 3,65%
+      pis_cofins_description: 'Regime Cumulativo - PIS 1,65% + COFINS 7,60%',
+      total_tax_rate: settings.pis_aliquota + settings.cofins_aliquota // 9,25%
     };
   };
 

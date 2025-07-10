@@ -206,19 +206,21 @@ Deno.serve(async (req) => {
         tipo_documento: 1, // Saída
         finalidade_emissao: 1, // Normal
         local_destino: 1, // Operação interna (mesmo estado)
-        consumidor_final: 1, // Consumidor final
+        consumidor_final: sale.clients?.type === 'pf' ? 1 : 0, // 1=PF (consumidor final), 0=PJ (não é consumidor final)
         presenca_comprador: 1, // Operação presencial
         
         // Dados do emitente (ARTISAN BREAD)
         cnpj_emitente: "39524018000128",
         nome_emitente: "ARTISAN BREAD PAES ARTESANAIS LTDA",
         nome_fantasia_emitente: "ARTISAN",
-        logradouro_emitente: companyData.company_street || "Rua a definir",
-        numero_emitente: companyData.company_number || "S/N",
-        bairro_emitente: companyData.company_neighborhood || "Centro",
+        logradouro_emitente: "V PASTOR MARTIN LUTHER KING JR.",
+        numero_emitente: "11026",
+        complemento_emitente: "LOJA A",
+        bairro_emitente: "ACARI",
         municipio_emitente: "Rio de Janeiro",
         uf_emitente: "RJ",
-        cep_emitente: companyData.company_cep?.replace(/[^\d]/g, '') || "20000000",
+        cep_emitente: "21530014",
+        telefone_emitente: "21643352067",
         inscricao_estadual_emitente: "11867847",
         regime_tributario_emitente: 3, // Regime Normal (baseado no porte da empresa)
         
@@ -232,26 +234,30 @@ Deno.serve(async (req) => {
         municipio_destinatario: sale.clients?.city,
         uf_destinatario: sale.clients?.state,
         cep_destinatario: sale.clients?.zip?.replace(/[^\d]/g, ''),
+        indicador_ie_destinatario: sale.clients?.ie ? 1 : (sale.clients?.type === 'pf' ? 2 : 9), // 1=Contribuinte, 2=Isento, 9=Não contribuinte
         
         // Modalidade de frete
-        modalidade_frete: 9, // Sem frete (padrão para padaria)
+        modalidade_frete: 3, // Por conta do destinatário
 
         // Itens da nota
         itens: sale.orders.order_items.map((item: any, index: number) => ({
           numero_item: index + 1,
           codigo_produto: item.products?.code || item.product_id,
+          codigo_ean: "SEM GTIN", // Código de barras padrão
           descricao: item.product_name,
           cfop: "5405", // Venda de mercadoria com substituição tributária
-          unidade_comercial: item.products?.unit || "UN",
+          unidade_comercial: item.products?.unit || "CX",
           quantidade_comercial: item.quantity,
           valor_unitario_comercial: item.unit_price,
           valor_total_bruto: item.total_price,
-          unidade_tributavel: item.products?.unit || "UN",
+          codigo_ean_tributavel: "SEM GTIN",
+          unidade_tributavel: item.products?.unit || "CX",
           quantidade_tributavel: item.quantity,
           valor_unitario_tributavel: item.unit_price,
           
-          // NCM - usar do produto ou padrão para pães
+          // NCM e CEST - usar do produto ou padrão para pães
           codigo_ncm: item.products?.ncm || "19059090", // Outros produtos de padaria
+          codigo_cest: "1706200", // CEST para produtos de padaria
           
           // ICMS - Substituição Tributária (conforme NFe anterior)
           icms_origem: 0, // Nacional
@@ -259,21 +265,30 @@ Deno.serve(async (req) => {
           
           // PIS - Regime cumulativo
           pis_situacao_tributaria: "01", // Operação tributável com alíquota básica
-          pis_aliquota_porcentual: 0.65, // 0,65% para regime cumulativo
+          pis_aliquota_porcentual: 1.65, // 1,65% - corrigido conforme XML
           
           // COFINS - Regime cumulativo  
           cofins_situacao_tributaria: "01", // Operação tributável com alíquota básica
-          cofins_aliquota_porcentual: 3.00, // 3% para regime cumulativo
+          cofins_aliquota_porcentual: 7.60, // 7,60% - corrigido conforme XML
           
-          valor_total_tributos: item.total_price * 0.0365 // Aproximadamente 3,65% (PIS + COFINS)
+          valor_total_tributos: item.total_price * 0.0925, // 9,25% (PIS + COFINS corrigido)
+          
+          // Indicador se compõe valor total
+          indicador_total: 1 // Sim, compõe o valor total
         })),
 
         // Totais calculados
         valor_produtos: sale.total_amount,
         valor_total: sale.total_amount,
+        
+        // Peso total da nota (somar peso dos produtos)
+        peso_liquido: sale.orders.order_items.reduce((total: number, item: any) => {
+          const weight = item.products?.weight || 1; // Peso padrão se não informado
+          return total + (weight * item.quantity);
+        }, 0),
 
         // Observações
-        informacoes_adicionais_contribuinte: data.observations || `Venda ${sale.sale_number} - Pedido ${sale.orders.order_number}. Empresa optante pelo Simples Nacional.`
+        informacoes_adicionais_contribuinte: data.observations || `Venda ${sale.sale_number} - Pedido ${sale.orders.order_number}.`
       }
 
       // Enviar para Focus NFe
