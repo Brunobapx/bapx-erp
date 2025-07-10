@@ -29,23 +29,42 @@ Deno.serve(async (req) => {
       throw new Error('Usuário não autenticado')
     }
 
-    const { action, data } = await req.json()
+  const { action, data } = await req.json()
 
-    // Buscar configurações do Focus NFe
-    const { data: settings, error: settingsError } = await supabase
-      .from('system_settings')
-      .select('key, value')
-      .in('key', ['focus_nfe_token', 'focus_nfe_environment', 'focus_nfe_enabled'])
+  console.log('Focus NFe - Action:', action, 'Data:', data)
 
-    if (settingsError) {
-      throw new Error('Erro ao buscar configurações: ' + settingsError.message)
+  // Buscar configurações do Focus NFe
+  const { data: settings, error: settingsError } = await supabase
+    .from('system_settings')
+    .select('key, value')
+    .in('key', ['focus_nfe_token', 'focus_nfe_environment', 'focus_nfe_enabled'])
+
+  if (settingsError) {
+    console.error('Erro ao buscar configurações:', settingsError)
+    throw new Error('Erro ao buscar configurações: ' + settingsError.message)
+  }
+
+  console.log('Settings from database:', settings)
+
+  // Função segura para fazer parsing JSON
+  const safeJsonParse = (value: string) => {
+    try {
+      return JSON.parse(value)
+    } catch (error) {
+      console.log('Failed to parse as JSON, returning as string:', value)
+      return value
     }
+  }
 
-    const configMap = settings.reduce((acc, setting) => {
-      acc[setting.key] = JSON.parse(setting.value as string)
-      return acc
-    }, {} as Record<string, any>)
+  const configMap = settings.reduce((acc, setting) => {
+    acc[setting.key] = safeJsonParse(setting.value as string)
+    return acc
+  }, {} as Record<string, any>)
 
+  console.log('Config map:', configMap)
+
+  // Para teste de conexão, não validar se está habilitado
+  if (action !== 'test_connection') {
     if (!configMap.focus_nfe_enabled) {
       throw new Error('Integração com Focus NFe não está habilitada')
     }
@@ -53,6 +72,7 @@ Deno.serve(async (req) => {
     if (!configMap.focus_nfe_token) {
       throw new Error('Token Focus NFe não configurado')
     }
+  }
 
     const focusApiUrl = configMap.focus_nfe_environment === 'producao' 
       ? 'https://api.focusnfe.com.br'

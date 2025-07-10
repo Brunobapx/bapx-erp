@@ -22,6 +22,16 @@ export const FiscalSettings = () => {
     loadSettings();
   }, []);
 
+  // Função segura para fazer parsing JSON
+  const safeJsonParse = (value: string) => {
+    try {
+      return JSON.parse(value);
+    } catch (error) {
+      console.log('Failed to parse as JSON, returning as string:', value);
+      return value;
+    }
+  };
+
   const loadSettings = async () => {
     setLoading(true);
     try {
@@ -32,10 +42,14 @@ export const FiscalSettings = () => {
 
       if (error) throw error;
 
+      console.log('Configurações carregadas:', data);
+
       const settingsMap = data.reduce((acc, setting) => {
-        acc[setting.key] = JSON.parse(setting.value as string);
+        acc[setting.key] = safeJsonParse(setting.value as string);
         return acc;
       }, {} as Record<string, any>);
+
+      console.log('Settings map:', settingsMap);
 
       setSettings({
         focus_nfe_token: settingsMap.focus_nfe_token || '',
