@@ -112,20 +112,26 @@ export const FiscalSettings = () => {
       console.log('Resposta da edge function:', { data, error });
 
       if (error) {
-        console.error('Erro ao testar conexão:', error);
-        toast.error(`Erro ao testar conexão: ${error.message || 'Erro desconhecido'}`);
+        console.error('Erro ao chamar edge function:', error);
+        toast.error(`Erro ao chamar função: ${error.message || 'Erro desconhecido'}`);
         return;
       }
 
-      if (data && data.success) {
+      if (!data) {
+        console.error('Resposta vazia da edge function');
+        toast.error('Resposta vazia da função');
+        return;
+      }
+
+      if (data.success) {
         toast.success('Conexão com Focus NFe estabelecida com sucesso!');
       } else {
-        const errorMsg = data?.error || 'Erro na conexão com Focus NFe. Verifique o token.';
+        const errorMsg = data.error || 'Erro na conexão com Focus NFe. Verifique o token.';
         console.error('Erro na resposta:', errorMsg);
         toast.error(errorMsg);
       }
     } catch (error) {
-      console.error('Erro ao testar conexão:', error);
+      console.error('Erro ao testar conexão (catch):', error);
       toast.error(`Erro ao testar conexão: ${error.message || 'Erro desconhecido'}`);
     } finally {
       setLoading(false);

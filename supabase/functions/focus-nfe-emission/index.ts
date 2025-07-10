@@ -285,12 +285,14 @@ Deno.serve(async (req) => {
     }
 
   } catch (error) {
-    console.error('Erro na function:', error)
+    console.error('Erro na function focus-nfe-emission:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
+    
     return new Response(JSON.stringify({
       success: false,
-      error: error.message
+      error: errorMessage
     }), {
-      status: 400,
+      status: 200, // Retornar status 200 para evitar erro de "non-2xx status code"
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
