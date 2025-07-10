@@ -394,7 +394,7 @@ Deno.serve(async (req) => {
       // Baixar DANFE em PDF
       console.log('Baixando DANFE para referência:', data.reference)
       
-      const focusResponse = await fetch(`${focusApiUrl}/v2/nfe/${data.reference}/danfe`, {
+      const focusResponse = await fetch(`${focusApiUrl}/v2/nfe/${data.reference}/danfe_pdf`, {
         method: 'GET',
         headers: {
           'Authorization': 'Basic ' + btoa(configMap.focus_nfe_token + ':')
