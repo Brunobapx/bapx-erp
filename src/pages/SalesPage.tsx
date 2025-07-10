@@ -258,6 +258,7 @@ const SalesPage = () => {
                 <TableHead>Venda</TableHead>
                 <TableHead>Pedido</TableHead>
                 <TableHead>Cliente</TableHead>
+                <TableHead>Vendedor</TableHead>
                 <TableHead className="text-right">Valor (R$)</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead>Status</TableHead>
@@ -273,6 +274,7 @@ const SalesPage = () => {
                   <TableCell className="font-medium">{item.sale_number}</TableCell>
                   <TableCell>{item.order_number}</TableCell>
                   <TableCell>{item.client_name}</TableCell>
+                  <TableCell>{item.seller || 'N/A'}</TableCell>
                   <TableCell className="text-right">{item.total_amount.toLocaleString('pt-BR')}</TableCell>
                   <TableCell>{new Date(item.created_at || '').toLocaleDateString('pt-BR')}</TableCell>
                   <TableCell>

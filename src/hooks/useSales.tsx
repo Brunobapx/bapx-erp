@@ -32,7 +32,9 @@ export type Sale = {
     order_number: string;
     client_name: string;
     salesperson_id?: string;
+    seller?: string;
   };
+  seller?: string;
 };
 
 export const useSales = () => {
@@ -61,7 +63,8 @@ export const useSales = () => {
             orders!inner(
               order_number,
               client_name,
-              salesperson_id
+              salesperson_id,
+              seller
             )
           `);
 
@@ -75,10 +78,11 @@ export const useSales = () => {
         
         if (error) throw error;
         
-        // Mapear os dados para incluir order_number
+        // Mapear os dados para incluir order_number e seller
         const salesWithOrderInfo = (data || []).map(sale => ({
           ...sale,
-          order_number: sale.orders?.order_number || ''
+          order_number: sale.orders?.order_number || '',
+          seller: sale.orders?.seller || 'N/A'
         }));
         
         setSales(salesWithOrderInfo);
