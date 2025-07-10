@@ -1,10 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { CommissionFilters } from './CommissionFilters';
 import { CommissionTable } from './CommissionTable';
+import { CommissionGenerationTable } from './CommissionGenerationTable';
 import { useCommissionReport } from '@/hooks/useCommissionReport';
+import { useCommissionGeneration } from '@/hooks/useCommissionGeneration';
 
 export const CommissionReport = () => {
+  const [isGenerationMode, setIsGenerationMode] = useState(false);
   const {
     commissions,
     loading,
@@ -13,12 +17,30 @@ export const CommissionReport = () => {
     totalCommissions,
     totalSales
   } = useCommissionReport();
+  
+  const {
+    selectedCommissions,
+    generating,
+    handleSelectionChange,
+    handleSelectAll,
+    handleClearAll,
+    getSelectedTotal,
+    generateCommissions
+  } = useCommissionGeneration();
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Relatório de Comissões</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Relatório de Comissões</CardTitle>
+            <Button
+              variant={isGenerationMode ? "secondary" : "default"}
+              onClick={() => setIsGenerationMode(!isGenerationMode)}
+            >
+              {isGenerationMode ? "Modo Visualização" : "Gerar Comissões"}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           <CommissionFilters
@@ -55,10 +77,23 @@ export const CommissionReport = () => {
             </Card>
           </div>
           
-          <CommissionTable
-            commissions={commissions}
-            loading={loading}
-          />
+          {isGenerationMode ? (
+            <CommissionGenerationTable
+              commissions={commissions}
+              loading={loading}
+              selectedCommissions={selectedCommissions}
+              onSelectionChange={handleSelectionChange}
+              onSelectAll={() => handleSelectAll(commissions)}
+              onClearAll={handleClearAll}
+              onGenerateCommissions={() => generateCommissions(commissions)}
+              selectedTotal={getSelectedTotal(commissions)}
+            />
+          ) : (
+            <CommissionTable
+              commissions={commissions}
+              loading={loading}
+            />
+          )}
         </CardContent>
       </Card>
     </div>

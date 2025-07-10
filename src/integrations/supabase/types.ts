@@ -145,6 +145,54 @@ export type Database = {
         }
         Relationships: []
       }
+      commission_payments: {
+        Row: {
+          accounts_payable_id: string | null
+          commission_details: Json
+          created_at: string
+          due_date: string
+          id: string
+          order_ids: Json
+          payment_number: string
+          seller_id: string
+          seller_name: string
+          status: string
+          total_commission: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accounts_payable_id?: string | null
+          commission_details?: Json
+          created_at?: string
+          due_date: string
+          id?: string
+          order_ids?: Json
+          payment_number: string
+          seller_id: string
+          seller_name: string
+          status?: string
+          total_commission?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accounts_payable_id?: string | null
+          commission_details?: Json
+          created_at?: string
+          due_date?: string
+          id?: string
+          order_ids?: Json
+          payment_number?: string
+          seller_id?: string
+          seller_name?: string
+          status?: string
+          total_commission?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       conciliacoes: {
         Row: {
           created_at: string

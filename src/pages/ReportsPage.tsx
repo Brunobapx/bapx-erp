@@ -1,8 +1,9 @@
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, FileText } from 'lucide-react';
+import { TrendingUp, FileText, Receipt } from 'lucide-react';
 import { CommissionReport } from '@/components/Reports/CommissionReport';
+import { GeneratedCommissionsTab } from '@/components/Reports/GeneratedCommissionsTab';
 
 const ReportsPage = () => {
   return (
@@ -15,10 +16,14 @@ const ReportsPage = () => {
       </div>
       
       <Tabs defaultValue="commissions" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="commissions" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
             Comissões
+          </TabsTrigger>
+          <TabsTrigger value="generated" className="flex items-center gap-2">
+            <Receipt className="h-4 w-4" />
+            Comissões Geradas
           </TabsTrigger>
           <TabsTrigger value="sales" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
@@ -28,6 +33,10 @@ const ReportsPage = () => {
         
         <TabsContent value="commissions" className="space-y-6">
           <CommissionReport />
+        </TabsContent>
+        
+        <TabsContent value="generated" className="space-y-6">
+          <GeneratedCommissionsTab />
         </TabsContent>
         
         <TabsContent value="sales" className="space-y-6">
