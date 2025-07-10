@@ -102,38 +102,69 @@ export const FiscalEmissionModal = ({
 
     setIsSubmitting(true);
     try {
+      console.log('=== INÍCIO EMISSÃO NFE ===');
+      console.log('Dados da venda:', saleData);
+      console.log('Número da NFe:', invoiceNumber);
+      console.log('Observações:', observations);
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         throw new Error('Usuário não autenticado');
       }
 
+      console.log('Sessão obtida:', !!session);
+
+      const requestBody = {
+        action: 'emit_nfe',
+        data: {
+          sale_id: saleData.id,
+          invoice_number: invoiceNumber,
+          observations
+        }
+      };
+
+      console.log('Body da requisição:', requestBody);
+
       const { data, error } = await supabase.functions.invoke('focus-nfe-emission', {
-        body: {
-          action: 'emit_nfe',
-          data: {
-            sale_id: saleData.id,
-            invoice_number: invoiceNumber,
-            observations
-          }
-        },
+        body: requestBody,
         headers: {
           Authorization: `Bearer ${session.access_token}`
         }
       });
 
+      console.log('Resposta completa do edge function:', { data, error });
+
       if (error) {
+        console.error('Erro do edge function:', error);
         throw new Error(error.message);
       }
 
-      if (!data.success) {
-        throw new Error(data.error || 'Erro ao emitir nota fiscal');
+      if (!data?.success) {
+        console.error('Dados de erro:', data);
+        throw new Error(data?.error || data?.message || 'Erro ao emitir nota fiscal');
       }
 
+      console.log('NFe emitida com sucesso:', data);
       toast.success('Nota fiscal enviada para processamento no Focus NFe!');
       onClose(true);
     } catch (error) {
-      console.error('Erro ao emitir nota fiscal:', error);
-      toast.error(error.message || 'Erro ao emitir nota fiscal');
+      console.error('=== ERRO NA EMISSÃO NFE ===');
+      console.error('Tipo do erro:', typeof error);
+      console.error('Erro completo:', error);
+      console.error('Stack trace:', error.stack);
+      
+      let errorMessage = 'Erro ao emitir nota fiscal';
+      
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error.error) {
+        errorMessage = error.error;
+      }
+      
+      console.error('Mensagem final do erro:', errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
