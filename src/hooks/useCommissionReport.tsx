@@ -93,12 +93,12 @@ export const useCommissionReport = () => {
           if (userRole) {
             query = query.eq('salesperson_id', matchingUser.id);
           } else {
-            // Se não for vendedor, não retornar nenhum resultado
-            query = query.eq('salesperson_id', 'no-match');
+            // Se não for vendedor, usar condição que não retorna resultados
+            query = query.eq('salesperson_id', '00000000-0000-0000-0000-000000000000');
           }
         } else {
-          // Se não encontrar usuário, não retornar nenhum resultado
-          query = query.eq('salesperson_id', 'no-match');
+          // Se não encontrar usuário, usar condição que não retorna resultados
+          query = query.eq('salesperson_id', '00000000-0000-0000-0000-000000000000');
         }
       }
 
