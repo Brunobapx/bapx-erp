@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Order } from '@/hooks/useOrders';
 import { useProducts } from '@/hooks/useProducts';
+import { useAuth } from '@/components/Auth/AuthProvider';
 
 export interface OrderFormItem {
   id: string;
@@ -22,6 +23,7 @@ export interface OrderFormState {
   payment_method: string;
   payment_term: string;
   seller: string;
+  salesperson_id: string;
   status: string;
   notes: string;
   total_amount: number;
@@ -33,6 +35,7 @@ interface UseOrderFormStateProps {
 
 export const useOrderFormState = (orderData?: any) => {
   const { products } = useProducts();
+  const { user, userRole } = useAuth();
   const [formData, setFormData] = useState<OrderFormState>({
     id: '',
     order_number: '',
@@ -42,7 +45,8 @@ export const useOrderFormState = (orderData?: any) => {
     delivery_deadline: null,
     payment_method: '',
     payment_term: '',
-    seller: '',
+    seller: userRole === 'seller' ? user?.email || '' : '',
+    salesperson_id: userRole === 'seller' ? user?.id || '' : '',
     status: 'pending',
     notes: '',
     total_amount: 0,
@@ -73,6 +77,7 @@ export const useOrderFormState = (orderData?: any) => {
         payment_method: data.payment_method || '',
         payment_term: data.payment_term || '',
         seller: data.seller || '',
+        salesperson_id: data.salesperson_id || '',
         status: data.status || 'pending',
         notes: data.notes || '',
         total_amount: data.total_amount || 0,
@@ -100,7 +105,8 @@ export const useOrderFormState = (orderData?: any) => {
       delivery_deadline: null,
       payment_method: '',
       payment_term: '',
-      seller: '',
+      seller: userRole === 'seller' ? user?.email || '' : '',
+      salesperson_id: userRole === 'seller' ? user?.id || '' : '',
       status: 'pending',
       notes: '',
       total_amount: 0,

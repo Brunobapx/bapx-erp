@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { 
   ChartBar, Users, Package, ShoppingCart, DollarSign, 
   Truck, Calendar, Settings, FileText, Box, Warehouse,
-  FilePen, LogOut, Menu, X
+  FilePen, LogOut, Menu, X, BarChart3
 } from 'lucide-react';
 import { useAuth } from '@/components/Auth/AuthProvider';
 import { useModuleAccess } from '@/hooks/useModuleAccess';
@@ -31,6 +31,7 @@ const Sidebar = () => {
     { icon: Truck, label: 'Rotas', href: '/rotas', route: '/rotas' },
     { icon: Calendar, label: 'Calendário', href: '/calendario', route: '/calendario' },
     { icon: FilePen, label: 'Ordens de Serviço', href: '/ordens-servico', route: '/ordens-servico' },
+    { icon: BarChart3, label: 'Relatórios', href: '/relatorios', route: '/relatorios' },
     { icon: Settings, label: 'Configurações', href: '/configuracoes', route: '/configuracoes' }
   ];
 

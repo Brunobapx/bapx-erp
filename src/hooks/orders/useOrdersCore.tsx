@@ -10,22 +10,29 @@ import {
 export const useOrdersCore = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
 
   const loadOrders = useCallback(async () => {
     if (!user) return;
     
     try {
       setLoading(true);
-      console.log('[useOrdersCore] Carregando pedidos da empresa');
+      console.log('[useOrdersCore] Carregando pedidos para role:', userRole);
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('orders')
         .select(`
           *,
           order_items (*)
-        `)
-        .order('created_at', { ascending: false });
+        `);
+
+      // Se for vendedor, filtrar apenas pedidos onde ele é o vendedor
+      if (userRole === 'seller') {
+        query = query.eq('salesperson_id', user.id);
+        console.log('[useOrdersCore] Filtrando pedidos do vendedor:', user.id);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
 
@@ -37,7 +44,7 @@ export const useOrdersCore = () => {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, userRole]);
 
   const createOrder = async (orderData: Omit<Order, 'id' | 'order_number' | 'created_at' | 'updated_at'>) => {
     if (!user) throw new Error('Usuário não autenticado');
@@ -67,6 +74,14 @@ export const useOrdersCore = () => {
 
   const updateOrder = async (id: string, orderData: Partial<Order>) => {
     try {
+      // Se for vendedor, verificar se pode editar este pedido
+      if (userRole === 'seller') {
+        const order = orders.find(o => o.id === id);
+        if (order && order.salesperson_id !== user.id) {
+          throw new Error('Você só pode editar seus próprios pedidos');
+        }
+      }
+
       const { error } = await supabase
         .from('orders')
         .update(orderData)
@@ -85,6 +100,14 @@ export const useOrdersCore = () => {
 
   const deleteOrder = async (id: string) => {
     try {
+      // Se for vendedor, verificar se pode deletar este pedido
+      if (userRole === 'seller') {
+        const order = orders.find(o => o.id === id);
+        if (order && order.salesperson_id !== user.id) {
+          throw new Error('Você só pode excluir seus próprios pedidos');
+        }
+      }
+
       const { error } = await supabase
         .from('orders')
         .delete()

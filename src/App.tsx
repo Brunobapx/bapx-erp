@@ -26,6 +26,7 @@ import PurchasesPage from "./pages/PurchasesPage";
 import StockPage from "./pages/StockPage";
 import FiscalEmissionPage from "./pages/FiscalEmissionPage";
 import ServiceOrdersPage from "./pages/ServiceOrdersPage";
+import ReportsPage from "./pages/ReportsPage";
 
 import NotFound from "./pages/NotFound";
 import { FinancialProvider } from "./contexts/FinancialContext";
@@ -137,6 +138,11 @@ const App = () => (
                           <Route path="/ordens-servico" element={
                             <ModuleAccessCheck routePath="/ordens-servico">
                               <ServiceOrdersPage />
+                            </ModuleAccessCheck>
+                          } />
+                          <Route path="/relatorios" element={
+                            <ModuleAccessCheck routePath="/relatorios">
+                              <ReportsPage />
                             </ModuleAccessCheck>
                           } />
                           <Route path="*" element={<NotFound />} />

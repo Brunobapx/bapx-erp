@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/components/Auth/AuthProvider";
 
 export type SaleStatus = 
   | 'pending'
@@ -27,6 +28,11 @@ export type Sale = {
   updated_at?: string;
   user_id?: string;
   order_number?: string;
+  orders?: {
+    order_number: string;
+    client_name: string;
+    salesperson_id?: string;
+  };
 };
 
 export const useSales = () => {
@@ -34,6 +40,7 @@ export const useSales = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const { userRole, user: authUser } = useAuth();
 
   useEffect(() => {
     const fetchSales = async () => {
@@ -47,16 +54,24 @@ export const useSales = () => {
           throw new Error('Usuário não autenticado');
         }
 
-        const { data, error } = await supabase
+        let query = supabase
           .from('sales')
           .select(`
             *,
             orders!inner(
               order_number,
-              client_name
+              client_name,
+              salesperson_id
             )
-          `)
-          .order('created_at', { ascending: false });
+          `);
+
+        // Se for vendedor, filtrar apenas vendas onde ele é o vendedor
+        if (userRole === 'seller') {
+          query = query.eq('orders.salesperson_id', user.id);
+          console.log('[useSales] Filtrando vendas do vendedor:', user.id);
+        }
+
+        const { data, error } = await query.order('created_at', { ascending: false });
         
         if (error) throw error;
         
@@ -77,7 +92,7 @@ export const useSales = () => {
     };
 
     fetchSales();
-  }, [refreshTrigger]);
+  }, [refreshTrigger, userRole]);
 
   const refreshSales = () => {
     setRefreshTrigger(prev => prev + 1);
@@ -85,6 +100,13 @@ export const useSales = () => {
 
   const updateSaleStatus = async (id: string, status: SaleStatus, invoiceNumber?: string) => {
     try {
+      // Se for vendedor, verificar se pode editar esta venda
+      if (userRole === 'seller' && authUser) {
+        const sale = sales.find(s => s.id === id);
+        if (sale && sale.orders?.salesperson_id !== authUser.id) {
+          throw new Error('Você só pode editar suas próprias vendas');
+        }
+      }
       const updateData: any = { 
         status,
         updated_at: new Date().toISOString()
