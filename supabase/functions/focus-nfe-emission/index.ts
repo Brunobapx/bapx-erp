@@ -58,7 +58,39 @@ Deno.serve(async (req) => {
       ? 'https://api.focusnfe.com.br'
       : 'https://homologacao.focusnfe.com.br'
 
-    if (action === 'emit_nfe') {
+    if (action === 'test_connection') {
+      // Teste simples de conexão
+      const testToken = data.token || configMap.focus_nfe_token
+      const testEnvironment = data.environment || configMap.focus_nfe_environment
+      
+      if (!testToken) {
+        throw new Error('Token não fornecido')
+      }
+
+      const focusApiUrl = testEnvironment === 'producao' 
+        ? 'https://api.focusnfe.com.br'
+        : 'https://homologacao.focusnfe.com.br'
+
+      const focusResponse = await fetch(`${focusApiUrl}/v2/empresas`, {
+        method: 'GET',
+        headers: {
+          'Authorization': 'Basic ' + btoa(testToken + ':')
+        }
+      })
+
+      if (focusResponse.ok) {
+        return new Response(JSON.stringify({
+          success: true,
+          message: 'Conexão estabelecida com sucesso'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      } else {
+        const errorData = await focusResponse.text()
+        throw new Error(`Erro ${focusResponse.status}: ${errorData}`)
+      }
+
+    } else if (action === 'emit_nfe') {
       console.log('Emitindo NFe para:', data.sale_id)
       
       // Buscar dados da venda

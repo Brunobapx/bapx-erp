@@ -84,21 +84,24 @@ export const FiscalSettings = () => {
 
     setLoading(true);
     try {
-      const baseUrl = settings.focus_nfe_environment === 'producao' 
-        ? 'https://api.focusnfe.com.br'
-        : 'https://homologacao.focusnfe.com.br';
-
-      const response = await fetch(`${baseUrl}/v2/empresas`, {
-        method: 'GET',
-        headers: {
-          'Authorization': 'Basic ' + btoa(settings.focus_nfe_token + ':')
+      const { data, error } = await supabase.functions.invoke('focus-nfe-emission', {
+        body: {
+          action: 'test_connection',
+          token: settings.focus_nfe_token,
+          environment: settings.focus_nfe_environment
         }
       });
 
-      if (response.ok) {
+      if (error) {
+        console.error('Erro ao testar conexão:', error);
+        toast.error('Erro ao testar conexão com Focus NFe');
+        return;
+      }
+
+      if (data.success) {
         toast.success('Conexão com Focus NFe estabelecida com sucesso!');
       } else {
-        toast.error('Erro na conexão com Focus NFe. Verifique o token.');
+        toast.error(data.error || 'Erro na conexão com Focus NFe. Verifique o token.');
       }
     } catch (error) {
       console.error('Erro ao testar conexão:', error);
