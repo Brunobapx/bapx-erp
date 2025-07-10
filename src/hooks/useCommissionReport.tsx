@@ -63,7 +63,7 @@ export const useCommissionReport = () => {
         `)
         .gte('created_at', `${filters.startDate}T00:00:00`)
         .lte('created_at', `${filters.endDate}T23:59:59`)
-        .in('status', ['confirmed', 'approved']);
+        .in('status', ['sale_confirmed', 'delivered']);
 
       // Se for vendedor, filtrar por seus pedidos
       if (userRole === 'seller') {
