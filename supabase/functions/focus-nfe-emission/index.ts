@@ -102,8 +102,9 @@ Deno.serve(async (req) => {
       console.log('URL da API Focus:', focusApiUrl)
 
       try {
-        // Usar endpoint mais simples para teste de conectividade
-        const focusResponse = await fetch(`${focusApiUrl}/v2/nfe`, {
+        // Usar uma requisição simples para testar a conectividade e autenticação
+        // Usar endpoint de consulta sem parâmetros específicos para verificar se o token é válido
+        const focusResponse = await fetch(`${focusApiUrl}/v2/nfe/12345`, {
           method: 'GET',
           headers: {
             'Authorization': 'Basic ' + btoa(testToken + ':'),
@@ -114,6 +115,7 @@ Deno.serve(async (req) => {
         console.log('Status da resposta Focus:', focusResponse.status)
         console.log('Headers da resposta:', Object.fromEntries(focusResponse.headers.entries()))
 
+        // Status 200 = sucesso
         if (focusResponse.ok) {
           const responseData = await focusResponse.text()
           console.log('Dados da resposta (sucesso):', responseData)
@@ -124,7 +126,26 @@ Deno.serve(async (req) => {
           }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           })
-        } else {
+        }
+        // Status 404 = nota não encontrada (mas token é válido)
+        else if (focusResponse.status === 404) {
+          console.log('Erro 404 - Nota não encontrada (token válido)')
+          
+          return new Response(JSON.stringify({
+            success: true,
+            message: 'Token válido - Conexão estabelecida com sucesso'
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
+        }
+        // Status 403 = token inválido
+        else if (focusResponse.status === 403) {
+          const errorData = await focusResponse.text()
+          console.error('Erro 403 - Token inválido:', errorData)
+          throw new Error('Token Focus NFe inválido ou não autorizado')
+        }
+        // Outros erros
+        else {
           const errorData = await focusResponse.text()
           console.error('Erro da API Focus (status', focusResponse.status, '):', errorData)
           throw new Error(`Erro ${focusResponse.status}: ${errorData}`)
