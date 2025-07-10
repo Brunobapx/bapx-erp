@@ -100,13 +100,14 @@ export const ProductBasicFields: React.FC<ProductBasicFieldsProps> = ({
       </div>
     </div>
 
-    <div className="grid grid-cols-3 gap-4">
+    <div className="grid grid-cols-4 gap-4">
       <div className="grid gap-2">
         <Label htmlFor="price">Preço (R$)</Label>
         <Input
           id="price"
           name="price"
           type="number"
+          step="0.01"
           value={formData.price}
           onChange={handleChange}
         />
@@ -117,6 +118,7 @@ export const ProductBasicFields: React.FC<ProductBasicFieldsProps> = ({
           id="cost"
           name="cost"
           type="number"
+          step="0.01"
           value={formData.cost}
           onChange={handleChange}
         />
@@ -127,7 +129,19 @@ export const ProductBasicFields: React.FC<ProductBasicFieldsProps> = ({
           id="stock"
           name="stock"
           type="number"
+          step="0.01"
           value={formData.stock}
+          onChange={handleChange}
+        />
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor="weight">Peso (kg)</Label>
+        <Input
+          id="weight"
+          name="weight"
+          type="number"
+          step="0.001"
+          value={formData.weight}
           onChange={handleChange}
         />
       </div>
