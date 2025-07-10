@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { Label } from "@/components/ui/label";
 import { ProductSelector } from '../ProductSelector';
-import { useActiveProducts } from '@/hooks/useProducts';
+import { useProducts } from '@/hooks/useProducts';
 
 interface OrderProductSectionProps {
   selectedProductId: string;
@@ -19,7 +18,15 @@ export const OrderProductSection: React.FC<OrderProductSectionProps> = ({
   openProductCombobox,
   setOpenProductCombobox
 }) => {
-  const { products } = useActiveProducts(); // Buscar apenas produtos ativos
+  const { products: allProducts } = useProducts();
+  
+  // Filtrar apenas produtos ativos para pedidos
+  const products = React.useMemo(() => {
+    return allProducts.filter((product: any) => {
+      // Só incluir produtos que não estão explicitamente desativados
+      return product.is_active !== false;
+    });
+  }, [allProducts]);
 
   // Garantir que products é sempre um array válido e nunca undefined
   const safeProducts = React.useMemo(() => {
