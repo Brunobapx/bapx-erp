@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Edit, Trash2, Percent, DollarSign } from 'lucide-react';
 import { useSellerCommissions, SellerCommission } from '@/hooks/useSellerCommissions';
+import { useSellerUsers } from '@/hooks/useSellerUsers';
 import { toast } from 'sonner';
 
 interface CommissionFormData {
@@ -20,6 +21,7 @@ interface CommissionFormData {
 
 export const SellerCommissionsSection = () => {
   const { commissions, loading, createCommission, updateCommission, deleteCommission } = useSellerCommissions();
+  const { sellers, loading: loadingSellers } = useSellerUsers();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCommission, setEditingCommission] = useState<SellerCommission | null>(null);
   const [formData, setFormData] = useState<CommissionFormData>({
@@ -116,14 +118,50 @@ export const SellerCommissionsSection = () => {
               
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="user_id">ID do Vendedor</Label>
-                  <Input
-                    id="user_id"
-                    value={formData.user_id}
-                    onChange={(e) => setFormData({ ...formData, user_id: e.target.value })}
-                    placeholder="ID do usuário vendedor"
-                    disabled={!!editingCommission}
-                  />
+                  <Label htmlFor="user_id">Vendedor</Label>
+                  {editingCommission ? (
+                    <Input
+                      id="user_id"
+                      value={`${formData.user_id.substring(0, 8)}...`}
+                      disabled
+                      className="font-mono text-sm"
+                    />
+                  ) : (
+                    <Select 
+                      value={formData.user_id} 
+                      onValueChange={(value) => setFormData({ ...formData, user_id: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um vendedor" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background border border-border shadow-lg">
+                        {loadingSellers ? (
+                          <div className="p-2 text-center text-muted-foreground">
+                            Carregando vendedores...
+                          </div>
+                        ) : sellers.length === 0 ? (
+                          <div className="p-2 text-center text-muted-foreground">
+                            Nenhum vendedor encontrado
+                          </div>
+                        ) : (
+                          sellers
+                            .filter(seller => !commissions.some(c => c.user_id === seller.user_id))
+                            .map((seller) => (
+                              <SelectItem key={seller.user_id} value={seller.user_id}>
+                                <div className="flex flex-col">
+                                  <span className="font-medium">
+                                    Vendedor {seller.user_id.substring(0, 8)}...
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    ID: {seller.user_id}
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -192,7 +230,7 @@ export const SellerCommissionsSection = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID do Vendedor</TableHead>
+                  <TableHead>Vendedor</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Valor</TableHead>
                   <TableHead>Status</TableHead>
@@ -210,8 +248,15 @@ export const SellerCommissionsSection = () => {
                 ) : (
                   commissions.map((commission) => (
                     <TableRow key={commission.id}>
-                      <TableCell className="font-mono text-sm">
-                        {commission.user_id.substring(0, 8)}...
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-medium">
+                            Vendedor {commission.user_id.substring(0, 8)}...
+                          </span>
+                          <span className="text-xs text-muted-foreground font-mono">
+                            {commission.user_id}
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
