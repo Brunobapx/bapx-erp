@@ -14,6 +14,7 @@ import ConciliacaoBancariaTab from "@/components/Finance/ConciliacaoBancariaTab"
 import { FinanceHeader } from "@/components/Finance/FinanceHeader";
 import { FinanceOverviewFilters } from "@/components/Finance/FinanceOverviewFilters";
 import { FinanceOverviewTable } from "@/components/Finance/FinanceOverviewTable";
+import { FinanceDashboard } from "@/components/Finance/Dashboard/FinanceDashboard";
 import { FinancialProvider } from "@/contexts/FinancialContext";
 import { useFinancialCleanup } from '@/hooks/useFinancialCleanup';
 import { Button } from "@/components/ui/button";
@@ -127,20 +128,7 @@ const FinancePage = () => {
           </TabsList>
 
           <TabsContent value="overview" className="mt-6">
-            <div className="space-y-6">
-              <FinanceOverviewFilters
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-              />
-              <div className="p-0">
-                <FinanceOverviewTable items={filteredItems} onItemClick={handleItemClick} />
-                {filteredItems.length === 0 && (
-                  <div className="p-4 text-center text-muted-foreground">
-                    Nenhum item encontrado.
-                  </div>
-                )}
-              </div>
-            </div>
+            <FinanceDashboard />
           </TabsContent>
 
           <TabsContent value="cash-flow">
