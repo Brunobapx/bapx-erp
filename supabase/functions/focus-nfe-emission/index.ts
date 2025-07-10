@@ -29,8 +29,10 @@ Deno.serve(async (req) => {
       throw new Error('Usuário não autenticado')
     }
 
-  const { action, data } = await req.json()
+  const requestBody = await req.json()
+  const { action, data } = requestBody || {}
 
+  console.log('Focus NFe - Request body:', requestBody)
   console.log('Focus NFe - Action:', action, 'Data:', data)
 
   // Buscar configurações do Focus NFe
@@ -82,8 +84,8 @@ Deno.serve(async (req) => {
       console.log('=== TESTE DE CONEXÃO INICIADO ===')
       
       // Teste simples de conexão
-      const testToken = data.token || configMap.focus_nfe_token
-      const testEnvironment = data.environment || configMap.focus_nfe_environment
+      const testToken = (data && data.token) || configMap.focus_nfe_token
+      const testEnvironment = (data && data.environment) || configMap.focus_nfe_environment
       
       console.log('Token recebido (primeiros 10 caracteres):', testToken?.substring(0, 10))
       console.log('Ambiente:', testEnvironment)
