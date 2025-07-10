@@ -215,6 +215,27 @@ Deno.serve(async (req) => {
       console.log('=== EMITINDO NFE ===')
       console.log('Sale data:', JSON.stringify(sale, null, 2))
       
+      // Validar dados básicos
+      if (!data.sale_id) {
+        throw new Error('ID da venda é obrigatório')
+      }
+      
+      if (!data.invoice_number) {
+        throw new Error('Número da nota fiscal é obrigatório')
+      }
+
+      // Validar dados do cliente
+      if (!sale.clients) {
+        throw new Error('Dados do cliente não encontrados')
+      }
+
+      // Validar itens
+      if (!sale.orders?.order_items || sale.orders.order_items.length === 0) {
+        throw new Error('Nenhum item encontrado na venda')
+      }
+
+      console.log('Itens encontrados:', sale.orders.order_items.length)
+
       // Montar dados da NFe para Focus NFe usando dados reais da empresa
       const nfeData = {
         natureza_operacao: "VENDA",
@@ -223,7 +244,7 @@ Deno.serve(async (req) => {
         tipo_documento: 1, // Saída
         finalidade_emissao: 1, // Normal
         local_destino: 1, // Operação interna (mesmo estado)
-        consumidor_final: sale.clients?.type === 'pf' || !sale.clients?.ie ? 1 : 0, // 1=PF ou PJ sem IE (consumidor final), 0=PJ com IE (não consumidor final)
+        consumidor_final: sale.clients?.type === 'Física' || !sale.clients?.ie ? 1 : 0, // 1=PF ou PJ sem IE (consumidor final), 0=PJ com IE (não consumidor final)
         presenca_comprador: 1, // Operação presencial
         
         // Dados do emitente (ARTISAN BREAD)
@@ -251,7 +272,7 @@ Deno.serve(async (req) => {
         municipio_destinatario: sale.clients?.city,
         uf_destinatario: sale.clients?.state,
         cep_destinatario: sale.clients?.zip?.replace(/[^\d]/g, ''),
-        indicador_ie_destinatario: sale.clients?.ie ? 1 : (sale.clients?.type === 'pf' ? 2 : 9), // 1=Contribuinte, 2=Isento, 9=Não contribuinte
+        indicador_ie_destinatario: sale.clients?.ie ? 1 : (sale.clients?.type === 'Física' ? 2 : 9), // 1=Contribuinte, 2=Isento, 9=Não contribuinte
 
         // Itens da nota
         itens: sale.orders.order_items.map((item: any, index: number) => ({
