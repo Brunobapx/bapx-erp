@@ -102,10 +102,12 @@ Deno.serve(async (req) => {
       console.log('URL da API Focus:', focusApiUrl)
 
       try {
-        const focusResponse = await fetch(`${focusApiUrl}/v2/empresas`, {
+        // Usar endpoint mais simples para teste de conectividade
+        const focusResponse = await fetch(`${focusApiUrl}/v2/nfe`, {
           method: 'GET',
           headers: {
-            'Authorization': 'Basic ' + btoa(testToken + ':')
+            'Authorization': 'Basic ' + btoa(testToken + ':'),
+            'Content-Type': 'application/json'
           }
         })
 
