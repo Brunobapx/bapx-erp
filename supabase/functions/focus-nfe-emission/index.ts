@@ -198,40 +198,50 @@ Deno.serve(async (req) => {
         return acc
       }, {} as Record<string, any>)
 
-      // Montar dados da NFe para Focus NFe
+      // Montar dados da NFe para Focus NFe usando dados reais da empresa
       const nfeData = {
-        natureza_operacao: "Venda",
+        natureza_operacao: "VENDA",
         data_emissao: new Date().toISOString().split('T')[0],
         data_entrada_saida: new Date().toISOString().split('T')[0],
-        tipo_documento: 1,
-        finalidade_emissao: 1,
-        cnpj_emitente: companyData.company_cnpj?.replace(/[^\d]/g, ''),
-        nome_emitente: companyData.company_name,
-        logradouro_emitente: companyData.company_street,
-        numero_emitente: companyData.company_number,
-        bairro_emitente: companyData.company_neighborhood,
-        municipio_emitente: companyData.company_city,
-        uf_emitente: companyData.company_state,
-        cep_emitente: companyData.company_cep?.replace(/[^\d]/g, ''),
-        inscricao_estadual_emitente: companyData.company_ie,
+        tipo_documento: 1, // Saída
+        finalidade_emissao: 1, // Normal
+        local_destino: 1, // Operação interna (mesmo estado)
+        consumidor_final: 1, // Consumidor final
+        presenca_comprador: 1, // Operação presencial
+        
+        // Dados do emitente (ARTISAN BREAD)
+        cnpj_emitente: "39524018000128",
+        nome_emitente: "ARTISAN BREAD PAES ARTESANAIS LTDA",
+        nome_fantasia_emitente: "ARTISAN",
+        logradouro_emitente: companyData.company_street || "Rua a definir",
+        numero_emitente: companyData.company_number || "S/N",
+        bairro_emitente: companyData.company_neighborhood || "Centro",
+        municipio_emitente: "Rio de Janeiro",
+        uf_emitente: "RJ",
+        cep_emitente: companyData.company_cep?.replace(/[^\d]/g, '') || "20000000",
+        inscricao_estadual_emitente: "11867847",
+        regime_tributario_emitente: 3, // Regime Normal (baseado no porte da empresa)
         
         // Dados do destinatário
         cpf_destinatario: sale.clients?.cpf?.replace(/[^\d]/g, ''),
         cnpj_destinatario: sale.clients?.cnpj?.replace(/[^\d]/g, ''),
         nome_destinatario: sale.clients?.name,
         logradouro_destinatario: sale.clients?.address,
-        numero_destinatario: sale.clients?.number,
+        numero_destinatario: sale.clients?.number || "S/N",
         bairro_destinatario: sale.clients?.bairro,
         municipio_destinatario: sale.clients?.city,
         uf_destinatario: sale.clients?.state,
         cep_destinatario: sale.clients?.zip?.replace(/[^\d]/g, ''),
+        
+        // Modalidade de frete
+        modalidade_frete: 9, // Sem frete (padrão para padaria)
 
         // Itens da nota
         itens: sale.orders.order_items.map((item: any, index: number) => ({
           numero_item: index + 1,
           codigo_produto: item.products?.code || item.product_id,
           descricao: item.product_name,
-          cfop: "5102", // Venda de mercadoria
+          cfop: "5405", // Venda de mercadoria com substituição tributária
           unidade_comercial: item.products?.unit || "UN",
           quantidade_comercial: item.quantity,
           valor_unitario_comercial: item.unit_price,
@@ -239,15 +249,31 @@ Deno.serve(async (req) => {
           unidade_tributavel: item.products?.unit || "UN",
           quantidade_tributavel: item.quantity,
           valor_unitario_tributavel: item.unit_price,
-          valor_total_tributos: 0,
-          icms_origem: 0,
-          icms_situacao_tributaria: "102",
-          pis_situacao_tributaria: "07",
-          cofins_situacao_tributaria: "07"
+          
+          // NCM - usar do produto ou padrão para pães
+          codigo_ncm: item.products?.ncm || "19059090", // Outros produtos de padaria
+          
+          // ICMS - Substituição Tributária (conforme NFe anterior)
+          icms_origem: 0, // Nacional
+          icms_situacao_tributaria: "60", // ICMS cobrado por substituição tributária
+          
+          // PIS - Regime cumulativo
+          pis_situacao_tributaria: "01", // Operação tributável com alíquota básica
+          pis_aliquota_porcentual: 0.65, // 0,65% para regime cumulativo
+          
+          // COFINS - Regime cumulativo  
+          cofins_situacao_tributaria: "01", // Operação tributável com alíquota básica
+          cofins_aliquota_porcentual: 3.00, // 3% para regime cumulativo
+          
+          valor_total_tributos: item.total_price * 0.0365 // Aproximadamente 3,65% (PIS + COFINS)
         })),
 
+        // Totais calculados
+        valor_produtos: sale.total_amount,
+        valor_total: sale.total_amount,
+
         // Observações
-        informacoes_adicionais_contribuinte: data.observations || `Venda ${sale.sale_number} - Pedido ${sale.orders.order_number}`
+        informacoes_adicionais_contribuinte: data.observations || `Venda ${sale.sale_number} - Pedido ${sale.orders.order_number}. Empresa optante pelo Simples Nacional.`
       }
 
       // Enviar para Focus NFe

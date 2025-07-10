@@ -7,6 +7,7 @@ import { UserManagement } from '@/components/Settings/UserManagement';
 import { CurrentUserProfile } from '@/components/Settings/CurrentUserProfile';
 import { DatabaseReset } from '@/components/Settings/DatabaseReset';
 import { FiscalSettings } from '@/components/Settings/FiscalSettings';
+import { CompanyFiscalInfo } from '@/components/Settings/CompanyFiscalInfo';
 
 interface TabContentProps {
   tabName: string;
@@ -61,7 +62,10 @@ export const SettingsPageContent: React.FC<SettingsPageContentProps> = ({ isAdmi
 
       <TabsContent value="fiscal">
         <TabContent tabName="Fiscal">
-          <FiscalSettings />
+          <div className="space-y-6">
+            <CompanyFiscalInfo />
+            <FiscalSettings />
+          </div>
         </TabContent>
       </TabsContent>
 
