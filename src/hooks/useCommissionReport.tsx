@@ -49,6 +49,7 @@ export const useCommissionReport = () => {
           status,
           created_at,
           salesperson_id,
+          seller,
           order_items (
             product_id,
             product_name,
@@ -75,31 +76,8 @@ export const useCommissionReport = () => {
       }
       // Se busca por nome do vendedor (para admins)
       else if (filters.sellerName && userRole !== 'seller') {
-        // Primeiro buscar o user_id baseado no email
-        const { data: authUsers } = await supabase.auth.admin.listUsers();
-        const matchingUser = authUsers.users.find((u: any) => 
-          u.email?.toLowerCase().includes(filters.sellerName.toLowerCase())
-        );
-        
-        if (matchingUser) {
-          // Verificar se o usuário é vendedor
-          const { data: userRole } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', matchingUser.id)
-            .eq('role', 'seller')
-            .maybeSingle();
-            
-          if (userRole) {
-            query = query.eq('salesperson_id', matchingUser.id);
-          } else {
-            // Se não for vendedor, usar condição que não retorna resultados
-            query = query.eq('salesperson_id', '00000000-0000-0000-0000-000000000000');
-          }
-        } else {
-          // Se não encontrar usuário, usar condição que não retorna resultados
-          query = query.eq('salesperson_id', '00000000-0000-0000-0000-000000000000');
-        }
+        // Filtrar por campo seller diretamente
+        query = query.ilike('seller', `%${filters.sellerName}%`);
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
@@ -139,11 +117,22 @@ export const useCommissionReport = () => {
           });
         }
 
-        // Buscar nome do vendedor
+        // Buscar nome do vendedor - usar o campo seller do pedido se disponível
         let sellerName = 'N/A';
-        if (order?.salesperson_id) {
-          const { data: userData } = await supabase.auth.admin.getUserById(order.salesperson_id);
-          sellerName = userData?.user?.email || 'N/A';
+        if (order?.seller) {
+          sellerName = order.seller;
+        } else if (order?.salesperson_id) {
+          // Se não há o campo seller, tentar buscar através de user_roles  
+          const { data: userRoles } = await supabase
+            .from('user_roles')
+            .select('*')
+            .eq('user_id', order.salesperson_id)
+            .eq('role', 'seller')
+            .single();
+          
+          if (userRoles) {
+            sellerName = `Vendedor ${order.salesperson_id.substring(0, 8)}...`;
+          }
         }
 
         commissionsData.push({
