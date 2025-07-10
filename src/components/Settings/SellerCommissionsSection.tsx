@@ -150,10 +150,10 @@ export const SellerCommissionsSection = () => {
                               <SelectItem key={seller.user_id} value={seller.user_id}>
                                 <div className="flex flex-col">
                                   <span className="font-medium">
-                                    Vendedor {seller.user_id.substring(0, 8)}...
+                                    {seller.display_name || `Vendedor ${seller.user_id.substring(0, 8)}...`}
                                   </span>
                                   <span className="text-xs text-muted-foreground">
-                                    Cargo: {seller.position}
+                                    {seller.email || `ID: ${seller.user_id.substring(0, 8)}...`}
                                   </span>
                                 </div>
                               </SelectItem>
@@ -248,16 +248,16 @@ export const SellerCommissionsSection = () => {
                 ) : (
                   commissions.map((commission) => (
                     <TableRow key={commission.id}>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium">
-                            Vendedor {commission.user_id.substring(0, 8)}...
-                          </span>
-                          <span className="text-xs text-muted-foreground font-mono">
-                            {commission.user_id}
-                          </span>
-                        </div>
-                      </TableCell>
+                       <TableCell>
+                         <div className="flex flex-col">
+                           <span className="font-medium">
+                             {sellers.find(s => s.user_id === commission.user_id)?.display_name || `Vendedor ${commission.user_id.substring(0, 8)}...`}
+                           </span>
+                           <span className="text-xs text-muted-foreground font-mono">
+                             {commission.user_id.substring(0, 8)}...
+                           </span>
+                         </div>
+                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           {commission.commission_type === 'percentage' ? (
