@@ -153,7 +153,7 @@ export const SellerCommissionsSection = () => {
                                     Vendedor {seller.user_id.substring(0, 8)}...
                                   </span>
                                   <span className="text-xs text-muted-foreground">
-                                    ID: {seller.user_id}
+                                    Cargo: {seller.position}
                                   </span>
                                 </div>
                               </SelectItem>
