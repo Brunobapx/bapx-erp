@@ -144,9 +144,23 @@ export const SellerCommissionsSection = () => {
                             Nenhum vendedor encontrado
                           </div>
                         ) : (
-                          sellers
-                            .filter(seller => !commissions.some(c => c.user_id === seller.user_id))
-                            .map((seller) => (
+                          (() => {
+                            const availableSellers = sellers.filter(seller => !commissions.some(c => c.user_id === seller.user_id));
+                            console.log('🏪 Vendedores disponíveis para seleção:', {
+                              allSellers: sellers,
+                              existingCommissions: commissions,
+                              availableSellers
+                            });
+                            
+                            if (availableSellers.length === 0) {
+                              return (
+                                <div className="p-2 text-center text-muted-foreground">
+                                  Todos os vendedores já possuem comissão configurada
+                                </div>
+                              );
+                            }
+                            
+                            return availableSellers.map((seller) => (
                               <SelectItem key={seller.user_id} value={seller.user_id}>
                                 <div className="flex flex-col">
                                   <span className="font-medium">
@@ -157,8 +171,9 @@ export const SellerCommissionsSection = () => {
                                   </span>
                                 </div>
                               </SelectItem>
-                            ))
-                        )}
+                            ));
+                           })()
+                         )}
                       </SelectContent>
                     </Select>
                   )}
