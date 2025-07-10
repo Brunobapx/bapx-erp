@@ -206,7 +206,7 @@ Deno.serve(async (req) => {
         tipo_documento: 1, // Saída
         finalidade_emissao: 1, // Normal
         local_destino: 1, // Operação interna (mesmo estado)
-        consumidor_final: sale.clients?.type === 'pf' ? 1 : 0, // 1=PF (consumidor final), 0=PJ (não é consumidor final)
+        consumidor_final: sale.clients?.type === 'pf' || !sale.clients?.ie ? 1 : 0, // 1=PF ou PJ sem IE (consumidor final), 0=PJ com IE (não consumidor final)
         presenca_comprador: 1, // Operação presencial
         
         // Dados do emitente (ARTISAN BREAD)
