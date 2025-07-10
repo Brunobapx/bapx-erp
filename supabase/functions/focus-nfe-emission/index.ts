@@ -164,11 +164,7 @@ Deno.serve(async (req) => {
         .select(`
           *,
           orders!inner(
-            *,
-            order_items(
-              *,
-              products(*)
-            )
+            *
           ),
           clients(*)
         `)
@@ -176,8 +172,26 @@ Deno.serve(async (req) => {
         .single()
 
       if (saleError) {
+        console.error('Erro ao buscar venda:', saleError)
         throw new Error('Erro ao buscar dados da venda: ' + saleError.message)
       }
+
+      // Buscar itens do pedido separadamente
+      const { data: orderItems, error: itemsError } = await supabase
+        .from('order_items')
+        .select(`
+          *,
+          products(*)
+        `)
+        .eq('order_id', sale.order_id)
+
+      if (itemsError) {
+        console.error('Erro ao buscar itens:', itemsError)
+        throw new Error('Erro ao buscar itens do pedido: ' + itemsError.message)
+      }
+
+      // Adicionar itens à estrutura da venda
+      sale.orders.order_items = orderItems
 
       // Buscar configurações da empresa
       const { data: companySettings, error: companyError } = await supabase
