@@ -8,6 +8,7 @@ import { CurrentUserProfile } from '@/components/Settings/CurrentUserProfile';
 import { DatabaseReset } from '@/components/Settings/DatabaseReset';
 import { FiscalSettings } from '@/components/Settings/FiscalSettings';
 import { CompanyFiscalInfo } from '@/components/Settings/CompanyFiscalInfo';
+import { SellerCommissionsSection } from '@/components/Settings/SellerCommissionsSection';
 
 interface TabContentProps {
   tabName: string;
@@ -76,6 +77,7 @@ export const SettingsPageContent: React.FC<SettingsPageContentProps> = ({ isAdmi
           <TabContent tabName="Usuários">
             <div className="space-y-6">
               <UserManagement />
+              <SellerCommissionsSection />
               <DatabaseReset />
             </div>
           </TabContent>

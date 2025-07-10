@@ -4,11 +4,13 @@ import { useAuth } from '@/components/Auth/AuthProvider';
 import { toast } from 'sonner';
 import { CommissionFilters } from '@/components/Reports/CommissionFilters';
 import { CommissionData } from '@/components/Reports/CommissionTable';
+import { useSellerCommissions } from './useSellerCommissions';
 
 export const useCommissionReport = () => {
   const [commissions, setCommissions] = useState<CommissionData[]>([]);
   const [loading, setLoading] = useState(false);
   const { user, userRole } = useAuth();
+  const { getCommissionByUserId } = useSellerCommissions();
   
   // Filtros padrão - mês atual
   const getCurrentMonth = () => {
@@ -91,12 +93,23 @@ export const useCommissionReport = () => {
         let totalCommission = 0;
         const items = [];
 
+        // Buscar configuração de comissão do vendedor
+        const sellerCommission = order?.salesperson_id ? await getCommissionByUserId(order.salesperson_id) : null;
+
         // Calcular comissão para cada item do pedido
         for (const item of order?.order_items || []) {
           const product = Array.isArray(item.products) ? item.products[0] : item.products;
           let commissionAmount = 0;
 
-          if (product) {
+          // Priorizar configuração do vendedor sobre configuração do produto
+          if (sellerCommission && sellerCommission.is_active) {
+            if (sellerCommission.commission_type === 'percentage') {
+              commissionAmount = (item.total_price * sellerCommission.commission_value) / 100;
+            } else if (sellerCommission.commission_type === 'fixed') {
+              commissionAmount = sellerCommission.commission_value * item.quantity;
+            }
+          } else if (product) {
+            // Usar configuração do produto se não houver configuração do vendedor
             if (product.commission_type === 'percentage') {
               commissionAmount = (item.total_price * (product.commission_value || 0)) / 100;
             } else if (product.commission_type === 'fixed') {
@@ -111,8 +124,8 @@ export const useCommissionReport = () => {
             quantity: item.quantity,
             unit_price: item.unit_price,
             total_price: item.total_price,
-            commission_type: product?.commission_type || 'inherit',
-            commission_value: product?.commission_value || 0,
+            commission_type: sellerCommission?.commission_type || product?.commission_type || 'inherit',
+            commission_value: sellerCommission?.commission_value || product?.commission_value || 0,
             calculated_commission: commissionAmount
           });
         }

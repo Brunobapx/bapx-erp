@@ -1366,6 +1366,36 @@ export type Database = {
           },
         ]
       }
+      seller_commissions: {
+        Row: {
+          commission_type: string
+          commission_value: number
+          created_at: string
+          id: string
+          is_active: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          commission_type?: string
+          commission_value?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          commission_type?: string
+          commission_value?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       service_order_attachments: {
         Row: {
           file_name: string | null
