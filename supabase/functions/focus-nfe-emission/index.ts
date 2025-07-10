@@ -367,6 +367,10 @@ Deno.serve(async (req) => {
       console.log(JSON.stringify(nfeData, null, 2))
 
       // Enviar para Focus NFe
+      console.log('=== ENVIANDO PARA FOCUS NFE ===')
+      console.log('URL:', `${focusApiUrl}/v2/nfe?ref=${sale.sale_number}`)
+      console.log('Token (primeiros 10 chars):', configMap.focus_nfe_token?.substring(0, 10))
+
       const focusResponse = await fetch(`${focusApiUrl}/v2/nfe?ref=${sale.sale_number}`, {
         method: 'POST',
         headers: {
@@ -378,19 +382,36 @@ Deno.serve(async (req) => {
 
       console.log('=== RESPOSTA FOCUS NFE ===')
       console.log('Status:', focusResponse.status)
+      console.log('Status Text:', focusResponse.statusText)
       console.log('Headers:', Object.fromEntries(focusResponse.headers.entries()))
 
-      const focusResult = await focusResponse.json()
-      console.log('Resposta completa:', JSON.stringify(focusResult, null, 2))
+      let focusResult: any
+      try {
+        const responseText = await focusResponse.text()
+        console.log('Response Text:', responseText)
+        focusResult = JSON.parse(responseText)
+      } catch (parseError) {
+        console.error('Erro ao fazer parse da resposta:', parseError)
+        throw new Error(`Erro de comunicação com Focus NFe: resposta inválida (status ${focusResponse.status})`)
+      }
+
+      console.log('Resposta parsed:', JSON.stringify(focusResult, null, 2))
 
       if (!focusResponse.ok) {
-        console.error('Erro Focus NFe:', focusResult)
-        let errorMessage = 'Erro ao comunicar com Focus NFe'
+        console.error('Erro Focus NFe (status não ok):', focusResult)
+        let errorMessage = `Erro HTTP ${focusResponse.status}: ${focusResponse.statusText}`
+        
         if (focusResult.erro_principal) {
           errorMessage = focusResult.erro_principal
+        } else if (focusResult.erros && Array.isArray(focusResult.erros)) {
+          errorMessage = focusResult.erros.join(', ')
         } else if (focusResult.erros) {
-          errorMessage = Array.isArray(focusResult.erros) ? focusResult.erros.join(', ') : focusResult.erros
+          errorMessage = focusResult.erros
+        } else if (focusResult.mensagem) {
+          errorMessage = focusResult.mensagem
         }
+        
+        console.error('Mensagem de erro final:', errorMessage)
         throw new Error(errorMessage)
       }
 
