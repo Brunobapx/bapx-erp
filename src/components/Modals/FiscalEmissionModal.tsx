@@ -32,10 +32,67 @@ export const FiscalEmissionModal = ({
 
   React.useEffect(() => {
     if (isOpen && saleData) {
-      setInvoiceNumber('');
-      setObservations(`Venda ${saleData.sale_number} - Pedido ${saleData.order_number}`);
+      // Buscar próximo número da NFe
+      getNextInvoiceNumber();
+      
+      // Montar observações com dados da venda
+      let obs = `Venda ${saleData.sale_number} - Pedido ${saleData.order_number}`;
+      
+      // Adicionar forma de pagamento se existir
+      if (saleData.payment_method) {
+        obs += ` | Forma de pagamento: ${saleData.payment_method}`;
+      }
+      
+      // Adicionar prazo de pagamento se existir
+      if (saleData.payment_term) {
+        obs += ` | Prazo: ${saleData.payment_term}`;
+      }
+      
+      setObservations(obs);
     }
   }, [isOpen, saleData]);
+
+  const getNextInvoiceNumber = async () => {
+    try {
+      // Buscar configuração da numeração inicial
+      const { data: settings, error: settingsError } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'nfe_initial_number')
+        .single();
+
+      let initialNumber = 1;
+      if (!settingsError && settings) {
+        try {
+          initialNumber = parseInt(JSON.parse(settings.value as string)) || 1;
+        } catch {
+          initialNumber = 1;
+        }
+      }
+
+      // Buscar a última nota fiscal emitida
+      const { data: lastInvoice, error: invoiceError } = await supabase
+        .from('fiscal_invoices')
+        .select('invoice_number')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      let nextNumber = initialNumber;
+      
+      if (!invoiceError && lastInvoice?.invoice_number) {
+        // Extrair número da última nota e incrementar
+        const lastNumber = parseInt(lastInvoice.invoice_number) || 0;
+        nextNumber = Math.max(lastNumber + 1, initialNumber);
+      }
+
+      setInvoiceNumber(nextNumber.toString());
+    } catch (error) {
+      console.error('Erro ao buscar próximo número da NFe:', error);
+      // Em caso de erro, usar 1 como padrão
+      setInvoiceNumber('1');
+    }
+  };
 
   const handleEmitNFe = async () => {
     if (!invoiceNumber.trim()) {

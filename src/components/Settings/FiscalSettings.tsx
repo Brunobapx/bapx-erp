@@ -13,7 +13,8 @@ export const FiscalSettings = () => {
   const [settings, setSettings] = useState({
     focus_nfe_token: '',
     focus_nfe_environment: 'homologacao',
-    focus_nfe_enabled: false
+    focus_nfe_enabled: false,
+    nfe_initial_number: ''
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -38,7 +39,7 @@ export const FiscalSettings = () => {
       const { data, error } = await supabase
         .from('system_settings')
         .select('key, value')
-        .in('key', ['focus_nfe_token', 'focus_nfe_environment', 'focus_nfe_enabled']);
+        .in('key', ['focus_nfe_token', 'focus_nfe_environment', 'focus_nfe_enabled', 'nfe_initial_number']);
 
       if (error) throw error;
 
@@ -54,7 +55,8 @@ export const FiscalSettings = () => {
       setSettings({
         focus_nfe_token: settingsMap.focus_nfe_token || '',
         focus_nfe_environment: settingsMap.focus_nfe_environment || 'homologacao',
-        focus_nfe_enabled: settingsMap.focus_nfe_enabled || false
+        focus_nfe_enabled: settingsMap.focus_nfe_enabled || false,
+        nfe_initial_number: settingsMap.nfe_initial_number || ''
       });
     } catch (error) {
       console.error('Erro ao carregar configurações:', error);
@@ -202,6 +204,22 @@ export const FiscalSettings = () => {
                 área do cliente Focus NFe
                 <ExternalLink className="h-3 w-3" />
               </a>
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="nfe_initial_number">Numeração Inicial da NFe</Label>
+            <Input
+              id="nfe_initial_number"
+              type="number"
+              value={settings.nfe_initial_number}
+              onChange={(e) => 
+                setSettings(prev => ({ ...prev, nfe_initial_number: e.target.value }))
+              }
+              placeholder="Ex: 1"
+            />
+            <p className="text-sm text-muted-foreground">
+              Defina o número inicial para a numeração sequencial das notas fiscais
             </p>
           </div>
         </div>
