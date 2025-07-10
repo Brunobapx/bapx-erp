@@ -16,17 +16,11 @@ export function useFinanceSettingCrud<T extends BaseFinanceSetting>(
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado.");
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("company_id")
-        .eq("id", user.id)
-        .maybeSingle();
-      if (!profile?.company_id) throw new Error("Empresa não encontrada.");
 
+      // Buscar todas as configurações (gestão colaborativa - todas as empresas)
       const { data, error } = await supabase
         .from(table)
         .select(selectFields)
-        .eq("company_id", profile.company_id)
         .order("created_at", { ascending: true });
       if (error) throw error;
       setItems((data ?? []) as unknown as T[]);
@@ -54,15 +48,11 @@ export function useFinanceSettingCrud<T extends BaseFinanceSetting>(
       } else {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("Usuário não autenticado.");
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("company_id")
-          .eq("id", user.id)
-          .maybeSingle();
-        if (!profile?.company_id) throw new Error("Empresa não encontrada.");
+        
+        // Inserir sem company_id (gestão colaborativa)
         const { data, error } = await supabase
           .from(table)
-          .insert({ ...fields, company_id: profile.company_id })
+          .insert({ ...fields })
           .select()
           .single();
         if (error) throw error;

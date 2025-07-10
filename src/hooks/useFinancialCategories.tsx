@@ -2,7 +2,6 @@
 import { useFinanceSettingCrud } from "./useFinanceSettingCrud";
 export interface FinancialCategory {
   id?: string;
-  company_id: string;
   name: string;
   type: "receita" | "despesa";
   description?: string;
