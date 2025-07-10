@@ -9,13 +9,21 @@ interface ProductFiscalFieldsProps {
   handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleSelectChange: (name: string, value: string) => void;
   taxTypeOptions: Array<{ value: string, label: string }>;
+  fiscalSettings?: any;
 }
 
 export const ProductFiscalFields: React.FC<ProductFiscalFieldsProps> = ({
-  formData, handleChange, handleSelectChange, taxTypeOptions
+  formData, handleChange, handleSelectChange, taxTypeOptions, fiscalSettings
 }) => (
   <div className="border-t pt-4 mt-2">
-    <h4 className="text-sm font-medium mb-2">Informações Fiscais</h4>
+    <div className="flex items-center justify-between mb-2">
+      <h4 className="text-sm font-medium">Informações Fiscais</h4>
+      {fiscalSettings && (
+        <span className="text-xs text-muted-foreground">
+          Configurações: PIS {fiscalSettings.pis_aliquota}% + COFINS {fiscalSettings.cofins_aliquota}%
+        </span>
+      )}
+    </div>
     <div className="grid grid-cols-2 gap-4">
       <div className="grid gap-2">
         <Label htmlFor="ncm">NCM</Label>

@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Box, ChevronDown, Search, FileText, Plus, Barcode, Factory, Loader2, Package } from 'lucide-react';
+import { Box, ChevronDown, Search, FileText, Plus, Barcode, Factory, Loader2, Package, ToggleLeft, ToggleRight } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -81,6 +81,23 @@ const ProductsPage = () => {
     
     if (refresh) {
       refreshProducts();
+    }
+  };
+
+  const toggleProductStatus = async (product: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ is_active: !(product as any).is_active })
+        .eq('id', product.id);
+        
+      if (error) throw error;
+      
+      refreshProducts();
+    } catch (error) {
+      console.error('Error updating product status:', error);
     }
   };
 
@@ -181,6 +198,7 @@ const ProductsPage = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Status</TableHead>
                       <TableHead>Código</TableHead>
                       <TableHead>Nome</TableHead>
                       <TableHead>NCM</TableHead>
@@ -196,9 +214,21 @@ const ProductsPage = () => {
                     {filteredProducts.map((product) => (
                       <TableRow 
                         key={product.id}
-                        className="cursor-pointer hover:bg-accent/5"
+                        className={`cursor-pointer hover:bg-accent/5 ${!(product as any).is_active ? 'opacity-60' : ''}`}
                         onClick={() => handleProductClick(product)}
                       >
+                        <TableCell>
+                          <button
+                            onClick={(e) => toggleProductStatus(product, e)}
+                            className="p-1 hover:bg-accent rounded transition-colors"
+                          >
+                            {(product as any).is_active ? (
+                              <ToggleRight className="h-5 w-5 text-green-600" />
+                            ) : (
+                              <ToggleLeft className="h-5 w-5 text-gray-400" />
+                            )}
+                          </button>
+                        </TableCell>
                         <TableCell className="font-medium flex items-center gap-2">
                           <Barcode className="h-4 w-4 text-muted-foreground" />
                           {product.code}

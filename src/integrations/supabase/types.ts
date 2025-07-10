@@ -999,6 +999,7 @@ export type Database = {
           icms: string | null
           id: string
           ipi: string | null
+          is_active: boolean
           is_direct_sale: boolean
           is_manufactured: boolean | null
           name: string
@@ -1025,6 +1026,7 @@ export type Database = {
           icms?: string | null
           id?: string
           ipi?: string | null
+          is_active?: boolean
           is_direct_sale?: boolean
           is_manufactured?: boolean | null
           name: string
@@ -1051,6 +1053,7 @@ export type Database = {
           icms?: string | null
           id?: string
           ipi?: string | null
+          is_active?: boolean
           is_direct_sale?: boolean
           is_manufactured?: boolean | null
           name?: string

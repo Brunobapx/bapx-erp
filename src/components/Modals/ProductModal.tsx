@@ -7,6 +7,7 @@ import { ProductBasicFields } from "./ProductModal/ProductBasicFields";
 import { ProductTypeSwitches } from "./ProductModal/ProductTypeSwitches";
 import { ProductRecipeSection } from "./ProductModal/ProductRecipeSection";
 import { ProductFiscalFields } from "./ProductModal/ProductFiscalFields";
+import { useCompanyFiscalSettings } from "@/hooks/useCompanyFiscalSettings";
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -33,7 +34,8 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
     pis: '1.65',
     cofins: '7.6',
     is_manufactured: false,
-    is_direct_sale: false
+    is_direct_sale: false,
+    is_active: true
   });
 
   const [recipeItems, setRecipeItems] = useState<Array<{id: string, productId: string, quantity: string}>>([]);
@@ -41,6 +43,7 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
   const [availableIngredients, setAvailableIngredients] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { settings: fiscalSettings } = useCompanyFiscalSettings();
   
   const isNewProduct = !productData?.id;
   
@@ -51,7 +54,7 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
         code: productData.code || '',
         name: productData.name || '',
         sku: productData.sku || '',
-        ncm: productData.ncm || '',
+        ncm: productData.ncm || fiscalSettings.default_ncm,
         price: productData.price ? productData.price.toString() : '',
         cost: productData.cost ? productData.cost.toString() : '',
         stock: productData.stock ? productData.stock.toString() : '',
@@ -61,10 +64,11 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
         tax_type: productData.tax_type || 'Tributado',
         icms: productData.icms || '18',
         ipi: productData.ipi || '5',
-        pis: productData.pis || '1.65',
-        cofins: productData.cofins || '7.6',
+        pis: productData.pis || fiscalSettings.pis_aliquota.toString(),
+        cofins: productData.cofins || fiscalSettings.cofins_aliquota.toString(),
         is_manufactured: productData.is_manufactured || false,
-        is_direct_sale: productData.is_direct_sale || false
+        is_direct_sale: productData.is_direct_sale || false,
+        is_active: productData.is_active !== undefined ? productData.is_active : true
       });
       
       // Carregar receita existente se for produto fabricado
@@ -157,7 +161,7 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
       code: '',
       name: '',
       sku: '',
-      ncm: '',
+      ncm: fiscalSettings.default_ncm,
       price: '',
       cost: '',
       stock: '',
@@ -167,10 +171,11 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
       tax_type: 'Tributado',
       icms: '18',
       ipi: '5',
-      pis: '1.65',
-      cofins: '7.6',
+      pis: fiscalSettings.pis_aliquota.toString(),
+      cofins: fiscalSettings.cofins_aliquota.toString(),
       is_manufactured: false,
-      is_direct_sale: false
+      is_direct_sale: false,
+      is_active: true
     });
     setRecipeItems([]);
   };
@@ -257,7 +262,8 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
         pis: formData.pis,
         cofins: formData.cofins,
         is_manufactured: formData.is_manufactured,
-        is_direct_sale: formData.is_direct_sale
+        is_direct_sale: formData.is_direct_sale,
+        is_active: formData.is_active
       };
       
       let productId;
@@ -364,6 +370,7 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
             formData={formData}
             handleChange={handleChange}
             handleSelectChange={handleSelectChange}
+            handleSwitchChange={handleSwitchChange}
             unitOptions={unitOptions}
             categories={categories}
           />
@@ -393,6 +400,7 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
             handleChange={handleChange}
             handleSelectChange={handleSelectChange}
             taxTypeOptions={taxTypeOptions}
+            fiscalSettings={fiscalSettings}
           />
         </div>
         

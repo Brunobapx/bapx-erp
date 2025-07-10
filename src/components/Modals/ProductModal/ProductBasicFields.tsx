@@ -3,17 +3,19 @@ import React from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 interface ProductBasicFieldsProps {
   formData: any;
   handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleSelectChange: (name: string, value: string) => void;
+  handleSwitchChange: (name: string, checked: boolean) => void;
   unitOptions: Array<{ value: string, label: string }>;
   categories: any[];
 }
 
 export const ProductBasicFields: React.FC<ProductBasicFieldsProps> = ({
-  formData, handleChange, handleSelectChange, unitOptions, categories
+  formData, handleChange, handleSelectChange, handleSwitchChange, unitOptions, categories
 }) => (
   <React.Fragment>
     <div className="grid grid-cols-2 gap-4">
@@ -37,14 +39,26 @@ export const ProductBasicFields: React.FC<ProductBasicFieldsProps> = ({
       </div>
     </div>
 
-    <div className="grid gap-2">
-      <Label htmlFor="name">Nome do Produto</Label>
-      <Input
-        id="name"
-        name="name"
-        value={formData.name}
-        onChange={handleChange}
-      />
+    <div className="grid grid-cols-4 gap-4 items-end">
+      <div className="grid gap-2 col-span-3">
+        <Label htmlFor="name">Nome do Produto</Label>
+        <Input
+          id="name"
+          name="name"
+          value={formData.name}
+          onChange={handleChange}
+        />
+      </div>
+      <div className="flex items-center space-x-2">
+        <Switch
+          id="is_active"
+          checked={formData.is_active}
+          onCheckedChange={(checked) => handleSwitchChange('is_active', checked)}
+        />
+        <Label htmlFor="is_active" className="text-sm">
+          {formData.is_active ? 'Ativo' : 'Inativo'}
+        </Label>
+      </div>
     </div>
 
     <div className="grid grid-cols-2 gap-4">
