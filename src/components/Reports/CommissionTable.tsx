@@ -106,7 +106,7 @@ export const CommissionTable: React.FC<CommissionTableProps> = ({
                     {commission.commission_percentage.toFixed(2)}%
                   </TableCell>
                   <TableCell className="text-right font-medium text-green-600">
-                    R$ {commission.commission_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    R$ {commission.commission_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </TableCell>
                   <TableCell>
                     {getStatusBadge(commission.status)}

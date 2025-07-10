@@ -40,7 +40,7 @@ export const CommissionReport = () => {
               <CardContent className="p-4">
                 <div className="text-sm text-muted-foreground">Total de Comissões</div>
                 <div className="text-2xl font-bold text-green-600">
-                  R$ {totalCommissions.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  R$ {totalCommissions.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </CardContent>
             </Card>
