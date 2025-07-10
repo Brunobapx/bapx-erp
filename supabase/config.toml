@@ -40,3 +40,6 @@ verify_jwt = false
 
 [functions.otimizar-roteiro-entregas]
 verify_jwt = false
+
+[functions.focus-nfe-emission]
+verify_jwt = true

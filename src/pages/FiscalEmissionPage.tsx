@@ -1,4 +1,3 @@
-
 import React from 'react';
 import FiscalEmissionHeader from "@/components/FiscalEmission/FiscalEmissionHeader";
 import FiscalEmissionFilters from "@/components/FiscalEmission/FiscalEmissionFilters";

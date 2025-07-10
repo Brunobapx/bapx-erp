@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EditSaleModal } from '@/components/Modals/EditSaleModal';
-import { InvoiceModal } from '@/components/Modals/InvoiceModal';
+import { FiscalEmissionModal } from '@/components/Modals/FiscalEmissionModal';
 import { DeliverySlipModal } from '@/components/Modals/DeliverySlipModal';
 import { DollarSign, ChevronDown, Search, TrendingUp, FileText, Truck, Eye, Edit, Check } from 'lucide-react';
 import { Input } from "@/components/ui/input";
@@ -353,11 +353,10 @@ const SalesPage = () => {
         saleData={selectedItem}
       />
       
-      <InvoiceModal
+      <FiscalEmissionModal
         isOpen={showInvoiceModal}
         onClose={handleInvoiceModalClose}
         saleData={selectedItem}
-        onEmitInvoice={handleEmitInvoice}
       />
 
       <DeliverySlipModal
