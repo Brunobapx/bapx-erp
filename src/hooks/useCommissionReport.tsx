@@ -126,23 +126,37 @@ export const useCommissionReport = () => {
         let sellerName = 'N/A';
         let appliedCommissionConfig = null;
 
-        // Buscar configuração de comissão do vendedor
-        const sellerCommission = order?.salesperson_id ? await getCommissionByUserId(order.salesperson_id) : null;
-        console.log('[COMMISSION_REPORT] Configuração de comissão encontrada:', sellerCommission);
+        // Melhorar correlação vendedor-comissão: se não tem salesperson_id mas tem seller name, tentar encontrar
+        let actualSalespersonId = order?.salesperson_id;
+        if (!actualSalespersonId && order?.seller) {
+          const knownSellersByName = {
+            'Thor Albuquerque': '50813b14-8b0c-40cf-a55c-76bf2a4a19b1',
+            'Nathalia Albuquerque': '6c0bf94a-f544-4452-9aaf-9a702c028967'
+          };
+          actualSalespersonId = knownSellersByName[order.seller];
+          console.log('[COMMISSION_REPORT] Correlacionando vendedor por nome:', {
+            seller: order.seller,
+            found_id: actualSalespersonId
+          });
+        }
 
-        // Definir nome do vendedor usando dados reais ou hardcoded conhecidos
+        // Definir nome do vendedor
         const knownSellers = {
-          '6c0bf94a-6db8-42c3-b8a1-db123e4c5678': 'Thor Albuquerque',
-          'f47ac10b-58cc-4372-a567-0e02b2c3d479': 'Nathalia Albuquerque'
+          '50813b14-8b0c-40cf-a55c-76bf2a4a19b1': 'Thor Albuquerque',
+          '6c0bf94a-f544-4452-9aaf-9a702c028967': 'Nathalia Albuquerque'
         };
 
         if (order?.seller && order.seller !== 'N/A') {
           sellerName = order.seller;
-        } else if (order?.salesperson_id && knownSellers[order.salesperson_id]) {
-          sellerName = knownSellers[order.salesperson_id];
-        } else if (order?.salesperson_id) {
-          sellerName = `Vendedor ${order.salesperson_id.substring(0, 8)}...`;
+        } else if (actualSalespersonId && knownSellers[actualSalespersonId]) {
+          sellerName = knownSellers[actualSalespersonId];
+        } else if (actualSalespersonId) {
+          sellerName = `Vendedor ${actualSalespersonId.substring(0, 8)}...`;
         }
+
+        // Buscar configuração de comissão do vendedor (usando ID real ou correlacionado)
+        const sellerCommission = actualSalespersonId ? await getCommissionByUserId(actualSalespersonId) : null;
+        console.log('[COMMISSION_REPORT] Configuração de comissão encontrada:', sellerCommission);
 
         // Calcular comissão para cada item do pedido
         for (const item of order?.order_items || []) {
