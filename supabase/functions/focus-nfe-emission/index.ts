@@ -158,20 +158,10 @@ Deno.serve(async (req) => {
     } else if (action === 'emit_nfe') {
       console.log('Emitindo NFe para:', data.sale_id)
       
-      // Buscar dados da venda
+      // Buscar dados da venda com JOIN manual para evitar problemas de nested selects
       const { data: sale, error: saleError } = await supabase
         .from('sales')
-        .select(`
-          *,
-          orders!inner(
-            *,
-            order_items(
-              *,
-              products(*)
-            )
-          ),
-          clients(*)
-        `)
+        .select('*')
         .eq('id', data.sale_id)
         .maybeSingle()
 
@@ -184,22 +174,46 @@ Deno.serve(async (req) => {
         throw new Error('Venda não encontrada')
       }
 
-      console.log('Dados da venda encontrados:', sale)
+      // Buscar dados do pedido
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('id', sale.order_id)
+        .maybeSingle()
 
-      // Verificar se os dados da venda estão completos
-      if (!sale.orders) {
-        throw new Error('Dados do pedido não encontrados na venda')
+      if (orderError || !order) {
+        throw new Error('Pedido não encontrado')
       }
-      
-      if (!sale.orders.order_items || sale.orders.order_items.length === 0) {
+
+      // Buscar itens do pedido
+      const { data: orderItems, error: itemsError } = await supabase
+        .from('order_items')
+        .select(`
+          *,
+          products(*)
+        `)
+        .eq('order_id', order.id)
+
+      if (itemsError || !orderItems || orderItems.length === 0) {
         throw new Error('Itens do pedido não encontrados')
       }
 
-      if (!sale.clients) {
-        throw new Error('Dados do cliente não encontrados na venda')
+      // Buscar dados do cliente
+      const { data: client, error: clientError } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('id', sale.client_id)
+        .maybeSingle()
+
+      if (clientError || !client) {
+        throw new Error('Cliente não encontrado')
       }
 
-      console.log('Validação dos dados da venda OK')
+      console.log('Dados encontrados:')
+      console.log('- Venda:', sale)
+      console.log('- Pedido:', order)
+      console.log('- Itens:', orderItems)
+      console.log('- Cliente:', client)
 
       // Buscar configurações da empresa
       const { data: companySettings, error: companyError } = await supabase
@@ -228,7 +242,7 @@ Deno.serve(async (req) => {
         tipo_documento: 1, // Saída
         finalidade_emissao: 1, // Normal
         local_destino: 1, // Operação interna (mesmo estado)
-        consumidor_final: sale.clients?.type === 'pf' || !sale.clients?.ie ? 1 : 0, // 1=PF ou PJ sem IE (consumidor final), 0=PJ com IE (não consumidor final)
+        consumidor_final: client.type === 'pf' || !client.ie ? 1 : 0, // 1=PF ou PJ sem IE (consumidor final), 0=PJ com IE (não consumidor final)
         presenca_comprador: 1, // Operação presencial
         
         // Dados do emitente (ARTISAN BREAD)
@@ -247,22 +261,22 @@ Deno.serve(async (req) => {
         regime_tributario_emitente: 3, // Regime Normal (baseado no porte da empresa)
         
         // Dados do destinatário
-        cpf_destinatario: sale.clients?.cpf?.replace(/[^\d]/g, ''),
-        cnpj_destinatario: sale.clients?.cnpj?.replace(/[^\d]/g, ''),
-        nome_destinatario: sale.clients?.name,
-        logradouro_destinatario: sale.clients?.address,
-        numero_destinatario: sale.clients?.number || "S/N",
-        bairro_destinatario: sale.clients?.bairro,
-        municipio_destinatario: sale.clients?.city,
-        uf_destinatario: sale.clients?.state,
-        cep_destinatario: sale.clients?.zip?.replace(/[^\d]/g, ''),
-        indicador_ie_destinatario: sale.clients?.ie ? 1 : (sale.clients?.type === 'pf' ? 2 : 9), // 1=Contribuinte, 2=Isento, 9=Não contribuinte
+        cpf_destinatario: client.cpf?.replace(/[^\d]/g, ''),
+        cnpj_destinatario: client.cnpj?.replace(/[^\d]/g, ''),
+        nome_destinatario: client.name,
+        logradouro_destinatario: client.address,
+        numero_destinatario: client.number || "S/N",
+        bairro_destinatario: client.bairro,
+        municipio_destinatario: client.city,
+        uf_destinatario: client.state,
+        cep_destinatario: client.zip?.replace(/[^\d]/g, ''),
+        indicador_ie_destinatario: client.ie ? 1 : (client.type === 'pf' ? 2 : 9), // 1=Contribuinte, 2=Isento, 9=Não contribuinte
         
         // Modalidade de frete
         modalidade_frete: 3, // Por conta do destinatário
 
         // Itens da nota
-        itens: sale.orders?.order_items?.map((item: any, index: number) => ({
+        itens: orderItems.map((item: any, index: number) => ({
           numero_item: index + 1,
           codigo_produto: item.products?.code || item.product_id,
           codigo_ean: "SEM GTIN", // Código de barras padrão
@@ -304,13 +318,13 @@ Deno.serve(async (req) => {
         valor_total: sale.total_amount,
         
         // Peso total da nota (somar peso dos produtos)
-        peso_liquido: sale.orders?.order_items?.reduce((total: number, item: any) => {
+        peso_liquido: orderItems.reduce((total: number, item: any) => {
           const weight = item.products?.weight || 1; // Peso padrão se não informado
           return total + (weight * item.quantity);
-        }, 0) || 0,
+        }, 0),
 
         // Observações
-        informacoes_adicionais_contribuinte: data.observations || `Venda ${sale.sale_number} - Pedido ${sale.orders?.order_number || ''}.`
+        informacoes_adicionais_contribuinte: data.observations || `Venda ${sale.sale_number} - Pedido ${order.order_number}.`
       }
 
       console.log('NFe Data montada:', JSON.stringify(nfeData, null, 2))
