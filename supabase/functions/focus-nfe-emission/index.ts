@@ -186,6 +186,21 @@ Deno.serve(async (req) => {
 
       console.log('Dados da venda encontrados:', sale)
 
+      // Verificar se os dados da venda estão completos
+      if (!sale.orders) {
+        throw new Error('Dados do pedido não encontrados na venda')
+      }
+      
+      if (!sale.orders.order_items || sale.orders.order_items.length === 0) {
+        throw new Error('Itens do pedido não encontrados')
+      }
+
+      if (!sale.clients) {
+        throw new Error('Dados do cliente não encontrados na venda')
+      }
+
+      console.log('Validação dos dados da venda OK')
+
       // Buscar configurações da empresa
       const { data: companySettings, error: companyError } = await supabase
         .from('system_settings')
@@ -298,21 +313,45 @@ Deno.serve(async (req) => {
         informacoes_adicionais_contribuinte: data.observations || `Venda ${sale.sale_number} - Pedido ${sale.orders?.order_number || ''}.`
       }
 
+      console.log('NFe Data montada:', JSON.stringify(nfeData, null, 2))
+      console.log('Focus API URL:', focusApiUrl)
+      console.log('Token para Focus (primeiros 10 chars):', configMap.focus_nfe_token?.substring(0, 10))
+
       // Enviar para Focus NFe
-      const focusResponse = await fetch(`${focusApiUrl}/v2/nfe?ref=${sale.sale_number}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Basic ' + btoa(configMap.focus_nfe_token + ':')
-        },
-        body: JSON.stringify(nfeData)
-      })
+      console.log('Enviando para Focus NFe...')
+      
+      try {
+        const focusResponse = await fetch(`${focusApiUrl}/v2/nfe?ref=${sale.sale_number}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Basic ' + btoa(configMap.focus_nfe_token + ':')
+          },
+          body: JSON.stringify(nfeData)
+        })
 
-      const focusResult = await focusResponse.json()
+        console.log('Focus Response Status:', focusResponse.status)
+        console.log('Focus Response Headers:', Object.fromEntries(focusResponse.headers.entries()))
+        
+        let focusResult
+        try {
+          focusResult = await focusResponse.json()
+        } catch (parseError) {
+          console.error('Erro ao fazer parse da resposta do Focus:', parseError)
+          const responseText = await focusResponse.text()
+          console.error('Resposta raw do Focus:', responseText)
+          throw new Error(`Erro na resposta do Focus NFe: ${responseText}`)
+        }
 
-      if (!focusResponse.ok) {
-        console.error('Erro Focus NFe:', focusResult)
-        throw new Error(focusResult.erro_principal || 'Erro ao comunicar com Focus NFe')
+        console.log('Focus Result:', focusResult)
+
+        if (!focusResponse.ok) {
+          console.error('Erro Focus NFe (status não OK):', focusResult)
+          throw new Error(focusResult.erro_principal || focusResult.mensagem || 'Erro ao comunicar com Focus NFe')
+        }
+      } catch (fetchError) {
+        console.error('Erro na requisição para Focus NFe:', fetchError)
+        throw new Error(`Erro de conexão com Focus NFe: ${fetchError.message}`)
       }
 
       // Salvar NFe na tabela fiscal_invoices
