@@ -404,7 +404,7 @@ Deno.serve(async (req) => {
       }
 
       // Atualizar venda com dados da NFe
-      await supabase
+      const { data: saleData } = await supabase
         .from('sales')
         .update({
           status: 'invoiced',
@@ -412,6 +412,18 @@ Deno.serve(async (req) => {
           invoice_date: new Date().toISOString().split('T')[0]
         })
         .eq('id', data.sale_id)
+        .select('order_id')
+        .single()
+
+      // Atualizar pedido relacionado com status faturado
+      if (saleData?.order_id) {
+        await supabase
+          .from('orders')
+          .update({
+            status: 'invoiced'
+          })
+          .eq('id', saleData.order_id)
+      }
 
       console.log('NFe emitida com sucesso:', focusResult)
 
