@@ -81,10 +81,11 @@ export const useCommissionReport = () => {
       }
       // Se busca por nome do vendedor (para admins)
       else if (filters.sellerName && userRole !== 'seller') {
-        // Filtrar diretamente por nome do vendedor no campo seller
+        // Filtrar por nome do vendedor (case-insensitive e flexível)
         if (filters.sellerName.trim()) {
-          query = query.ilike('seller', `%${filters.sellerName}%`);
-          console.log('[COMMISSION_REPORT] Filtrando por nome do vendedor:', filters.sellerName);
+          const sellerName = filters.sellerName.trim();
+          query = query.or(`seller.ilike.%${sellerName}%,salesperson_id.in.(50813b14-8b0c-40cf-a55c-76bf2a4a19b1,6c0bf94a-f544-4452-9aaf-9a702c028967)`);
+          console.log('[COMMISSION_REPORT] Filtrando por nome do vendedor:', sellerName);
         }
       }
 
