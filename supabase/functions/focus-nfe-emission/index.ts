@@ -323,8 +323,14 @@ Deno.serve(async (req) => {
           return total + (weight * item.quantity);
         }, 0),
 
-        // Observações
-        informacoes_adicionais_contribuinte: data.observations || `Venda ${sale.sale_number} - Pedido ${order.order_number}.`
+        // Informações complementares conforme modelo
+        informacoes_adicionais_contribuinte: [
+          `VENDA ${sale.sale_number} - PEDIDO ${order.order_number}`,
+          `VALOR APROXIMADO DOS TRIBUTOS R$ ${(sale.total_amount * 0.0925).toFixed(2)} (9,25%)`,
+          `FONTE: IBPT/EMPRESOMETRO`,
+          `LEI 12.741/2012`,
+          data.observations || ''
+        ].filter(info => info.trim() !== '').join(' | ')
       }
 
       console.log('NFe Data montada:', JSON.stringify(nfeData, null, 2))
