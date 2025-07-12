@@ -69,6 +69,19 @@ export const useCommissionGeneration = () => {
       console.log('[COMMISSION_GENERATION] Comissões agrupadas por vendedor:', groupedCommissions);
 
       for (const group of groupedCommissions) {
+        // Buscar o ID real do vendedor baseado no nome
+        const knownSellers = {
+          'Thor Albuquerque': '50813b14-8b0c-40cf-a55c-76bf2a4a19b1',
+          'Nathalia Albuquerque': '6c0bf94a-f544-4452-9aaf-9a702c028967'
+        };
+        
+        const sellerId = knownSellers[group.seller_name as keyof typeof knownSellers];
+        
+        if (!sellerId) {
+          console.error('ID do vendedor não encontrado para:', group.seller_name);
+          continue;
+        }
+
         // Criar entrada em accounts_payable primeiro
         const { data: payableData, error: payableError } = await supabase
           .from('accounts_payable')
@@ -91,7 +104,7 @@ export const useCommissionGeneration = () => {
           .from('commission_payments')
           .insert({
             user_id: user.id,
-            seller_id: group.commissions[0].id, // Usando ID da primeira comissão como fallback
+            seller_id: sellerId,
             seller_name: group.seller_name,
             total_commission: group.total_commission,
             order_ids: group.commissions.map(c => c.order_number),
