@@ -81,26 +81,10 @@ export const useCommissionReport = () => {
       }
       // Se busca por nome do vendedor (para admins)
       else if (filters.sellerName && userRole !== 'seller') {
-        // Primeiro tentar encontrar o vendedor pelo nome nos usuários configurados
-        const { data: sellerUsers } = await supabase
-          .from('seller_commissions')
-          .select('user_id')
-          .eq('is_active', true);
-        
-        console.log('[COMMISSION_REPORT] Vendedores ativos encontrados:', sellerUsers);
-        
-        // Se temos vendedores configurados, filtrar por seus IDs
-        if (sellerUsers && sellerUsers.length > 0) {
-          const sellerIds = sellerUsers.map(s => s.user_id);
-          query = query.in('salesperson_id', sellerIds);
-          
-          // Se tem nome específico, filtrar também por nome
-          if (filters.sellerName.trim()) {
-            query = query.ilike('seller', `%${filters.sellerName}%`);
-          }
-        } else {
-          // Fallback: filtrar apenas por nome
+        // Filtrar diretamente por nome do vendedor no campo seller
+        if (filters.sellerName.trim()) {
           query = query.ilike('seller', `%${filters.sellerName}%`);
+          console.log('[COMMISSION_REPORT] Filtrando por nome do vendedor:', filters.sellerName);
         }
       }
 
