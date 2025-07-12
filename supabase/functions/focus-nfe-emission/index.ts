@@ -323,7 +323,7 @@ Deno.serve(async (req) => {
           return total + (weight * item.quantity);
         }, 0),
 
-        // Informações complementares conforme modelo obrigatório
+        // Informações complementares conforme modelo obrigatório (Regime Normal)
         informacoes_adicionais_contribuinte: [
           `VENDA ${sale.sale_number} - PEDIDO ${order.order_number}`,
           `VALOR APROXIMADO DOS TRIBUTOS DESTA NOTA: R$ ${(sale.total_amount * 0.0925).toFixed(2)} (9,25%)`,
@@ -332,8 +332,6 @@ Deno.serve(async (req) => {
           `LEI DA TRANSPARENCIA (LEI N 12.741/2012)`,
           `INFORMACOES DOS TRIBUTOS INCIDENTES SOBRE PRODUTOS/SERVICOS`,
           `TRIBUTOS FEDERAIS APROXIMADOS: R$ ${(sale.total_amount * 0.0925).toFixed(2)}`,
-          `Este documento foi emitido por ME/EPP optante pelo Simples Nacional`,
-          `Nao gera direito a credito fiscal de IPI, ICMS, ISS e COFINS`,
           data.observations || ''
         ].filter(info => info.trim() !== '').join(' - ')
       }
