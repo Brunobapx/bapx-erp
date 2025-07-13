@@ -78,17 +78,17 @@ export const CommissionFilters: React.FC<CommissionFiltersProps> = ({
           />
         </div>
         
-        {!isSellerRestricted && (
-          <div className="space-y-2">
-            <Label htmlFor="sellerName">Vendedor</Label>
-            <Input
-              id="sellerName"
-              placeholder="Nome do vendedor"
-              value={filters.sellerName}
-              onChange={(e) => onFiltersChange({ sellerName: e.target.value, sellerId: '' })}
-            />
-          </div>
-        )}
+        <div className="space-y-2">
+          <Label htmlFor="sellerName">Vendedor</Label>
+          <Input
+            id="sellerName"
+            placeholder="Nome do vendedor"
+            value={isSellerRestricted ? user?.email || '' : filters.sellerName}
+            onChange={(e) => onFiltersChange({ sellerName: e.target.value, sellerId: '' })}
+            disabled={isSellerRestricted}
+            className={isSellerRestricted ? "opacity-60 cursor-not-allowed" : ""}
+          />
+        </div>
         
         <div className="space-y-2">
           <Label>Período</Label>
