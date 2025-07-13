@@ -547,13 +547,15 @@ export const EditUserModal = ({ open, onOpenChange, user, onSuccess, isCurrentUs
                                    
                                    return (
                                      <div key={subModule.id} className="flex items-center space-x-2">
-                                       <Checkbox
+                                       <input
+                                         type="checkbox"
                                          id={`tab-${subModule.id}`}
                                          checked={isChecked}
-                                         onCheckedChange={(checked) => {
-                                           console.log('[EditUserModal] Checkbox onCheckedChange:', { subModuleId: subModule.id, checked, subModuleName: subModule.name });
-                                           handleTabToggle(subModule.id, checked as boolean);
+                                         onChange={(e) => {
+                                           console.log('[EditUserModal] Checkbox onChange:', { subModuleId: subModule.id, checked: e.target.checked, subModuleName: subModule.name });
+                                           handleTabToggle(subModule.id, e.target.checked);
                                          }}
+                                         className="h-4 w-4 rounded border border-input bg-background text-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                        />
                                        <Label htmlFor={`tab-${subModule.id}`} className="text-sm cursor-pointer">
                                          {subModule.name}
