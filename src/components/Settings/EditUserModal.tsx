@@ -11,6 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useSystemModules } from '@/hooks/useSystemModules';
+import { useTabPermissions } from '@/hooks/useTabPermissions';
 import { POSITION_LABELS, UserPosition } from '@/hooks/useUserPositions';
 import { User, Shield, Loader2, Edit, Lock, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -33,7 +34,8 @@ export const EditUserModal = ({ open, onOpenChange, user, onSuccess, isCurrentUs
     password: '',
     confirmPassword: '',
     position: '',
-    moduleIds: [] as string[]
+    moduleIds: [] as string[],
+    tabPermissions: [] as string[]
   });
   
   const [loading, setLoading] = useState(false);
@@ -44,42 +46,48 @@ export const EditUserModal = ({ open, onOpenChange, user, onSuccess, isCurrentUs
   const [userPosition, setUserPosition] = useState<UserPosition | null>(null);
   const { toast } = useToast();
   const { modules, loading: modulesLoading } = useSystemModules();
+  const { subModules, loading: tabsLoading, fetchUserTabPermissions, updateUserTabPermissions } = useTabPermissions();
 
   useEffect(() => {
     if (user && open) {
-      // Buscar cargo do usuário
-      const fetchUserPosition = async () => {
+      // Buscar cargo do usuário e permissões de abas
+      const fetchUserData = async () => {
         try {
-          const { data, error } = await supabase
+          // Buscar cargo
+          const { data: positionData, error: positionError } = await supabase
             .from('user_positions')
             .select('position')
             .eq('user_id', user.id)
             .maybeSingle();
 
-          if (!error && data) {
-            setUserPosition(data.position as UserPosition);
-            setForm(prev => ({ ...prev, position: data.position }));
+          if (!positionError && positionData) {
+            setUserPosition(positionData.position as UserPosition);
           }
+
+          // Buscar permissões de abas
+          const tabPermissions = await fetchUserTabPermissions(user.id);
+
+          setForm({
+            firstName: user.user_metadata.first_name || '',
+            lastName: user.user_metadata.last_name || '',
+            email: user.email,
+            password: '',
+            confirmPassword: '',
+            position: positionData?.position || '',
+            moduleIds: user.moduleIds || [],
+            tabPermissions
+          });
         } catch (error) {
-          console.error('Error fetching user position:', error);
+          console.error('Error fetching user data:', error);
         }
       };
 
-      setForm({
-        firstName: user.user_metadata.first_name || '',
-        lastName: user.user_metadata.last_name || '',
-        email: user.email,
-        password: '',
-        confirmPassword: '',
-        position: '',
-        moduleIds: user.moduleIds || []
-      });
       setAvatarPreview(user.user_metadata.avatar_url || null);
       setError(null);
       
-      fetchUserPosition();
+      fetchUserData();
     }
-  }, [user, open]);
+  }, [user, open, fetchUserTabPermissions]);
 
   const handleChange = (field: string, value: string | string[]) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -92,6 +100,15 @@ export const EditUserModal = ({ open, onOpenChange, user, onSuccess, isCurrentUs
       moduleIds: checked 
         ? [...prev.moduleIds, moduleId]
         : prev.moduleIds.filter(id => id !== moduleId)
+    }));
+  };
+
+  const handleTabToggle = (subModuleId: string, checked: boolean) => {
+    setForm(prev => ({
+      ...prev,
+      tabPermissions: checked 
+        ? [...prev.tabPermissions, subModuleId]
+        : prev.tabPermissions.filter(id => id !== subModuleId)
     }));
   };
 
@@ -189,6 +206,11 @@ export const EditUserModal = ({ open, onOpenChange, user, onSuccess, isCurrentUs
           console.error('Error updating position:', positionError);
           throw new Error('Erro ao atualizar cargo');
         }
+      }
+
+      // Atualizar permissões de abas se não for usuário atual
+      if (!isCurrentUser && user.role === 'user') {
+        await updateUserTabPermissions(user.id, form.tabPermissions);
       }
 
       // Chamar a edge function para atualizar
@@ -461,6 +483,64 @@ export const EditUserModal = ({ open, onOpenChange, user, onSuccess, isCurrentUs
                             </div>
                           </div>
                         ))
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {user.role === 'user' && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm">Permissões de Abas</CardTitle>
+                      <CardDescription className="text-xs">
+                        Controle quais abas dentro de cada módulo este usuário poderá acessar.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {tabsLoading ? (
+                        <div className="flex items-center justify-center p-4">
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Carregando abas...
+                        </div>
+                      ) : (
+                        (() => {
+                          // Agrupar sub-módulos por módulo pai
+                          const subModulesByModule = subModules.reduce((acc, subModule) => {
+                            const moduleKey = `${subModule.module_name} (${subModule.module_category})`;
+                            if (!acc[moduleKey]) {
+                              acc[moduleKey] = [];
+                            }
+                            acc[moduleKey].push(subModule);
+                            return acc;
+                          }, {} as Record<string, typeof subModules>);
+
+                          return Object.entries(subModulesByModule).map(([moduleInfo, moduleSubTabs]) => (
+                            <div key={moduleInfo} className="space-y-2">
+                              <h4 className="font-medium text-sm text-muted-foreground">{moduleInfo}</h4>
+                              <div className="grid grid-cols-1 gap-2 ml-4">
+                                {moduleSubTabs.map((subModule) => (
+                                  <div key={subModule.id} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={`tab-${subModule.id}`}
+                                      checked={form.tabPermissions.includes(subModule.id)}
+                                      onCheckedChange={(checked) => 
+                                        handleTabToggle(subModule.id, checked as boolean)
+                                      }
+                                    />
+                                    <Label htmlFor={`tab-${subModule.id}`} className="text-sm">
+                                      {subModule.name}
+                                    </Label>
+                                    {subModule.description && (
+                                      <span className="text-xs text-muted-foreground">
+                                        - {subModule.description}
+                                      </span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ));
+                        })()
                       )}
                     </CardContent>
                   </Card>
