@@ -75,11 +75,20 @@ export const useTabPermissions = () => {
 
   const updateUserTabPermissions = async (userId: string, subModuleIds: string[]): Promise<void> => {
     try {
+      console.log('[useTabPermissions] Iniciando atualização de permissões:', { userId, subModuleIds });
+      
       // Primeiro, remover todas as permissões existentes
-      await supabase
+      const { error: deleteError } = await supabase
         .from('user_tab_permissions')
         .delete()
         .eq('user_id', userId);
+
+      if (deleteError) {
+        console.error('[useTabPermissions] Erro ao deletar permissões existentes:', deleteError);
+        throw deleteError;
+      }
+
+      console.log('[useTabPermissions] Permissões existentes removidas com sucesso');
 
       // Depois, inserir as novas permissões
       if (subModuleIds.length > 0) {
@@ -88,14 +97,25 @@ export const useTabPermissions = () => {
           sub_module_id: subModuleId
         }));
 
-        const { error } = await supabase
+        console.log('[useTabPermissions] Inserindo novas permissões:', insertData);
+
+        const { error: insertError, data: insertedData } = await supabase
           .from('user_tab_permissions')
           .insert(insertData);
 
-        if (error) throw error;
+        if (insertError) {
+          console.error('[useTabPermissions] Erro ao inserir novas permissões:', insertError);
+          throw insertError;
+        }
+
+        console.log('[useTabPermissions] Novas permissões inseridas com sucesso:', insertedData);
+      } else {
+        console.log('[useTabPermissions] Nenhuma permissão para inserir (array vazio)');
       }
+
+      console.log('[useTabPermissions] Atualização de permissões concluída com sucesso');
     } catch (err: any) {
-      console.error('Erro ao atualizar permissões de abas:', err);
+      console.error('[useTabPermissions] Erro ao atualizar permissões de abas:', err);
       throw err;
     }
   };

@@ -210,8 +210,20 @@ export const EditUserModal = ({ open, onOpenChange, user, onSuccess, isCurrentUs
 
       // Atualizar permissões de abas se não for usuário atual
       if (!isCurrentUser) {
-        console.log('Atualizando permissões de abas para usuário:', user.id, 'permissões:', form.tabPermissions);
-        await updateUserTabPermissions(user.id, form.tabPermissions);
+        console.log('[EditUserModal] Atualizando permissões de abas para usuário:', {
+          userId: user.id,
+          email: user.email,
+          permissões: form.tabPermissions,
+          quantidadePermissões: form.tabPermissions.length
+        });
+        
+        try {
+          await updateUserTabPermissions(user.id, form.tabPermissions);
+          console.log('[EditUserModal] Permissões de abas atualizadas com sucesso');
+        } catch (tabError) {
+          console.error('[EditUserModal] Erro específico ao atualizar permissões de abas:', tabError);
+          throw new Error('Erro ao atualizar permissões de abas: ' + tabError.message);
+        }
       }
 
       // Chamar a edge function para atualizar
