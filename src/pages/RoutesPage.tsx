@@ -7,9 +7,6 @@ import { ApprovalModal } from '@/components/Modals/ApprovalModal';
 import { Truck, ChevronDown, Search, MapPin, Plus, Route, Zap, Target } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ModuleAccessCheck } from '@/components/Auth/ModuleAccessCheck';
-import { TabAccessCheck, AccessibleTabsList } from '@/components/Auth/TabAccessCheck';
-import { useTabAccess } from '@/hooks/useTabAccess';
 import {
   Table,
   TableBody,
@@ -35,11 +32,10 @@ const RoutesPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { routes, loading, fetchRoutes } = useRoutes();
-  const { getFirstAllowedTab } = useTabAccess('/routes');
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [activeTab, setActiveTab] = useState('');
+  const [activeTab, setActiveTab] = useState('routes');
   
   // Receber dados da venda se vier da página de vendas
   const saleData = location.state?.saleData;
@@ -62,12 +58,9 @@ const RoutesPage = () => {
   ]);
 
   useEffect(() => {
-    const firstTab = getFirstAllowedTab();
-    if (firstTab) {
-      setActiveTab(initialTab === 'routes' ? firstTab : initialTab);
-    }
+    setActiveTab(initialTab);
     fetchRoutes();
-  }, [initialTab, getFirstAllowedTab]);
+  }, [initialTab]);
 
   // Usar dados reais do banco ao invés de mock data
   const filteredItems = routes.filter(route => {
@@ -94,20 +87,18 @@ const RoutesPage = () => {
   };
 
   return (
-    <ModuleAccessCheck routePath="/routes">
-      <TabAccessCheck moduleRoute="/routes">
-        <div className="p-4 sm:p-6 space-y-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold">Roteirização</h1>
-              <p className="text-muted-foreground">Gerencie todas as rotas de entrega e veículos.</p>
-            </div>
-          </div>
-          
-          <StageAlert alerts={alerts} onDismiss={handleDismissAlert} />
-          
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <AccessibleTabsList moduleRoute="/routes" className="grid w-full grid-cols-5">
+    <div className="p-4 sm:p-6 space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Roteirização</h1>
+          <p className="text-muted-foreground">Gerencie todas as rotas de entrega e veículos.</p>
+        </div>
+      </div>
+      
+      <StageAlert alerts={alerts} onDismiss={handleDismissAlert} />
+      
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="routes" className="flex items-center gap-2">
             <Truck className="h-4 w-4" />
             Rotas
@@ -128,7 +119,7 @@ const RoutesPage = () => {
             <Target className="h-4 w-4" />
             Otimização OpenRoute
           </TabsTrigger>
-        </AccessibleTabsList>
+        </TabsList>
 
         <TabsContent value="routes" className="space-y-6">
           <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
@@ -239,22 +230,20 @@ const RoutesPage = () => {
         <TabsContent value="otimizacao-roteiro">
           <OtimizacaoRoteiroTab />
         </TabsContent>
-          </Tabs>
-          
-          <ApprovalModal
-            isOpen={showModal}
-            onClose={() => setShowModal(false)}
-            stage="route"
-            orderData={selectedItem || {
-              id: 'NOVO', 
-              product: '', 
-              quantity: 1, 
-              customer: ''
-            }}
-          />
-        </div>
-      </TabAccessCheck>
-    </ModuleAccessCheck>
+      </Tabs>
+      
+      <ApprovalModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        stage="route"
+        orderData={selectedItem || {
+          id: 'NOVO', 
+          product: '', 
+          quantity: 1, 
+          customer: ''
+        }}
+      />
+    </div>
   );
 };
 

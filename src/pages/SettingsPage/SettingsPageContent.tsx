@@ -9,8 +9,6 @@ import { DatabaseReset } from '@/components/Settings/DatabaseReset';
 import { FiscalSettings } from '@/components/Settings/FiscalSettings';
 import { CompanyFiscalInfo } from '@/components/Settings/CompanyFiscalInfo';
 import { SellerCommissionsSection } from '@/components/Settings/SellerCommissionsSection';
-import { SystemSettings } from '@/components/Settings/SystemSettings';
-import { SecuritySettings } from '@/components/Settings/SecuritySettings';
 
 interface TabContentProps {
   tabName: string;
@@ -43,44 +41,48 @@ interface SettingsPageContentProps {
 export const SettingsPageContent: React.FC<SettingsPageContentProps> = ({ isAdmin }) => {
   return (
     <>
+      <TabsContent value="profile">
+        <TabContent tabName="Perfil">
+          <CurrentUserProfile />
+        </TabContent>
+      </TabsContent>
+
       <TabsContent value="company">
-        <TabContent tabName="Empresa">
-          <CompanySettings />
-        </TabContent>
+        {!isAdmin ? (
+          <Alert>
+            <AlertDescription>
+              Você não tem permissão para acessar esta seção. Acesso restrito a administradores.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <TabContent tabName="Empresa">
+            <CompanySettings />
+          </TabContent>
+        )}
       </TabsContent>
 
-      <TabsContent value="users">
-        <TabContent tabName="Usuários">
-          <div className="space-y-6">
-            <UserManagement />
-            <SellerCommissionsSection />
-          </div>
-        </TabContent>
-      </TabsContent>
+      {isAdmin && (
+        <TabsContent value="fiscal">
+          <TabContent tabName="Fiscal">
+            <div className="space-y-6">
+              <CompanyFiscalInfo />
+              <FiscalSettings />
+            </div>
+          </TabContent>
+        </TabsContent>
+      )}
 
-      <TabsContent value="system">
-        <TabContent tabName="Sistema">
-          <div className="space-y-6">
-            <SystemSettings />
-            <DatabaseReset />
-          </div>
-        </TabContent>
-      </TabsContent>
-
-      <TabsContent value="fiscal">
-        <TabContent tabName="Fiscal">
-          <div className="space-y-6">
-            <CompanyFiscalInfo />
-            <FiscalSettings />
-          </div>
-        </TabContent>
-      </TabsContent>
-
-      <TabsContent value="security">
-        <TabContent tabName="Segurança">
-          <SecuritySettings />
-        </TabContent>
-      </TabsContent>
+      {isAdmin && (
+        <TabsContent value="users">
+          <TabContent tabName="Usuários">
+            <div className="space-y-6">
+              <UserManagement />
+              <SellerCommissionsSection />
+              <DatabaseReset />
+            </div>
+          </TabContent>
+        </TabsContent>
+      )}
     </>
   );
 };

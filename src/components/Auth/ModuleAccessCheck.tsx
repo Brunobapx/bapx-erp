@@ -10,7 +10,7 @@ interface ModuleAccessCheckProps {
 }
 
 export const ModuleAccessCheck = ({ routePath, children }: ModuleAccessCheckProps) => {
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
   const { hasAccess, loading } = useModuleAccess();
 
   // Verificar se está logado
@@ -43,7 +43,12 @@ export const ModuleAccessCheck = ({ routePath, children }: ModuleAccessCheckProp
     return <>{children}</>;
   }
 
-  // Verificar permissão específica do módulo (incluindo administradores)
+  // Admin e Master têm acesso a tudo
+  if (userRole === 'admin' || userRole === 'master') {
+    return <>{children}</>;
+  }
+
+  // Verificar permissão específica do módulo
   if (!hasAccess(routePath)) {
     return (
       <div className="min-h-[400px] flex items-center justify-center p-6">

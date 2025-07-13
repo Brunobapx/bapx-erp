@@ -11,7 +11,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useSystemModules } from '@/hooks/useSystemModules';
-import { useTabPermissions } from '@/hooks/useTabPermissions';
 import { POSITION_LABELS, UserPosition } from '@/hooks/useUserPositions';
 import { User, Shield, Loader2, Edit, Lock, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,8 +33,7 @@ export const EditUserModal = ({ open, onOpenChange, user, onSuccess, isCurrentUs
     password: '',
     confirmPassword: '',
     position: '',
-    moduleIds: [] as string[],
-    tabPermissions: [] as string[]
+    moduleIds: [] as string[]
   });
   
   const [loading, setLoading] = useState(false);
@@ -46,51 +44,42 @@ export const EditUserModal = ({ open, onOpenChange, user, onSuccess, isCurrentUs
   const [userPosition, setUserPosition] = useState<UserPosition | null>(null);
   const { toast } = useToast();
   const { modules, loading: modulesLoading } = useSystemModules();
-  const { subModules, loading: tabsLoading, fetchUserTabPermissions, updateUserTabPermissions } = useTabPermissions();
 
   useEffect(() => {
     if (user && open) {
-      // Buscar cargo do usuário e permissões de abas
-      const fetchUserData = async () => {
+      // Buscar cargo do usuário
+      const fetchUserPosition = async () => {
         try {
-          // Buscar cargo
-          const { data: positionData, error: positionError } = await supabase
+          const { data, error } = await supabase
             .from('user_positions')
             .select('position')
             .eq('user_id', user.id)
             .maybeSingle();
 
-          if (!positionError && positionData) {
-            setUserPosition(positionData.position as UserPosition);
+          if (!error && data) {
+            setUserPosition(data.position as UserPosition);
+            setForm(prev => ({ ...prev, position: data.position }));
           }
-
-          // Buscar permissões de abas
-          const tabPermissions = await fetchUserTabPermissions(user.id);
-          console.log('[EditUserModal] Permissões de abas carregadas:', tabPermissions);
-
-          setForm({
-            firstName: user.user_metadata.first_name || '',
-            lastName: user.user_metadata.last_name || '',
-            email: user.email,
-            password: '',
-            confirmPassword: '',
-            position: positionData?.position || '',
-            moduleIds: user.moduleIds || [],
-            tabPermissions
-          });
-          
-          console.log('[EditUserModal] Form atualizado com permissões:', { tabPermissions, moduleIds: user.moduleIds });
         } catch (error) {
-          console.error('Error fetching user data:', error);
+          console.error('Error fetching user position:', error);
         }
       };
 
+      setForm({
+        firstName: user.user_metadata.first_name || '',
+        lastName: user.user_metadata.last_name || '',
+        email: user.email,
+        password: '',
+        confirmPassword: '',
+        position: '',
+        moduleIds: user.moduleIds || []
+      });
       setAvatarPreview(user.user_metadata.avatar_url || null);
       setError(null);
       
-      fetchUserData();
+      fetchUserPosition();
     }
-  }, [user, open, fetchUserTabPermissions]);
+  }, [user, open]);
 
   const handleChange = (field: string, value: string | string[]) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -104,23 +93,6 @@ export const EditUserModal = ({ open, onOpenChange, user, onSuccess, isCurrentUs
         ? [...prev.moduleIds, moduleId]
         : prev.moduleIds.filter(id => id !== moduleId)
     }));
-  };
-
-  const handleTabToggle = (subModuleId: string, checked: boolean) => {
-    console.log('[EditUserModal] handleTabToggle chamado:', { subModuleId, checked, currentPermissions: form.tabPermissions });
-    
-    setForm(prev => {
-      const newPermissions = checked 
-        ? [...prev.tabPermissions, subModuleId]
-        : prev.tabPermissions.filter(id => id !== subModuleId);
-      
-      console.log('[EditUserModal] Novas permissões após toggle:', newPermissions);
-      
-      return {
-        ...prev,
-        tabPermissions: newPermissions
-      };
-    });
   };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -216,24 +188,6 @@ export const EditUserModal = ({ open, onOpenChange, user, onSuccess, isCurrentUs
         if (positionError) {
           console.error('Error updating position:', positionError);
           throw new Error('Erro ao atualizar cargo');
-        }
-      }
-
-      // Atualizar permissões de abas se não for usuário atual
-      if (!isCurrentUser) {
-        console.log('[EditUserModal] Atualizando permissões de abas para usuário:', {
-          userId: user.id,
-          email: user.email,
-          permissões: form.tabPermissions,
-          quantidadePermissões: form.tabPermissions.length
-        });
-        
-        try {
-          await updateUserTabPermissions(user.id, form.tabPermissions);
-          console.log('[EditUserModal] Permissões de abas atualizadas com sucesso');
-        } catch (tabError) {
-          console.error('[EditUserModal] Erro específico ao atualizar permissões de abas:', tabError);
-          throw new Error('Erro ao atualizar permissões de abas: ' + tabError.message);
         }
       }
 
@@ -511,70 +465,6 @@ export const EditUserModal = ({ open, onOpenChange, user, onSuccess, isCurrentUs
                     </CardContent>
                   </Card>
                 )}
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">Permissões de Abas</CardTitle>
-                    <CardDescription className="text-xs">
-                      Controle quais abas dentro de cada módulo este usuário poderá acessar.
-                    </CardDescription>
-                  </CardHeader>
-                    <CardContent className="space-y-4">
-                      {tabsLoading ? (
-                        <div className="flex items-center justify-center p-4">
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          Carregando abas...
-                        </div>
-                      ) : (
-                        (() => {
-                          // Agrupar sub-módulos por módulo pai
-                          const subModulesByModule = subModules.reduce((acc, subModule) => {
-                            const moduleKey = `${subModule.module_name} (${subModule.module_category})`;
-                            if (!acc[moduleKey]) {
-                              acc[moduleKey] = [];
-                            }
-                            acc[moduleKey].push(subModule);
-                            return acc;
-                          }, {} as Record<string, typeof subModules>);
-
-                          return Object.entries(subModulesByModule).map(([moduleInfo, moduleSubTabs]) => (
-                            <div key={moduleInfo} className="space-y-2">
-                              <h4 className="font-medium text-sm text-muted-foreground">{moduleInfo}</h4>
-                              <div className="grid grid-cols-1 gap-2 ml-4">
-                                 {moduleSubTabs.map((subModule) => {
-                                   const isChecked = form.tabPermissions.includes(subModule.id);
-                                   console.log('[EditUserModal] Renderizando checkbox para:', subModule.name, 'isChecked:', isChecked, 'subModuleId:', subModule.id);
-                                   
-                                   return (
-                                     <div key={subModule.id} className="flex items-center space-x-2">
-                                       <input
-                                         type="checkbox"
-                                         id={`tab-${subModule.id}`}
-                                         checked={isChecked}
-                                         onChange={(e) => {
-                                           console.log('[EditUserModal] Checkbox onChange:', { subModuleId: subModule.id, checked: e.target.checked, subModuleName: subModule.name });
-                                           handleTabToggle(subModule.id, e.target.checked);
-                                         }}
-                                         className="h-4 w-4 rounded border border-input bg-background text-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                       />
-                                       <Label htmlFor={`tab-${subModule.id}`} className="text-sm cursor-pointer">
-                                         {subModule.name}
-                                       </Label>
-                                       {subModule.description && (
-                                         <span className="text-xs text-muted-foreground">
-                                           - {subModule.description}
-                                         </span>
-                                       )}
-                                     </div>
-                                   );
-                                 })}
-                              </div>
-                            </div>
-                          ));
-                        })()
-                      )}
-                    </CardContent>
-                  </Card>
 
                 {['admin', 'master'].includes(user.role || '') && (
                   <Alert>
