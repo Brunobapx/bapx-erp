@@ -20,9 +20,10 @@ interface TabAccessHook {
 }
 
 export const useTabAccess = (moduleRoute: string): TabAccessHook => {
-  const { user, isAdmin, isMaster } = useAuth();
+  const { user } = useAuth();
   const [allowedTabs, setAllowedTabs] = useState<SubModule[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState<string>('user');
 
   const fetchTabPermissions = async () => {
     if (!user) {
@@ -33,8 +34,18 @@ export const useTabAccess = (moduleRoute: string): TabAccessHook => {
     try {
       setLoading(true);
 
+      // Buscar role do usuário primeiro
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      const currentRole = roleData?.role || 'user';
+      setUserRole(currentRole);
+
       // Admin e Master têm acesso a todas as abas
-      if (isAdmin || isMaster) {
+      if (currentRole === 'admin' || currentRole === 'master') {
         const { data: allTabs } = await supabase
           .from('system_sub_modules')
           .select('*')
@@ -95,7 +106,7 @@ export const useTabAccess = (moduleRoute: string): TabAccessHook => {
   };
 
   const hasAccess = (tabKey: string): boolean => {
-    if (isAdmin || isMaster) return true;
+    if (userRole === 'admin' || userRole === 'master') return true;
     return allowedTabs.some(tab => tab.tab_key === tabKey);
   };
 
@@ -105,7 +116,7 @@ export const useTabAccess = (moduleRoute: string): TabAccessHook => {
 
   useEffect(() => {
     fetchTabPermissions();
-  }, [user, moduleRoute, isAdmin, isMaster]);
+  }, [user, moduleRoute]);
   
   // Método para forçar recarregamento das permissões
   const refetchPermissions = () => {

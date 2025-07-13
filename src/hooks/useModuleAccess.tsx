@@ -9,9 +9,10 @@ interface ModuleAccessHook {
 }
 
 export const useModuleAccess = (): ModuleAccessHook => {
-  const { user, userRole } = useAuth();
+  const { user } = useAuth();
   const [allowedModuleRoutes, setAllowedModuleRoutes] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState<string>('user');
 
   const fetchUserModuleAccess = async () => {
     if (!user) {
@@ -22,8 +23,18 @@ export const useModuleAccess = (): ModuleAccessHook => {
     try {
       setLoading(true);
 
+      // Buscar role do usuário primeiro
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      const currentRole = roleData?.role || 'user';
+      setUserRole(currentRole);
+
       // Admin e Master têm acesso a todos os módulos
-      if (userRole === 'admin' || userRole === 'master') {
+      if (currentRole === 'admin' || currentRole === 'master') {
         const { data: allModules } = await supabase
           .from('system_modules')
           .select('route_path')
@@ -71,7 +82,7 @@ export const useModuleAccess = (): ModuleAccessHook => {
 
   useEffect(() => {
     fetchUserModuleAccess();
-  }, [user, userRole]);
+  }, [user]);
 
   return {
     hasAccess,
