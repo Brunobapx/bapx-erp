@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs } from "@/components/ui/tabs";
 import { Settings as SettingsIcon } from 'lucide-react';
 import { SettingsPageTabs } from './SettingsPage/SettingsPageTabs';
@@ -10,17 +10,19 @@ import { useTabAccess } from '@/hooks/useTabAccess';
 
 const SettingsPage = () => {
   const { 
+    user,
     loading,
     isAdmin,
     isMaster
   } = useAuth();
-  const { getFirstAllowedTab } = useTabAccess('/configuracoes');
-  const [activeTab, setActiveTab] = useState('');
+  const { getFirstAllowedTab, allowedTabs } = useTabAccess('/configuracoes');
+  const [activeTab, setActiveTab] = useState('company'); // Default para empresa
 
   console.log('SettingsPage rendered:', { 
     isAdmin, 
     isMaster,
-    loading
+    loading,
+    allowedTabs: allowedTabs.map(t => t.tab_key)
   });
 
   // Show loading if still getting auth info
@@ -41,28 +43,35 @@ const SettingsPage = () => {
 
   const userIsAdmin = isAdmin || isMaster;
 
-  React.useEffect(() => {
+  useEffect(() => {
+    // Para admins, sempre começar com 'company'
+    if (userIsAdmin) {
+      setActiveTab('company');
+      return;
+    }
+
+    // Para usuários normais, usar primeira aba permitida
     const firstTab = getFirstAllowedTab();
     if (firstTab) {
       setActiveTab(firstTab);
+    } else {
+      setActiveTab('company'); // fallback
     }
-  }, [getFirstAllowedTab]);
+  }, [userIsAdmin, getFirstAllowedTab, allowedTabs]);
 
   return (
     <ModuleAccessCheck routePath="/configuracoes">
-      <TabAccessCheck moduleRoute="/configuracoes">
-        <div className="container mx-auto p-6 space-y-6">
-          <div className="flex items-center gap-3 mb-6">
-            <SettingsIcon className="h-8 w-8 text-primary" />
-            <h1 className="text-3xl font-bold">Configurações</h1>
-          </div>
-
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <SettingsPageTabs isAdmin={userIsAdmin} moduleRoute="/configuracoes" />
-            <SettingsPageContent isAdmin={userIsAdmin} />
-          </Tabs>
+      <div className="container mx-auto p-6 space-y-6">
+        <div className="flex items-center gap-3 mb-6">
+          <SettingsIcon className="h-8 w-8 text-primary" />
+          <h1 className="text-3xl font-bold">Configurações</h1>
         </div>
-      </TabAccessCheck>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <SettingsPageTabs isAdmin={userIsAdmin} moduleRoute="/configuracoes" />
+          <SettingsPageContent isAdmin={userIsAdmin} />
+        </Tabs>
+      </div>
     </ModuleAccessCheck>
   );
 };

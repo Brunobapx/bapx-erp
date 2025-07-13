@@ -57,7 +57,6 @@ export const AccessibleTabsList: React.FC<AccessibleTabsListProps> = ({
       if (React.isValidElement(child) && child.type === TabsTrigger) {
         const tabValue = child.props.value;
         const isAllowed = allowedTabs.some(tab => tab.tab_key === tabValue);
-        console.log(`Tab ${tabValue} allowed:`, isAllowed, 'allowedTabs:', allowedTabs.map(t => t.tab_key));
         return isAllowed ? child : null;
       }
       return child;
