@@ -12,17 +12,24 @@ const SettingsPage = () => {
   const { 
     user,
     loading,
+    userRole,
     isAdmin,
     isMaster
   } = useAuth();
   const { getFirstAllowedTab, allowedTabs } = useTabAccess('/configuracoes');
-  const [activeTab, setActiveTab] = useState('company'); // Default para empresa
+  const [activeTab, setActiveTab] = useState('company');
+
+  // Determinar se o usuário é admin/master de forma consistente
+  const userIsAdmin = userRole === 'admin' || userRole === 'master' || isAdmin || isMaster;
 
   console.log('SettingsPage rendered:', { 
+    userRole,
     isAdmin, 
     isMaster,
+    userIsAdmin,
     loading,
-    allowedTabs: allowedTabs.map(t => t.tab_key)
+    allowedTabs: allowedTabs.length,
+    activeTab
   });
 
   // Show loading if still getting auth info
@@ -41,23 +48,25 @@ const SettingsPage = () => {
     );
   }
 
-  const userIsAdmin = isAdmin || isMaster;
-
   useEffect(() => {
-    // Para admins, sempre começar com 'company'
+    console.log('SettingsPage useEffect:', { userIsAdmin, userRole, allowedTabs: allowedTabs.length });
+    
+    // Para admins/masters, não usar sistema de controle de abas
     if (userIsAdmin) {
-      setActiveTab('company');
+      console.log('User is admin/master, keeping current tab:', activeTab);
       return;
     }
 
     // Para usuários normais, usar primeira aba permitida
     const firstTab = getFirstAllowedTab();
-    if (firstTab) {
+    console.log('Normal user, first allowed tab:', firstTab);
+    
+    if (firstTab && firstTab !== activeTab) {
       setActiveTab(firstTab);
-    } else {
+    } else if (!firstTab) {
       setActiveTab('company'); // fallback
     }
-  }, [userIsAdmin, getFirstAllowedTab, allowedTabs]);
+  }, [userIsAdmin, userRole, allowedTabs, getFirstAllowedTab]);
 
   return (
     <ModuleAccessCheck routePath="/configuracoes">

@@ -13,8 +13,11 @@ interface SettingsPageTabsProps {
 export const SettingsPageTabs: React.FC<SettingsPageTabsProps> = ({ isAdmin, moduleRoute }) => {
   const { userRole } = useAuth();
   
+  console.log('SettingsPageTabs rendered:', { isAdmin, userRole, moduleRoute });
+  
   // Se for admin ou master, mostrar todas as abas diretamente
-  if (userRole === 'admin' || userRole === 'master') {
+  if (isAdmin || userRole === 'admin' || userRole === 'master') {
+    console.log('Rendering admin tabs directly');
     return (
       <TabsList className="grid w-full grid-cols-5">
         <TabsTrigger value="company" className="flex items-center gap-2">
@@ -42,6 +45,7 @@ export const SettingsPageTabs: React.FC<SettingsPageTabsProps> = ({ isAdmin, mod
   }
 
   // Para usuários normais, usar o sistema de controle de acesso
+  console.log('Rendering normal user tabs with AccessibleTabsList');
   return (
     <AccessibleTabsList moduleRoute={moduleRoute} className="grid w-full grid-cols-5">
       <TabsTrigger value="company" className="flex items-center gap-2">
