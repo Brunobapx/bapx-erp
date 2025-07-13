@@ -1658,6 +1658,53 @@ export type Database = {
         }
         Relationships: []
       }
+      system_sub_modules: {
+        Row: {
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean
+          name: string
+          parent_module_id: string
+          sort_order: number | null
+          tab_key: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          parent_module_id: string
+          sort_order?: number | null
+          tab_key: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          parent_module_id?: string
+          sort_order?: number | null
+          tab_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_parent_module"
+            columns: ["parent_module_id"]
+            isOneToOne: false
+            referencedRelation: "system_modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_departments: {
         Row: {
           created_at: string
@@ -1758,6 +1805,35 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_tab_permissions: {
+        Row: {
+          created_at: string
+          id: string
+          sub_module_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          sub_module_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          sub_module_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_sub_module"
+            columns: ["sub_module_id"]
+            isOneToOne: false
+            referencedRelation: "system_sub_modules"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vehicles: {
         Row: {

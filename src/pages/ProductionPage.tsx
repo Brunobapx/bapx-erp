@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { ApprovalModal } from '@/components/Modals/ApprovalModal';
 import { Box } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { TabAccessCheck, AccessibleTabsList } from '@/components/Auth/TabAccessCheck';
+import { useTabAccess } from '@/hooks/useTabAccess';
 import StageAlert from '@/components/Alerts/StageAlert';
 import { ProductionFilters } from '@/components/Production/ProductionFilters';
 import { ProductionTable } from '@/components/Production/ProductionTable';
@@ -18,7 +20,8 @@ const ProductionPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Production | null>(null);
   const [statusFilter, setStatusFilter] = useState('active');
-  const [orderSort, setOrderSort] = useState('recent'); // novo controle
+  const [orderSort, setOrderSort] = useState('recent');
+  const { getFirstAllowedTab } = useTabAccess('/producao');
   const [alerts, setAlerts] = useState<AlertType[]>([
     {
       id: 'alert-1',
@@ -139,46 +142,48 @@ const ProductionPage = () => {
       
       <StageAlert alerts={alerts} onDismiss={handleDismissAlert} />
 
-      <Tabs defaultValue="individual" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="individual">Produções Individuais</TabsTrigger>
-          <TabsTrigger value="internal">Produção Interna</TabsTrigger>
-          <TabsTrigger value="summary">Resumo por Produto</TabsTrigger>
-        </TabsList>
+      <TabAccessCheck moduleRoute="/producao">
+        <Tabs defaultValue={getFirstAllowedTab() || "individual"} className="w-full">
+          <AccessibleTabsList moduleRoute="/producao" className="grid w-full grid-cols-3">
+            <TabsTrigger value="individual">Produções Individuais</TabsTrigger>
+            <TabsTrigger value="internal">Produção Interna</TabsTrigger>
+            <TabsTrigger value="summary">Resumo por Produto</TabsTrigger>
+          </AccessibleTabsList>
 
-        <TabsContent value="individual" className="space-y-6">
-          <ProductionFilters
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            statusFilter={statusFilter}
-            setStatusFilter={setStatusFilter}
-            orderSort={orderSort}
-            setOrderSort={setOrderSort}
-          />
-          
-          <ProductionTable
-            filteredItems={filteredItems}
-            loading={loading}
-            onItemClick={handleItemClick}
-            onViewItem={handleViewItem}
-            onEditItem={handleEditItem}
-            onDeleteItem={handleDeleteItem}
-            onSendToPackaging={handleSendToPackaging}
-            canSendToPackaging={canSendToPackaging}
-          />
-        </TabsContent>
+          <TabsContent value="individual" className="space-y-6">
+            <ProductionFilters
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              statusFilter={statusFilter}
+              setStatusFilter={setStatusFilter}
+              orderSort={orderSort}
+              setOrderSort={setOrderSort}
+            />
+            
+            <ProductionTable
+              filteredItems={filteredItems}
+              loading={loading}
+              onItemClick={handleItemClick}
+              onViewItem={handleViewItem}
+              onEditItem={handleEditItem}
+              onDeleteItem={handleDeleteItem}
+              onSendToPackaging={handleSendToPackaging}
+              canSendToPackaging={canSendToPackaging}
+            />
+          </TabsContent>
 
-        <TabsContent value="internal" className="space-y-6">
-          <InternalProductionTab />
-        </TabsContent>
+          <TabsContent value="internal" className="space-y-6">
+            <InternalProductionTab />
+          </TabsContent>
 
-        <TabsContent value="summary" className="space-y-6">
-          <ProductionSummaryTable
-            productionSummary={productionSummary}
-            loading={loading}
-          />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="summary" className="space-y-6">
+            <ProductionSummaryTable
+              productionSummary={productionSummary}
+              loading={loading}
+            />
+          </TabsContent>
+        </Tabs>
+      </TabAccessCheck>
       
       <ApprovalModal
         isOpen={showModal}
