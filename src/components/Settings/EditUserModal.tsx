@@ -66,6 +66,7 @@ export const EditUserModal = ({ open, onOpenChange, user, onSuccess, isCurrentUs
 
           // Buscar permissões de abas
           const tabPermissions = await fetchUserTabPermissions(user.id);
+          console.log('[EditUserModal] Permissões de abas carregadas:', tabPermissions);
 
           setForm({
             firstName: user.user_metadata.first_name || '',
@@ -77,6 +78,8 @@ export const EditUserModal = ({ open, onOpenChange, user, onSuccess, isCurrentUs
             moduleIds: user.moduleIds || [],
             tabPermissions
           });
+          
+          console.log('[EditUserModal] Form atualizado com permissões:', { tabPermissions, moduleIds: user.moduleIds });
         } catch (error) {
           console.error('Error fetching user data:', error);
         }
@@ -104,12 +107,20 @@ export const EditUserModal = ({ open, onOpenChange, user, onSuccess, isCurrentUs
   };
 
   const handleTabToggle = (subModuleId: string, checked: boolean) => {
-    setForm(prev => ({
-      ...prev,
-      tabPermissions: checked 
+    console.log('[EditUserModal] handleTabToggle chamado:', { subModuleId, checked, currentPermissions: form.tabPermissions });
+    
+    setForm(prev => {
+      const newPermissions = checked 
         ? [...prev.tabPermissions, subModuleId]
-        : prev.tabPermissions.filter(id => id !== subModuleId)
-    }));
+        : prev.tabPermissions.filter(id => id !== subModuleId);
+      
+      console.log('[EditUserModal] Novas permissões após toggle:', newPermissions);
+      
+      return {
+        ...prev,
+        tabPermissions: newPermissions
+      };
+    });
   };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -530,25 +541,31 @@ export const EditUserModal = ({ open, onOpenChange, user, onSuccess, isCurrentUs
                             <div key={moduleInfo} className="space-y-2">
                               <h4 className="font-medium text-sm text-muted-foreground">{moduleInfo}</h4>
                               <div className="grid grid-cols-1 gap-2 ml-4">
-                                {moduleSubTabs.map((subModule) => (
-                                  <div key={subModule.id} className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id={`tab-${subModule.id}`}
-                                      checked={form.tabPermissions.includes(subModule.id)}
-                                      onCheckedChange={(checked) => 
-                                        handleTabToggle(subModule.id, checked as boolean)
-                                      }
-                                    />
-                                    <Label htmlFor={`tab-${subModule.id}`} className="text-sm">
-                                      {subModule.name}
-                                    </Label>
-                                    {subModule.description && (
-                                      <span className="text-xs text-muted-foreground">
-                                        - {subModule.description}
-                                      </span>
-                                    )}
-                                  </div>
-                                ))}
+                                 {moduleSubTabs.map((subModule) => {
+                                   const isChecked = form.tabPermissions.includes(subModule.id);
+                                   console.log('[EditUserModal] Renderizando checkbox para:', subModule.name, 'isChecked:', isChecked, 'subModuleId:', subModule.id);
+                                   
+                                   return (
+                                     <div key={subModule.id} className="flex items-center space-x-2">
+                                       <Checkbox
+                                         id={`tab-${subModule.id}`}
+                                         checked={isChecked}
+                                         onCheckedChange={(checked) => {
+                                           console.log('[EditUserModal] Checkbox onCheckedChange:', { subModuleId: subModule.id, checked, subModuleName: subModule.name });
+                                           handleTabToggle(subModule.id, checked as boolean);
+                                         }}
+                                       />
+                                       <Label htmlFor={`tab-${subModule.id}`} className="text-sm cursor-pointer">
+                                         {subModule.name}
+                                       </Label>
+                                       {subModule.description && (
+                                         <span className="text-xs text-muted-foreground">
+                                           - {subModule.description}
+                                         </span>
+                                       )}
+                                     </div>
+                                   );
+                                 })}
                               </div>
                             </div>
                           ));
