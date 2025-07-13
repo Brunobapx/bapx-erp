@@ -16,6 +16,7 @@ interface TabAccessHook {
   loading: boolean;
   hasAccess: (tabKey: string) => boolean;
   getFirstAllowedTab: () => string | null;
+  refetchPermissions: () => void;
 }
 
 export const useTabAccess = (moduleRoute: string): TabAccessHook => {
@@ -47,16 +48,20 @@ export const useTabAccess = (moduleRoute: string): TabAccessHook => {
       }
 
       // Para usuários normais, buscar permissões específicas
+      const moduleIds = await getModuleIds(moduleRoute);
+      
       const { data: userTabs, error } = await supabase
         .from('user_tab_permissions')
         .select(`
-          system_sub_modules (
+          sub_module_id,
+          system_sub_modules!inner (
             id,
             name,
             tab_key,
             description,
             icon,
-            sort_order
+            sort_order,
+            parent_module_id
           )
         `)
         .eq('user_id', user.id);
@@ -66,15 +71,8 @@ export const useTabAccess = (moduleRoute: string): TabAccessHook => {
         setAllowedTabs([]);
       } else {
         // Filtrar apenas abas do módulo atual
-        const moduleIds = await getModuleIds(moduleRoute);
-        const { data: moduleSubTabs } = await supabase
-          .from('system_sub_modules')
-          .select('*')
-          .eq('is_active', true)
-          .in('parent_module_id', moduleIds);
-
-        const userTabIds = userTabs?.map((t: any) => t.system_sub_modules?.id).filter(Boolean) || [];
-        const allowedModuleTabs = moduleSubTabs?.filter(tab => userTabIds.includes(tab.id)) || [];
+        const userAllowedTabs = userTabs?.map((t: any) => t.system_sub_modules).filter(Boolean) || [];
+        const allowedModuleTabs = userAllowedTabs.filter(tab => moduleIds.includes(tab.parent_module_id)) || [];
         
         allowedModuleTabs.sort((a, b) => a.sort_order - b.sort_order);
         setAllowedTabs(allowedModuleTabs);
@@ -108,11 +106,17 @@ export const useTabAccess = (moduleRoute: string): TabAccessHook => {
   useEffect(() => {
     fetchTabPermissions();
   }, [user, moduleRoute, isAdmin, isMaster]);
+  
+  // Método para forçar recarregamento das permissões
+  const refetchPermissions = () => {
+    fetchTabPermissions();
+  };
 
   return {
     allowedTabs,
     loading,
     hasAccess,
-    getFirstAllowedTab
+    getFirstAllowedTab,
+    refetchPermissions
   };
 };

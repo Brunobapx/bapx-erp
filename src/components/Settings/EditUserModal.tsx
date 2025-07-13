@@ -209,7 +209,8 @@ export const EditUserModal = ({ open, onOpenChange, user, onSuccess, isCurrentUs
       }
 
       // Atualizar permissões de abas se não for usuário atual
-      if (!isCurrentUser && user.role === 'user') {
+      if (!isCurrentUser) {
+        console.log('Atualizando permissões de abas para usuário:', user.id, 'permissões:', form.tabPermissions);
         await updateUserTabPermissions(user.id, form.tabPermissions);
       }
 
@@ -488,14 +489,13 @@ export const EditUserModal = ({ open, onOpenChange, user, onSuccess, isCurrentUs
                   </Card>
                 )}
 
-                {user.role === 'user' && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-sm">Permissões de Abas</CardTitle>
-                      <CardDescription className="text-xs">
-                        Controle quais abas dentro de cada módulo este usuário poderá acessar.
-                      </CardDescription>
-                    </CardHeader>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Permissões de Abas</CardTitle>
+                    <CardDescription className="text-xs">
+                      Controle quais abas dentro de cada módulo este usuário poderá acessar.
+                    </CardDescription>
+                  </CardHeader>
                     <CardContent className="space-y-4">
                       {tabsLoading ? (
                         <div className="flex items-center justify-center p-4">
@@ -544,7 +544,6 @@ export const EditUserModal = ({ open, onOpenChange, user, onSuccess, isCurrentUs
                       )}
                     </CardContent>
                   </Card>
-                )}
 
                 {['admin', 'master'].includes(user.role || '') && (
                   <Alert>

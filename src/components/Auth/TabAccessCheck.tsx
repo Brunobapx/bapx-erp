@@ -48,18 +48,32 @@ export const AccessibleTabsList: React.FC<AccessibleTabsListProps> = ({
   children, 
   className 
 }) => {
-  const { allowedTabs } = useTabAccess(moduleRoute);
+  const { allowedTabs, loading } = useTabAccess(moduleRoute);
   
   const filterAllowedTabs = (children: React.ReactNode): React.ReactNode => {
+    if (loading) return null;
+    
     return React.Children.map(children, (child) => {
       if (React.isValidElement(child) && child.type === TabsTrigger) {
         const tabValue = child.props.value;
         const isAllowed = allowedTabs.some(tab => tab.tab_key === tabValue);
+        console.log(`Tab ${tabValue} allowed:`, isAllowed, 'allowedTabs:', allowedTabs.map(t => t.tab_key));
         return isAllowed ? child : null;
       }
       return child;
     });
   };
+
+  if (loading) {
+    return (
+      <TabsList className={className}>
+        <div className="flex items-center justify-center p-4">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+          Carregando abas...
+        </div>
+      </TabsList>
+    );
+  }
 
   return (
     <TabsList className={className}>
