@@ -14,31 +14,26 @@ const useFiscalEmissionFilters = () => {
   const loadInvoices = async () => {
     try {
       setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('Usuário não autenticado');
-      }
+      console.log('[FISCAL_EMISSION] Carregando notas fiscais...');
 
-      const { data, error } = await supabase.functions.invoke('focus-nfe-emission', {
-        body: {
-          action: 'list_invoices'
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
-        }
-      });
+      const { data: invoices, error } = await supabase
+        .from('fiscal_invoices')
+        .select(`
+          *,
+          sales(sale_number, client_name),
+          orders(order_number),
+          clients(name)
+        `)
+        .order('created_at', { ascending: false });
 
       if (error) {
-        throw new Error(error.message);
+        throw new Error('Erro ao carregar NFes: ' + error.message);
       }
 
-      if (!data.success) {
-        throw new Error(data.error || 'Erro ao carregar NFes');
-      }
-
-      setInvoices(data.invoices || []);
+      console.log('[FISCAL_EMISSION] NFes carregadas:', invoices?.length || 0);
+      setInvoices(invoices || []);
     } catch (error) {
-      console.error('Erro ao carregar NFes:', error);
+      console.error('[FISCAL_EMISSION] Erro ao carregar NFes:', error);
       toast({ 
         title: "Erro", 
         description: error.message || 'Erro ao carregar notas fiscais',
@@ -68,8 +63,9 @@ const useFiscalEmissionFilters = () => {
       }
       return (
         invoice.invoice_number.toLowerCase().includes(searchString) ||
-        invoice.sales?.sale_number.toLowerCase().includes(searchString) ||
-        invoice.sales?.client_name.toLowerCase().includes(searchString) ||
+        invoice.sales?.sale_number?.toLowerCase().includes(searchString) ||
+        invoice.sales?.client_name?.toLowerCase().includes(searchString) ||
+        invoice.clients?.name?.toLowerCase().includes(searchString) ||
         invoice.invoice_type.toLowerCase().includes(searchString) ||
         invoice.status.toLowerCase().includes(searchString)
       );
@@ -84,8 +80,8 @@ const useFiscalEmissionFilters = () => {
     .map(invoice => ({
       id: invoice.invoice_number,
       type: invoice.invoice_type,
-      saleId: invoice.sales?.sale_number,
-      customer: invoice.sales?.client_name,
+      saleId: invoice.sales?.sale_number || 'N/A',
+      customer: invoice.sales?.client_name || invoice.clients?.name || 'N/A',
       value: invoice.total_amount,
       date: new Date(invoice.issue_date).toLocaleDateString('pt-BR'),
       status: invoice.status === 'authorized' ? 'Autorizada' : 
@@ -271,7 +267,7 @@ const useFiscalEmissionFilters = () => {
       }
 
       // Recarregar lista
-      await loadInvoices();
+      setTimeout(() => loadInvoices(), 1000); // Aguardar 1s para sincronização
     } catch (error) {
       console.error('Erro ao consultar status:', error);
       toast({ 

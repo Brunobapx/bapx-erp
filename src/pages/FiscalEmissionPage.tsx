@@ -17,12 +17,13 @@ const FiscalEmissionPage = () => {
     downloadDANFE,
     downloadXML,
     checkStatus,
-    loading
+    loading,
+    refreshInvoices
   } = useFiscalEmissionFilters();
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
-      <FiscalEmissionHeader onCreate={handleCreateInvoice} />
+      <FiscalEmissionHeader onCreate={handleCreateInvoice} onRefresh={refreshInvoices} />
       <FiscalEmissionFilters
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}

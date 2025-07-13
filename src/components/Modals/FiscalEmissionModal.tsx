@@ -54,43 +54,55 @@ export const FiscalEmissionModal = ({
 
   const getNextInvoiceNumber = async () => {
     try {
+      console.log('[NFE_MODAL] Buscando próximo número da NFe...');
+      
       // Buscar configuração da numeração inicial
       const { data: settings, error: settingsError } = await supabase
         .from('system_settings')
         .select('value')
         .eq('key', 'nfe_initial_number')
-        .single();
+        .maybeSingle();
 
-      let initialNumber = 1;
+      let initialNumber = 10801; // Número padrão mais alto para evitar conflitos
       if (!settingsError && settings) {
         try {
-          initialNumber = parseInt(JSON.parse(settings.value as string)) || 1;
+          const settingValue = settings.value;
+          if (typeof settingValue === 'string') {
+            initialNumber = parseInt(JSON.parse(settingValue)) || 10801;
+          } else if (typeof settingValue === 'number') {
+            initialNumber = settingValue || 10801;
+          }
         } catch {
-          initialNumber = 1;
+          initialNumber = 10801;
         }
       }
 
-      // Buscar a última nota fiscal emitida
-      const { data: lastInvoice, error: invoiceError } = await supabase
+      // Buscar a última nota fiscal emitida globalmente (não filtrar por usuário)
+      const { data: invoices, error: invoiceError } = await supabase
         .from('fiscal_invoices')
         .select('invoice_number')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+        .order('invoice_number', { ascending: false })
+        .limit(10); // Buscar as últimas 10 para encontrar o maior número
 
       let nextNumber = initialNumber;
       
-      if (!invoiceError && lastInvoice?.invoice_number) {
-        // Extrair número da última nota e incrementar
-        const lastNumber = parseInt(lastInvoice.invoice_number) || 0;
-        nextNumber = Math.max(lastNumber + 1, initialNumber);
+      if (!invoiceError && invoices && invoices.length > 0) {
+        // Encontrar o maior número de NFe
+        const maxNumber = invoices.reduce((max, invoice) => {
+          const num = parseInt(invoice.invoice_number) || 0;
+          return Math.max(max, num);
+        }, 0);
+        
+        nextNumber = Math.max(maxNumber + 1, initialNumber);
       }
 
+      console.log('[NFE_MODAL] Próximo número calculado:', nextNumber);
       setInvoiceNumber(nextNumber.toString());
     } catch (error) {
-      console.error('Erro ao buscar próximo número da NFe:', error);
-      // Em caso de erro, usar 1 como padrão
-      setInvoiceNumber('1');
+      console.error('[NFE_MODAL] Erro ao buscar próximo número da NFe:', error);
+      // Em caso de erro, usar número alto para evitar conflitos
+      const fallbackNumber = 10800 + Math.floor(Math.random() * 100);
+      setInvoiceNumber(fallbackNumber.toString());
     }
   };
 
