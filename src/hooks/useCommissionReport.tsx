@@ -9,7 +9,7 @@ import { useSellerCommissions } from './useSellerCommissions';
 export const useCommissionReport = () => {
   const [commissions, setCommissions] = useState<CommissionData[]>([]);
   const [loading, setLoading] = useState(false);
-  const { user, userRole } = useAuth();
+  const { user, isSeller } = useAuth();
   const { getCommissionByUserId } = useSellerCommissions();
   
   // Filtros padrão - mês atual
@@ -28,8 +28,8 @@ export const useCommissionReport = () => {
   const [filters, setFilters] = useState<CommissionFilters>({
     startDate: start,
     endDate: end,
-    sellerId: userRole === 'seller' ? user?.id || '' : '',
-    sellerName: userRole === 'seller' ? user?.email || '' : ''
+    sellerId: isSeller ? user?.id || '' : '',
+    sellerName: ''
   });
 
   const updateFilters = (newFilters: Partial<CommissionFilters>) => {
@@ -70,7 +70,7 @@ export const useCommissionReport = () => {
         .in('status', ['sale_confirmed', 'delivered']);
 
       // Se for vendedor, filtrar por seus pedidos
-      if (userRole === 'seller') {
+      if (isSeller) {
         query = query.eq('salesperson_id', user?.id);
         console.log('[COMMISSION_REPORT] Filtrando para vendedor:', user?.id);
       } 
@@ -80,7 +80,7 @@ export const useCommissionReport = () => {
         console.log('[COMMISSION_REPORT] Filtrando por ID do vendedor:', filters.sellerId);
       }
       // Se busca por nome do vendedor (para admins)
-      else if (filters.sellerName && userRole !== 'seller') {
+      else if (filters.sellerName && !isSeller) {
         // Filtrar por nome do vendedor (case-insensitive e flexível)
         if (filters.sellerName.trim()) {
           const sellerName = filters.sellerName.trim();
@@ -236,7 +236,7 @@ export const useCommissionReport = () => {
     if (user) {
       loadCommissions();
     }
-  }, [filters, user, userRole]);
+  }, [filters, user, isSeller]);
 
   const totalCommissions = useMemo(() => {
     return commissions.reduce((sum, commission) => sum + commission.commission_amount, 0);

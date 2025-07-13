@@ -8,9 +8,11 @@ interface AuthContextType {
   loading: boolean;
   signOut: () => Promise<void>;
   userRole: string | null;
+  userPosition: string | null;
   userModules: string[];
   isAdmin: boolean;
   isMaster: boolean;
+  isSeller: boolean;
   refreshUserData: () => Promise<void>;
 }
 
@@ -29,10 +31,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [userPosition, setUserPosition] = useState<string | null>(null);
   const [userModules, setUserModules] = useState<string[]>([]);
 
   const isAdmin = userRole === 'admin';
   const isMaster = userRole === 'master';
+  const isSeller = userPosition === 'vendedor';
 
   const fetchUserData = async (userId: string) => {
     try {
@@ -48,6 +52,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUserRole('user');
       } else {
         setUserRole(roleData?.role || 'user');
+      }
+
+      // Buscar posição do usuário
+      const { data: positionData, error: positionError } = await supabase
+        .from('user_positions')
+        .select('position')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (positionError) {
+        console.error('[AuthProvider] Erro ao buscar posição:', positionError);
+        setUserPosition(null);
+      } else {
+        setUserPosition(positionData?.position || null);
       }
 
       // Se for admin ou master, não precisa buscar permissões específicas
@@ -76,6 +94,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (error) {
       console.error('[AuthProvider] Erro ao buscar dados do usuário:', error);
       setUserRole('user');
+      setUserPosition(null);
       setUserModules([]);
     }
   };
@@ -101,6 +120,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }, 0);
         } else {
           setUserRole(null);
+          setUserPosition(null);
           setUserModules([]);
         }
         
@@ -153,9 +173,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     loading,
     signOut,
     userRole,
+    userPosition,
     userModules,
     isAdmin,
     isMaster,
+    isSeller,
     refreshUserData,
   };
 

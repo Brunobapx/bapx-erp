@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, Search } from 'lucide-react';
 import { useAuth } from '@/components/Auth/AuthProvider';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface CommissionFilters {
   startDate: string;
@@ -22,10 +23,7 @@ export const CommissionFilters: React.FC<CommissionFiltersProps> = ({
   filters,
   onFiltersChange
 }) => {
-  const { userRole, user } = useAuth();
-  
-  // Se for vendedor, só pode ver suas próprias comissões
-  const isSellerRestricted = userRole === 'seller';
+  const { isSeller, user } = useAuth();
 
   const getCurrentMonth = () => {
     const now = new Date();
@@ -35,6 +33,30 @@ export const CommissionFilters: React.FC<CommissionFiltersProps> = ({
       start: `${year}-${month}-01`,
       end: `${year}-${month}-${new Date(year, now.getMonth() + 1, 0).getDate()}`
     };
+  };
+
+  // Função para buscar nome do vendedor
+  const getSellerName = async (userId: string): Promise<string> => {
+    try {
+      // Tentar buscar em pedidos existentes primeiro
+      const { data: orderData } = await supabase
+        .from('orders')
+        .select('seller')
+        .eq('salesperson_id', userId)
+        .not('seller', 'is', null)
+        .limit(1)
+        .single();
+
+      if (orderData?.seller && orderData.seller !== 'N/A') {
+        return orderData.seller;
+      }
+
+      // Fallback para email do usuário
+      return user?.email || 'Vendedor';
+    } catch (error) {
+      console.error('Erro ao buscar nome do vendedor:', error);
+      return user?.email || 'Vendedor';
+    }
   };
 
   const setCurrentMonth = () => {
@@ -54,6 +76,20 @@ export const CommissionFilters: React.FC<CommissionFiltersProps> = ({
       endDate: `${year}-${month}-${lastDay}`
     });
   };
+
+  // Preencher automaticamente o nome do vendedor se for vendedor
+  useEffect(() => {
+    if (isSeller && user?.id) {
+      const loadSellerName = async () => {
+        const sellerName = await getSellerName(user.id);
+        onFiltersChange({ 
+          sellerId: user.id, 
+          sellerName: sellerName 
+        });
+      };
+      loadSellerName();
+    }
+  }, [isSeller, user?.id]);
 
   return (
     <div className="space-y-4">
@@ -82,11 +118,11 @@ export const CommissionFilters: React.FC<CommissionFiltersProps> = ({
           <Label htmlFor="sellerName">Vendedor</Label>
           <Input
             id="sellerName"
-            placeholder="Nome do vendedor"
-            value={isSellerRestricted ? user?.email || '' : filters.sellerName}
+            placeholder={isSeller ? "Seu nome será preenchido automaticamente" : "Nome do vendedor"}
+            value={filters.sellerName}
             onChange={(e) => onFiltersChange({ sellerName: e.target.value, sellerId: '' })}
-            disabled={isSellerRestricted}
-            className={isSellerRestricted ? "opacity-60 cursor-not-allowed" : ""}
+            disabled={isSeller}
+            className={isSeller ? "opacity-60 cursor-not-allowed" : ""}
           />
         </div>
         
@@ -103,10 +139,10 @@ export const CommissionFilters: React.FC<CommissionFiltersProps> = ({
         </div>
       </div>
       
-      {isSellerRestricted && (
+      {isSeller && (
         <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-sm text-blue-700">
-            📊 Visualizando apenas suas comissões como vendedor
+            🔒 Como vendedor, você visualiza apenas suas próprias comissões por motivos de segurança
           </p>
         </div>
       )}
