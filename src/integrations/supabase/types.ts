@@ -1762,6 +1762,61 @@ export type Database = {
           },
         ]
       }
+      troca_itens: {
+        Row: {
+          created_at: string
+          id: string
+          observacoes_item: string | null
+          produto_devolvido_id: string
+          produto_novo_id: string
+          quantidade: number
+          troca_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          observacoes_item?: string | null
+          produto_devolvido_id: string
+          produto_novo_id: string
+          quantidade: number
+          troca_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          observacoes_item?: string | null
+          produto_devolvido_id?: string
+          produto_novo_id?: string
+          quantidade?: number
+          troca_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "troca_itens_produto_devolvido_id_fkey"
+            columns: ["produto_devolvido_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "troca_itens_produto_novo_id_fkey"
+            columns: ["produto_novo_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "troca_itens_troca_id_fkey"
+            columns: ["troca_id"]
+            isOneToOne: false
+            referencedRelation: "trocas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trocas: {
         Row: {
           cliente_id: string
@@ -1769,10 +1824,8 @@ export type Database = {
           data_troca: string
           id: string
           motivo: string
+          numero_troca: string | null
           observacoes: string | null
-          produto_devolvido_id: string
-          produto_novo_id: string
-          quantidade: number
           responsavel: string
           updated_at: string
           user_id: string
@@ -1783,10 +1836,8 @@ export type Database = {
           data_troca?: string
           id?: string
           motivo: string
+          numero_troca?: string | null
           observacoes?: string | null
-          produto_devolvido_id: string
-          produto_novo_id: string
-          quantidade: number
           responsavel: string
           updated_at?: string
           user_id: string
@@ -1797,10 +1848,8 @@ export type Database = {
           data_troca?: string
           id?: string
           motivo?: string
+          numero_troca?: string | null
           observacoes?: string | null
-          produto_devolvido_id?: string
-          produto_novo_id?: string
-          quantidade?: number
           responsavel?: string
           updated_at?: string
           user_id?: string
@@ -1811,20 +1860,6 @@ export type Database = {
             columns: ["cliente_id"]
             isOneToOne: false
             referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "trocas_produto_devolvido_id_fkey"
-            columns: ["produto_devolvido_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "trocas_produto_novo_id_fkey"
-            columns: ["produto_novo_id"]
-            isOneToOne: false
-            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]

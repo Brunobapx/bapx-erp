@@ -59,6 +59,17 @@ export const TrocasTable: React.FC<TrocasTableProps> = ({
     }
   };
 
+  const calcularQuantidadeTotal = (troca: Troca) => {
+    return troca.troca_itens?.reduce((acc, item) => acc + item.quantidade, 0) || 0;
+  };
+
+  const calcularCustoTotal = (troca: Troca) => {
+    return troca.troca_itens?.reduce((acc, item) => {
+      const custo = item.produto_devolvido?.cost || 0;
+      return acc + (custo * item.quantidade);
+    }, 0) || 0;
+  };
+
   if (trocas.length === 0) {
     return (
       <Card>
@@ -79,11 +90,11 @@ export const TrocasTable: React.FC<TrocasTableProps> = ({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Número</TableHead>
               <TableHead>Data/Hora</TableHead>
               <TableHead>Cliente</TableHead>
-              <TableHead>Produto Devolvido</TableHead>
-              <TableHead>Produto Entregue</TableHead>
-              <TableHead>Qtd</TableHead>
+              <TableHead>Itens</TableHead>
+              <TableHead>Qtd Total</TableHead>
               <TableHead>Motivo</TableHead>
               <TableHead>Responsável</TableHead>
               <TableHead>Perda Estimada</TableHead>
@@ -94,19 +105,27 @@ export const TrocasTable: React.FC<TrocasTableProps> = ({
             {trocas.map((troca) => (
               <TableRow key={troca.id} className="hover:bg-accent/5">
                 <TableCell className="font-medium">
+                  <Badge variant="outline">{troca.numero_troca}</Badge>
+                </TableCell>
+                <TableCell className="font-medium">
                   {formatDate(troca.data_troca)}
                 </TableCell>
                 <TableCell>{troca.cliente?.name}</TableCell>
                 <TableCell>
                   <div className="space-y-1">
-                    <div className="font-medium">{troca.produto_devolvido?.name}</div>
-                    <Badge variant="destructive" className="text-xs">
-                      Descartado
-                    </Badge>
+                    {troca.troca_itens?.map((item, index) => (
+                      <div key={item.id} className="text-sm">
+                        <div className="font-medium">
+                          {item.produto_devolvido?.name} → {item.produto_novo?.name}
+                        </div>
+                        <Badge variant="destructive" className="text-xs">
+                          {item.quantidade} unidades
+                        </Badge>
+                      </div>
+                    ))}
                   </div>
                 </TableCell>
-                <TableCell>{troca.produto_novo?.name}</TableCell>
-                <TableCell>{troca.quantidade}</TableCell>
+                <TableCell>{calcularQuantidadeTotal(troca)}</TableCell>
                 <TableCell>
                   <Badge variant={getMotivoColor(troca.motivo)}>
                     {troca.motivo}
@@ -114,7 +133,7 @@ export const TrocasTable: React.FC<TrocasTableProps> = ({
                 </TableCell>
                 <TableCell>{troca.responsavel}</TableCell>
                 <TableCell>
-                  {formatCurrency((troca.produto_devolvido?.cost || 0) * troca.quantidade)}
+                  {formatCurrency(calcularCustoTotal(troca))}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">

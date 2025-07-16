@@ -18,11 +18,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Package, User } from 'lucide-react';
+import { RefreshCw, Package, User, Plus, Trash2 } from 'lucide-react';
 import { toast } from "sonner";
 import { useClients } from "@/hooks/useClients";
 import { useProducts } from "@/hooks/useProducts";
-import { useTrocas, NovoTrocaData } from "@/hooks/useTrocas";
+import { useTrocas, NovoTrocaData, NovoTrocaItem } from "@/hooks/useTrocas";
 import { useAuth } from "@/components/Auth/AuthProvider";
 
 interface RegistrarTrocaModalProps {
@@ -44,12 +44,15 @@ export const RegistrarTrocaModal: React.FC<RegistrarTrocaModalProps> = ({
 }) => {
   const [formData, setFormData] = useState<NovoTrocaData>({
     cliente_id: '',
-    produto_devolvido_id: '',
-    produto_novo_id: '',
-    quantidade: 1,
     motivo: '',
     responsavel: '',
-    observacoes: ''
+    observacoes: '',
+    itens: [{
+      produto_devolvido_id: '',
+      produto_novo_id: '',
+      quantidade: 1,
+      observacoes_item: ''
+    }]
   });
   const [loading, setLoading] = useState(false);
 
@@ -72,12 +75,49 @@ export const RegistrarTrocaModal: React.FC<RegistrarTrocaModalProps> = ({
     }
   }, [user, isOpen]);
 
+  const adicionarItem = () => {
+    setFormData(prev => ({
+      ...prev,
+      itens: [...prev.itens, {
+        produto_devolvido_id: '',
+        produto_novo_id: '',
+        quantidade: 1,
+        observacoes_item: ''
+      }]
+    }));
+  };
+
+  const removerItem = (index: number) => {
+    if (formData.itens.length > 1) {
+      setFormData(prev => ({
+        ...prev,
+        itens: prev.itens.filter((_, i) => i !== index)
+      }));
+    }
+  };
+
+  const atualizarItem = (index: number, campo: keyof NovoTrocaItem, valor: any) => {
+    setFormData(prev => ({
+      ...prev,
+      itens: prev.itens.map((item, i) => 
+        i === index ? { ...item, [campo]: valor } : item
+      )
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.cliente_id || !formData.produto_devolvido_id || !formData.produto_novo_id || !formData.motivo) {
+    if (!formData.cliente_id || !formData.motivo) {
       toast.error('Preencha todos os campos obrigatórios');
       return;
+    }
+
+    for (const item of formData.itens) {
+      if (!item.produto_devolvido_id || !item.produto_novo_id) {
+        toast.error('Todos os itens devem ter produtos devolvido e novo selecionados');
+        return;
+      }
     }
 
     setLoading(true);
@@ -86,12 +126,15 @@ export const RegistrarTrocaModal: React.FC<RegistrarTrocaModalProps> = ({
       onClose(true);
       setFormData({
         cliente_id: '',
-        produto_devolvido_id: '',
-        produto_novo_id: '',
-        quantidade: 1,
         motivo: '',
-        responsavel: '',
-        observacoes: ''
+        responsavel: user?.user_metadata?.display_name || '',
+        observacoes: '',
+        itens: [{
+          produto_devolvido_id: '',
+          produto_novo_id: '',
+          quantidade: 1,
+          observacoes_item: ''
+        }]
       });
     } catch (error) {
       // Erro já tratado no hook
@@ -102,7 +145,7 @@ export const RegistrarTrocaModal: React.FC<RegistrarTrocaModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <RefreshCw className="h-5 w-5" />
@@ -110,66 +153,23 @@ export const RegistrarTrocaModal: React.FC<RegistrarTrocaModalProps> = ({
           </DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Cliente *</Label>
-            <Select value={formData.cliente_id} onValueChange={(value) => setFormData(prev => ({ ...prev, cliente_id: value }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o cliente" />
-              </SelectTrigger>
-              <SelectContent>
-                {clients.map((client) => (
-                  <SelectItem key={client.id} value={client.id}>
-                    {client.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Dados gerais */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Produto Devolvido *</Label>
-              <Select value={formData.produto_devolvido_id} onValueChange={(value) => setFormData(prev => ({ ...prev, produto_devolvido_id: value }))}>
+              <Label>Cliente *</Label>
+              <Select value={formData.cliente_id} onValueChange={(value) => setFormData(prev => ({ ...prev, cliente_id: value }))}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Produto devolvido" />
+                  <SelectValue placeholder="Selecione o cliente" />
                 </SelectTrigger>
                 <SelectContent>
-                  {products.map((product) => (
-                    <SelectItem key={product.id} value={product.id}>
-                      {product.name}
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Produto Novo *</Label>
-              <Select value={formData.produto_novo_id} onValueChange={(value) => setFormData(prev => ({ ...prev, produto_novo_id: value }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Produto novo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {produtosAtivos.map((product) => (
-                    <SelectItem key={product.id} value={product.id}>
-                      {product.name} - Estoque: {product.stock}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Quantidade *</Label>
-              <Input
-                type="number"
-                min="1"
-                value={formData.quantidade}
-                onChange={(e) => setFormData(prev => ({ ...prev, quantidade: Number(e.target.value) }))}
-              />
             </div>
 
             <div className="space-y-2">
@@ -198,10 +198,103 @@ export const RegistrarTrocaModal: React.FC<RegistrarTrocaModalProps> = ({
             />
           </div>
 
+          {/* Lista de itens */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-lg font-semibold">Itens da Troca</Label>
+              <Button type="button" onClick={adicionarItem} variant="outline" size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Item
+              </Button>
+            </div>
+
+            {formData.itens.map((item, index) => (
+              <Card key={index}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm">Item {index + 1}</CardTitle>
+                    {formData.itens.length > 1 && (
+                      <Button 
+                        type="button" 
+                        onClick={() => removerItem(index)}
+                        variant="outline" 
+                        size="sm"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Produto Devolvido *</Label>
+                      <Select 
+                        value={item.produto_devolvido_id} 
+                        onValueChange={(value) => atualizarItem(index, 'produto_devolvido_id', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Produto devolvido" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {products.map((product) => (
+                            <SelectItem key={product.id} value={product.id}>
+                              {product.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Produto Novo *</Label>
+                      <Select 
+                        value={item.produto_novo_id} 
+                        onValueChange={(value) => atualizarItem(index, 'produto_novo_id', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Produto novo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {produtosAtivos.map((product) => (
+                            <SelectItem key={product.id} value={product.id}>
+                              {product.name} - Estoque: {product.stock}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Quantidade *</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={item.quantidade}
+                        onChange={(e) => atualizarItem(index, 'quantidade', parseInt(e.target.value) || 1)}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Observações do Item</Label>
+                      <Input
+                        value={item.observacoes_item || ''}
+                        onChange={(e) => atualizarItem(index, 'observacoes_item', e.target.value)}
+                        placeholder="Observações específicas"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
           <div className="space-y-2">
-            <Label>Observações</Label>
+            <Label>Observações Gerais</Label>
             <Textarea
-              value={formData.observacoes}
+              value={formData.observacoes || ''}
               onChange={(e) => setFormData(prev => ({ ...prev, observacoes: e.target.value }))}
               placeholder="Observações adicionais..."
               rows={3}

@@ -3,24 +3,14 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/Auth/AuthProvider";
 
-export type Troca = {
+export type TrocaItem = {
   id: string;
-  user_id: string;
-  cliente_id: string;
+  troca_id: string;
   produto_devolvido_id: string;
   produto_novo_id: string;
   quantidade: number;
-  motivo: string;
-  data_troca: string;
-  responsavel: string;
-  observacoes?: string;
-  created_at: string;
-  updated_at: string;
+  observacoes_item?: string;
   // Relacionamentos
-  cliente?: {
-    id: string;
-    name: string;
-  };
   produto_devolvido?: {
     id: string;
     name: string;
@@ -33,14 +23,38 @@ export type Troca = {
   };
 };
 
-export type NovoTrocaData = {
+export type Troca = {
+  id: string;
+  numero_troca: string;
+  user_id: string;
   cliente_id: string;
+  motivo: string;
+  data_troca: string;
+  responsavel: string;
+  observacoes?: string;
+  created_at: string;
+  updated_at: string;
+  // Relacionamentos
+  cliente?: {
+    id: string;
+    name: string;
+  };
+  troca_itens?: TrocaItem[];
+};
+
+export type NovoTrocaItem = {
   produto_devolvido_id: string;
   produto_novo_id: string;
   quantidade: number;
+  observacoes_item?: string;
+};
+
+export type NovoTrocaData = {
+  cliente_id: string;
   motivo: string;
   responsavel: string;
   observacoes?: string;
+  itens: NovoTrocaItem[];
 };
 
 export const useTrocas = () => {
@@ -70,15 +84,22 @@ export const useTrocas = () => {
               id,
               name
             ),
-            produto_devolvido:products!produto_devolvido_id(
+            troca_itens(
               id,
-              name,
-              cost
-            ),
-            produto_novo:products!produto_novo_id(
-              id,
-              name,
-              cost
+              produto_devolvido_id,
+              produto_novo_id,
+              quantidade,
+              observacoes_item,
+              produto_devolvido:products!produto_devolvido_id(
+                id,
+                name,
+                cost
+              ),
+              produto_novo:products!produto_novo_id(
+                id,
+                name,
+                cost
+              )
             )
           `)
           .order('data_troca', { ascending: false });
@@ -108,40 +129,38 @@ export const useTrocas = () => {
         throw new Error('Usuário não autenticado');
       }
 
+      if (!data.itens || data.itens.length === 0) {
+        throw new Error('É necessário adicionar pelo menos um item à troca');
+      }
+
       console.log('[CREATE_TROCA] Iniciando processo de troca:', data);
 
-      // Verificar estoque do produto novo
-      const { data: produtoNovo, error: produtoError } = await supabase
-        .from('products')
-        .select('id, name, stock, cost')
-        .eq('id', data.produto_novo_id)
-        .single();
+      // Verificar estoque de todos os produtos novos
+      for (const item of data.itens) {
+        const { data: produto, error: produtoError } = await supabase
+          .from('products')
+          .select('id, name, stock')
+          .eq('id', item.produto_novo_id)
+          .single();
 
-      if (produtoError || !produtoNovo) {
-        throw new Error('Produto novo não encontrado');
+        if (produtoError || !produto) {
+          throw new Error(`Produto não encontrado: ${item.produto_novo_id}`);
+        }
+
+        if ((produto.stock || 0) < item.quantidade) {
+          throw new Error(`Estoque insuficiente para ${produto.name}. Disponível: ${produto.stock || 0}, Solicitado: ${item.quantidade}`);
+        }
       }
 
-      if ((produtoNovo.stock || 0) < data.quantidade) {
-        throw new Error(`Estoque insuficiente. Disponível: ${produtoNovo.stock || 0}, Solicitado: ${data.quantidade}`);
-      }
-
-      // Buscar dados do produto devolvido para o cálculo da perda
-      const { data: produtoDevolvido, error: produtoDevError } = await supabase
-        .from('products')
-        .select('id, name, cost')
-        .eq('id', data.produto_devolvido_id)
-        .single();
-
-      if (produtoDevError || !produtoDevolvido) {
-        throw new Error('Produto devolvido não encontrado');
-      }
-
-      // 1. Criar a troca
+      // 1. Criar a troca principal
       const { data: trocaCriada, error: trocaError } = await supabase
         .from('trocas')
         .insert({
           user_id: user.id,
-          ...data,
+          cliente_id: data.cliente_id,
+          motivo: data.motivo,
+          responsavel: data.responsavel,
+          observacoes: data.observacoes,
           data_troca: new Date().toISOString()
         })
         .select()
@@ -151,55 +170,73 @@ export const useTrocas = () => {
 
       console.log('[CREATE_TROCA] Troca criada:', trocaCriada);
 
-      // 2. Dar baixa no estoque do produto novo
-      const novoEstoque = (produtoNovo.stock || 0) - data.quantidade;
-      const { error: estoqueError } = await supabase
-        .from('products')
-        .update({ 
-          stock: novoEstoque,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', data.produto_novo_id);
+      // 2. Processar cada item da troca
+      for (const item of data.itens) {
+        // Buscar dados dos produtos
+        const { data: produtoNovo, error: produtoNovoError } = await supabase
+          .from('products')
+          .select('id, name, stock, cost')
+          .eq('id', item.produto_novo_id)
+          .single();
 
-      if (estoqueError) {
-        console.error('[CREATE_TROCA] Erro ao atualizar estoque:', estoqueError);
-        // Tentar reverter a troca criada
-        await supabase.from('trocas').delete().eq('id', trocaCriada.id);
-        throw new Error('Erro ao atualizar estoque do produto');
+        const { data: produtoDevolvido, error: produtoDevError } = await supabase
+          .from('products')
+          .select('id, name, cost')
+          .eq('id', item.produto_devolvido_id)
+          .single();
+
+        if (produtoNovoError || !produtoNovo || produtoDevError || !produtoDevolvido) {
+          throw new Error('Erro ao buscar dados dos produtos');
+        }
+
+        // Criar item da troca
+        const { error: itemError } = await supabase
+          .from('troca_itens')
+          .insert({
+            troca_id: trocaCriada.id,
+            produto_devolvido_id: item.produto_devolvido_id,
+            produto_novo_id: item.produto_novo_id,
+            quantidade: item.quantidade,
+            observacoes_item: item.observacoes_item
+          });
+
+        if (itemError) throw itemError;
+
+        // Dar baixa no estoque do produto novo
+        const novoEstoque = (produtoNovo.stock || 0) - item.quantidade;
+        const { error: estoqueError } = await supabase
+          .from('products')
+          .update({ 
+            stock: novoEstoque,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', item.produto_novo_id);
+
+        if (estoqueError) {
+          console.error('[CREATE_TROCA] Erro ao atualizar estoque:', estoqueError);
+          throw new Error(`Erro ao atualizar estoque do produto ${produtoNovo.name}`);
+        }
+
+        // Registrar a perda
+        const custoEstimado = (produtoDevolvido.cost || 0) * item.quantidade;
+        const { error: perdaError } = await supabase
+          .from('perdas')
+          .insert({
+            user_id: user.id,
+            produto_id: item.produto_devolvido_id,
+            quantidade: item.quantidade,
+            motivo: `Troca - ${data.motivo}`,
+            custo_estimado: custoEstimado,
+            referencia_troca_id: trocaCriada.id,
+            observacoes: `Produto descartado por troca. ${item.observacoes_item || ''}`
+          });
+
+        if (perdaError) {
+          console.error('[CREATE_TROCA] Erro ao registrar perda:', perdaError);
+        }
       }
 
-      console.log('[CREATE_TROCA] Estoque atualizado:', { 
-        produto: produtoNovo.name, 
-        estoque_anterior: produtoNovo.stock, 
-        estoque_novo: novoEstoque 
-      });
-
-      // 3. Registrar a perda
-      const custoEstimado = (produtoDevolvido.cost || 0) * data.quantidade;
-      const { error: perdaError } = await supabase
-        .from('perdas')
-        .insert({
-          user_id: user.id,
-          produto_id: data.produto_devolvido_id,
-          quantidade: data.quantidade,
-          motivo: `Troca - ${data.motivo}`,
-          custo_estimado: custoEstimado,
-          referencia_troca_id: trocaCriada.id,
-          observacoes: `Produto descartado por troca. ${data.observacoes || ''}`
-        });
-
-      if (perdaError) {
-        console.error('[CREATE_TROCA] Erro ao registrar perda:', perdaError);
-        // Não falhar a operação por erro na perda, apenas logar
-      }
-
-      console.log('[CREATE_TROCA] Perda registrada:', { 
-        produto: produtoDevolvido.name, 
-        quantidade: data.quantidade, 
-        custo: custoEstimado 
-      });
-
-      toast.success('Troca registrada com sucesso');
+      toast.success(`Troca ${trocaCriada.numero_troca} registrada com sucesso`);
       refreshTrocas();
       return trocaCriada;
 
@@ -215,9 +252,12 @@ export const useTrocas = () => {
       let query = supabase
         .from('trocas')
         .select(`
-          quantidade,
-          motivo,
-          produto_devolvido:products!produto_devolvido_id(cost)
+          id,
+          troca_itens(
+            quantidade,
+            produto_devolvido:products!produto_devolvido_id(cost)
+          ),
+          motivo
         `);
 
       if (dataInicio) {
@@ -232,20 +272,25 @@ export const useTrocas = () => {
       if (error) throw error;
 
       const totalTrocas = data?.length || 0;
-      const totalProdutosDescartados = data?.reduce((acc, troca) => acc + troca.quantidade, 0) || 0;
-      const custoEstimadoPerdas = data?.reduce((acc, troca) => {
-        const custo = (troca.produto_devolvido as any)?.cost || 0;
-        return acc + (custo * troca.quantidade);
-      }, 0) || 0;
-
-      // Agrupar por motivo
+      let totalProdutosDescartados = 0;
+      let custoEstimadoPerdas = 0;
       const motivosMap = new Map();
+
       data?.forEach(troca => {
         const motivo = troca.motivo;
+        let quantidadetroca = 0;
+
+        troca.troca_itens?.forEach(item => {
+          quantidadetroca += item.quantidade;
+          totalProdutosDescartados += item.quantidade;
+          const custo = (item.produto_devolvido as any)?.cost || 0;
+          custoEstimadoPerdas += custo * item.quantidade;
+        });
+
         if (motivosMap.has(motivo)) {
-          motivosMap.set(motivo, motivosMap.get(motivo) + troca.quantidade);
+          motivosMap.set(motivo, motivosMap.get(motivo) + quantidadetroca);
         } else {
-          motivosMap.set(motivo, troca.quantidade);
+          motivosMap.set(motivo, quantidadetroca);
         }
       });
 

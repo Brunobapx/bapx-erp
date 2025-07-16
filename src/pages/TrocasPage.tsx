@@ -24,19 +24,28 @@ const TrocasPage = () => {
     const searchString = searchQuery.toLowerCase();
     return (
       troca.cliente?.name?.toLowerCase().includes(searchString) ||
-      troca.produto_devolvido?.name?.toLowerCase().includes(searchString) ||
-      troca.produto_novo?.name?.toLowerCase().includes(searchString) ||
+      troca.numero_troca?.toLowerCase().includes(searchString) ||
       troca.motivo.toLowerCase().includes(searchString) ||
-      troca.responsavel.toLowerCase().includes(searchString)
+      troca.responsavel.toLowerCase().includes(searchString) ||
+      troca.troca_itens?.some(item => 
+        item.produto_devolvido?.name?.toLowerCase().includes(searchString) ||
+        item.produto_novo?.name?.toLowerCase().includes(searchString)
+      )
     );
   });
 
   // Calcular estatísticas
   const totalTrocas = trocas.length;
-  const totalProdutosDescartados = trocas.reduce((acc, troca) => acc + troca.quantidade, 0);
+  const totalProdutosDescartados = trocas.reduce((acc, troca) => {
+    return acc + (troca.troca_itens?.reduce((itemAcc, item) => itemAcc + item.quantidade, 0) || 0);
+  }, 0);
+  
   const custoEstimadoPerdas = trocas.reduce((acc, troca) => {
-    const custo = troca.produto_devolvido?.cost || 0;
-    return acc + (custo * troca.quantidade);
+    const custoTroca = troca.troca_itens?.reduce((itemAcc, item) => {
+      const custo = item.produto_devolvido?.cost || 0;
+      return itemAcc + (custo * item.quantidade);
+    }, 0) || 0;
+    return acc + custoTroca;
   }, 0);
 
   const formatCurrency = (value: number) => {
@@ -48,11 +57,11 @@ const TrocasPage = () => {
 
   const handleGenerateRomaneio = (troca: any) => {
     // Implementar geração de romaneio
-    toast.info('Funcionalidade de romaneio em desenvolvimento');
+    toast.info(`Gerando romaneio para troca ${troca.numero_troca}`);
   };
 
   const handleViewDetails = (troca: any) => {
-    toast.info('Visualização de detalhes em desenvolvimento');
+    toast.info(`Visualizando detalhes da troca ${troca.numero_troca}`);
   };
 
   const handleRefresh = () => {
