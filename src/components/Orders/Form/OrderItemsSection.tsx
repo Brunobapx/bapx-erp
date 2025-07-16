@@ -101,7 +101,7 @@ export const OrderItemsSection: React.FC<OrderItemsSectionProps> = ({
                 <TableHead className="w-[35%]">Produto</TableHead>
                 <TableHead className="w-[12%]">Estoque</TableHead>
                 <TableHead className="w-[13%]">Quantidade</TableHead>
-                <TableHead className="w-[18%]">Preço Unit. (Cadastro)</TableHead>
+                <TableHead className="w-[18%]">Preço Unit.</TableHead>
                 <TableHead className="w-[17%]">Total</TableHead>
                 <TableHead className="w-[5%]">Ações</TableHead>
               </TableRow>
@@ -150,9 +150,6 @@ export const OrderItemsSection: React.FC<OrderItemsSectionProps> = ({
                     <TableCell>
                       <div className="text-sm font-medium text-blue-700 bg-blue-50 p-2 rounded border">
                         {formatCurrency(item.unit_price)}
-                        <div className="text-xs text-blue-600 mt-1">
-                          Preço do produto
-                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
