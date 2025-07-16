@@ -44,10 +44,13 @@ export const OrderItemsSection: React.FC<OrderItemsSectionProps> = ({
   }, [products]);
 
   const handleProductSelect = (itemId: string, productId: string, productName: string, productPrice?: number) => {
+    const selectedProduct = safeProducts.find(p => p.id === productId);
+    const price = selectedProduct?.price || productPrice || 0;
+    
     onUpdateItem(itemId, {
       product_id: productId,
       product_name: productName,
-      unit_price: productPrice || 0
+      unit_price: price
     });
   };
 
@@ -57,11 +60,7 @@ export const OrderItemsSection: React.FC<OrderItemsSectionProps> = ({
     }
   };
 
-  const handlePriceChange = (itemId: string, unit_price: number) => {
-    if (unit_price >= 0) {
-      onUpdateItem(itemId, { unit_price });
-    }
-  };
+  // Preço não é mais editável, vem sempre do cadastro do produto
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -102,7 +101,7 @@ export const OrderItemsSection: React.FC<OrderItemsSectionProps> = ({
                 <TableHead className="w-[35%]">Produto</TableHead>
                 <TableHead className="w-[12%]">Estoque</TableHead>
                 <TableHead className="w-[13%]">Quantidade</TableHead>
-                <TableHead className="w-[18%]">Preço Unit.</TableHead>
+                <TableHead className="w-[18%]">Preço Unit. (Cadastro)</TableHead>
                 <TableHead className="w-[17%]">Total</TableHead>
                 <TableHead className="w-[5%]">Ações</TableHead>
               </TableRow>
@@ -149,14 +148,12 @@ export const OrderItemsSection: React.FC<OrderItemsSectionProps> = ({
                       />
                     </TableCell>
                     <TableCell>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={item.unit_price}
-                        onChange={(e) => handlePriceChange(item.id, Number(e.target.value))}
-                        className="w-full"
-                      />
+                      <div className="text-sm font-medium text-blue-700 bg-blue-50 p-2 rounded border">
+                        {formatCurrency(item.unit_price)}
+                        <div className="text-xs text-blue-600 mt-1">
+                          Preço do produto
+                        </div>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="font-medium text-green-700">
