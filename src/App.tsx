@@ -29,6 +29,7 @@ import ServiceOrdersPage from "./pages/ServiceOrdersPage";
 import ReportsPage from "./pages/ReportsPage";
 
 import NotFound from "./pages/NotFound";
+import OrderFormPage from "./pages/OrderFormPage";
 import { FinancialProvider } from "./contexts/FinancialContext";
 
 const queryClient = new QueryClient();
@@ -44,114 +45,253 @@ const App = () => (
             <Routes>
               <Route path="/auth" element={<AuthPage />} />
               
-              <Route
-                path="/*"
-                element={
-                  <ProtectedRoute>
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <div className="flex h-screen bg-gray-50">
+                    <Sidebar />
+                    <main className="flex-1 overflow-auto lg:ml-64">
+                      <Index />
+                    </main>
+                  </div>
+                </ProtectedRoute>
+              } />
+              <Route path="/trocas" element={
+                <ProtectedRoute>
+                  <div className="flex h-screen bg-gray-50">
+                    <Sidebar />
+                    <main className="flex-1 overflow-auto lg:ml-64">
+                      <TrocasPage />
+                    </main>
+                  </div>
+                </ProtectedRoute>
+              } />
+              <Route path="/pedidos" element={
+                <ProtectedRoute>
+                  <ModuleAccessCheck routePath="/pedidos">
                     <div className="flex h-screen bg-gray-50">
                       <Sidebar />
                       <main className="flex-1 overflow-auto lg:ml-64">
-                        <Routes>
-                          <Route path="/" element={<Index />} />
-                          <Route path="/trocas" element={<TrocasPage />} />
-                          
-                          <Route path="/pedidos" element={
-                            <ModuleAccessCheck routePath="/pedidos">
-                              <OrdersPage />
-                            </ModuleAccessCheck>
-                          } />
-                          <Route path="/pedidos/novo" element={
-                            <ModuleAccessCheck routePath="/pedidos">
-                              <OrderFormPage />
-                            </ModuleAccessCheck>
-                          } />
-                          <Route path="/pedidos/new" element={
-                            <ModuleAccessCheck routePath="/pedidos">
-                              <OrderFormPage />
-                            </ModuleAccessCheck>
-                          } />
-                          <Route path="/pedidos/:id" element={
-                            <ModuleAccessCheck routePath="/pedidos">
-                              <OrderFormPage />
-                            </ModuleAccessCheck>
-                          } />
-                          <Route path="/produtos" element={
-                            <ModuleAccessCheck routePath="/produtos">
-                              <ProductsPage />
-                            </ModuleAccessCheck>
-                          } />
-                           <Route path="/clientes" element={
-                             <ModuleAccessCheck routePath="/clientes">
-                               <ClientsPage />
-                             </ModuleAccessCheck>
-                           } />
-                          <Route path="/producao" element={
-                            <ModuleAccessCheck routePath="/producao">
-                              <ProductionPage />
-                            </ModuleAccessCheck>
-                          } />
-                          <Route path="/embalagem" element={
-                            <ModuleAccessCheck routePath="/embalagem">
-                              <PackagingPage />
-                            </ModuleAccessCheck>
-                          } />
-                          <Route path="/vendas" element={
-                            <ModuleAccessCheck routePath="/vendas">
-                              <SalesPage />
-                            </ModuleAccessCheck>
-                          } />
-                          <Route path="/financeiro" element={
-                            <ModuleAccessCheck routePath="/financeiro">
-                              <FinancePage />
-                            </ModuleAccessCheck>
-                          } />
-                          <Route path="/rotas" element={
-                            <ModuleAccessCheck routePath="/rotas">
-                              <RoutesPage />
-                            </ModuleAccessCheck>
-                          } />
-                          <Route path="/calendario" element={
-                            <ModuleAccessCheck routePath="/calendario">
-                              <CalendarPage />
-                            </ModuleAccessCheck>
-                          } />
-                          <Route path="/fornecedores" element={
-                            <ModuleAccessCheck routePath="/fornecedores">
-                              <VendorsPage />
-                            </ModuleAccessCheck>
-                          } />
-                          <Route path="/compras" element={
-                            <ModuleAccessCheck routePath="/compras">
-                              <PurchasesPage />
-                            </ModuleAccessCheck>
-                          } />
-                          <Route path="/estoque" element={
-                            <ModuleAccessCheck routePath="/estoque">
-                              <StockPage />
-                            </ModuleAccessCheck>
-                          } />
-                          <Route path="/emissao-fiscal" element={
-                            <ModuleAccessCheck routePath="/emissao-fiscal">
-                              <FiscalEmissionPage />
-                            </ModuleAccessCheck>
-                          } />
-                          <Route path="/ordens-servico" element={
-                            <ModuleAccessCheck routePath="/ordens-servico">
-                              <ServiceOrdersPage />
-                            </ModuleAccessCheck>
-                          } />
-                          <Route path="/relatorios" element={
-                            <ModuleAccessCheck routePath="/relatorios">
-                              <ReportsPage />
-                            </ModuleAccessCheck>
-                          } />
-                          <Route path="*" element={<NotFound />} />
-                              <Route path="/configuracoes" element={<SettingsPage />} />
+                        <OrdersPage />
                       </main>
                     </div>
-                  </ProtectedRoute>
-                }
-              />
+                  </ModuleAccessCheck>
+                </ProtectedRoute>
+              } />
+              <Route path="/pedidos/novo" element={
+                <ProtectedRoute>
+                  <ModuleAccessCheck routePath="/pedidos">
+                    <div className="flex h-screen bg-gray-50">
+                      <Sidebar />
+                      <main className="flex-1 overflow-auto lg:ml-64">
+                        <OrderFormPage />
+                      </main>
+                    </div>
+                  </ModuleAccessCheck>
+                </ProtectedRoute>
+              } />
+              <Route path="/pedidos/new" element={
+                <ProtectedRoute>
+                  <ModuleAccessCheck routePath="/pedidos">
+                    <div className="flex h-screen bg-gray-50">
+                      <Sidebar />
+                      <main className="flex-1 overflow-auto lg:ml-64">
+                        <OrderFormPage />
+                      </main>
+                    </div>
+                  </ModuleAccessCheck>
+                </ProtectedRoute>
+              } />
+              <Route path="/pedidos/:id" element={
+                <ProtectedRoute>
+                  <ModuleAccessCheck routePath="/pedidos">
+                    <div className="flex h-screen bg-gray-50">
+                      <Sidebar />
+                      <main className="flex-1 overflow-auto lg:ml-64">
+                        <OrderFormPage />
+                      </main>
+                    </div>
+                  </ModuleAccessCheck>
+                </ProtectedRoute>
+              } />
+              <Route path="/produtos" element={
+                <ProtectedRoute>
+                  <ModuleAccessCheck routePath="/produtos">
+                    <div className="flex h-screen bg-gray-50">
+                      <Sidebar />
+                      <main className="flex-1 overflow-auto lg:ml-64">
+                        <ProductsPage />
+                      </main>
+                    </div>
+                  </ModuleAccessCheck>
+                </ProtectedRoute>
+              } />
+              <Route path="/clientes" element={
+                <ProtectedRoute>
+                  <ModuleAccessCheck routePath="/clientes">
+                    <div className="flex h-screen bg-gray-50">
+                      <Sidebar />
+                      <main className="flex-1 overflow-auto lg:ml-64">
+                        <ClientsPage />
+                      </main>
+                    </div>
+                  </ModuleAccessCheck>
+                </ProtectedRoute>
+              } />
+              <Route path="/producao" element={
+                <ProtectedRoute>
+                  <ModuleAccessCheck routePath="/producao">
+                    <div className="flex h-screen bg-gray-50">
+                      <Sidebar />
+                      <main className="flex-1 overflow-auto lg:ml-64">
+                        <ProductionPage />
+                      </main>
+                    </div>
+                  </ModuleAccessCheck>
+                </ProtectedRoute>
+              } />
+              <Route path="/embalagem" element={
+                <ProtectedRoute>
+                  <ModuleAccessCheck routePath="/embalagem">
+                    <div className="flex h-screen bg-gray-50">
+                      <Sidebar />
+                      <main className="flex-1 overflow-auto lg:ml-64">
+                        <PackagingPage />
+                      </main>
+                    </div>
+                  </ModuleAccessCheck>
+                </ProtectedRoute>
+              } />
+              <Route path="/vendas" element={
+                <ProtectedRoute>
+                  <ModuleAccessCheck routePath="/vendas">
+                    <div className="flex h-screen bg-gray-50">
+                      <Sidebar />
+                      <main className="flex-1 overflow-auto lg:ml-64">
+                        <SalesPage />
+                      </main>
+                    </div>
+                  </ModuleAccessCheck>
+                </ProtectedRoute>
+              } />
+              <Route path="/financeiro" element={
+                <ProtectedRoute>
+                  <ModuleAccessCheck routePath="/financeiro">
+                    <div className="flex h-screen bg-gray-50">
+                      <Sidebar />
+                      <main className="flex-1 overflow-auto lg:ml-64">
+                        <FinancePage />
+                      </main>
+                    </div>
+                  </ModuleAccessCheck>
+                </ProtectedRoute>
+              } />
+              <Route path="/rotas" element={
+                <ProtectedRoute>
+                  <ModuleAccessCheck routePath="/rotas">
+                    <div className="flex h-screen bg-gray-50">
+                      <Sidebar />
+                      <main className="flex-1 overflow-auto lg:ml-64">
+                        <RoutesPage />
+                      </main>
+                    </div>
+                  </ModuleAccessCheck>
+                </ProtectedRoute>
+              } />
+              <Route path="/calendario" element={
+                <ProtectedRoute>
+                  <ModuleAccessCheck routePath="/calendario">
+                    <div className="flex h-screen bg-gray-50">
+                      <Sidebar />
+                      <main className="flex-1 overflow-auto lg:ml-64">
+                        <CalendarPage />
+                      </main>
+                    </div>
+                  </ModuleAccessCheck>
+                </ProtectedRoute>
+              } />
+              <Route path="/fornecedores" element={
+                <ProtectedRoute>
+                  <ModuleAccessCheck routePath="/fornecedores">
+                    <div className="flex h-screen bg-gray-50">
+                      <Sidebar />
+                      <main className="flex-1 overflow-auto lg:ml-64">
+                        <VendorsPage />
+                      </main>
+                    </div>
+                  </ModuleAccessCheck>
+                </ProtectedRoute>
+              } />
+              <Route path="/compras" element={
+                <ProtectedRoute>
+                  <ModuleAccessCheck routePath="/compras">
+                    <div className="flex h-screen bg-gray-50">
+                      <Sidebar />
+                      <main className="flex-1 overflow-auto lg:ml-64">
+                        <PurchasesPage />
+                      </main>
+                    </div>
+                  </ModuleAccessCheck>
+                </ProtectedRoute>
+              } />
+              <Route path="/estoque" element={
+                <ProtectedRoute>
+                  <ModuleAccessCheck routePath="/estoque">
+                    <div className="flex h-screen bg-gray-50">
+                      <Sidebar />
+                      <main className="flex-1 overflow-auto lg:ml-64">
+                        <StockPage />
+                      </main>
+                    </div>
+                  </ModuleAccessCheck>
+                </ProtectedRoute>
+              } />
+              <Route path="/emissao-fiscal" element={
+                <ProtectedRoute>
+                  <ModuleAccessCheck routePath="/emissao-fiscal">
+                    <div className="flex h-screen bg-gray-50">
+                      <Sidebar />
+                      <main className="flex-1 overflow-auto lg:ml-64">
+                        <FiscalEmissionPage />
+                      </main>
+                    </div>
+                  </ModuleAccessCheck>
+                </ProtectedRoute>
+              } />
+              <Route path="/ordens-servico" element={
+                <ProtectedRoute>
+                  <ModuleAccessCheck routePath="/ordens-servico">
+                    <div className="flex h-screen bg-gray-50">
+                      <Sidebar />
+                      <main className="flex-1 overflow-auto lg:ml-64">
+                        <ServiceOrdersPage />
+                      </main>
+                    </div>
+                  </ModuleAccessCheck>
+                </ProtectedRoute>
+              } />
+              <Route path="/relatorios" element={
+                <ProtectedRoute>
+                  <ModuleAccessCheck routePath="/relatorios">
+                    <div className="flex h-screen bg-gray-50">
+                      <Sidebar />
+                      <main className="flex-1 overflow-auto lg:ml-64">
+                        <ReportsPage />
+                      </main>
+                    </div>
+                  </ModuleAccessCheck>
+                </ProtectedRoute>
+              } />
+              <Route path="/configuracoes" element={
+                <ProtectedRoute>
+                  <div className="flex h-screen bg-gray-50">
+                    <Sidebar />
+                    <main className="flex-1 overflow-auto lg:ml-64">
+                      <SettingsPage />
+                    </main>
+                  </div>
+                </ProtectedRoute>
+              } />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </FinancialProvider>
         </AuthProvider>
