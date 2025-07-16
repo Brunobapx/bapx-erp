@@ -295,7 +295,7 @@ const SalesPage = () => {
                           Aprovar
                         </Button>
                       )}
-                      {(item.status === 'pending' || item.status === 'confirmed') && (
+                      {(item.status === 'pending') && (
                         <Button 
                           size="sm" 
                           variant="outline"
