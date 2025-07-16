@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from "@/components/Auth/AuthProvider";
 import { useUserPositions } from "@/hooks/useUserPositions";
+import { usePaymentMethods } from "@/hooks/usePaymentMethods";
+import { usePaymentTerms } from "@/hooks/usePaymentTerms";
 
 interface OrderPaymentSectionProps {
   formData: any;
@@ -25,6 +27,8 @@ export const OrderPaymentSection: React.FC<OrderPaymentSectionProps> = ({
 }) => {
   const { user } = useAuth();
   const { isVendedor, loading } = useUserPositions();
+  const { items: paymentMethods } = usePaymentMethods();
+  const { items: paymentTerms } = usePaymentTerms();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -76,12 +80,11 @@ export const OrderPaymentSection: React.FC<OrderPaymentSectionProps> = ({
             <SelectValue placeholder="Selecione a forma de pagamento" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="Dinheiro">Dinheiro</SelectItem>
-            <SelectItem value="Cartão de Crédito">Cartão de Crédito</SelectItem>
-            <SelectItem value="Cartão de Débito">Cartão de Débito</SelectItem>
-            <SelectItem value="PIX">PIX</SelectItem>
-            <SelectItem value="Boleto">Boleto</SelectItem>
-            <SelectItem value="Transferência">Transferência</SelectItem>
+            {paymentMethods.filter(pm => pm.is_active).map((method) => (
+              <SelectItem key={method.id} value={method.name}>
+                {method.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -97,12 +100,11 @@ export const OrderPaymentSection: React.FC<OrderPaymentSectionProps> = ({
             <SelectValue placeholder="Selecione o prazo de pagamento" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="À vista">À vista</SelectItem>
-            <SelectItem value="7 dias">7 dias</SelectItem>
-            <SelectItem value="15 dias">15 dias</SelectItem>
-            <SelectItem value="30 dias">30 dias</SelectItem>
-            <SelectItem value="45 dias">45 dias</SelectItem>
-            <SelectItem value="60 dias">60 dias</SelectItem>
+            {paymentTerms.filter(pt => pt.is_active).map((term) => (
+              <SelectItem key={term.id} value={term.name}>
+                {term.name} ({term.days} dias)
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
