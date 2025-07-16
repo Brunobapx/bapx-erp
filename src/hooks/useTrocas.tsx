@@ -161,7 +161,8 @@ export const useTrocas = () => {
           motivo: data.motivo || '',
           responsavel: data.responsavel || '',
           observacoes: data.observacoes || null,
-          data_troca: new Date().toISOString()
+          data_troca: new Date().toISOString(),
+          numero_troca: '' // Será gerado pelo trigger
         })
         .select()
         .single();
