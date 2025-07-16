@@ -158,9 +158,9 @@ export const useTrocas = () => {
         .insert({
           user_id: user.id,
           cliente_id: data.cliente_id,
-          motivo: data.motivo,
-          responsavel: data.responsavel,
-          observacoes: data.observacoes,
+          motivo: data.motivo || '',
+          responsavel: data.responsavel || '',
+          observacoes: data.observacoes || null,
           data_troca: new Date().toISOString()
         })
         .select()
