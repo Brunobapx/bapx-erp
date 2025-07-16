@@ -11,7 +11,7 @@ import Sidebar from "@/components/Sidebar/Sidebar";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import OrdersPage from "./pages/OrdersPage";
-import OrderFormPage from "./pages/OrderFormPage";
+import TrocasPage from "./pages/TrocasPage";
 import ProductsPage from "./pages/ProductsPage";
 import ClientsPage from "./pages/ClientsPage";
 import ProductionPage from "./pages/ProductionPage";
@@ -53,7 +53,7 @@ const App = () => (
                       <main className="flex-1 overflow-auto lg:ml-64">
                         <Routes>
                           <Route path="/" element={<Index />} />
-                          <Route path="/configuracoes" element={<SettingsPage />} />
+                          <Route path="/trocas" element={<TrocasPage />} />
                           
                           <Route path="/pedidos" element={
                             <ModuleAccessCheck routePath="/pedidos">
@@ -146,7 +146,7 @@ const App = () => (
                             </ModuleAccessCheck>
                           } />
                           <Route path="*" element={<NotFound />} />
-                        </Routes>
+                              <Route path="/configuracoes" element={<SettingsPage />} />
                       </main>
                     </div>
                   </ProtectedRoute>

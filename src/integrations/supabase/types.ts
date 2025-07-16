@@ -890,6 +890,63 @@ export type Database = {
         }
         Relationships: []
       }
+      perdas: {
+        Row: {
+          created_at: string
+          custo_estimado: number | null
+          data_perda: string
+          id: string
+          motivo: string
+          observacoes: string | null
+          produto_id: string
+          quantidade: number
+          referencia_troca_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          custo_estimado?: number | null
+          data_perda?: string
+          id?: string
+          motivo: string
+          observacoes?: string | null
+          produto_id: string
+          quantidade: number
+          referencia_troca_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          custo_estimado?: number | null
+          data_perda?: string
+          id?: string
+          motivo?: string
+          observacoes?: string | null
+          produto_id?: string
+          quantidade?: number
+          referencia_troca_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "perdas_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "perdas_referencia_troca_id_fkey"
+            columns: ["referencia_troca_id"]
+            isOneToOne: false
+            referencedRelation: "trocas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_categories: {
         Row: {
           created_at: string
@@ -1701,6 +1758,73 @@ export type Database = {
             columns: ["parent_module_id"]
             isOneToOne: false
             referencedRelation: "system_modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trocas: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          data_troca: string
+          id: string
+          motivo: string
+          observacoes: string | null
+          produto_devolvido_id: string
+          produto_novo_id: string
+          quantidade: number
+          responsavel: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          data_troca?: string
+          id?: string
+          motivo: string
+          observacoes?: string | null
+          produto_devolvido_id: string
+          produto_novo_id: string
+          quantidade: number
+          responsavel: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          data_troca?: string
+          id?: string
+          motivo?: string
+          observacoes?: string | null
+          produto_devolvido_id?: string
+          produto_novo_id?: string
+          quantidade?: number
+          responsavel?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trocas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trocas_produto_devolvido_id_fkey"
+            columns: ["produto_devolvido_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trocas_produto_novo_id_fkey"
+            columns: ["produto_novo_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
