@@ -17,8 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Package, User, Plus, Trash2 } from 'lucide-react';
+import { RefreshCw, Plus, Trash2 } from 'lucide-react';
 import { toast } from "sonner";
 import { useClients } from "@/hooks/useClients";
 import { useProducts } from "@/hooks/useProducts";
@@ -44,13 +43,13 @@ export const RegistrarTrocaModal: React.FC<RegistrarTrocaModalProps> = ({
 }) => {
   const [formData, setFormData] = useState<NovoTrocaData>({
     cliente_id: '',
-    motivo: '',
     responsavel: '',
     observacoes: '',
     itens: [{
       produto_devolvido_id: '',
       produto_novo_id: '',
       quantidade: 1,
+      motivo: '',
       observacoes_item: ''
     }]
   });
@@ -82,6 +81,7 @@ export const RegistrarTrocaModal: React.FC<RegistrarTrocaModalProps> = ({
         produto_devolvido_id: '',
         produto_novo_id: '',
         quantidade: 1,
+        motivo: '',
         observacoes_item: ''
       }]
     }));
@@ -105,43 +105,51 @@ export const RegistrarTrocaModal: React.FC<RegistrarTrocaModalProps> = ({
     }));
   };
 
+  const resetForm = () => {
+    setFormData({
+      cliente_id: '',
+      responsavel: user?.user_metadata?.first_name && user?.user_metadata?.last_name 
+        ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`.trim() 
+        : '',
+      observacoes: '',
+      itens: [{
+        produto_devolvido_id: '',
+        produto_novo_id: '',
+        quantidade: 1,
+        motivo: '',
+        observacoes_item: ''
+      }]
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.cliente_id || !formData.motivo) {
+    if (!isFormValid) {
       toast.error('Preencha todos os campos obrigatórios');
       return;
-    }
-
-    for (const item of formData.itens) {
-      if (!item.produto_devolvido_id || !item.produto_novo_id) {
-        toast.error('Todos os itens devem ter produtos devolvido e novo selecionados');
-        return;
-      }
     }
 
     setLoading(true);
     try {
       await criarTroca(formData);
+      resetForm();
       onClose(true);
-      setFormData({
-        cliente_id: '',
-        motivo: '',
-        responsavel: user?.user_metadata?.display_name || '',
-        observacoes: '',
-        itens: [{
-          produto_devolvido_id: '',
-          produto_novo_id: '',
-          quantidade: 1,
-          observacoes_item: ''
-        }]
-      });
     } catch (error) {
-      // Erro já tratado no hook
+      console.error('Erro ao registrar troca:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  const isFormValid = formData.cliente_id && 
+    formData.responsavel && 
+    formData.itens.every(item => 
+      item.produto_devolvido_id && 
+      item.produto_novo_id && 
+      item.quantidade > 0 &&
+      item.motivo
+    );
 
   return (
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
@@ -156,9 +164,13 @@ export const RegistrarTrocaModal: React.FC<RegistrarTrocaModalProps> = ({
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Dados gerais */}
           <div className="grid grid-cols-2 gap-4">
+            {/* Cliente */}
             <div className="space-y-2">
               <Label>Cliente *</Label>
-              <Select value={formData.cliente_id} onValueChange={(value) => setFormData(prev => ({ ...prev, cliente_id: value }))}>
+              <Select 
+                value={formData.cliente_id} 
+                onValueChange={(value) => setFormData(prev => ({ ...prev, cliente_id: value }))}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o cliente" />
                 </SelectTrigger>
@@ -172,30 +184,17 @@ export const RegistrarTrocaModal: React.FC<RegistrarTrocaModalProps> = ({
               </Select>
             </div>
 
+            {/* Responsável */}
             <div className="space-y-2">
-              <Label>Motivo *</Label>
-              <Select value={formData.motivo} onValueChange={(value) => setFormData(prev => ({ ...prev, motivo: value }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Motivo da troca" />
-                </SelectTrigger>
-                <SelectContent>
-                  {MOTIVOS_TROCA.map((motivo) => (
-                    <SelectItem key={motivo} value={motivo}>
-                      {motivo}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="responsavel">Responsável *</Label>
+              <Input
+                id="responsavel"
+                placeholder="Digite o nome do responsável"
+                value={formData.responsavel}
+                onChange={(e) => setFormData(prev => ({ ...prev, responsavel: e.target.value }))}
+                required
+              />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Responsável *</Label>
-            <Input
-              value={formData.responsavel}
-              onChange={(e) => setFormData(prev => ({ ...prev, responsavel: e.target.value }))}
-              placeholder="Nome do responsável"
-            />
           </div>
 
           {/* Lista de itens */}
@@ -266,7 +265,7 @@ export const RegistrarTrocaModal: React.FC<RegistrarTrocaModalProps> = ({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label>Quantidade *</Label>
                       <Input
@@ -275,6 +274,25 @@ export const RegistrarTrocaModal: React.FC<RegistrarTrocaModalProps> = ({
                         value={item.quantidade}
                         onChange={(e) => atualizarItem(index, 'quantidade', parseInt(e.target.value) || 1)}
                       />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Motivo *</Label>
+                      <Select 
+                        value={item.motivo} 
+                        onValueChange={(value) => atualizarItem(index, 'motivo', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Motivo da troca" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {MOTIVOS_TROCA.map((motivo) => (
+                            <SelectItem key={motivo} value={motivo}>
+                              {motivo}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div className="space-y-2">
@@ -305,7 +323,7 @@ export const RegistrarTrocaModal: React.FC<RegistrarTrocaModalProps> = ({
             <Button type="button" variant="outline" onClick={() => onClose()}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || !isFormValid}>
               {loading ? 'Registrando...' : 'Registrar Troca'}
             </Button>
           </div>

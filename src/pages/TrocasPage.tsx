@@ -22,10 +22,11 @@ const TrocasPage = () => {
   // Filtrar trocas baseado na busca
   const filteredTrocas = trocas.filter(troca => {
     const searchString = searchQuery.toLowerCase();
+    const motivosItems = troca.troca_itens?.map(item => item.motivo).join(' ') || '';
     return (
       troca.cliente?.name?.toLowerCase().includes(searchString) ||
       troca.numero_troca?.toLowerCase().includes(searchString) ||
-      troca.motivo.toLowerCase().includes(searchString) ||
+      motivosItems.toLowerCase().includes(searchString) ||
       troca.responsavel.toLowerCase().includes(searchString) ||
       troca.troca_itens?.some(item => 
         item.produto_devolvido?.name?.toLowerCase().includes(searchString) ||

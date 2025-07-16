@@ -1766,6 +1766,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          motivo: string
           observacoes_item: string | null
           produto_devolvido_id: string
           produto_novo_id: string
@@ -1776,6 +1777,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          motivo?: string
           observacoes_item?: string | null
           produto_devolvido_id: string
           produto_novo_id: string
@@ -1786,6 +1788,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          motivo?: string
           observacoes_item?: string | null
           produto_devolvido_id?: string
           produto_novo_id?: string

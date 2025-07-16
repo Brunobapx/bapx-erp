@@ -9,6 +9,7 @@ export type TrocaItem = {
   produto_devolvido_id: string;
   produto_novo_id: string;
   quantidade: number;
+  motivo: string;
   observacoes_item?: string;
   // Relacionamentos
   produto_devolvido?: {
@@ -28,7 +29,6 @@ export type Troca = {
   numero_troca: string;
   user_id: string;
   cliente_id: string;
-  motivo: string;
   data_troca: string;
   responsavel: string;
   observacoes?: string;
@@ -46,12 +46,12 @@ export type NovoTrocaItem = {
   produto_devolvido_id: string;
   produto_novo_id: string;
   quantidade: number;
+  motivo: string;
   observacoes_item?: string;
 };
 
 export type NovoTrocaData = {
   cliente_id: string;
-  motivo: string;
   responsavel: string;
   observacoes?: string;
   itens: NovoTrocaItem[];
@@ -89,6 +89,7 @@ export const useTrocas = () => {
               produto_devolvido_id,
               produto_novo_id,
               quantidade,
+              motivo,
               observacoes_item,
               produto_devolvido:products!produto_devolvido_id(
                 id,
@@ -158,7 +159,6 @@ export const useTrocas = () => {
         .insert({
           user_id: user.id,
           cliente_id: data.cliente_id,
-          motivo: data.motivo || '',
           responsavel: data.responsavel || '',
           observacoes: data.observacoes || null,
           data_troca: new Date().toISOString(),
@@ -198,6 +198,7 @@ export const useTrocas = () => {
             produto_devolvido_id: item.produto_devolvido_id,
             produto_novo_id: item.produto_novo_id,
             quantidade: item.quantidade,
+            motivo: item.motivo,
             observacoes_item: item.observacoes_item
           });
 
@@ -226,7 +227,7 @@ export const useTrocas = () => {
             user_id: user.id,
             produto_id: item.produto_devolvido_id,
             quantidade: item.quantidade,
-            motivo: `Troca - ${data.motivo}`,
+            motivo: `Troca - ${item.motivo}`,
             custo_estimado: custoEstimado,
             referencia_troca_id: trocaCriada.id,
             observacoes: `Produto descartado por troca. ${item.observacoes_item || ''}`
@@ -256,9 +257,9 @@ export const useTrocas = () => {
           id,
           troca_itens(
             quantidade,
+            motivo,
             produto_devolvido:products!produto_devolvido_id(cost)
-          ),
-          motivo
+          )
         `);
 
       if (dataInicio) {
@@ -278,21 +279,18 @@ export const useTrocas = () => {
       const motivosMap = new Map();
 
       data?.forEach(troca => {
-        const motivo = troca.motivo;
-        let quantidadetroca = 0;
-
         troca.troca_itens?.forEach(item => {
-          quantidadetroca += item.quantidade;
           totalProdutosDescartados += item.quantidade;
           const custo = (item.produto_devolvido as any)?.cost || 0;
           custoEstimadoPerdas += custo * item.quantidade;
+          
+          const motivo = item.motivo;
+          if (motivosMap.has(motivo)) {
+            motivosMap.set(motivo, motivosMap.get(motivo) + item.quantidade);
+          } else {
+            motivosMap.set(motivo, item.quantidade);
+          }
         });
-
-        if (motivosMap.has(motivo)) {
-          motivosMap.set(motivo, motivosMap.get(motivo) + quantidadetroca);
-        } else {
-          motivosMap.set(motivo, quantidadetroca);
-        }
       });
 
       const motivosEstatisticas = Array.from(motivosMap.entries()).map(([motivo, quantidade]) => ({

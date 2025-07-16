@@ -127,9 +127,13 @@ export const TrocasTable: React.FC<TrocasTableProps> = ({
                 </TableCell>
                 <TableCell>{calcularQuantidadeTotal(troca)}</TableCell>
                 <TableCell>
-                  <Badge variant={getMotivoColor(troca.motivo)}>
-                    {troca.motivo}
-                  </Badge>
+                  <div className="space-y-1">
+                    {troca.troca_itens?.map(item => (
+                      <Badge key={item.id} variant="outline" className="mr-1">
+                        {item.motivo}
+                      </Badge>
+                    ))}
+                  </div>
                 </TableCell>
                 <TableCell>{troca.responsavel}</TableCell>
                 <TableCell>
