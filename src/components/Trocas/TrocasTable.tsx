@@ -10,19 +10,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Eye, FileText, AlertTriangle } from 'lucide-react';
+import { Eye, FileText, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Troca } from '@/hooks/useTrocas';
 
 interface TrocasTableProps {
   trocas: Troca[];
   onViewDetails?: (troca: Troca) => void;
   onGenerateRomaneio?: (troca: Troca) => void;
+  onFinalizarTroca?: (troca: Troca) => void;
 }
 
 export const TrocasTable: React.FC<TrocasTableProps> = ({
   trocas,
   onViewDetails,
-  onGenerateRomaneio
+  onGenerateRomaneio,
+  onFinalizarTroca
 }) => {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
@@ -56,6 +58,15 @@ export const TrocasTable: React.FC<TrocasTableProps> = ({
         return 'secondary';
       default:
         return 'outline';
+    }
+  };
+
+  const getStatusBadge = (status?: string) => {
+    switch (status) {
+      case 'finalizada':
+        return <Badge variant="secondary" className="bg-green-100 text-green-800">Finalizada</Badge>;
+      default:
+        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Pendente</Badge>;
     }
   };
 
@@ -97,6 +108,7 @@ export const TrocasTable: React.FC<TrocasTableProps> = ({
               <TableHead>Qtd Total</TableHead>
               <TableHead>Motivo</TableHead>
               <TableHead>Responsável</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead>Perda Estimada</TableHead>
               <TableHead>Ações</TableHead>
             </TableRow>
@@ -137,10 +149,13 @@ export const TrocasTable: React.FC<TrocasTableProps> = ({
                 </TableCell>
                 <TableCell>{troca.responsavel}</TableCell>
                 <TableCell>
+                  {getStatusBadge((troca as any).status)}
+                </TableCell>
+                <TableCell>
                   {formatCurrency(calcularCustoTotal(troca))}
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     {onViewDetails && (
                       <Button
                         size="sm"
@@ -159,6 +174,17 @@ export const TrocasTable: React.FC<TrocasTableProps> = ({
                         title="Gerar romaneio"
                       >
                         <FileText className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {onFinalizarTroca && (troca as any).status !== 'finalizada' && (
+                      <Button
+                        size="sm"
+                        variant="default"
+                        onClick={() => onFinalizarTroca(troca)}
+                        title="Finalizar troca"
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <CheckCircle className="h-4 w-4" />
                       </Button>
                     )}
                   </div>

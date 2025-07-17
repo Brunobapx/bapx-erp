@@ -1824,33 +1824,42 @@ export type Database = {
         Row: {
           cliente_id: string
           created_at: string
+          data_finalizacao: string | null
           data_troca: string
           id: string
           numero_troca: string | null
           observacoes: string | null
+          recebido_por: string | null
           responsavel: string
+          status: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           cliente_id: string
           created_at?: string
+          data_finalizacao?: string | null
           data_troca?: string
           id?: string
           numero_troca?: string | null
           observacoes?: string | null
+          recebido_por?: string | null
           responsavel: string
+          status?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           cliente_id?: string
           created_at?: string
+          data_finalizacao?: string | null
           data_troca?: string
           id?: string
           numero_troca?: string | null
           observacoes?: string | null
+          recebido_por?: string | null
           responsavel?: string
+          status?: string | null
           updated_at?: string
           user_id?: string
         }

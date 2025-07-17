@@ -6,17 +6,24 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RefreshCw, Search, Plus, TrendingDown, DollarSign, Package, AlertTriangle } from 'lucide-react';
 import { RegistrarTrocaModal } from '@/components/Trocas/RegistrarTrocaModal';
+import { VisualizarTrocaModal } from '@/components/Trocas/VisualizarTrocaModal';
+import { GerarRomaneioModal } from '@/components/Trocas/GerarRomaneioModal';
+import { FinalizarTrocaModal } from '@/components/Trocas/FinalizarTrocaModal';
 import { TrocasTable } from '@/components/Trocas/TrocasTable';
-import { useTrocas } from '@/hooks/useTrocas';
+import { useTrocas, Troca } from '@/hooks/useTrocas';
 import { usePerdas } from '@/hooks/usePerdas';
 import { toast } from "sonner";
 
 const TrocasPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showRegistrarModal, setShowRegistrarModal] = useState(false);
-  const [selectedDateRange, setSelectedDateRange] = useState('30'); // últimos 30 dias
+  const [showVisualizarModal, setShowVisualizarModal] = useState(false);
+  const [showRomaneioModal, setShowRomaneioModal] = useState(false);
+  const [showFinalizarModal, setShowFinalizarModal] = useState(false);
+  const [selectedTroca, setSelectedTroca] = useState<Troca | null>(null);
+  const [loadingFinalizar, setLoadingFinalizar] = useState(false);
 
-  const { trocas, loading: trocasLoading, refreshTrocas } = useTrocas();
+  const { trocas, loading: trocasLoading, refreshTrocas, finalizarTroca } = useTrocas();
   const { perdas, loading: perdasLoading } = usePerdas();
 
   // Filtrar trocas baseado na busca
@@ -56,13 +63,34 @@ const TrocasPage = () => {
     }).format(value);
   };
 
-  const handleGenerateRomaneio = (troca: any) => {
-    // Implementar geração de romaneio
-    toast.info(`Gerando romaneio para troca ${troca.numero_troca}`);
+  const handleGenerateRomaneio = (troca: Troca) => {
+    setSelectedTroca(troca);
+    setShowRomaneioModal(true);
   };
 
-  const handleViewDetails = (troca: any) => {
-    toast.info(`Visualizando detalhes da troca ${troca.numero_troca}`);
+  const handleViewDetails = (troca: Troca) => {
+    setSelectedTroca(troca);
+    setShowVisualizarModal(true);
+  };
+
+  const handleFinalizarTroca = (troca: Troca) => {
+    setSelectedTroca(troca);
+    setShowFinalizarModal(true);
+  };
+
+  const handleConfirmFinalizar = async (recebidoPor: string) => {
+    if (!selectedTroca) return;
+    
+    setLoadingFinalizar(true);
+    try {
+      await finalizarTroca(selectedTroca.id, recebidoPor);
+      setShowFinalizarModal(false);
+      setSelectedTroca(null);
+    } catch (error) {
+      console.error('Erro ao finalizar troca:', error);
+    } finally {
+      setLoadingFinalizar(false);
+    }
   };
 
   const handleRefresh = () => {
@@ -181,6 +209,7 @@ const TrocasPage = () => {
               trocas={filteredTrocas}
               onViewDetails={handleViewDetails}
               onGenerateRomaneio={handleGenerateRomaneio}
+              onFinalizarTroca={handleFinalizarTroca}
             />
           )}
         </TabsContent>
@@ -206,7 +235,7 @@ const TrocasPage = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Modal de Nova Troca */}
+      {/* Modais */}
       <RegistrarTrocaModal
         isOpen={showRegistrarModal}
         onClose={(refresh) => {
@@ -215,6 +244,35 @@ const TrocasPage = () => {
             refreshTrocas();
           }
         }}
+      />
+
+      <VisualizarTrocaModal
+        isOpen={showVisualizarModal}
+        onClose={() => {
+          setShowVisualizarModal(false);
+          setSelectedTroca(null);
+        }}
+        troca={selectedTroca}
+      />
+
+      <GerarRomaneioModal
+        isOpen={showRomaneioModal}
+        onClose={() => {
+          setShowRomaneioModal(false);
+          setSelectedTroca(null);
+        }}
+        troca={selectedTroca}
+      />
+
+      <FinalizarTrocaModal
+        isOpen={showFinalizarModal}
+        onClose={() => {
+          setShowFinalizarModal(false);
+          setSelectedTroca(null);
+        }}
+        onConfirm={handleConfirmFinalizar}
+        numeroTroca={selectedTroca?.numero_troca}
+        loading={loadingFinalizar}
       />
     </div>
   );

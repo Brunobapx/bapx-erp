@@ -311,12 +311,40 @@ export const useTrocas = () => {
     }
   };
 
+  const finalizarTroca = async (trocaId: string, recebidoPor: string) => {
+    try {
+      if (!user) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      const { error } = await supabase
+        .from('trocas')
+        .update({
+          status: 'finalizada',
+          data_finalizacao: new Date().toISOString(),
+          recebido_por: recebidoPor
+        })
+        .eq('id', trocaId);
+
+      if (error) throw error;
+      
+      await refreshTrocas();
+      toast.success('Troca finalizada com sucesso!');
+      return { success: true };
+    } catch (error: any) {
+      console.error('[FINALIZAR_TROCA] Erro:', error);
+      toast.error('Erro ao finalizar troca: ' + error.message);
+      throw error;
+    }
+  };
+
   return {
     trocas,
     loading,
     error,
     refreshTrocas,
     criarTroca,
+    finalizarTroca,
     obterEstatisticas
   };
 };
