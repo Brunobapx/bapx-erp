@@ -1826,7 +1826,6 @@ export type Database = {
           created_at: string
           data_troca: string
           id: string
-          motivo: string
           numero_troca: string | null
           observacoes: string | null
           responsavel: string
@@ -1838,7 +1837,6 @@ export type Database = {
           created_at?: string
           data_troca?: string
           id?: string
-          motivo: string
           numero_troca?: string | null
           observacoes?: string | null
           responsavel: string
@@ -1850,7 +1848,6 @@ export type Database = {
           created_at?: string
           data_troca?: string
           id?: string
-          motivo?: string
           numero_troca?: string | null
           observacoes?: string | null
           responsavel?: string
