@@ -24,14 +24,7 @@ const FinancePage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
-  const [alerts, setAlerts] = useState([
-    {
-      id: 'alert-1',
-      type: 'finance' as const,
-      message: 'Lançamento #F-004 aguardando confirmação de pagamento',
-      time: '2 dias'
-    }
-  ]);
+  const [alerts, setAlerts] = useState([]);
 
   const { entries, loading, error } = useUnifiedFinancialEntries();
   const { cleanupDuplicateEntries, isCleaningUp } = useFinancialCleanup();

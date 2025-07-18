@@ -10,14 +10,7 @@ const usePackagingPageFilters = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [statusFilter, setStatusFilter] = useState('active');
   const [orderSort, setOrderSort] = useState('recent');
-  const [alerts, setAlerts] = useState([
-    {
-      id: 'alert-1',
-      type: 'packaging' as const,
-      message: 'Embalagem #EMB-003 aguardando confirmação há 1 dia',
-      time: '1 dia'
-    }
-  ]);
+  const [alerts, setAlerts] = useState([]);
   const { packagings, loading, updatePackagingStatus, refreshPackagings } = usePackaging();
   const filteredItems = usePackagingFilters(packagings, searchQuery, statusFilter, orderSort);
   const packagingSummary = usePackagingSummary(packagings);

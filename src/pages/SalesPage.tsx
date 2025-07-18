@@ -34,14 +34,7 @@ const SalesPage = () => {
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [showDeliverySlipModal, setShowDeliverySlipModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [alerts, setAlerts] = useState([
-    {
-      id: 'alert-1',
-      type: 'sales' as const,
-      message: 'Venda aguardando confirmação para faturamento',
-      time: '3 horas'
-    }
-  ]);
+  const [alerts, setAlerts] = useState([]);
 
   const { sales, loading, error, updateSaleStatus, approveSale } = useSales();
   const { adicionarPedidoParaRoterizacao } = useRotasOtimizadas();

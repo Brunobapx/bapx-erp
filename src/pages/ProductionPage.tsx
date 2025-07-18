@@ -19,20 +19,7 @@ const ProductionPage = () => {
   const [selectedItem, setSelectedItem] = useState<Production | null>(null);
   const [statusFilter, setStatusFilter] = useState('active');
   const [orderSort, setOrderSort] = useState('recent'); // novo controle
-  const [alerts, setAlerts] = useState<AlertType[]>([
-    {
-      id: 'alert-1',
-      type: 'production' as const,
-      message: 'Produção #PR-002 aguardando aprovação há 2 dias',
-      time: '2 dias'
-    },
-    {
-      id: 'alert-2',
-      type: 'production' as const,
-      message: 'Material para Produção #PR-005 está em falta',
-      time: '4 horas'
-    }
-  ]);
+  const [alerts, setAlerts] = useState<AlertType[]>([]);
 
   const { productions, loading, updateProductionStatus, refreshProductions } = useProduction();
   const productionSummary = useProductionSummary(productions);
