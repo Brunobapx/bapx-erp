@@ -1,38 +1,20 @@
 import React from 'react';
 import { StatusCards } from '@/components/Dashboard/StatusCards';
 import { ProcessFunnel } from '@/components/Dashboard/ProcessFunnel';
-import StageAlert from '@/components/Alerts/StageAlert';
 import { ApprovalModal } from '@/components/Modals/ApprovalModal';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock } from 'lucide-react';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from '@/components/Auth/AuthProvider';
 
 const Index = () => {
-  const { stats, recentOrders, loading } = useDashboardStats();
+  const { stats, sellerStats, recentOrders, loading } = useDashboardStats();
+  const { isSeller, userRole } = useAuth();
   
-  const [alerts, setAlerts] = React.useState([
-    {
-      id: '1',
-      type: 'production' as const,
-      message: 'Verificar pedidos parados na produção há mais de 2 dias.',
-      time: '2 dias atrás'
-    },
-    {
-      id: '2',
-      type: 'route' as const,
-      message: 'Revisar pedidos aguardando definição de rota.',
-      time: '5 horas atrás'
-    }
-  ]);
-
   const [showApprovalModal, setShowApprovalModal] = React.useState(false);
   const [currentStage, setCurrentStage] = React.useState<'order' | 'production' | 'packaging' | 'sales' | 'finance' | 'route'>('order');
-
-  const handleDismissAlert = (id: string) => {
-    setAlerts(alerts.filter(alert => alert.id !== id));
-  };
 
   const openModal = (stage: 'order' | 'production' | 'packaging' | 'sales' | 'finance' | 'route') => {
     setCurrentStage(stage);
@@ -76,22 +58,23 @@ const Index = () => {
   return (
     <div className="p-4 sm:p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <h1 className="text-2xl font-bold">
+          {isSeller ? 'Painel do Vendedor' : 'Dashboard'}
+        </h1>
         <div>
           <Button onClick={() => openModal('order')}>Novo Pedido</Button>
         </div>
       </div>
-      
-      <StageAlert alerts={alerts} onDismiss={handleDismissAlert} />
 
-      <StatusCards />
+      
+      {!isSeller && <StatusCards />}
       
       <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
-        <ProcessFunnel />
+        {!isSeller && <ProcessFunnel />}
         
-        <Card className="col-span-1 lg:col-span-2">
+        <Card className={`col-span-1 ${isSeller ? 'lg:col-span-3' : 'lg:col-span-2'}`}>
           <CardHeader>
-            <CardTitle>Pedidos Recentes</CardTitle>
+            <CardTitle>{isSeller ? 'Meus Pedidos Recentes' : 'Pedidos Recentes'}</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -146,9 +129,126 @@ const Index = () => {
             )}
           </CardContent>
         </Card>
+        
+        {isSeller && (
+          <Card className="col-span-1 lg:col-span-3">
+            <CardHeader>
+              <CardTitle>Minhas Comissões</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-6 w-full" />
+                  <Skeleton className="h-6 w-full" />
+                  <Skeleton className="h-6 w-full" />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>Comissão do Mês</span>
+                    <span className="font-medium">{formatCurrency(sellerStats.monthlyCommission)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Comissões Pendentes</span>
+                    <span className="font-medium">{formatCurrency(sellerStats.pendingCommissions)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Total de Vendas</span>
+                    <span className="font-medium">{formatCurrency(sellerStats.totalSales)}</span>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {isSeller ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Meus Pedidos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-6 w-full" />
+                  <Skeleton className="h-6 w-full" />
+                  <Skeleton className="h-6 w-full" />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>Total de Pedidos</span>
+                    <span className="font-medium">{sellerStats.myOrders}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Vendas Realizadas</span>
+                    <span className="font-medium">{formatCurrency(sellerStats.totalSales)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Meta do Mês</span>
+                    <span className="font-medium">R$ 50.000</span>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Performance</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-6 w-full" />
+                  <Skeleton className="h-6 w-full" />
+                  <Skeleton className="h-6 w-full" />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>Taxa de Conversão</span>
+                    <span className="font-medium">85%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Ticket Médio</span>
+                    <span className="font-medium">{sellerStats.myOrders > 0 ? formatCurrency(sellerStats.totalSales / sellerStats.myOrders) : 'R$ 0,00'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Ranking</span>
+                    <span className="font-medium">#2</span>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Próximas Ações</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>Follow-ups Pendentes</span>
+                  <span className="font-medium">3</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Propostas Enviadas</span>
+                  <span className="font-medium">2</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Visitas Agendadas</span>
+                  <span className="font-medium">1</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card>
           <CardHeader>
             <CardTitle>Entregas Programadas</CardTitle>
@@ -238,7 +338,8 @@ const Index = () => {
             )}
           </CardContent>
         </Card>
-      </div>
+        </div>
+      )}
       
       <ApprovalModal 
         isOpen={showApprovalModal}
