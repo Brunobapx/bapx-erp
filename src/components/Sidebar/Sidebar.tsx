@@ -28,6 +28,7 @@ const Sidebar = () => {
     { icon: DollarSign, label: 'Vendas', href: '/vendas', route: '/vendas' },
     { icon: FilePen, label: 'Emissão Fiscal', href: '/emissao-fiscal', route: '/emissao-fiscal' },
     { icon: DollarSign, label: 'Financeiro', href: '/financeiro', route: '/financeiro' },
+    { icon: FileText, label: 'Trocas', href: '/trocas', route: '/trocas' },
     { icon: Truck, label: 'Rotas', href: '/rotas', route: '/rotas' },
     { icon: Calendar, label: 'Calendário', href: '/calendario', route: '/calendario' },
     { icon: FilePen, label: 'Ordens de Serviço', href: '/ordens-servico', route: '/ordens-servico' },
@@ -75,7 +76,7 @@ const Sidebar = () => {
         </div>
       </div>
 
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {filteredMenuItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.href;

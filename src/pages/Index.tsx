@@ -10,7 +10,7 @@ import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { Skeleton } from "@/components/ui/skeleton";
 
 const Index = () => {
-  const { recentOrders, loading } = useDashboardStats();
+  const { stats, recentOrders, loading } = useDashboardStats();
   
   const [alerts, setAlerts] = React.useState([
     {
@@ -151,45 +151,31 @@ const Index = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card>
           <CardHeader>
-            <CardTitle>Pedidos por Categoria</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span>Hardware</span>
-                <span className="font-medium">12</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Software</span>
-                <span className="font-medium">8</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Serviços</span>
-                <span className="font-medium">4</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
             <CardTitle>Entregas Programadas</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span>Hoje</span>
-                <span className="font-medium">3</span>
+            {loading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-6 w-full" />
+                <Skeleton className="h-6 w-full" />
+                <Skeleton className="h-6 w-full" />
               </div>
-              <div className="flex justify-between">
-                <span>Amanhã</span>
-                <span className="font-medium">5</span>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>Hoje</span>
+                  <span className="font-medium">{stats.routes || 0}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Amanhã</span>
+                  <span className="font-medium">0</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Esta semana</span>
+                  <span className="font-medium">{stats.routes || 0}</span>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span>Esta semana</span>
-                <span className="font-medium">12</span>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
         
@@ -198,20 +184,58 @@ const Index = () => {
             <CardTitle>Status Financeiro</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span>A receber (7d)</span>
-                <span className="font-medium">R$ 12.450</span>
+            {loading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-6 w-full" />
+                <Skeleton className="h-6 w-full" />
+                <Skeleton className="h-6 w-full" />
               </div>
-              <div className="flex justify-between">
-                <span>A receber (30d)</span>
-                <span className="font-medium">R$ 45.820</span>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>A receber</span>
+                  <span className="font-medium">{formatCurrency(stats.total_receivables_amount)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>A pagar</span>
+                  <span className="font-medium">{formatCurrency(stats.total_payables_amount)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Pendentes</span>
+                  <span className="font-medium">{stats.pending_receivables}</span>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span>Recebido (mês)</span>
-                <span className="font-medium">R$ 38.670</span>
+            )}
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Resumo Geral</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-6 w-full" />
+                <Skeleton className="h-6 w-full" />
+                <Skeleton className="h-6 w-full" />
               </div>
-            </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>Total Clientes</span>
+                  <span className="font-medium">{stats.clients}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Total Produtos</span>
+                  <span className="font-medium">{stats.products}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Total Vendas</span>
+                  <span className="font-medium">{stats.sales}</span>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
