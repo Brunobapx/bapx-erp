@@ -149,22 +149,31 @@ export const useTrocasReports = () => {
     const mediaPerdaPorTroca = totalTrocas > 0 ? custoTotalPerdas / totalTrocas : 0;
 
     // Buscar dados do período anterior para comparação
-    const periodoDias = Math.abs(new Date(filters.endDate || '').getTime() - new Date(filters.startDate || '').getTime()) / (1000 * 60 * 60 * 24);
-    const dataInicioAnterior = new Date();
-    dataInicioAnterior.setDate(dataInicioAnterior.getDate() - (periodoDias * 2));
-    const dataFimAnterior = new Date(filters.startDate || '');
-    dataFimAnterior.setDate(dataFimAnterior.getDate() - 1);
+    const { startDate: currentStart, endDate: currentEnd } = getDateRange(filters);
+    const startDateObj = new Date(currentStart);
+    const endDateObj = new Date(currentEnd);
+    
+    let trocasPeriodoAnterior = 0;
+    let crescimentoPercentual = 0;
+    
+    if (!isNaN(startDateObj.getTime()) && !isNaN(endDateObj.getTime())) {
+      const periodoDias = Math.abs(endDateObj.getTime() - startDateObj.getTime()) / (1000 * 60 * 60 * 24);
+      const dataInicioAnterior = new Date(startDateObj);
+      dataInicioAnterior.setDate(dataInicioAnterior.getDate() - periodoDias);
+      const dataFimAnterior = new Date(startDateObj);
+      dataFimAnterior.setDate(dataFimAnterior.getDate() - 1);
 
-    const { data: trocasAnteriores } = await supabase
-      .from('trocas')
-      .select('id')
-      .gte('data_troca', dataInicioAnterior.toISOString().split('T')[0])
-      .lte('data_troca', dataFimAnterior.toISOString().split('T')[0]);
+      const { data: trocasAnteriores } = await supabase
+        .from('trocas')
+        .select('id')
+        .gte('data_troca', dataInicioAnterior.toISOString().split('T')[0])
+        .lte('data_troca', dataFimAnterior.toISOString().split('T')[0]);
 
-    const trocasPeriodoAnterior = trocasAnteriores?.length || 0;
-    const crescimentoPercentual = trocasPeriodoAnterior > 0 
-      ? ((totalTrocas - trocasPeriodoAnterior) / trocasPeriodoAnterior) * 100 
-      : 0;
+      trocasPeriodoAnterior = trocasAnteriores?.length || 0;
+      crescimentoPercentual = trocasPeriodoAnterior > 0 
+        ? ((totalTrocas - trocasPeriodoAnterior) / trocasPeriodoAnterior) * 100 
+        : 0;
+    }
 
     // Produtos mais trocados
     const produtosMap = new Map<string, ProdutoMaisTrocado>();
