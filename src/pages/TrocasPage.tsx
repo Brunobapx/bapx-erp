@@ -10,6 +10,7 @@ import { VisualizarTrocaModal } from '@/components/Trocas/VisualizarTrocaModal';
 import { GerarRomaneioModal } from '@/components/Trocas/GerarRomaneioModal';
 import { FinalizarTrocaModal } from '@/components/Trocas/FinalizarTrocaModal';
 import { TrocasTable } from '@/components/Trocas/TrocasTable';
+import { TrocasReports } from '@/components/Trocas/TrocasReports';
 import { useTrocas, Troca } from '@/hooks/useTrocas';
 import { usePerdas } from '@/hooks/usePerdas';
 import { toast } from "sonner";
@@ -215,23 +216,7 @@ const TrocasPage = () => {
         </TabsContent>
 
         <TabsContent value="relatorios" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5" />
-                Relatórios de Perdas
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">Relatórios em Desenvolvimento</h3>
-                <p>
-                  Os relatórios detalhados de perdas e estatísticas estarão disponíveis em breve.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <TrocasReports />
         </TabsContent>
       </Tabs>
 
