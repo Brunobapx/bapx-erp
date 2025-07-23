@@ -179,25 +179,26 @@ const NotasEmitidas = () => {
                             )}
                           </Button>
 
-                          {nota.status === 'autorizado' && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => baixarPDF(nota.id)}
-                              >
-                                <Download className="h-3 w-3" />
-                                PDF
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => baixarXML(nota.id)}
-                              >
-                                <Download className="h-3 w-3" />
-                                XML
-                              </Button>
-                            </>
+                          {nota.status === 'autorizado' && nota.json_resposta?.caminho_danfe && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => baixarPDF(nota)}
+                            >
+                              <Download className="h-3 w-3" />
+                              DANFE
+                            </Button>
+                          )}
+
+                          {nota.status === 'autorizado' && nota.json_resposta?.caminho_xml_nota_fiscal && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => baixarXML(nota)}
+                            >
+                              <Download className="h-3 w-3" />
+                              XML
+                            </Button>
                           )}
 
                           {nota.status === 'autorizado' && (

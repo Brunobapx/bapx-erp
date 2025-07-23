@@ -131,77 +131,76 @@ export const useNotaFiscal = () => {
     }
   };
 
-  const baixarPDF = async (notaId: string) => {
+  const baixarPDF = async (nota: NotaEmitida) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Usuário não autenticado');
+      // Se a nota tem caminho_danfe na resposta, usar diretamente
+      if (nota.json_resposta?.caminho_danfe) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error('Usuário não autenticado');
 
-      const response = await fetch(`https://gtqmwlxzszttzriswoxj.supabase.co/functions/v1/focus-nfe-api`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0cW13bHh6c3p0dHpyaXN3b3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc3NzUwMjUsImV4cCI6MjA2MzM1MTAyNX0.03XyZCOF5UnUUaNpn44-MlQW0J6Vfo3_rb7mhE7D-Bk'
-        },
-        body: JSON.stringify({
-          action: 'obter_pdf',
-          notaId
-        }),
-      });
+        const response = await fetch(`https://gtqmwlxzszttzriswoxj.supabase.co/functions/v1/focus-nfe-api`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0cW13bHh6c3p0dHpyaXN3b3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc3NzUwMjUsImV4cCI6MjA2MzM1MTAyNX0.03XyZCOF5UnUUaNpn44-MlQW0J6Vfo3_rb7mhE7D-Bk'
+          },
+          body: JSON.stringify({
+            action: 'baixar_danfe',
+            caminhoDanfe: nota.json_resposta.caminho_danfe
+          }),
+        });
 
-      if (response.ok) {
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/pdf')) {
+        if (response.ok) {
           const blob = await response.blob();
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `nfe-${notaId}.pdf`;
+          a.download = `danfe-${nota.numero_nota}.pdf`;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
           window.URL.revokeObjectURL(url);
-          toast.success('PDF baixado com sucesso!');
+          toast.success('DANFE baixado com sucesso!');
         } else {
           const errorData = await response.json();
-          toast.error(errorData.error || 'PDF não disponível');
+          toast.error(errorData.error || 'Erro ao baixar DANFE');
         }
       } else {
-        const errorData = await response.json();
-        toast.error(errorData.error || 'Erro ao baixar PDF');
+        toast.error('DANFE não disponível para esta nota');
       }
     } catch (error) {
-      console.error('Erro ao baixar PDF:', error);
-      toast.error('Erro ao baixar PDF');
+      console.error('Erro ao baixar DANFE:', error);
+      toast.error('Erro ao baixar DANFE');
     }
   };
 
-  const baixarXML = async (notaId: string) => {
+  const baixarXML = async (nota: NotaEmitida) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Usuário não autenticado');
+      // Se a nota tem caminho_xml_nota_fiscal na resposta, usar diretamente
+      if (nota.json_resposta?.caminho_xml_nota_fiscal) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error('Usuário não autenticado');
 
-      const response = await fetch(`https://gtqmwlxzszttzriswoxj.supabase.co/functions/v1/focus-nfe-api`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0cW13bHh6c3p0dHpyaXN3b3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc3NzUwMjUsImV4cCI6MjA2MzM1MTAyNX0.03XyZCOF5UnUUaNpn44-MlQW0J6Vfo3_rb7mhE7D-Bk'
-        },
-        body: JSON.stringify({
-          action: 'obter_xml',
-          notaId
-        }),
-      });
+        const response = await fetch(`https://gtqmwlxzszttzriswoxj.supabase.co/functions/v1/focus-nfe-api`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0cW13bHh6c3p0dHpyaXN3b3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc3NzUwMjUsImV4cCI6MjA2MzM1MTAyNX0.03XyZCOF5UnUUaNpn44-MlQW0J6Vfo3_rb7mhE7D-Bk'
+          },
+          body: JSON.stringify({
+            action: 'baixar_xml',
+            caminhoXml: nota.json_resposta.caminho_xml_nota_fiscal
+          }),
+        });
 
-      if (response.ok) {
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/xml')) {
+        if (response.ok) {
           const blob = await response.blob();
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `nfe-${notaId}.xml`;
+          a.download = `nfe-${nota.numero_nota}.xml`;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
@@ -209,11 +208,10 @@ export const useNotaFiscal = () => {
           toast.success('XML baixado com sucesso!');
         } else {
           const errorData = await response.json();
-          toast.error(errorData.error || 'XML não disponível');
+          toast.error(errorData.error || 'Erro ao baixar XML');
         }
       } else {
-        const errorData = await response.json();
-        toast.error(errorData.error || 'Erro ao baixar XML');
+        toast.error('XML não disponível para esta nota');
       }
     } catch (error) {
       console.error('Erro ao baixar XML:', error);
