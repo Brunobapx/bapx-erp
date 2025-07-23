@@ -1563,10 +1563,13 @@ export type Database = {
           confirmed_at: string | null
           confirmed_by: string | null
           created_at: string
+          discount_amount: number | null
+          discount_percentage: number | null
           id: string
           invoice_date: string | null
           invoice_number: string | null
           order_id: string
+          original_amount: number | null
           payment_method: string | null
           payment_term: string | null
           sale_number: string
@@ -1582,10 +1585,13 @@ export type Database = {
           confirmed_at?: string | null
           confirmed_by?: string | null
           created_at?: string
+          discount_amount?: number | null
+          discount_percentage?: number | null
           id?: string
           invoice_date?: string | null
           invoice_number?: string | null
           order_id: string
+          original_amount?: number | null
           payment_method?: string | null
           payment_term?: string | null
           sale_number: string
@@ -1601,10 +1607,13 @@ export type Database = {
           confirmed_at?: string | null
           confirmed_by?: string | null
           created_at?: string
+          discount_amount?: number | null
+          discount_percentage?: number | null
           id?: string
           invoice_date?: string | null
           invoice_number?: string | null
           order_id?: string
+          original_amount?: number | null
           payment_method?: string | null
           payment_term?: string | null
           sale_number?: string

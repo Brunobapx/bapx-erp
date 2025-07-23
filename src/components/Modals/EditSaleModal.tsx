@@ -122,17 +122,18 @@ export const EditSaleModal: React.FC<EditSaleModalProps> = ({
         payment_method: saleData.payment_method || '',
         payment_term: saleData.payment_term || '',
         notes: saleData.notes || '',
-        discount_percentage: 0,
-        discount_amount: 0
+        discount_percentage: saleData.discount_percentage || 0,
+        discount_amount: saleData.discount_amount || 0
       });
     }
   }, [saleData, isOpen]);
 
-  // Calcular total com desconto
-  const finalTotal = originalTotal - formData.discount_amount;
+  // Calcular total com desconto baseado nos itens atuais
+  const currentItemsTotal = totalAmount || originalTotal;
+  const finalTotal = Math.max(0, currentItemsTotal - formData.discount_amount);
 
   const handleDiscountPercentageChange = (percentage: number) => {
-    const discountAmount = (originalTotal * percentage) / 100;
+    const discountAmount = (currentItemsTotal * percentage) / 100;
     setFormData(prev => ({
       ...prev,
       discount_percentage: percentage,
@@ -141,7 +142,7 @@ export const EditSaleModal: React.FC<EditSaleModalProps> = ({
   };
 
   const handleDiscountAmountChange = (amount: number) => {
-    const percentage = originalTotal > 0 ? (amount / originalTotal) * 100 : 0;
+    const percentage = currentItemsTotal > 0 ? (amount / currentItemsTotal) * 100 : 0;
     setFormData(prev => ({
       ...prev,
       discount_percentage: percentage,
@@ -165,13 +166,16 @@ export const EditSaleModal: React.FC<EditSaleModalProps> = ({
 
     setLoading(true);
     try {
-      // Atualizar venda
+      // Atualizar venda com informações de desconto
       const { error: saleError } = await supabase
         .from('sales')
         .update({
           payment_method: formData.payment_method,
           payment_term: formData.payment_term,
           notes: formData.notes,
+          discount_percentage: formData.discount_percentage,
+          discount_amount: formData.discount_amount,
+          original_amount: currentItemsTotal,
           total_amount: finalTotal,
           updated_at: new Date().toISOString()
         })
@@ -179,20 +183,48 @@ export const EditSaleModal: React.FC<EditSaleModalProps> = ({
 
       if (saleError) throw saleError;
 
-      // Se houve mudanças no pedido, atualizar também
-      if (hasOrderChanges && orderData) {
+      // Atualizar pedido e itens
+      if (orderData) {
+        // Primeiro, deletar itens antigos
+        const { error: deleteError } = await supabase
+          .from('order_items')
+          .delete()
+          .eq('order_id', orderData.id);
+
+        if (deleteError) throw deleteError;
+
+        // Inserir novos itens
+        if (items.length > 0) {
+          const { error: itemsError } = await supabase
+            .from('order_items')
+            .insert(
+              items.map(item => ({
+                order_id: orderData.id,
+                product_id: item.product_id,
+                product_name: item.product_name,
+                quantity: item.quantity,
+                unit_price: item.unit_price,
+                total_price: item.total_price,
+                user_id: orderData.user_id
+              }))
+            );
+
+          if (itemsError) throw itemsError;
+        }
+
+        // Atualizar totais do pedido
         const { error: orderError } = await supabase
           .from('orders')
           .update({
-            total_amount: totalAmount,
+            payment_method: formData.payment_method,
+            payment_term: formData.payment_term,
+            notes: formData.notes,
+            total_amount: currentItemsTotal,
             updated_at: new Date().toISOString()
           })
           .eq('id', orderData.id);
 
         if (orderError) throw orderError;
-
-        // Atualizar itens do pedido se necessário
-        // (implementação simplificada - em produção seria mais complexa)
       }
 
       toast.success('Venda atualizada com sucesso');
@@ -429,8 +461,8 @@ export const EditSaleModal: React.FC<EditSaleModalProps> = ({
 
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span>Valor Original:</span>
-                      <span className="font-medium">{formatCurrency(originalTotal)}</span>
+                      <span>Valor dos Itens:</span>
+                      <span className="font-medium">{formatCurrency(currentItemsTotal)}</span>
                     </div>
                     <div className="flex justify-between text-red-600">
                       <span>Desconto:</span>
