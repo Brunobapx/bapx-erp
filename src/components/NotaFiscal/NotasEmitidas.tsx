@@ -179,22 +179,24 @@ const NotasEmitidas = () => {
                             )}
                           </Button>
 
-                          {nota.status === 'autorizado' && nota.json_resposta?.caminho_danfe && (
+                          {nota.status === 'autorizado' && nota.focus_id && (
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => baixarPDF(nota)}
+                              title="Baixar DANFE (PDF)"
                             >
                               <Download className="h-3 w-3" />
                               DANFE
                             </Button>
                           )}
 
-                          {nota.status === 'autorizado' && nota.json_resposta?.caminho_xml_nota_fiscal && (
+                          {nota.status === 'autorizado' && nota.focus_id && (
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => baixarXML(nota)}
+                              title="Baixar XML da NFe"
                             >
                               <Download className="h-3 w-3" />
                               XML

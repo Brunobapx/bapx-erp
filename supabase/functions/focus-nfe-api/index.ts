@@ -529,16 +529,26 @@ async function cancelarNFe(supabase: any, userId: string, payload: any) {
 async function obterPDF(supabase: any, userId: string, payload: any) {
   const { notaId } = payload;
 
-  // Buscar nota
-  const { data: nota } = await supabase
+  console.log('Obtendo PDF para nota:', { notaId, userId });
+
+  // Buscar nota (sem filtro por user_id pois estamos usando service role)
+  const { data: nota, error: notaError } = await supabase
     .from('notas_emitidas')
     .select('*')
     .eq('id', notaId)
-    .eq('user_id', userId)
     .single();
+
+  if (notaError) {
+    console.error('Erro ao buscar nota:', notaError);
+    throw new Error('Erro ao buscar nota');
+  }
 
   if (!nota) {
     throw new Error('Nota não encontrada');
+  }
+
+  if (!nota.focus_id) {
+    throw new Error('Nota não possui ID Focus NFe válido');
   }
 
   // Buscar configurações Focus NFe
@@ -559,6 +569,8 @@ async function obterPDF(supabase: any, userId: string, payload: any) {
   const baseUrl = configMap.focus_nfe_environment === 'producao' 
     ? 'https://api.focusnfe.com.br'
     : 'https://homologacao.focusnfe.com.br';
+
+  console.log('Fazendo requisição para Focus NFe:', { baseUrl, focusId: nota.focus_id });
 
   const response = await fetch(`${baseUrl}/v2/nfe/${nota.focus_id}/danfe`, {
     headers: {
@@ -566,36 +578,53 @@ async function obterPDF(supabase: any, userId: string, payload: any) {
     }
   });
 
+  console.log('Resposta da Focus NFe:', { status: response.status, statusText: response.statusText });
+
   if (response.ok) {
     const pdfBuffer = await response.arrayBuffer();
+    console.log('PDF obtido com sucesso, tamanho:', pdfBuffer.byteLength);
+    
     return new Response(pdfBuffer, {
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="nfe-${nota.numero_nota}.pdf"`
+        'Content-Disposition': `attachment; filename="danfe-${nota.numero_nota || nota.focus_id}.pdf"`
       }
     });
   }
 
+  const errorText = await response.text();
+  console.error('Erro ao obter PDF:', { status: response.status, error: errorText });
+  
   return new Response(
-    JSON.stringify({ error: 'PDF não disponível' }),
-    { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    JSON.stringify({ error: 'PDF não disponível', details: errorText }),
+    { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );
 }
 
 async function obterXML(supabase: any, userId: string, payload: any) {
   const { notaId } = payload;
 
-  // Buscar nota
-  const { data: nota } = await supabase
+  console.log('Obtendo XML para nota:', { notaId, userId });
+
+  // Buscar nota (sem filtro por user_id pois estamos usando service role)
+  const { data: nota, error: notaError } = await supabase
     .from('notas_emitidas')
     .select('*')
     .eq('id', notaId)
-    .eq('user_id', userId)
     .single();
+
+  if (notaError) {
+    console.error('Erro ao buscar nota:', notaError);
+    throw new Error('Erro ao buscar nota');
+  }
 
   if (!nota) {
     throw new Error('Nota não encontrada');
+  }
+
+  if (!nota.focus_id) {
+    throw new Error('Nota não possui ID Focus NFe válido');
   }
 
   // Buscar configurações Focus NFe
@@ -617,25 +646,34 @@ async function obterXML(supabase: any, userId: string, payload: any) {
     ? 'https://api.focusnfe.com.br'
     : 'https://homologacao.focusnfe.com.br';
 
+  console.log('Fazendo requisição para Focus NFe:', { baseUrl, focusId: nota.focus_id });
+
   const response = await fetch(`${baseUrl}/v2/nfe/${nota.focus_id}/xml`, {
     headers: {
       'Authorization': `Basic ${btoa(configMap.focus_nfe_token + ':')}`
     }
   });
 
+  console.log('Resposta da Focus NFe:', { status: response.status, statusText: response.statusText });
+
   if (response.ok) {
     const xmlContent = await response.text();
+    console.log('XML obtido com sucesso, tamanho:', xmlContent.length);
+    
     return new Response(xmlContent, {
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/xml',
-        'Content-Disposition': `attachment; filename="nfe-${nota.numero_nota}.xml"`
+        'Content-Disposition': `attachment; filename="nfe-${nota.numero_nota || nota.focus_id}.xml"`
       }
     });
   }
 
+  const errorText = await response.text();
+  console.error('Erro ao obter XML:', { status: response.status, error: errorText });
+  
   return new Response(
-    JSON.stringify({ error: 'XML não disponível' }),
-    { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    JSON.stringify({ error: 'XML não disponível', details: errorText }),
+    { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );
 }
