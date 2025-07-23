@@ -2274,6 +2274,10 @@ export type Database = {
         Args: { user_id?: string }
         Returns: boolean
       }
+      is_seller: {
+        Args: { user_id?: string }
+        Returns: boolean
+      }
       validate_cnpj: {
         Args: { cnpj: string }
         Returns: boolean
