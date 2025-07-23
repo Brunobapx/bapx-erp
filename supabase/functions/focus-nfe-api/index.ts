@@ -68,7 +68,9 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
       'pis_cst', 'pis_aliquota', 'cofins_cst', 'cofins_aliquota',
       'company_name', 'company_cnpj', 'company_ie', 'company_city', 'company_state',
       'company_address', 'company_number', 'company_complement', 'company_neighborhood', 
-      'company_cep', 'company_fantasy_name'
+      'company_cep', 'company_fantasy_name',
+      'nota_fiscal_tipo', 'nota_fiscal_ambiente', 'empresa_tipo', 'csosn_padrao', 'cst_padrao',
+      'icms_percentual', 'pis_percentual', 'cofins_percentual', 'cnpj_emissor'
     ]);
 
   const configMap = allSettings?.reduce((acc, setting) => {
@@ -80,11 +82,12 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     return acc;
   }, {} as Record<string, any>) || {};
 
-  if (!configMap.focus_nfe_enabled) {
-    throw new Error('Emissão via Focus NFe não está habilitada');
+  if (!configMap.focus_nfe_enabled && !configMap.focus_nfe_token) {
+    throw new Error('Focus NFe não está configurado');
   }
 
-  if (!configMap.focus_nfe_token) {
+  const token = configMap.focus_nfe_token || "";
+  if (!token) {
     throw new Error('Token Focus NFe não configurado');
   }
 
@@ -145,15 +148,15 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
   }
 
   // Usar configurações fiscais e dados da empresa dinâmicos
-  const pisAliquota = Number(configMap.pis_aliquota || 1.65);
-  const cofinsAliquota = Number(configMap.cofins_aliquota || 7.6);
+  const pisAliquota = Number(configMap.pis_percentual || configMap.pis_aliquota || 1.65);
+  const cofinsAliquota = Number(configMap.cofins_percentual || configMap.cofins_aliquota || 7.6);
   const defaultCfop = configMap.default_cfop || "5405";
   const defaultNcm = configMap.default_ncm || "19059090";
   const icmsCst = configMap.icms_cst || "60";
   const icmsOrigem = Number(configMap.icms_origem || 0);
   
-  // Dados da empresa do emissor
-  const companyCnpj = (configMap.company_cnpj || "39524018000128").replace(/[^\d]/g, '');
+  // Dados da empresa do emissor (usar cnpj_emissor se configurado, senão company_cnpj)
+  const companyCnpj = (configMap.cnpj_emissor || configMap.company_cnpj || "39524018000128").replace(/[^\d]/g, '');
   const companyName = configMap.company_name || "ARTISAN BREAD PAES ARTESANAIS LTDA";
   const companyFantasyName = configMap.company_fantasy_name || "ARTISAN";
   const companyAddress = configMap.company_address || "V PASTOR MARTIN LUTHER KING JR.";
@@ -289,8 +292,9 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
 
   console.log('NFe Data montada:', JSON.stringify(nfeData, null, 2));
 
-  // Usar ambiente configurado
-  const baseUrl = configMap.focus_nfe_environment === 'producao' 
+  // Usar ambiente configurado (priorizar nota_fiscal_ambiente)
+  const ambiente = configMap.nota_fiscal_ambiente || configMap.focus_nfe_environment || 'homologacao';
+  const baseUrl = ambiente === 'producao' 
     ? 'https://api.focusnfe.com.br'
     : 'https://homologacao.focusnfe.com.br';
   
@@ -300,7 +304,7 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
   const response = await fetch(`${baseUrl}/v2/nfe?ref=${referencia}`, {
     method: 'POST',
     headers: {
-      'Authorization': `Basic ${btoa(configMap.focus_nfe_token + ':')}`,
+      'Authorization': `Basic ${btoa(token + ':')}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(nfeData)
@@ -327,7 +331,7 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     .from('notas_emitidas')
     .insert({
       user_id: userId,
-      tipo_nota: 'nfe',
+      tipo_nota: configMap.nota_fiscal_tipo || 'nfe',
       pedido_id: pedidoId,
       focus_id: responseData.ref || null,
       numero_nota: responseData.numero || null,
@@ -375,7 +379,7 @@ async function consultarStatus(supabase: any, userId: string, payload: any) {
   const { data: focusSettings } = await supabase
     .from('system_settings')
     .select('key, value')
-    .in('key', ['focus_nfe_token', 'focus_nfe_environment']);
+    .in('key', ['focus_nfe_token', 'focus_nfe_environment', 'nota_fiscal_ambiente']);
 
   const configMap = focusSettings?.reduce((acc, setting) => {
     try {
@@ -386,7 +390,8 @@ async function consultarStatus(supabase: any, userId: string, payload: any) {
     return acc;
   }, {} as Record<string, any>) || {};
 
-  const baseUrl = configMap.focus_nfe_environment === 'producao' 
+  const ambiente = configMap.nota_fiscal_ambiente || configMap.focus_nfe_environment || 'homologacao';
+  const baseUrl = ambiente === 'producao' 
     ? 'https://api.focusnfe.com.br'
     : 'https://homologacao.focusnfe.com.br';
 
@@ -460,7 +465,7 @@ async function cancelarNFe(supabase: any, userId: string, payload: any) {
   const { data: focusSettings } = await supabase
     .from('system_settings')
     .select('key, value')
-    .in('key', ['focus_nfe_token', 'focus_nfe_environment']);
+    .in('key', ['focus_nfe_token', 'focus_nfe_environment', 'nota_fiscal_ambiente']);
 
   const configMap = focusSettings?.reduce((acc, setting) => {
     try {
@@ -471,7 +476,8 @@ async function cancelarNFe(supabase: any, userId: string, payload: any) {
     return acc;
   }, {} as Record<string, any>) || {};
 
-  const baseUrl = configMap.focus_nfe_environment === 'producao' 
+  const ambiente = configMap.nota_fiscal_ambiente || configMap.focus_nfe_environment || 'homologacao';
+  const baseUrl = ambiente === 'producao' 
     ? 'https://api.focusnfe.com.br'
     : 'https://homologacao.focusnfe.com.br';
 
@@ -555,7 +561,7 @@ async function obterPDF(supabase: any, userId: string, payload: any) {
   const { data: focusSettings } = await supabase
     .from('system_settings')
     .select('key, value')
-    .in('key', ['focus_nfe_token', 'focus_nfe_environment']);
+    .in('key', ['focus_nfe_token', 'focus_nfe_environment', 'nota_fiscal_ambiente']);
 
   const configMap = focusSettings?.reduce((acc, setting) => {
     try {
@@ -566,7 +572,8 @@ async function obterPDF(supabase: any, userId: string, payload: any) {
     return acc;
   }, {} as Record<string, any>) || {};
 
-  const baseUrl = configMap.focus_nfe_environment === 'producao' 
+  const ambiente = configMap.nota_fiscal_ambiente || configMap.focus_nfe_environment || 'homologacao';
+  const baseUrl = ambiente === 'producao' 
     ? 'https://api.focusnfe.com.br'
     : 'https://homologacao.focusnfe.com.br';
 
@@ -637,7 +644,7 @@ async function obterXML(supabase: any, userId: string, payload: any) {
   const { data: focusSettings } = await supabase
     .from('system_settings')
     .select('key, value')
-    .in('key', ['focus_nfe_token', 'focus_nfe_environment']);
+    .in('key', ['focus_nfe_token', 'focus_nfe_environment', 'nota_fiscal_ambiente']);
 
   const configMap = focusSettings?.reduce((acc, setting) => {
     try {
@@ -648,7 +655,8 @@ async function obterXML(supabase: any, userId: string, payload: any) {
     return acc;
   }, {} as Record<string, any>) || {};
 
-  const baseUrl = configMap.focus_nfe_environment === 'producao' 
+  const ambiente = configMap.nota_fiscal_ambiente || configMap.focus_nfe_environment || 'homologacao';
+  const baseUrl = ambiente === 'producao' 
     ? 'https://api.focusnfe.com.br'
     : 'https://homologacao.focusnfe.com.br';
 

@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Building, FileText, Percent, Save } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Building, FileText, Percent, Save, Settings } from 'lucide-react';
 import { useCompanyFiscalSettings } from '@/hooks/useCompanyFiscalSettings';
 
 export const CompanyFiscalInfo = () => {
@@ -298,13 +299,171 @@ export const CompanyFiscalInfo = () => {
         </CardContent>
       </Card>
 
+      {/* Configurações de Nota Fiscal */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            Configurações de Nota Fiscal
+          </CardTitle>
+          <CardDescription>
+            Configurações específicas para emissão de NFe via Focus NFe
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="nota_fiscal_tipo">Tipo de Nota</Label>
+              <Select
+                value={settings.nota_fiscal_tipo}
+                onValueChange={(value) => setSettings(prev => ({ ...prev, nota_fiscal_tipo: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="nfe">NFe - Nota Fiscal Eletrônica</SelectItem>
+                  <SelectItem value="nfce">NFCe - Nota Fiscal de Consumidor</SelectItem>
+                  <SelectItem value="nfse">NFSe - Nota Fiscal de Serviços</SelectItem>
+                  <SelectItem value="cte">CTe - Conhecimento de Transporte</SelectItem>
+                  <SelectItem value="mdfe">MDFe - Manifesto de Documentos Fiscais</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="nota_fiscal_ambiente">Ambiente</Label>
+              <Select
+                value={settings.nota_fiscal_ambiente}
+                onValueChange={(value) => setSettings(prev => ({ ...prev, nota_fiscal_ambiente: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="homologacao">Homologação</SelectItem>
+                  <SelectItem value="producao">Produção</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="focus_nfe_token">Token Focus NFe</Label>
+              <Input
+                id="focus_nfe_token"
+                type="password"
+                value={settings.focus_nfe_token}
+                onChange={(e) => setSettings(prev => ({ ...prev, focus_nfe_token: e.target.value }))}
+                placeholder="Seu token da API Focus NFe"
+              />
+            </div>
+            <div>
+              <Label htmlFor="cnpj_emissor">CNPJ Emissor</Label>
+              <Input
+                id="cnpj_emissor"
+                value={settings.cnpj_emissor || settings.company_cnpj}
+                onChange={(e) => setSettings(prev => ({ ...prev, cnpj_emissor: e.target.value }))}
+                placeholder="00.000.000/0000-00"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="empresa_tipo">Tipo de Empresa</Label>
+              <Select
+                value={settings.empresa_tipo}
+                onValueChange={(value) => setSettings(prev => ({ ...prev, empresa_tipo: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="MEI">MEI</SelectItem>
+                  <SelectItem value="ME">Microempresa</SelectItem>
+                  <SelectItem value="EPP">Empresa de Pequeno Porte</SelectItem>
+                  <SelectItem value="LTDA">Sociedade Limitada</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="csosn_padrao">CSOSN Padrão</Label>
+              <Input
+                id="csosn_padrao"
+                value={settings.csosn_padrao}
+                onChange={(e) => setSettings(prev => ({ ...prev, csosn_padrao: e.target.value }))}
+                placeholder="Ex: 101"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Para empresas do Simples Nacional</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="cst_padrao">CST Padrão</Label>
+              <Input
+                id="cst_padrao"
+                value={settings.cst_padrao}
+                onChange={(e) => setSettings(prev => ({ ...prev, cst_padrao: e.target.value }))}
+                placeholder="Ex: 00"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Para empresas do Regime Normal</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="icms_percentual">ICMS (%)</Label>
+              <Input
+                id="icms_percentual"
+                type="number"
+                step="0.01"
+                value={settings.icms_percentual}
+                onChange={(e) => setSettings(prev => ({ ...prev, icms_percentual: e.target.value }))}
+                placeholder="Ex: 18"
+              />
+            </div>
+            <div>
+              <Label htmlFor="pis_percentual">PIS (%)</Label>
+              <Input
+                id="pis_percentual"
+                type="number"
+                step="0.01"
+                value={settings.pis_percentual}
+                onChange={(e) => setSettings(prev => ({ ...prev, pis_percentual: e.target.value }))}
+                placeholder="Ex: 1.65"
+              />
+            </div>
+            <div>
+              <Label htmlFor="cofins_percentual">COFINS (%)</Label>
+              <Input
+                id="cofins_percentual"
+                type="number"
+                step="0.01"
+                value={settings.cofins_percentual}
+                onChange={(e) => setSettings(prev => ({ ...prev, cofins_percentual: e.target.value }))}
+                placeholder="Ex: 7.6"
+              />
+            </div>
+          </div>
+
+          <Button onClick={saveSettings} disabled={saving} className="flex items-center gap-2">
+            <Save className="h-4 w-4" />
+            {saving ? 'Salvando...' : 'Salvar Configurações NFe'}
+          </Button>
+        </CardContent>
+      </Card>
+
       <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
         <h4 className="font-medium text-blue-900 mb-2">ℹ️ Informações Importantes</h4>
         <ul className="text-sm text-blue-800 space-y-1">
+          <li>• Todas as configurações fiscais agora estão centralizadas nesta página</li>
           <li>• As configurações tributárias foram baseadas na análise da NF-e modelo 55 anterior</li>
           <li>• A empresa está configurada para substituição tributária (CST 60)</li>
           <li>• PIS/COFINS no regime cumulativo conforme a operação anterior</li>
           <li>• Certifique-se de que o endereço está completo antes de emitir NF-e</li>
+          <li>• Configure o token Focus NFe para habilitar a emissão de notas fiscais</li>
         </ul>
       </div>
     </div>

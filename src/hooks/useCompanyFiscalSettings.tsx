@@ -30,6 +30,18 @@ export interface CompanyFiscalSettings {
   pis_aliquota: string;
   cofins_cst: string;
   cofins_aliquota: string;
+
+  // Configurações NFe
+  nota_fiscal_tipo: string;
+  nota_fiscal_ambiente: string;
+  empresa_tipo: string;
+  csosn_padrao: string;
+  cst_padrao: string;
+  icms_percentual: string;
+  pis_percentual: string;
+  cofins_percentual: string;
+  focus_nfe_token: string;
+  cnpj_emissor: string;
 }
 
 export const useCompanyFiscalSettings = () => {
@@ -60,7 +72,19 @@ export const useCompanyFiscalSettings = () => {
     pis_cst: "01", // Operação tributável com alíquota básica
     pis_aliquota: "1.65", // 1,65%
     cofins_cst: "01", // Operação tributável com alíquota básica  
-    cofins_aliquota: "7.60" // 7,60%
+    cofins_aliquota: "7.60", // 7,60%
+
+    // Configurações NFe
+    nota_fiscal_tipo: "nfe",
+    nota_fiscal_ambiente: "homologacao",
+    empresa_tipo: "MEI",
+    csosn_padrao: "101",
+    cst_padrao: "00",
+    icms_percentual: "18",
+    pis_percentual: "1.65",
+    cofins_percentual: "7.6",
+    focus_nfe_token: "",
+    cnpj_emissor: ""
   });
 
   const [loading, setLoading] = useState(false);
@@ -76,7 +100,9 @@ export const useCompanyFiscalSettings = () => {
           'company_name', 'company_cnpj', 'company_ie', 'company_city', 'company_state',
           'company_address', 'company_number', 'company_complement', 'company_neighborhood', 'company_cep', 'company_fantasy_name',
           'tax_regime', 'default_cfop', 'default_ncm', 'icms_cst', 'icms_origem',
-          'pis_cst', 'pis_aliquota', 'cofins_cst', 'cofins_aliquota'
+          'pis_cst', 'pis_aliquota', 'cofins_cst', 'cofins_aliquota',
+          'nota_fiscal_tipo', 'nota_fiscal_ambiente', 'empresa_tipo', 'csosn_padrao', 'cst_padrao',
+          'icms_percentual', 'pis_percentual', 'cofins_percentual', 'focus_nfe_token', 'cnpj_emissor'
         ]);
 
       if (error) throw error;
@@ -112,7 +138,17 @@ export const useCompanyFiscalSettings = () => {
         pis_cst: settingsMap.pis_cst || prev.pis_cst,
         pis_aliquota: settingsMap.pis_aliquota || prev.pis_aliquota,
         cofins_cst: settingsMap.cofins_cst || prev.cofins_cst,
-        cofins_aliquota: settingsMap.cofins_aliquota || prev.cofins_aliquota
+        cofins_aliquota: settingsMap.cofins_aliquota || prev.cofins_aliquota,
+        nota_fiscal_tipo: settingsMap.nota_fiscal_tipo || prev.nota_fiscal_tipo,
+        nota_fiscal_ambiente: settingsMap.nota_fiscal_ambiente || prev.nota_fiscal_ambiente,
+        empresa_tipo: settingsMap.empresa_tipo || prev.empresa_tipo,
+        csosn_padrao: settingsMap.csosn_padrao || prev.csosn_padrao,
+        cst_padrao: settingsMap.cst_padrao || prev.cst_padrao,
+        icms_percentual: settingsMap.icms_percentual || prev.icms_percentual,
+        pis_percentual: settingsMap.pis_percentual || prev.pis_percentual,
+        cofins_percentual: settingsMap.cofins_percentual || prev.cofins_percentual,
+        focus_nfe_token: settingsMap.focus_nfe_token || prev.focus_nfe_token,
+        cnpj_emissor: settingsMap.cnpj_emissor || prev.cnpj_emissor
       }));
 
     } catch (error) {
@@ -146,7 +182,17 @@ export const useCompanyFiscalSettings = () => {
         { key: 'pis_cst', value: JSON.stringify(settings.pis_cst), category: 'fiscal' },
         { key: 'pis_aliquota', value: JSON.stringify(settings.pis_aliquota), category: 'fiscal' },
         { key: 'cofins_cst', value: JSON.stringify(settings.cofins_cst), category: 'fiscal' },
-        { key: 'cofins_aliquota', value: JSON.stringify(settings.cofins_aliquota), category: 'fiscal' }
+        { key: 'cofins_aliquota', value: JSON.stringify(settings.cofins_aliquota), category: 'fiscal' },
+        { key: 'nota_fiscal_tipo', value: JSON.stringify(settings.nota_fiscal_tipo), category: 'fiscal' },
+        { key: 'nota_fiscal_ambiente', value: JSON.stringify(settings.nota_fiscal_ambiente), category: 'fiscal' },
+        { key: 'empresa_tipo', value: JSON.stringify(settings.empresa_tipo), category: 'company' },
+        { key: 'csosn_padrao', value: JSON.stringify(settings.csosn_padrao), category: 'fiscal' },
+        { key: 'cst_padrao', value: JSON.stringify(settings.cst_padrao), category: 'fiscal' },
+        { key: 'icms_percentual', value: JSON.stringify(settings.icms_percentual), category: 'fiscal' },
+        { key: 'pis_percentual', value: JSON.stringify(settings.pis_percentual), category: 'fiscal' },
+        { key: 'cofins_percentual', value: JSON.stringify(settings.cofins_percentual), category: 'fiscal' },
+        { key: 'focus_nfe_token', value: JSON.stringify(settings.focus_nfe_token), category: 'fiscal' },
+        { key: 'cnpj_emissor', value: JSON.stringify(settings.cnpj_emissor), category: 'company' }
       ];
 
       for (const update of updates) {
