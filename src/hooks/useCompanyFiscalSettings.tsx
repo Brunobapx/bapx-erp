@@ -42,6 +42,8 @@ export interface CompanyFiscalSettings {
   cofins_percentual: string;
   focus_nfe_token: string;
   cnpj_emissor: string;
+  focus_nfe_enabled: boolean;
+  nfe_initial_number: string;
 }
 
 export const useCompanyFiscalSettings = () => {
@@ -84,7 +86,9 @@ export const useCompanyFiscalSettings = () => {
     pis_percentual: "1.65",
     cofins_percentual: "7.6",
     focus_nfe_token: "",
-    cnpj_emissor: ""
+    cnpj_emissor: "",
+    focus_nfe_enabled: false,
+    nfe_initial_number: ""
   });
 
   const [loading, setLoading] = useState(false);
@@ -102,7 +106,8 @@ export const useCompanyFiscalSettings = () => {
           'tax_regime', 'default_cfop', 'default_ncm', 'icms_cst', 'icms_origem',
           'pis_cst', 'pis_aliquota', 'cofins_cst', 'cofins_aliquota',
           'nota_fiscal_tipo', 'nota_fiscal_ambiente', 'empresa_tipo', 'csosn_padrao', 'cst_padrao',
-          'icms_percentual', 'pis_percentual', 'cofins_percentual', 'focus_nfe_token', 'cnpj_emissor'
+          'icms_percentual', 'pis_percentual', 'cofins_percentual', 'focus_nfe_token', 'cnpj_emissor',
+          'focus_nfe_enabled', 'nfe_initial_number'
         ]);
 
       if (error) throw error;
@@ -148,7 +153,9 @@ export const useCompanyFiscalSettings = () => {
         pis_percentual: settingsMap.pis_percentual || prev.pis_percentual,
         cofins_percentual: settingsMap.cofins_percentual || prev.cofins_percentual,
         focus_nfe_token: settingsMap.focus_nfe_token || prev.focus_nfe_token,
-        cnpj_emissor: settingsMap.cnpj_emissor || prev.cnpj_emissor
+        cnpj_emissor: settingsMap.cnpj_emissor || prev.cnpj_emissor,
+        focus_nfe_enabled: settingsMap.focus_nfe_enabled !== undefined ? settingsMap.focus_nfe_enabled : prev.focus_nfe_enabled,
+        nfe_initial_number: settingsMap.nfe_initial_number || prev.nfe_initial_number
       }));
 
     } catch (error) {
@@ -192,7 +199,9 @@ export const useCompanyFiscalSettings = () => {
         { key: 'pis_percentual', value: JSON.stringify(settings.pis_percentual), category: 'fiscal' },
         { key: 'cofins_percentual', value: JSON.stringify(settings.cofins_percentual), category: 'fiscal' },
         { key: 'focus_nfe_token', value: JSON.stringify(settings.focus_nfe_token), category: 'fiscal' },
-        { key: 'cnpj_emissor', value: JSON.stringify(settings.cnpj_emissor), category: 'company' }
+        { key: 'cnpj_emissor', value: JSON.stringify(settings.cnpj_emissor), category: 'company' },
+        { key: 'focus_nfe_enabled', value: JSON.stringify(settings.focus_nfe_enabled), category: 'fiscal' },
+        { key: 'nfe_initial_number', value: JSON.stringify(settings.nfe_initial_number), category: 'fiscal' }
       ];
 
       for (const update of updates) {

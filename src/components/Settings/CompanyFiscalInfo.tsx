@@ -1,16 +1,68 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building, FileText, Percent, Save } from 'lucide-react';
+import { Building, FileText, Percent, Save, ExternalLink } from 'lucide-react';
 import { useCompanyFiscalSettings } from '@/hooks/useCompanyFiscalSettings';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export const CompanyFiscalInfo = () => {
   const { settings, setSettings, loading, saving, saveSettings, getTaxInfo } = useCompanyFiscalSettings();
   const taxInfo = getTaxInfo();
+  const [testingConnection, setTestingConnection] = useState(false);
+
+  const testConnection = async () => {
+    if (!settings.focus_nfe_token) {
+      toast.error('Token Focus NFe é obrigatório');
+      return;
+    }
+
+    setTestingConnection(true);
+    try {
+      console.log('Testando conexão com token:', settings.focus_nfe_token?.substring(0, 10) + '...');
+      console.log('Ambiente:', settings.nota_fiscal_ambiente);
+      
+      const { data, error } = await supabase.functions.invoke('focus-nfe-emission', {
+        body: {
+          action: 'test_connection',
+          token: settings.focus_nfe_token,
+          environment: settings.nota_fiscal_ambiente
+        }
+      });
+
+      console.log('Resposta da edge function:', { data, error });
+
+      if (error) {
+        console.error('Erro ao chamar edge function:', error);
+        toast.error(`Erro ao chamar função: ${error.message || 'Erro desconhecido'}`);
+        return;
+      }
+
+      if (!data) {
+        console.error('Resposta vazia da edge function');
+        toast.error('Resposta vazia da função');
+        return;
+      }
+
+      if (data.success) {
+        toast.success('Conexão com Focus NFe estabelecida com sucesso!');
+      } else {
+        const errorMsg = data.error || 'Erro na conexão com Focus NFe. Verifique o token.';
+        console.error('Erro na resposta:', errorMsg);
+        toast.error(errorMsg);
+      }
+    } catch (error) {
+      console.error('Erro ao testar conexão (catch):', error);
+      toast.error(`Erro ao testar conexão: ${error.message || 'Erro desconhecido'}`);
+    } finally {
+      setTestingConnection(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -348,6 +400,21 @@ export const CompanyFiscalInfo = () => {
             <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
               Configurações de Emissão da NF
             </h4>
+            
+            {/* Switch de habilitação */}
+            <div className="flex items-center space-x-2 p-3 bg-muted/50 rounded-lg">
+              <Switch
+                id="focus_nfe_enabled"
+                checked={settings.focus_nfe_enabled}
+                onCheckedChange={(checked) => 
+                  setSettings(prev => ({ ...prev, focus_nfe_enabled: checked }))
+                }
+              />
+              <Label htmlFor="focus_nfe_enabled" className="font-medium">
+                Habilitar emissão via Focus NFe
+              </Label>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="nota_fiscal_tipo">Tipo de Nota *</Label>
@@ -389,6 +456,18 @@ export const CompanyFiscalInfo = () => {
                   onChange={(e) => setSettings(prev => ({ ...prev, focus_nfe_token: e.target.value }))}
                   placeholder="Token da API Focus NFe"
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Para obter seu token, acesse a{' '}
+                  <a 
+                    href="https://focusnfe.com.br/painel/" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline inline-flex items-center gap-1"
+                  >
+                    área do cliente Focus NFe
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </p>
               </div>
               <div>
                 <Label htmlFor="cnpj_emissor">CNPJ Emissor *</Label>
@@ -398,6 +477,19 @@ export const CompanyFiscalInfo = () => {
                   onChange={(e) => setSettings(prev => ({ ...prev, cnpj_emissor: e.target.value }))}
                   placeholder="00.000.000/0000-00"
                 />
+              </div>
+              <div>
+                <Label htmlFor="nfe_initial_number">Numeração Inicial da NFe</Label>
+                <Input
+                  id="nfe_initial_number"
+                  type="number"
+                  value={settings.nfe_initial_number}
+                  onChange={(e) => setSettings(prev => ({ ...prev, nfe_initial_number: e.target.value }))}
+                  placeholder="Ex: 1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Defina o número inicial para a numeração sequencial das notas fiscais
+                </p>
               </div>
             </div>
           </div>
@@ -482,10 +574,20 @@ export const CompanyFiscalInfo = () => {
             </div>
           </div>
 
-          <Button onClick={saveSettings} disabled={saving} className="flex items-center gap-2 w-full md:w-auto">
-            <Save className="h-4 w-4" />
-            {saving ? 'Salvando Configurações...' : 'Salvar Configurações Fiscais'}
-          </Button>
+          <div className="flex gap-2 flex-wrap">
+            <Button onClick={saveSettings} disabled={saving} className="flex items-center gap-2">
+              <Save className="h-4 w-4" />
+              {saving ? 'Salvando Configurações...' : 'Salvar Configurações Fiscais'}
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={testConnection}
+              disabled={testingConnection || !settings.focus_nfe_token}
+              className="flex items-center gap-2"
+            >
+              {testingConnection ? 'Testando...' : 'Testar Conexão'}
+            </Button>
+          </div>
 
           {/* Informações importantes */}
           <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
