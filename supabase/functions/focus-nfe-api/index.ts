@@ -587,11 +587,14 @@ async function obterPDF(supabase: any, userId: string, payload: any) {
     const pdfBuffer = await response.arrayBuffer();
     console.log('PDF obtido com sucesso, tamanho:', pdfBuffer.byteLength);
     
+    // Retornar o PDF diretamente como binary response
     return new Response(pdfBuffer, {
+      status: 200,
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="danfe-${nota.numero_nota || nota.focus_id}.pdf"`
+        'Content-Disposition': `attachment; filename="danfe-${nota.numero_nota || nota.focus_id}.pdf"`,
+        'Content-Length': pdfBuffer.byteLength.toString()
       }
     });
   }
