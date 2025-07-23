@@ -401,7 +401,11 @@ export const EditSaleModal: React.FC<EditSaleModalProps> = ({
                         min="0"
                         max="100"
                         value={formData.discount_percentage.toFixed(2)}
-                        onChange={(e) => handleDiscountPercentageChange(Number(e.target.value))}
+                        onChange={(e) => {
+                          const value = parseFloat(e.target.value) || 0;
+                          const rounded = Math.round(value * 100) / 100;
+                          handleDiscountPercentageChange(rounded);
+                        }}
                       />
                     </div>
 
@@ -412,7 +416,11 @@ export const EditSaleModal: React.FC<EditSaleModalProps> = ({
                         step="0.01"
                         min="0"
                         value={formData.discount_amount.toFixed(2)}
-                        onChange={(e) => handleDiscountAmountChange(Number(e.target.value))}
+                        onChange={(e) => {
+                          const value = parseFloat(e.target.value) || 0;
+                          const rounded = Math.round(value * 100) / 100;
+                          handleDiscountAmountChange(rounded);
+                        }}
                       />
                     </div>
                   </div>
