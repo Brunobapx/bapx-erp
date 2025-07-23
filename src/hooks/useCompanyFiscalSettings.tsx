@@ -44,6 +44,22 @@ export interface CompanyFiscalSettings {
   cnpj_emissor: string;
   focus_nfe_enabled: boolean;
   nfe_initial_number: string;
+  
+  // ICMS ST Destacado
+  icms_st_destacado_por_item: boolean;
+  icms_st_base_calculo_retido: string;
+  icms_st_valor_retido: string;
+  icms_st_aliquota: string;
+  
+  // FCP ST
+  fcp_st_habilitado: boolean;
+  fcp_st_base_calculo_retido: string;
+  fcp_st_valor_retido: string;
+  fcp_st_aliquota: string;
+  
+  // Valor Total de Tributos
+  informar_valor_total_tributos: boolean;
+  percentual_carga_tributaria: string;
 }
 
 export const useCompanyFiscalSettings = () => {
@@ -88,7 +104,23 @@ export const useCompanyFiscalSettings = () => {
     focus_nfe_token: "",
     cnpj_emissor: "",
     focus_nfe_enabled: false,
-    nfe_initial_number: ""
+    nfe_initial_number: "",
+    
+    // ICMS ST Destacado - valores padrão
+    icms_st_destacado_por_item: false,
+    icms_st_base_calculo_retido: "",
+    icms_st_valor_retido: "",
+    icms_st_aliquota: "",
+    
+    // FCP ST - valores padrão
+    fcp_st_habilitado: false,
+    fcp_st_base_calculo_retido: "",
+    fcp_st_valor_retido: "",
+    fcp_st_aliquota: "",
+    
+    // Valor Total de Tributos - valores padrão
+    informar_valor_total_tributos: false,
+    percentual_carga_tributaria: ""
   });
 
   const [loading, setLoading] = useState(false);
@@ -107,7 +139,10 @@ export const useCompanyFiscalSettings = () => {
           'pis_cst', 'pis_aliquota', 'cofins_cst', 'cofins_aliquota',
           'nota_fiscal_tipo', 'nota_fiscal_ambiente', 'empresa_tipo', 'csosn_padrao', 'cst_padrao',
           'icms_percentual', 'pis_percentual', 'cofins_percentual', 'focus_nfe_token', 'cnpj_emissor',
-          'focus_nfe_enabled', 'nfe_initial_number'
+          'focus_nfe_enabled', 'nfe_initial_number',
+          'icms_st_destacado_por_item', 'icms_st_base_calculo_retido', 'icms_st_valor_retido', 'icms_st_aliquota',
+          'fcp_st_habilitado', 'fcp_st_base_calculo_retido', 'fcp_st_valor_retido', 'fcp_st_aliquota',
+          'informar_valor_total_tributos', 'percentual_carga_tributaria'
         ]);
 
       if (error) throw error;
@@ -155,7 +190,19 @@ export const useCompanyFiscalSettings = () => {
         focus_nfe_token: settingsMap.focus_nfe_token || prev.focus_nfe_token,
         cnpj_emissor: settingsMap.cnpj_emissor || prev.cnpj_emissor,
         focus_nfe_enabled: settingsMap.focus_nfe_enabled !== undefined ? settingsMap.focus_nfe_enabled : prev.focus_nfe_enabled,
-        nfe_initial_number: settingsMap.nfe_initial_number || prev.nfe_initial_number
+        nfe_initial_number: settingsMap.nfe_initial_number || prev.nfe_initial_number,
+        
+        // Novos campos ICMS ST, FCP ST e vTotTrib
+        icms_st_destacado_por_item: settingsMap.icms_st_destacado_por_item !== undefined ? settingsMap.icms_st_destacado_por_item : prev.icms_st_destacado_por_item,
+        icms_st_base_calculo_retido: settingsMap.icms_st_base_calculo_retido || prev.icms_st_base_calculo_retido,
+        icms_st_valor_retido: settingsMap.icms_st_valor_retido || prev.icms_st_valor_retido,
+        icms_st_aliquota: settingsMap.icms_st_aliquota || prev.icms_st_aliquota,
+        fcp_st_habilitado: settingsMap.fcp_st_habilitado !== undefined ? settingsMap.fcp_st_habilitado : prev.fcp_st_habilitado,
+        fcp_st_base_calculo_retido: settingsMap.fcp_st_base_calculo_retido || prev.fcp_st_base_calculo_retido,
+        fcp_st_valor_retido: settingsMap.fcp_st_valor_retido || prev.fcp_st_valor_retido,
+        fcp_st_aliquota: settingsMap.fcp_st_aliquota || prev.fcp_st_aliquota,
+        informar_valor_total_tributos: settingsMap.informar_valor_total_tributos !== undefined ? settingsMap.informar_valor_total_tributos : prev.informar_valor_total_tributos,
+        percentual_carga_tributaria: settingsMap.percentual_carga_tributaria || prev.percentual_carga_tributaria
       }));
 
     } catch (error) {
@@ -201,7 +248,19 @@ export const useCompanyFiscalSettings = () => {
         { key: 'focus_nfe_token', value: JSON.stringify(settings.focus_nfe_token), category: 'fiscal' },
         { key: 'cnpj_emissor', value: JSON.stringify(settings.cnpj_emissor), category: 'company' },
         { key: 'focus_nfe_enabled', value: JSON.stringify(settings.focus_nfe_enabled), category: 'fiscal' },
-        { key: 'nfe_initial_number', value: JSON.stringify(settings.nfe_initial_number), category: 'fiscal' }
+        { key: 'nfe_initial_number', value: JSON.stringify(settings.nfe_initial_number), category: 'fiscal' },
+        
+        // Novos campos
+        { key: 'icms_st_destacado_por_item', value: JSON.stringify(settings.icms_st_destacado_por_item), category: 'fiscal' },
+        { key: 'icms_st_base_calculo_retido', value: JSON.stringify(settings.icms_st_base_calculo_retido), category: 'fiscal' },
+        { key: 'icms_st_valor_retido', value: JSON.stringify(settings.icms_st_valor_retido), category: 'fiscal' },
+        { key: 'icms_st_aliquota', value: JSON.stringify(settings.icms_st_aliquota), category: 'fiscal' },
+        { key: 'fcp_st_habilitado', value: JSON.stringify(settings.fcp_st_habilitado), category: 'fiscal' },
+        { key: 'fcp_st_base_calculo_retido', value: JSON.stringify(settings.fcp_st_base_calculo_retido), category: 'fiscal' },
+        { key: 'fcp_st_valor_retido', value: JSON.stringify(settings.fcp_st_valor_retido), category: 'fiscal' },
+        { key: 'fcp_st_aliquota', value: JSON.stringify(settings.fcp_st_aliquota), category: 'fiscal' },
+        { key: 'informar_valor_total_tributos', value: JSON.stringify(settings.informar_valor_total_tributos), category: 'fiscal' },
+        { key: 'percentual_carga_tributaria', value: JSON.stringify(settings.percentual_carga_tributaria), category: 'fiscal' }
       ];
 
       for (const update of updates) {
