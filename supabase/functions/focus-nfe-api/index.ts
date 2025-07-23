@@ -58,18 +58,28 @@ serve(async (req) => {
 async function emitirNFe(supabase: any, userId: string, payload: any) {
   const { pedidoId } = payload;
 
-  // Buscar configurações
-  const { data: config } = await supabase
-    .from('nota_configuracoes')
-    .select('*')
-    .eq('user_id', userId)
-    .single();
+  // Buscar configurações Focus NFe do sistema existente
+  const { data: focusSettings } = await supabase
+    .from('system_settings')
+    .select('key, value')
+    .in('key', ['focus_nfe_token', 'focus_nfe_environment', 'focus_nfe_enabled']);
 
-  if (!config) {
-    throw new Error('Configurações de nota fiscal não encontradas');
+  const configMap = focusSettings?.reduce((acc, setting) => {
+    try {
+      acc[setting.key] = JSON.parse(setting.value as string);
+    } catch {
+      acc[setting.key] = setting.value;
+    }
+    return acc;
+  }, {} as Record<string, any>) || {};
+
+  if (!configMap.focus_nfe_enabled) {
+    throw new Error('Emissão via Focus NFe não está habilitada');
   }
 
-  console.log('Config encontrada:', config);
+  if (!configMap.focus_nfe_token) {
+    throw new Error('Token Focus NFe não configurado');
+  }
 
   // Buscar dados do pedido com JOIN correto
   const { data: pedido } = await supabase
@@ -90,11 +100,7 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
   console.log('Pedido encontrado:', { id: pedido.id, client_name: pedido.client_name, items_count: pedido.order_items?.length });
 
   // Validar dados obrigatórios
-  if (!config.cnpj_emissor) {
-    throw new Error('CNPJ do emissor não configurado');
-  }
-
-  if (!config.token_focus) {
+  if (!configMap.focus_nfe_token) {
     throw new Error('Token Focus NFe não configurado');
   }
 
@@ -102,14 +108,13 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     throw new Error('Pedido sem itens');
   }
 
-  // Calcular valores totais
+  // Calcular valores totais usando configurações fiscais existentes
   const valorTotalItens = pedido.order_items.reduce((sum: number, item: any) => sum + Number(item.total_price), 0);
-  const valorTotalICMS = valorTotalItens * (Number(config.icms_percentual) / 100);
-  const valorTotalPIS = valorTotalItens * (Number(config.pis_percentual) / 100);
-  const valorTotalCOFINS = valorTotalItens * (Number(config.cofins_percentual) / 100);
-  const valorTotalTributos = valorTotalICMS + valorTotalPIS + valorTotalCOFINS;
+  const valorTotalPIS = valorTotalItens * (1.65 / 100); // PIS 1.65%
+  const valorTotalCOFINS = valorTotalItens * (7.6 / 100); // COFINS 7.6%
+  const valorTotalTributos = valorTotalPIS + valorTotalCOFINS;
 
-  // Montar JSON da NFe conforme documentação oficial Focus NFe
+  // Montar JSON da NFe usando dados da ARTISAN BREAD
   const nfeData = {
     natureza_operacao: "Venda",
     data_emissao: new Date().toISOString().split('T')[0],
@@ -117,29 +122,29 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     tipo_documento: 1,
     finalidade_emissao: 1,
     
-    // Dados completos do emitente (obrigatórios conforme doc)
-    cnpj_emitente: config.cnpj_emissor.replace(/[^\d]/g, ''),
-    nome_emitente: "Empresa Teste LTDA",
-    nome_fantasia_emitente: "Empresa Teste",
-    logradouro_emitente: "Rua Padre Natal Pigato",
-    numero_emitente: "100",
-    bairro_emitente: "Santa Felicidade",
-    municipio_emitente: "São Paulo",
-    uf_emitente: "SP",
-    cep_emitente: "01234567",
-    codigo_municipio_emitente: "3550308",
-    inscricao_estadual_emitente: "123456789",
-    regime_tributario_emitente: Number(config.regime_tributario) || 3,
+    // Dados da ARTISAN BREAD (empresa emitente)
+    cnpj_emitente: "39524018000128",
+    nome_emitente: "ARTISAN BREAD PAES ARTESANAIS LTDA",
+    nome_fantasia_emitente: "ARTISAN",
+    logradouro_emitente: "Rua Flora Rica",
+    numero_emitente: "30",
+    bairro_emitente: "Engenho da Rainha",
+    municipio_emitente: "Rio de Janeiro",
+    uf_emitente: "RJ",
+    cep_emitente: "20766620",
+    codigo_municipio_emitente: "3304557",
+    inscricao_estadual_emitente: "11867847",
+    regime_tributario_emitente: 3, // Regime Normal
     
-    // Dados do destinatário
-    nome_destinatario: pedido.clients?.name || pedido.client_name || "NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL",
-    logradouro_destinatario: pedido.clients?.address || "Rua São Januário",
-    numero_destinatario: pedido.clients?.number || "99",
-    bairro_destinatario: pedido.clients?.bairro || "Crespo",
-    municipio_destinatario: pedido.clients?.city || "Manaus",
-    uf_destinatario: pedido.clients?.state || "AM",
-    cep_destinatario: (pedido.clients?.zip || "69073178").replace(/[^\d]/g, ''),
-    codigo_municipio_destinatario: "3550308",
+    // Dados do destinatário (cliente)
+    nome_destinatario: pedido.clients?.name || pedido.client_name || "CONSUMIDOR FINAL",
+    logradouro_destinatario: pedido.clients?.address || "Não informado",
+    numero_destinatario: pedido.clients?.number || "S/N",
+    bairro_destinatario: pedido.clients?.bairro || "Não informado",
+    municipio_destinatario: pedido.clients?.city || "Rio de Janeiro",
+    uf_destinatario: pedido.clients?.state || "RJ",
+    cep_destinatario: (pedido.clients?.zip || "20000000").replace(/[^\d]/g, ''),
+    codigo_municipio_destinatario: "3304557", // Rio de Janeiro
     pais_destinatario: "Brasil",
     
     // Valores totais calculados
@@ -172,7 +177,7 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
       numero_item: index + 1,
       codigo_produto: item.product_id,
       descricao: item.product_name,
-      cfop: config.cfop_padrao || "5102",
+      cfop: "5405", // CFOP da ARTISAN BREAD
       unidade_comercial: "UN",
       quantidade_comercial: Number(item.quantity),
       valor_unitario_comercial: Number(item.unit_price),
@@ -180,10 +185,10 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
       unidade_tributavel: "UN",
       quantidade_tributavel: Number(item.quantity),
       valor_unitario_tributacao: Number(item.unit_price),
-      codigo_ncm: "49111090", // NCM genérico - deveria vir do cadastro do produto
+      codigo_ncm: "19059090", // NCM padrão da ARTISAN BREAD
       
-      // ICMS completo
-      icms_situacao_tributaria: config.csosn_padrao || "101",
+      // ICMS - Substituição Tributária conforme empresa
+      icms_situacao_tributaria: "60", // Substituição tributária
       icms_origem: 0,
       icms_base_calculo: 0,
       icms_valor: 0,
@@ -193,16 +198,16 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
       ipi_situacao_tributaria: "53", // Saída não tributada
       ipi_valor: 0,
       
-      // PIS completo
+      // PIS conforme ARTISAN BREAD
       pis_situacao_tributaria: "01",
-      pis_aliquota_porcentual: Number(config.pis_percentual) || 1.65,
-      pis_valor: Number(item.total_price) * (Number(config.pis_percentual || 1.65) / 100),
+      pis_aliquota_porcentual: 1.65,
+      pis_valor: Number(item.total_price) * (1.65 / 100),
       pis_base_calculo: Number(item.total_price),
       
-      // COFINS completo
+      // COFINS conforme ARTISAN BREAD
       cofins_situacao_tributaria: "01",
-      cofins_aliquota_porcentual: Number(config.cofins_percentual) || 7.6,
-      cofins_valor: Number(item.total_price) * (Number(config.cofins_percentual || 7.6) / 100),
+      cofins_aliquota_porcentual: 7.6,
+      cofins_valor: Number(item.total_price) * (7.6 / 100),
       cofins_base_calculo: Number(item.total_price),
       
       // Valor total de tributos do item
@@ -222,18 +227,18 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
 
   console.log('NFe Data montada:', JSON.stringify(nfeData, null, 2));
 
-  // Fazer chamada para API Focus NFe
-  const baseUrl = config.ambiente === 'producao' 
+  // Usar ambiente configurado
+  const baseUrl = configMap.focus_nfe_environment === 'producao' 
     ? 'https://api.focusnfe.com.br'
     : 'https://homologacao.focusnfe.com.br';
-
+  
   // Usar referência única para a NFe
   const referencia = `nfe_${pedidoId}_${Date.now()}`;
   
   const response = await fetch(`${baseUrl}/v2/nfe?ref=${referencia}`, {
     method: 'POST',
     headers: {
-      'Authorization': `Basic ${btoa(config.token_focus + ':')}`,
+      'Authorization': `Basic ${btoa(configMap.focus_nfe_token + ':')}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(nfeData)
@@ -260,7 +265,7 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     .from('notas_emitidas')
     .insert({
       user_id: userId,
-      tipo_nota: config.tipo_nota,
+      tipo_nota: 'nfe',
       pedido_id: pedidoId,
       focus_id: responseData.ref || null,
       numero_nota: responseData.numero || null,
@@ -295,7 +300,7 @@ async function consultarStatus(supabase: any, userId: string, payload: any) {
   // Buscar nota
   const { data: nota } = await supabase
     .from('notas_emitidas')
-    .select('*, nota_configuracoes!inner(*)')
+    .select('*')
     .eq('id', notaId)
     .eq('user_id', userId)
     .single();
@@ -304,14 +309,28 @@ async function consultarStatus(supabase: any, userId: string, payload: any) {
     throw new Error('Nota não encontrada');
   }
 
-  const config = nota.nota_configuracoes;
-  const baseUrl = config.ambiente === 'producao' 
+  // Buscar configurações Focus NFe
+  const { data: focusSettings } = await supabase
+    .from('system_settings')
+    .select('key, value')
+    .in('key', ['focus_nfe_token', 'focus_nfe_environment']);
+
+  const configMap = focusSettings?.reduce((acc, setting) => {
+    try {
+      acc[setting.key] = JSON.parse(setting.value as string);
+    } catch {
+      acc[setting.key] = setting.value;
+    }
+    return acc;
+  }, {} as Record<string, any>) || {};
+
+  const baseUrl = configMap.focus_nfe_environment === 'producao' 
     ? 'https://api.focusnfe.com.br'
     : 'https://homologacao.focusnfe.com.br';
 
   const response = await fetch(`${baseUrl}/v2/nfe/${nota.focus_id}`, {
     headers: {
-      'Authorization': `Basic ${btoa(config.token_focus + ':')}`
+      'Authorization': `Basic ${btoa(configMap.focus_nfe_token + ':')}`
     }
   });
 
@@ -366,7 +385,7 @@ async function cancelarNFe(supabase: any, userId: string, payload: any) {
   // Buscar nota
   const { data: nota } = await supabase
     .from('notas_emitidas')
-    .select('*, nota_configuracoes!inner(*)')
+    .select('*')
     .eq('id', notaId)
     .eq('user_id', userId)
     .single();
@@ -375,15 +394,29 @@ async function cancelarNFe(supabase: any, userId: string, payload: any) {
     throw new Error('Nota não encontrada');
   }
 
-  const config = nota.nota_configuracoes;
-  const baseUrl = config.ambiente === 'producao' 
+  // Buscar configurações Focus NFe
+  const { data: focusSettings } = await supabase
+    .from('system_settings')
+    .select('key, value')
+    .in('key', ['focus_nfe_token', 'focus_nfe_environment']);
+
+  const configMap = focusSettings?.reduce((acc, setting) => {
+    try {
+      acc[setting.key] = JSON.parse(setting.value as string);
+    } catch {
+      acc[setting.key] = setting.value;
+    }
+    return acc;
+  }, {} as Record<string, any>) || {};
+
+  const baseUrl = configMap.focus_nfe_environment === 'producao' 
     ? 'https://api.focusnfe.com.br'
     : 'https://homologacao.focusnfe.com.br';
 
   const response = await fetch(`${baseUrl}/v2/nfe/${nota.focus_id}`, {
     method: 'DELETE',
     headers: {
-      'Authorization': `Basic ${btoa(config.token_focus + ':')}`,
+      'Authorization': `Basic ${btoa(configMap.focus_nfe_token + ':')}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({ justificativa: motivo })
@@ -437,7 +470,7 @@ async function obterPDF(supabase: any, userId: string, payload: any) {
   // Buscar nota
   const { data: nota } = await supabase
     .from('notas_emitidas')
-    .select('*, nota_configuracoes!inner(*)')
+    .select('*')
     .eq('id', notaId)
     .eq('user_id', userId)
     .single();
@@ -446,14 +479,28 @@ async function obterPDF(supabase: any, userId: string, payload: any) {
     throw new Error('Nota não encontrada');
   }
 
-  const config = nota.nota_configuracoes;
-  const baseUrl = config.ambiente === 'producao' 
+  // Buscar configurações Focus NFe
+  const { data: focusSettings } = await supabase
+    .from('system_settings')
+    .select('key, value')
+    .in('key', ['focus_nfe_token', 'focus_nfe_environment']);
+
+  const configMap = focusSettings?.reduce((acc, setting) => {
+    try {
+      acc[setting.key] = JSON.parse(setting.value as string);
+    } catch {
+      acc[setting.key] = setting.value;
+    }
+    return acc;
+  }, {} as Record<string, any>) || {};
+
+  const baseUrl = configMap.focus_nfe_environment === 'producao' 
     ? 'https://api.focusnfe.com.br'
     : 'https://homologacao.focusnfe.com.br';
 
   const response = await fetch(`${baseUrl}/v2/nfe/${nota.focus_id}/danfe`, {
     headers: {
-      'Authorization': `Basic ${btoa(config.token_focus + ':')}`
+      'Authorization': `Basic ${btoa(configMap.focus_nfe_token + ':')}`
     }
   });
 
@@ -480,7 +527,7 @@ async function obterXML(supabase: any, userId: string, payload: any) {
   // Buscar nota
   const { data: nota } = await supabase
     .from('notas_emitidas')
-    .select('*, nota_configuracoes!inner(*)')
+    .select('*')
     .eq('id', notaId)
     .eq('user_id', userId)
     .single();
@@ -489,14 +536,28 @@ async function obterXML(supabase: any, userId: string, payload: any) {
     throw new Error('Nota não encontrada');
   }
 
-  const config = nota.nota_configuracoes;
-  const baseUrl = config.ambiente === 'producao' 
+  // Buscar configurações Focus NFe
+  const { data: focusSettings } = await supabase
+    .from('system_settings')
+    .select('key, value')
+    .in('key', ['focus_nfe_token', 'focus_nfe_environment']);
+
+  const configMap = focusSettings?.reduce((acc, setting) => {
+    try {
+      acc[setting.key] = JSON.parse(setting.value as string);
+    } catch {
+      acc[setting.key] = setting.value;
+    }
+    return acc;
+  }, {} as Record<string, any>) || {};
+
+  const baseUrl = configMap.focus_nfe_environment === 'producao' 
     ? 'https://api.focusnfe.com.br'
     : 'https://homologacao.focusnfe.com.br';
 
   const response = await fetch(`${baseUrl}/v2/nfe/${nota.focus_id}/xml`, {
     headers: {
-      'Authorization': `Basic ${btoa(config.token_focus + ':')}`
+      'Authorization': `Basic ${btoa(configMap.focus_nfe_token + ':')}`
     }
   });
 
