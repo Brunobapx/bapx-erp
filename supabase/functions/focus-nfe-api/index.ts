@@ -109,76 +109,108 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
   const valorTotalCOFINS = valorTotalItens * (Number(config.cofins_percentual) / 100);
   const valorTotalTributos = valorTotalICMS + valorTotalPIS + valorTotalCOFINS;
 
-  // Montar JSON da NFe conforme documentação Focus NFe
+  // Montar JSON da NFe conforme documentação oficial Focus NFe
   const nfeData = {
     natureza_operacao: "Venda",
     data_emissao: new Date().toISOString().split('T')[0],
     data_entrada_saida: new Date().toISOString().split('T')[0],
-    tipo_documento: 1, // Saída
-    finalidade_emissao: 1, // Normal
+    tipo_documento: 1,
+    finalidade_emissao: 1,
     
-    // Dados do emitente (obrigatórios)
+    // Dados completos do emitente (obrigatórios conforme doc)
     cnpj_emitente: config.cnpj_emissor.replace(/[^\d]/g, ''),
     nome_emitente: "Empresa Teste LTDA",
-    logradouro_emitente: "Rua Teste",
-    numero_emitente: "123",
-    bairro_emitente: "Centro",
+    nome_fantasia_emitente: "Empresa Teste",
+    logradouro_emitente: "Rua Padre Natal Pigato",
+    numero_emitente: "100",
+    bairro_emitente: "Santa Felicidade",
     municipio_emitente: "São Paulo",
     uf_emitente: "SP",
     cep_emitente: "01234567",
-    codigo_municipio_emitente: "3550308", // Código IBGE de São Paulo
+    codigo_municipio_emitente: "3550308",
     inscricao_estadual_emitente: "123456789",
-    regime_tributario_emitente: Number(config.regime_tributario) || 1,
+    regime_tributario_emitente: Number(config.regime_tributario) || 3,
     
     // Dados do destinatário
-    nome_destinatario: pedido.clients?.name || pedido.client_name || "Cliente Teste",
-    logradouro_destinatario: pedido.clients?.address || "Rua do Cliente",
-    numero_destinatario: pedido.clients?.number || "S/N",
-    bairro_destinatario: pedido.clients?.bairro || "Centro",
-    municipio_destinatario: pedido.clients?.city || "São Paulo",
-    uf_destinatario: pedido.clients?.state || "SP",
-    cep_destinatario: (pedido.clients?.zip || "01234567").replace(/[^\d]/g, ''),
+    nome_destinatario: pedido.clients?.name || pedido.client_name || "NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL",
+    logradouro_destinatario: pedido.clients?.address || "Rua São Januário",
+    numero_destinatario: pedido.clients?.number || "99",
+    bairro_destinatario: pedido.clients?.bairro || "Crespo",
+    municipio_destinatario: pedido.clients?.city || "Manaus",
+    uf_destinatario: pedido.clients?.state || "AM",
+    cep_destinatario: (pedido.clients?.zip || "69073178").replace(/[^\d]/g, ''),
     codigo_municipio_destinatario: "3550308",
+    pais_destinatario: "Brasil",
     
-    // Valores totais
+    // Valores totais calculados
     valor_produtos: valorTotalItens,
     valor_total: valorTotalItens,
     valor_tributos_totais: valorTotalTributos,
+    valor_frete: 0,
+    valor_seguro: 0,
+    valor_desconto: 0,
+    modalidade_frete: 9, // Sem frete
     
-    // Itens da nota
-    items: pedido.order_items.map((item: any, index: number) => {
-      const valorTributoItem = Number(item.total_price) * 0.2; // 20% de exemplo
+    // Totais ICMS
+    icms_base_calculo: 0,
+    icms_valor_total: 0,
+    icms_base_calculo_st: 0,
+    icms_valor_total_st: 0,
+    
+    // Totais IPI
+    ipi_valor: 0,
+    
+    // Totais PIS/COFINS
+    pis_valor: valorTotalPIS,
+    cofins_valor: valorTotalCOFINS,
+    
+    // Outras despesas
+    valor_outras_despesas: 0,
+    
+    // Itens com campos obrigatórios conforme documentação
+    items: pedido.order_items.map((item: any, index: number) => ({
+      numero_item: index + 1,
+      codigo_produto: item.product_id,
+      descricao: item.product_name,
+      cfop: config.cfop_padrao || "5102",
+      unidade_comercial: "UN",
+      quantidade_comercial: Number(item.quantity),
+      valor_unitario_comercial: Number(item.unit_price),
+      valor_total_bruto: Number(item.total_price),
+      unidade_tributavel: "UN",
+      quantidade_tributavel: Number(item.quantity),
+      valor_unitario_tributacao: Number(item.unit_price),
+      codigo_ncm: "49111090", // NCM genérico - deveria vir do cadastro do produto
       
-      return {
-        numero_item: index + 1,
-        codigo_produto: item.product_id.substring(0, 60), // Máximo 60 caracteres
-        descricao: item.product_name.substring(0, 120), // Máximo 120 caracteres
-        cfop: config.cfop_padrao || "5102",
-        unidade_comercial: "UN",
-        quantidade_comercial: Number(item.quantity),
-        valor_unitario_comercial: Number(item.unit_price),
-        valor_total_bruto: Number(item.total_price),
-        unidade_tributavel: "UN",
-        quantidade_tributavel: Number(item.quantity),
-        valor_unitario_tributacao: Number(item.unit_price),
-        
-        // ICMS
-        icms_situacao_tributaria: config.csosn_padrao || "102",
-        icms_origem: 0,
-        
-        // PIS
-        pis_situacao_tributaria: "01",
-        pis_aliquota_porcentual: Number(config.pis_percentual) || 1.65,
-        pis_valor: Number(item.total_price) * (Number(config.pis_percentual) / 100),
-        
-        // COFINS
-        cofins_situacao_tributaria: "01", 
-        cofins_aliquota_porcentual: Number(config.cofins_percentual) || 7.6,
-        cofins_valor: Number(item.total_price) * (Number(config.cofins_percentual) / 100),
-        
-        valor_total_tributos: valorTributoItem
-      };
-    })
+      // ICMS completo
+      icms_situacao_tributaria: config.csosn_padrao || "101",
+      icms_origem: 0,
+      icms_base_calculo: 0,
+      icms_valor: 0,
+      icms_aliquota_porcentual: 0,
+      
+      // IPI
+      ipi_situacao_tributaria: "53", // Saída não tributada
+      ipi_valor: 0,
+      
+      // PIS completo
+      pis_situacao_tributaria: "01",
+      pis_aliquota_porcentual: Number(config.pis_percentual) || 1.65,
+      pis_valor: Number(item.total_price) * (Number(config.pis_percentual || 1.65) / 100),
+      pis_base_calculo: Number(item.total_price),
+      
+      // COFINS completo
+      cofins_situacao_tributaria: "01",
+      cofins_aliquota_porcentual: Number(config.cofins_percentual) || 7.6,
+      cofins_valor: Number(item.total_price) * (Number(config.cofins_percentual || 7.6) / 100),
+      cofins_base_calculo: Number(item.total_price),
+      
+      // Valor total de tributos do item
+      valor_total_tributos: Number(item.total_price) * 0.2736, // PIS + COFINS + estimativa outros
+      
+      // Inclui no total da nota
+      inclui_no_total: 1
+    }))
   };
 
   // Adicionar CPF ou CNPJ do destinatário se disponível
@@ -195,10 +227,13 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     ? 'https://api.focusnfe.com.br'
     : 'https://homologacao.focusnfe.com.br';
 
-  const response = await fetch(`${baseUrl}/v2/nfe`, {
+  // Usar referência única para a NFe
+  const referencia = `nfe_${pedidoId}_${Date.now()}`;
+  
+  const response = await fetch(`${baseUrl}/v2/nfe?ref=${referencia}`, {
     method: 'POST',
     headers: {
-      'Authorization': `Token ${config.token_focus}`,
+      'Authorization': `Basic ${btoa(config.token_focus + ':')}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(nfeData)
@@ -276,7 +311,7 @@ async function consultarStatus(supabase: any, userId: string, payload: any) {
 
   const response = await fetch(`${baseUrl}/v2/nfe/${nota.focus_id}`, {
     headers: {
-      'Authorization': `Token ${config.token_focus}`
+      'Authorization': `Basic ${btoa(config.token_focus + ':')}`
     }
   });
 
@@ -345,10 +380,10 @@ async function cancelarNFe(supabase: any, userId: string, payload: any) {
     ? 'https://api.focusnfe.com.br'
     : 'https://homologacao.focusnfe.com.br';
 
-  const response = await fetch(`${baseUrl}/v2/nfe/${nota.focus_id}/cancelar`, {
-    method: 'POST',
+  const response = await fetch(`${baseUrl}/v2/nfe/${nota.focus_id}`, {
+    method: 'DELETE',
     headers: {
-      'Authorization': `Token ${config.token_focus}`,
+      'Authorization': `Basic ${btoa(config.token_focus + ':')}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({ justificativa: motivo })
@@ -418,7 +453,7 @@ async function obterPDF(supabase: any, userId: string, payload: any) {
 
   const response = await fetch(`${baseUrl}/v2/nfe/${nota.focus_id}/danfe`, {
     headers: {
-      'Authorization': `Token ${config.token_focus}`
+      'Authorization': `Basic ${btoa(config.token_focus + ':')}`
     }
   });
 
@@ -461,7 +496,7 @@ async function obterXML(supabase: any, userId: string, payload: any) {
 
   const response = await fetch(`${baseUrl}/v2/nfe/${nota.focus_id}/xml`, {
     headers: {
-      'Authorization': `Token ${config.token_focus}`
+      'Authorization': `Basic ${btoa(config.token_focus + ':')}`
     }
   });
 
