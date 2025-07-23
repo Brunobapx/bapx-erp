@@ -69,20 +69,45 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     throw new Error('Configurações de nota fiscal não encontradas');
   }
 
-  // Buscar dados do pedido
+  console.log('Config encontrada:', config);
+
+  // Buscar dados do pedido com JOIN correto
   const { data: pedido } = await supabase
     .from('orders')
     .select(`
       *,
       order_items(*),
-      clients(*)
+      clients!orders_client_id_fkey(*)
     `)
     .eq('id', pedidoId)
+    .eq('user_id', userId)
     .single();
 
   if (!pedido) {
-    throw new Error('Pedido não encontrado');
+    throw new Error('Pedido não encontrado ou não pertence ao usuário');
   }
+
+  console.log('Pedido encontrado:', { id: pedido.id, client_name: pedido.client_name, items_count: pedido.order_items?.length });
+
+  // Validar dados obrigatórios
+  if (!config.cnpj_emissor) {
+    throw new Error('CNPJ do emissor não configurado');
+  }
+
+  if (!config.token_focus) {
+    throw new Error('Token Focus NFe não configurado');
+  }
+
+  if (!pedido.order_items || pedido.order_items.length === 0) {
+    throw new Error('Pedido sem itens');
+  }
+
+  // Calcular valores totais
+  const valorTotalItens = pedido.order_items.reduce((sum: number, item: any) => sum + Number(item.total_price), 0);
+  const valorTotalICMS = valorTotalItens * (Number(config.icms_percentual) / 100);
+  const valorTotalPIS = valorTotalItens * (Number(config.pis_percentual) / 100);
+  const valorTotalCOFINS = valorTotalItens * (Number(config.cofins_percentual) / 100);
+  const valorTotalTributos = valorTotalICMS + valorTotalPIS + valorTotalCOFINS;
 
   // Montar JSON da NFe conforme documentação Focus NFe
   const nfeData = {
@@ -91,47 +116,79 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     data_entrada_saida: new Date().toISOString().split('T')[0],
     tipo_documento: 1, // Saída
     finalidade_emissao: 1, // Normal
-    cnpj_emitente: config.cnpj_emissor,
-    nome_emitente: "Empresa Emitente", // Buscar dos dados da empresa
-    logradouro_emitente: "Rua da Empresa",
+    
+    // Dados do emitente (obrigatórios)
+    cnpj_emitente: config.cnpj_emissor.replace(/[^\d]/g, ''),
+    nome_emitente: "Empresa Teste LTDA",
+    logradouro_emitente: "Rua Teste",
     numero_emitente: "123",
     bairro_emitente: "Centro",
-    municipio_emitente: "Cidade",
-    uf_emitente: "UF",
-    cep_emitente: "12345678",
-    telefone_emitente: "11999999999",
+    municipio_emitente: "São Paulo",
+    uf_emitente: "SP",
+    cep_emitente: "01234567",
+    codigo_municipio_emitente: "3550308", // Código IBGE de São Paulo
+    inscricao_estadual_emitente: "123456789",
+    regime_tributario_emitente: Number(config.regime_tributario) || 1,
     
     // Dados do destinatário
-    cnpj_destinatario: pedido.clients?.cnpj || null,
-    cpf_destinatario: pedido.clients?.cpf || null,
-    nome_destinatario: pedido.clients?.name || pedido.client_name,
-    logradouro_destinatario: pedido.clients?.address || "",
+    nome_destinatario: pedido.clients?.name || pedido.client_name || "Cliente Teste",
+    logradouro_destinatario: pedido.clients?.address || "Rua do Cliente",
     numero_destinatario: pedido.clients?.number || "S/N",
-    bairro_destinatario: pedido.clients?.bairro || "",
-    municipio_destinatario: pedido.clients?.city || "",
-    uf_destinatario: pedido.clients?.state || "",
-    cep_destinatario: pedido.clients?.zip || "",
+    bairro_destinatario: pedido.clients?.bairro || "Centro",
+    municipio_destinatario: pedido.clients?.city || "São Paulo",
+    uf_destinatario: pedido.clients?.state || "SP",
+    cep_destinatario: (pedido.clients?.zip || "01234567").replace(/[^\d]/g, ''),
+    codigo_municipio_destinatario: "3550308",
+    
+    // Valores totais
+    valor_produtos: valorTotalItens,
+    valor_total: valorTotalItens,
+    valor_tributos_totais: valorTotalTributos,
     
     // Itens da nota
-    items: pedido.order_items.map((item: any, index: number) => ({
-      numero_item: index + 1,
-      codigo_produto: item.product_id,
-      descricao: item.product_name,
-      cfop: config.cfop_padrao,
-      unidade_comercial: "UN",
-      quantidade_comercial: item.quantity,
-      valor_unitario_comercial: item.unit_price,
-      valor_total_bruto: item.total_price,
-      unidade_tributavel: "UN",
-      quantidade_tributavel: item.quantity,
-      valor_unitario_tributacao: item.unit_price,
+    items: pedido.order_items.map((item: any, index: number) => {
+      const valorTributoItem = Number(item.total_price) * 0.2; // 20% de exemplo
       
-      // Impostos
-      icms_situacao_tributaria: config.csosn_padrao,
-      icms_origem: 0,
-      valor_total_tributos: 0
-    }))
+      return {
+        numero_item: index + 1,
+        codigo_produto: item.product_id.substring(0, 60), // Máximo 60 caracteres
+        descricao: item.product_name.substring(0, 120), // Máximo 120 caracteres
+        cfop: config.cfop_padrao || "5102",
+        unidade_comercial: "UN",
+        quantidade_comercial: Number(item.quantity),
+        valor_unitario_comercial: Number(item.unit_price),
+        valor_total_bruto: Number(item.total_price),
+        unidade_tributavel: "UN",
+        quantidade_tributavel: Number(item.quantity),
+        valor_unitario_tributacao: Number(item.unit_price),
+        
+        // ICMS
+        icms_situacao_tributaria: config.csosn_padrao || "102",
+        icms_origem: 0,
+        
+        // PIS
+        pis_situacao_tributaria: "01",
+        pis_aliquota_porcentual: Number(config.pis_percentual) || 1.65,
+        pis_valor: Number(item.total_price) * (Number(config.pis_percentual) / 100),
+        
+        // COFINS
+        cofins_situacao_tributaria: "01", 
+        cofins_aliquota_porcentual: Number(config.cofins_percentual) || 7.6,
+        cofins_valor: Number(item.total_price) * (Number(config.cofins_percentual) / 100),
+        
+        valor_total_tributos: valorTributoItem
+      };
+    })
   };
+
+  // Adicionar CPF ou CNPJ do destinatário se disponível
+  if (pedido.clients?.cnpj) {
+    nfeData['cnpj_destinatario'] = pedido.clients.cnpj.replace(/[^\d]/g, '');
+  } else if (pedido.clients?.cpf) {
+    nfeData['cpf_destinatario'] = pedido.clients.cpf.replace(/[^\d]/g, '');
+  }
+
+  console.log('NFe Data montada:', JSON.stringify(nfeData, null, 2));
 
   // Fazer chamada para API Focus NFe
   const baseUrl = config.ambiente === 'producao' 
