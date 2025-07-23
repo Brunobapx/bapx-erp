@@ -633,6 +633,166 @@ export type Database = {
         }
         Relationships: []
       }
+      nota_configuracoes: {
+        Row: {
+          ambiente: string
+          cfop_padrao: string | null
+          cnpj_emissor: string
+          cofins_percentual: number | null
+          created_at: string
+          csosn_padrao: string | null
+          cst_padrao: string | null
+          icms_percentual: number | null
+          id: string
+          pis_percentual: number | null
+          regime_tributario: string | null
+          tipo_empresa: string | null
+          tipo_nota: string
+          token_focus: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ambiente?: string
+          cfop_padrao?: string | null
+          cnpj_emissor: string
+          cofins_percentual?: number | null
+          created_at?: string
+          csosn_padrao?: string | null
+          cst_padrao?: string | null
+          icms_percentual?: number | null
+          id?: string
+          pis_percentual?: number | null
+          regime_tributario?: string | null
+          tipo_empresa?: string | null
+          tipo_nota?: string
+          token_focus: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ambiente?: string
+          cfop_padrao?: string | null
+          cnpj_emissor?: string
+          cofins_percentual?: number | null
+          created_at?: string
+          csosn_padrao?: string | null
+          cst_padrao?: string | null
+          icms_percentual?: number | null
+          id?: string
+          pis_percentual?: number | null
+          regime_tributario?: string | null
+          tipo_empresa?: string | null
+          tipo_nota?: string
+          token_focus?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      nota_logs: {
+        Row: {
+          acao: string
+          criado_em: string
+          id: string
+          mensagem: string | null
+          nota_id: string | null
+          resposta: Json | null
+          status_code: number | null
+        }
+        Insert: {
+          acao: string
+          criado_em?: string
+          id?: string
+          mensagem?: string | null
+          nota_id?: string | null
+          resposta?: Json | null
+          status_code?: number | null
+        }
+        Update: {
+          acao?: string
+          criado_em?: string
+          id?: string
+          mensagem?: string | null
+          nota_id?: string | null
+          resposta?: Json | null
+          status_code?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nota_logs_nota_id_fkey"
+            columns: ["nota_id"]
+            isOneToOne: false
+            referencedRelation: "notas_emitidas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notas_emitidas: {
+        Row: {
+          chave_acesso: string | null
+          created_at: string
+          emitida_em: string
+          focus_id: string | null
+          id: string
+          json_enviado: Json | null
+          json_resposta: Json | null
+          numero_nota: string | null
+          pdf_url: string | null
+          pedido_id: string | null
+          serie: string | null
+          status: string | null
+          tipo_nota: string
+          updated_at: string
+          user_id: string
+          xml_url: string | null
+        }
+        Insert: {
+          chave_acesso?: string | null
+          created_at?: string
+          emitida_em?: string
+          focus_id?: string | null
+          id?: string
+          json_enviado?: Json | null
+          json_resposta?: Json | null
+          numero_nota?: string | null
+          pdf_url?: string | null
+          pedido_id?: string | null
+          serie?: string | null
+          status?: string | null
+          tipo_nota: string
+          updated_at?: string
+          user_id: string
+          xml_url?: string | null
+        }
+        Update: {
+          chave_acesso?: string | null
+          created_at?: string
+          emitida_em?: string
+          focus_id?: string | null
+          id?: string
+          json_enviado?: Json | null
+          json_resposta?: Json | null
+          numero_nota?: string | null
+          pdf_url?: string | null
+          pedido_id?: string | null
+          serie?: string | null
+          status?: string | null
+          tipo_nota?: string
+          updated_at?: string
+          user_id?: string
+          xml_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notas_emitidas_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string
