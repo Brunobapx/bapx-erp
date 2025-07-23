@@ -147,20 +147,20 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     body: JSON.stringify(nfeData)
   });
 
+  const responseText = await response.text();
+  console.log('Focus NFe Response Status:', response.status);
+  console.log('Focus NFe Response Text:', responseText);
+  
+  if (!response.ok) {
+    throw new Error(`Focus NFe API Error (${response.status}): ${responseText}`);
+  }
+  
   let responseData;
   try {
-    const responseText = await response.text();
-    console.log('Focus NFe Response Status:', response.status);
-    console.log('Focus NFe Response Text:', responseText);
-    
-    if (!response.ok) {
-      throw new Error(`Focus NFe API Error (${response.status}): ${responseText}`);
-    }
-    
     responseData = JSON.parse(responseText);
-  } catch (error) {
-    console.error('Erro ao processar resposta da Focus NFe:', error);
-    throw new Error(`Erro na comunicação com Focus NFe: ${error.message}`);
+  } catch (parseError) {
+    console.error('Erro ao fazer parse do JSON da Focus NFe:', parseError);
+    throw new Error(`Resposta inválida da Focus NFe: ${responseText}`);
   }
 
   // Salvar nota emitida
