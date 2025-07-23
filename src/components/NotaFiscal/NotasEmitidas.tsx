@@ -43,7 +43,8 @@ const NotasEmitidas = () => {
   const filteredNotas = notas.filter(nota =>
     nota.numero_nota?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     nota.chave_acesso?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    nota.status?.toLowerCase().includes(searchTerm.toLowerCase())
+    nota.status?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    nota.cliente_nome?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getStatusBadge = (status: string) => {
@@ -113,7 +114,7 @@ const NotasEmitidas = () => {
           <div className="flex items-center gap-2">
             <Search className="h-4 w-4" />
             <Input
-              placeholder="Pesquisar por número, chave ou status..."
+              placeholder="Pesquisar por número, chave, status ou cliente..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="max-w-sm"
@@ -132,6 +133,7 @@ const NotasEmitidas = () => {
                   <TableRow>
                     <TableHead>Número</TableHead>
                     <TableHead>Tipo</TableHead>
+                    <TableHead>Cliente</TableHead>
                     <TableHead>Chave de Acesso</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Data Emissão</TableHead>
@@ -148,6 +150,11 @@ const NotasEmitidas = () => {
                         <Badge variant="outline">
                           {nota.tipo_nota.toUpperCase()}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="max-w-[150px] truncate">
+                          {nota.cliente_nome || 'Cliente não informado'}
+                        </div>
                       </TableCell>
                       <TableCell className="font-mono text-xs">
                         {nota.chave_acesso ? 

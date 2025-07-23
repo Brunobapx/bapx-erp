@@ -299,6 +299,7 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
       numero_nota: responseData.numero || null,
       chave_acesso: responseData.chave_nfe || null,
       status: responseData.status || 'processando',
+      cliente_nome: pedido.clients?.name || pedido.clients?.razao_social || 'Cliente não informado',
       json_enviado: nfeData,
       json_resposta: responseData
     })
