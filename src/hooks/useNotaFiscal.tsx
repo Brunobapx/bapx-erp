@@ -136,20 +136,21 @@ export const useNotaFiscal = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Usuário não autenticado');
 
-      const response = await fetch(`https://gtqmwlxzszttzriswoxj.supabase.co/functions/v1/focus-nfe-api`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('focus-nfe-api', {
+        body: {
           action: 'obter_pdf',
           notaId
-        }),
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
 
-      if (response.ok) {
-        const blob = await response.blob();
+      if (error) throw error;
+
+      if (data && data.success !== false) {
+        // Criar blob a partir dos dados retornados
+        const blob = new Blob([data], { type: 'application/pdf' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -160,7 +161,7 @@ export const useNotaFiscal = () => {
         window.URL.revokeObjectURL(url);
         toast.success('PDF baixado com sucesso!');
       } else {
-        toast.error('Erro ao baixar PDF');
+        toast.error('PDF não disponível');
       }
     } catch (error) {
       console.error('Erro ao baixar PDF:', error);
@@ -173,20 +174,21 @@ export const useNotaFiscal = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Usuário não autenticado');
 
-      const response = await fetch(`https://gtqmwlxzszttzriswoxj.supabase.co/functions/v1/focus-nfe-api`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('focus-nfe-api', {
+        body: {
           action: 'obter_xml',
           notaId
-        }),
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
 
-      if (response.ok) {
-        const blob = await response.blob();
+      if (error) throw error;
+
+      if (data && data.success !== false) {
+        // Criar blob a partir dos dados retornados
+        const blob = new Blob([data], { type: 'application/xml' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -197,7 +199,7 @@ export const useNotaFiscal = () => {
         window.URL.revokeObjectURL(url);
         toast.success('XML baixado com sucesso!');
       } else {
-        toast.error('Erro ao baixar XML');
+        toast.error('XML não disponível');
       }
     } catch (error) {
       console.error('Erro ao baixar XML:', error);
