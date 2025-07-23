@@ -2,63 +2,65 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-interface CompanyFiscalSettings {
-  // Dados da empresa ARTISAN BREAD
+export interface CompanyFiscalSettings {
+  // Dados da empresa
   company_name: string;
   company_fantasy_name: string;
   company_cnpj: string;
   company_ie: string;
   company_address: string;
   company_number: string;
+  company_complement: string;
   company_neighborhood: string;
   company_city: string;
   company_state: string;
   company_cep: string;
   
   // Configurações tributárias
-  tax_regime: number; // 1=Simples, 2=Simples Excesso, 3=Normal
+  tax_regime: string;
   default_cfop: string;
   default_ncm: string;
   
   // ICMS
   icms_cst: string;
-  icms_origem: number;
+  icms_origem: string;
   
   // PIS/COFINS
   pis_cst: string;
-  pis_aliquota: number;
+  pis_aliquota: string;
   cofins_cst: string;
-  cofins_aliquota: number;
+  cofins_aliquota: string;
 }
 
 export const useCompanyFiscalSettings = () => {
   const [settings, setSettings] = useState<CompanyFiscalSettings>({
-    // Dados fixos da ARTISAN BREAD baseados na NFe analisada
+    // Dados da empresa ARTISAN BREAD
     company_name: "ARTISAN BREAD PAES ARTESANAIS LTDA",
     company_fantasy_name: "ARTISAN",
     company_cnpj: "39.524.018/0001-28",
     company_ie: "11867847",
-    company_address: "",
-    company_number: "",
-    company_neighborhood: "",
+    company_address: "V PASTOR MARTIN LUTHER KING JR.",
+    company_number: "11026",
+    company_complement: "LOJA A",
+    company_neighborhood: "ACARI",
     company_city: "Rio de Janeiro",
     company_state: "RJ", 
-    company_cep: "",
+    company_cep: "21530-014",
     
-    // Configurações tributárias baseadas na análise
-    tax_regime: 3, // Regime Normal (baseado no porte)
+    // Configurações tributárias
+    tax_regime: "3", // Regime Normal
     default_cfop: "5405", // Venda com substituição tributária
     default_ncm: "19059090", // Outros produtos de padaria
     
     // ICMS - Substituição Tributária
     icms_cst: "60", // ICMS cobrado por substituição tributária
-    icms_origem: 0, // Nacional
+    icms_origem: "0", // Nacional
     
-    // PIS/COFINS - Regime cumulativo (corrigido conforme XML)
+    // PIS/COFINS - Regime cumulativo
     pis_cst: "01", // Operação tributável com alíquota básica
-    pis_aliquota: 1.65, // 1,65% - corrigido
+    pis_aliquota: "1.65", // 1,65%
     cofins_cst: "01", // Operação tributável com alíquota básica  
-    cofins_aliquota: 7.60 // 7,60% - corrigido
+    cofins_aliquota: "7.60" // 7,60%
   });
 
   const [loading, setLoading] = useState(false);
@@ -71,7 +73,8 @@ export const useCompanyFiscalSettings = () => {
         .from('system_settings')
         .select('key, value')
         .in('key', [
-          'company_address', 'company_number', 'company_neighborhood', 'company_cep',
+          'company_name', 'company_cnpj', 'company_ie', 'company_city', 'company_state',
+          'company_address', 'company_number', 'company_complement', 'company_neighborhood', 'company_cep', 'company_fantasy_name',
           'tax_regime', 'default_cfop', 'default_ncm', 'icms_cst', 'icms_origem',
           'pis_cst', 'pis_aliquota', 'cofins_cst', 'cofins_aliquota'
         ]);
@@ -87,22 +90,29 @@ export const useCompanyFiscalSettings = () => {
         return acc;
       }, {} as Record<string, any>);
 
-      // Atualizar todos os campos variáveis
+      // Atualizar todos os campos
       setSettings(prev => ({
         ...prev,
-        company_address: settingsMap.company_address || "",
-        company_number: settingsMap.company_number || "",
-        company_neighborhood: settingsMap.company_neighborhood || "",
-        company_cep: settingsMap.company_cep || "",
+        company_name: settingsMap.company_name || prev.company_name,
+        company_cnpj: settingsMap.company_cnpj || prev.company_cnpj,
+        company_ie: settingsMap.company_ie || prev.company_ie,
+        company_city: settingsMap.company_city || prev.company_city,
+        company_state: settingsMap.company_state || prev.company_state,
+        company_address: settingsMap.company_address || prev.company_address,
+        company_number: settingsMap.company_number || prev.company_number,
+        company_complement: settingsMap.company_complement || prev.company_complement,
+        company_neighborhood: settingsMap.company_neighborhood || prev.company_neighborhood,
+        company_cep: settingsMap.company_cep || prev.company_cep,
+        company_fantasy_name: settingsMap.company_fantasy_name || prev.company_fantasy_name,
         tax_regime: settingsMap.tax_regime || prev.tax_regime,
         default_cfop: settingsMap.default_cfop || prev.default_cfop,
         default_ncm: settingsMap.default_ncm || prev.default_ncm,
         icms_cst: settingsMap.icms_cst || prev.icms_cst,
-        icms_origem: settingsMap.icms_origem !== undefined ? settingsMap.icms_origem : prev.icms_origem,
+        icms_origem: settingsMap.icms_origem || prev.icms_origem,
         pis_cst: settingsMap.pis_cst || prev.pis_cst,
-        pis_aliquota: settingsMap.pis_aliquota !== undefined ? settingsMap.pis_aliquota : prev.pis_aliquota,
+        pis_aliquota: settingsMap.pis_aliquota || prev.pis_aliquota,
         cofins_cst: settingsMap.cofins_cst || prev.cofins_cst,
-        cofins_aliquota: settingsMap.cofins_aliquota !== undefined ? settingsMap.cofins_aliquota : prev.cofins_aliquota
+        cofins_aliquota: settingsMap.cofins_aliquota || prev.cofins_aliquota
       }));
 
     } catch (error) {
@@ -117,10 +127,17 @@ export const useCompanyFiscalSettings = () => {
     setSaving(true);
     try {
       const updates = [
+        { key: 'company_name', value: JSON.stringify(settings.company_name), category: 'company' },
+        { key: 'company_cnpj', value: JSON.stringify(settings.company_cnpj), category: 'company' },
+        { key: 'company_ie', value: JSON.stringify(settings.company_ie), category: 'company' },
+        { key: 'company_city', value: JSON.stringify(settings.company_city), category: 'company' },
+        { key: 'company_state', value: JSON.stringify(settings.company_state), category: 'company' },
         { key: 'company_address', value: JSON.stringify(settings.company_address), category: 'company' },
         { key: 'company_number', value: JSON.stringify(settings.company_number), category: 'company' },
+        { key: 'company_complement', value: JSON.stringify(settings.company_complement), category: 'company' },
         { key: 'company_neighborhood', value: JSON.stringify(settings.company_neighborhood), category: 'company' },
         { key: 'company_cep', value: JSON.stringify(settings.company_cep), category: 'company' },
+        { key: 'company_fantasy_name', value: JSON.stringify(settings.company_fantasy_name), category: 'company' },
         { key: 'tax_regime', value: JSON.stringify(settings.tax_regime), category: 'fiscal' },
         { key: 'default_cfop', value: JSON.stringify(settings.default_cfop), category: 'fiscal' },
         { key: 'default_ncm', value: JSON.stringify(settings.default_ncm), category: 'fiscal' },
@@ -152,12 +169,12 @@ export const useCompanyFiscalSettings = () => {
   const getTaxInfo = () => {
     return {
       // Informações para exibição
-      regime_description: settings.tax_regime === 1 ? 'Simples Nacional' : 
-                         settings.tax_regime === 2 ? 'Simples Nacional - Excesso' : 'Regime Normal',
+      regime_description: settings.tax_regime === "1" ? 'Simples Nacional' : 
+                         settings.tax_regime === "2" ? 'Simples Nacional - Excesso' : 'Regime Normal',
       cfop_description: 'Venda de mercadoria adquirida (com substituição tributária)',
       icms_description: 'ICMS por Substituição Tributária (já retido anteriormente)',
-      pis_cofins_description: 'Regime Cumulativo - PIS 1,65% + COFINS 7,60%',
-      total_tax_rate: settings.pis_aliquota + settings.cofins_aliquota // 9,25%
+      pis_cofins_description: `Regime Cumulativo - PIS ${settings.pis_aliquota}% + COFINS ${settings.cofins_aliquota}%`,
+      total_tax_rate: Number(settings.pis_aliquota) + Number(settings.cofins_aliquota)
     };
   };
 

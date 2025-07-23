@@ -41,35 +41,64 @@ export const CompanyFiscalInfo = () => {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label>Razão Social</Label>
-              <Input value={settings.company_name} disabled className="bg-muted" />
+              <Label htmlFor="company_name">Razão Social *</Label>
+              <Input
+                id="company_name"
+                value={settings.company_name}
+                onChange={(e) => setSettings(prev => ({ ...prev, company_name: e.target.value }))}
+                placeholder="Ex: ARTISAN BREAD PAES ARTESANAIS LTDA"
+              />
             </div>
             <div>
-              <Label>Nome Fantasia</Label>
-              <Input value={settings.company_fantasy_name} disabled className="bg-muted" />
+              <Label htmlFor="company_fantasy_name">Nome Fantasia *</Label>
+              <Input
+                id="company_fantasy_name"
+                value={settings.company_fantasy_name}
+                onChange={(e) => setSettings(prev => ({ ...prev, company_fantasy_name: e.target.value }))}
+                placeholder="Ex: ARTISAN"
+              />
             </div>
             <div>
-              <Label>CNPJ</Label>
-              <Input value={settings.company_cnpj} disabled className="bg-muted" />
+              <Label htmlFor="company_cnpj">CNPJ *</Label>
+              <Input
+                id="company_cnpj"
+                value={settings.company_cnpj}
+                onChange={(e) => setSettings(prev => ({ ...prev, company_cnpj: e.target.value }))}
+                placeholder="Ex: 39.524.018/0001-28"
+              />
             </div>
             <div>
-              <Label>Inscrição Estadual</Label>
-              <Input value={settings.company_ie} disabled className="bg-muted" />
+              <Label htmlFor="company_ie">Inscrição Estadual *</Label>
+              <Input
+                id="company_ie"
+                value={settings.company_ie}
+                onChange={(e) => setSettings(prev => ({ ...prev, company_ie: e.target.value }))}
+                placeholder="Ex: 11867847"
+              />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label>Cidade</Label>
-              <Input value={settings.company_city} disabled className="bg-muted" />
+              <Label htmlFor="company_city">Cidade *</Label>
+              <Input
+                id="company_city"
+                value={settings.company_city}
+                onChange={(e) => setSettings(prev => ({ ...prev, company_city: e.target.value }))}
+                placeholder="Ex: Rio de Janeiro"
+              />
             </div>
             <div>
-              <Label>Estado</Label>
-              <Input value={settings.company_state} disabled className="bg-muted" />
+              <Label htmlFor="company_state">Estado *</Label>
+              <Input
+                id="company_state"
+                value={settings.company_state}
+                onChange={(e) => setSettings(prev => ({ ...prev, company_state: e.target.value }))}
+                placeholder="Ex: RJ"
+              />
             </div>
           </div>
 
-          {/* Campos editáveis */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="company_address">Logradouro *</Label>
@@ -87,6 +116,15 @@ export const CompanyFiscalInfo = () => {
                 value={settings.company_number}
                 onChange={(e) => setSettings(prev => ({ ...prev, company_number: e.target.value }))}
                 placeholder="Ex: 123"
+              />
+            </div>
+            <div>
+              <Label htmlFor="company_complement">Complemento</Label>
+              <Input
+                id="company_complement"
+                value={settings.company_complement}
+                onChange={(e) => setSettings(prev => ({ ...prev, company_complement: e.target.value }))}
+                placeholder="Ex: LOJA A, Sala 101"
               />
             </div>
             <div>
@@ -111,7 +149,7 @@ export const CompanyFiscalInfo = () => {
 
           <Button onClick={saveSettings} disabled={saving} className="flex items-center gap-2">
             <Save className="h-4 w-4" />
-            {saving ? 'Salvando...' : 'Salvar Endereço'}
+            {saving ? 'Salvando...' : 'Salvar Dados da Empresa'}
           </Button>
         </CardContent>
       </Card>
@@ -134,12 +172,12 @@ export const CompanyFiscalInfo = () => {
               <select
                 id="tax_regime"
                 value={settings.tax_regime}
-                onChange={(e) => setSettings(prev => ({ ...prev, tax_regime: Number(e.target.value) }))}
+                onChange={(e) => setSettings(prev => ({ ...prev, tax_regime: e.target.value }))}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <option value={1}>Simples Nacional</option>
-                <option value={2}>Simples Nacional - Excesso</option>
-                <option value={3}>Regime Normal</option>
+                <option value="1">Simples Nacional</option>
+                <option value="2">Simples Nacional - Excesso</option>
+                <option value="3">Regime Normal</option>
               </select>
             </div>
             <div>
@@ -181,12 +219,12 @@ export const CompanyFiscalInfo = () => {
               <select
                 id="icms_origem"
                 value={settings.icms_origem}
-                onChange={(e) => setSettings(prev => ({ ...prev, icms_origem: Number(e.target.value) }))}
+                onChange={(e) => setSettings(prev => ({ ...prev, icms_origem: e.target.value }))}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <option value={0}>0 - Nacional</option>
-                <option value={1}>1 - Estrangeira (importação direta)</option>
-                <option value={2}>2 - Estrangeira (mercado interno)</option>
+                <option value="0">0 - Nacional</option>
+                <option value="1">1 - Estrangeira (importação direta)</option>
+                <option value="2">2 - Estrangeira (mercado interno)</option>
               </select>
             </div>
           </div>
@@ -208,7 +246,7 @@ export const CompanyFiscalInfo = () => {
                 type="number"
                 step="0.01"
                 value={settings.pis_aliquota}
-                onChange={(e) => setSettings(prev => ({ ...prev, pis_aliquota: Number(e.target.value) }))}
+                onChange={(e) => setSettings(prev => ({ ...prev, pis_aliquota: e.target.value }))}
                 placeholder="Ex: 1.65"
               />
             </div>
@@ -231,7 +269,7 @@ export const CompanyFiscalInfo = () => {
                 type="number"
                 step="0.01"
                 value={settings.cofins_aliquota}
-                onChange={(e) => setSettings(prev => ({ ...prev, cofins_aliquota: Number(e.target.value) }))}
+                onChange={(e) => setSettings(prev => ({ ...prev, cofins_aliquota: e.target.value }))}
                 placeholder="Ex: 7.60"
               />
             </div>

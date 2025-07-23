@@ -58,14 +58,17 @@ serve(async (req) => {
 async function emitirNFe(supabase: any, userId: string, payload: any) {
   const { pedidoId } = payload;
 
-  // Buscar configurações Focus NFe e fiscais do sistema
+  // Buscar configurações Focus NFe, fiscais e dados da empresa do sistema
   const { data: allSettings } = await supabase
     .from('system_settings')
     .select('key, value')
     .in('key', [
       'focus_nfe_token', 'focus_nfe_environment', 'focus_nfe_enabled',
       'tax_regime', 'default_cfop', 'default_ncm', 'icms_cst', 'icms_origem',
-      'pis_cst', 'pis_aliquota', 'cofins_cst', 'cofins_aliquota'
+      'pis_cst', 'pis_aliquota', 'cofins_cst', 'cofins_aliquota',
+      'company_name', 'company_cnpj', 'company_ie', 'company_city', 'company_state',
+      'company_address', 'company_number', 'company_complement', 'company_neighborhood', 
+      'company_cep', 'company_fantasy_name'
     ]);
 
   const configMap = allSettings?.reduce((acc, setting) => {
@@ -107,13 +110,27 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     throw new Error('Pedido sem itens');
   }
 
-  // Usar configurações fiscais dinâmicas
+  // Usar configurações fiscais e dados da empresa dinâmicos
   const pisAliquota = Number(configMap.pis_aliquota || 1.65);
   const cofinsAliquota = Number(configMap.cofins_aliquota || 7.6);
   const defaultCfop = configMap.default_cfop || "5405";
   const defaultNcm = configMap.default_ncm || "19059090";
   const icmsCst = configMap.icms_cst || "60";
   const icmsOrigem = Number(configMap.icms_origem || 0);
+  
+  // Dados da empresa do emissor
+  const companyCnpj = (configMap.company_cnpj || "39524018000128").replace(/[^\d]/g, '');
+  const companyName = configMap.company_name || "ARTISAN BREAD PAES ARTESANAIS LTDA";
+  const companyFantasyName = configMap.company_fantasy_name || "ARTISAN";
+  const companyAddress = configMap.company_address || "V PASTOR MARTIN LUTHER KING JR.";
+  const companyNumber = configMap.company_number || "11026";
+  const companyComplement = configMap.company_complement || "LOJA A";
+  const companyNeighborhood = configMap.company_neighborhood || "ACARI";
+  const companyCity = configMap.company_city || "Rio de Janeiro";
+  const companyState = configMap.company_state || "RJ";
+  const companyCep = (configMap.company_cep || "21530014").replace(/[^\d]/g, '');
+  const companyIe = configMap.company_ie || "11867847";
+  const taxRegime = Number(configMap.tax_regime || 3);
 
   // Calcular valores totais usando configurações fiscais dinâmicas
   const valorTotalItens = pedido.order_items.reduce((sum: number, item: any) => sum + Number(item.total_price), 0);
@@ -129,21 +146,21 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     tipo_documento: 1,
     finalidade_emissao: 1,
     
-    // Dados corretos da ARTISAN BREAD conforme XML autorizado
-    cnpj_emitente: "39524018000128",
-    nome_emitente: "ARTISAN BREAD PAES ARTESANAIS LTDA",
-    nome_fantasia_emitente: "ARTISAN",
-    logradouro_emitente: "V PASTOR MARTIN LUTHER KING JR.",
-    numero_emitente: "11026",
-    complemento_emitente: "LOJA A",
-    bairro_emitente: "ACARI",
-    municipio_emitente: "Rio de Janeiro",
-    uf_emitente: "RJ",
-    cep_emitente: "21530014",
-    codigo_municipio_emitente: "3304557",
-    inscricao_estadual_emitente: "11867847",
-    regime_tributario_emitente: 3, // Regime Normal
-    telefone_emitente: "2164335206",
+    // Dados da empresa emissora (dinâmicos das configurações)
+    cnpj_emitente: companyCnpj,
+    nome_emitente: companyName,
+    nome_fantasia_emitente: companyFantasyName,
+    logradouro_emitente: companyAddress,
+    numero_emitente: companyNumber,
+    complemento_emitente: companyComplement,
+    bairro_emitente: companyNeighborhood,
+    municipio_emitente: companyCity,
+    uf_emitente: companyState,
+    cep_emitente: companyCep,
+    codigo_municipio_emitente: "3304557", // Rio de Janeiro (fixo por enquanto)
+    inscricao_estadual_emitente: companyIe,
+    regime_tributario_emitente: taxRegime,
+    telefone_emitente: "2164335206", // Fixo por enquanto
     
     // Dados do destinatário (cliente)
     nome_destinatario: pedido.clients?.name || pedido.client_name || "CONSUMIDOR FINAL",
