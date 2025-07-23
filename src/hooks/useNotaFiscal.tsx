@@ -15,7 +15,6 @@ interface NotaEmitida {
   pdf_url: string;
   emitida_em: string;
   json_resposta: any;
-  cliente_nome?: string;
 }
 
 export const useNotaFiscal = () => {
