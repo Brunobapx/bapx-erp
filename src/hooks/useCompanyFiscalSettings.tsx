@@ -71,7 +71,9 @@ export const useCompanyFiscalSettings = () => {
         .from('system_settings')
         .select('key, value')
         .in('key', [
-          'company_address', 'company_number', 'company_neighborhood', 'company_cep'
+          'company_address', 'company_number', 'company_neighborhood', 'company_cep',
+          'tax_regime', 'default_cfop', 'default_ncm', 'icms_cst', 'icms_origem',
+          'pis_cst', 'pis_aliquota', 'cofins_cst', 'cofins_aliquota'
         ]);
 
       if (error) throw error;
@@ -85,13 +87,22 @@ export const useCompanyFiscalSettings = () => {
         return acc;
       }, {} as Record<string, any>);
 
-      // Atualizar apenas os campos variáveis
+      // Atualizar todos os campos variáveis
       setSettings(prev => ({
         ...prev,
         company_address: settingsMap.company_address || "",
         company_number: settingsMap.company_number || "",
         company_neighborhood: settingsMap.company_neighborhood || "",
-        company_cep: settingsMap.company_cep || ""
+        company_cep: settingsMap.company_cep || "",
+        tax_regime: settingsMap.tax_regime || prev.tax_regime,
+        default_cfop: settingsMap.default_cfop || prev.default_cfop,
+        default_ncm: settingsMap.default_ncm || prev.default_ncm,
+        icms_cst: settingsMap.icms_cst || prev.icms_cst,
+        icms_origem: settingsMap.icms_origem !== undefined ? settingsMap.icms_origem : prev.icms_origem,
+        pis_cst: settingsMap.pis_cst || prev.pis_cst,
+        pis_aliquota: settingsMap.pis_aliquota !== undefined ? settingsMap.pis_aliquota : prev.pis_aliquota,
+        cofins_cst: settingsMap.cofins_cst || prev.cofins_cst,
+        cofins_aliquota: settingsMap.cofins_aliquota !== undefined ? settingsMap.cofins_aliquota : prev.cofins_aliquota
       }));
 
     } catch (error) {
@@ -109,7 +120,16 @@ export const useCompanyFiscalSettings = () => {
         { key: 'company_address', value: JSON.stringify(settings.company_address), category: 'company' },
         { key: 'company_number', value: JSON.stringify(settings.company_number), category: 'company' },
         { key: 'company_neighborhood', value: JSON.stringify(settings.company_neighborhood), category: 'company' },
-        { key: 'company_cep', value: JSON.stringify(settings.company_cep), category: 'company' }
+        { key: 'company_cep', value: JSON.stringify(settings.company_cep), category: 'company' },
+        { key: 'tax_regime', value: JSON.stringify(settings.tax_regime), category: 'fiscal' },
+        { key: 'default_cfop', value: JSON.stringify(settings.default_cfop), category: 'fiscal' },
+        { key: 'default_ncm', value: JSON.stringify(settings.default_ncm), category: 'fiscal' },
+        { key: 'icms_cst', value: JSON.stringify(settings.icms_cst), category: 'fiscal' },
+        { key: 'icms_origem', value: JSON.stringify(settings.icms_origem), category: 'fiscal' },
+        { key: 'pis_cst', value: JSON.stringify(settings.pis_cst), category: 'fiscal' },
+        { key: 'pis_aliquota', value: JSON.stringify(settings.pis_aliquota), category: 'fiscal' },
+        { key: 'cofins_cst', value: JSON.stringify(settings.cofins_cst), category: 'fiscal' },
+        { key: 'cofins_aliquota', value: JSON.stringify(settings.cofins_aliquota), category: 'fiscal' }
       ];
 
       for (const update of updates) {
@@ -120,10 +140,10 @@ export const useCompanyFiscalSettings = () => {
         if (error) throw error;
       }
 
-      toast.success('Configurações da empresa salvas com sucesso!');
+      toast.success('Configurações salvas com sucesso!');
     } catch (error) {
       console.error('Erro ao salvar configurações:', error);
-      toast.error('Erro ao salvar configurações da empresa');
+      toast.error('Erro ao salvar configurações');
     } finally {
       setSaving(false);
     }

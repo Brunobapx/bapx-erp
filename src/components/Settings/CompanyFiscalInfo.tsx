@@ -130,46 +130,117 @@ export const CompanyFiscalInfo = () => {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label>Regime Tributário</Label>
-              <div className="flex items-center gap-2">
-                <Input value={taxInfo.regime_description} disabled className="bg-muted" />
-                <Badge variant="secondary">{settings.tax_regime === 3 ? 'Normal' : 'Simples'}</Badge>
-              </div>
+              <Label htmlFor="tax_regime">Regime Tributário</Label>
+              <select
+                id="tax_regime"
+                value={settings.tax_regime}
+                onChange={(e) => setSettings(prev => ({ ...prev, tax_regime: Number(e.target.value) }))}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value={1}>Simples Nacional</option>
+                <option value={2}>Simples Nacional - Excesso</option>
+                <option value={3}>Regime Normal</option>
+              </select>
             </div>
             <div>
-              <Label>CFOP Padrão</Label>
-              <div className="flex items-center gap-2">
-                <Input value={settings.default_cfop} disabled className="bg-muted" />
-                <Badge variant="outline">ST</Badge>
-              </div>
+              <Label htmlFor="default_cfop">CFOP Padrão</Label>
+              <Input
+                id="default_cfop"
+                value={settings.default_cfop}
+                onChange={(e) => setSettings(prev => ({ ...prev, default_cfop: e.target.value }))}
+                placeholder="Ex: 5405"
+              />
               <p className="text-xs text-muted-foreground mt-1">{taxInfo.cfop_description}</p>
             </div>
           </div>
 
+          <div>
+            <Label htmlFor="default_ncm">NCM Padrão</Label>
+            <Input
+              id="default_ncm"
+              value={settings.default_ncm}
+              onChange={(e) => setSettings(prev => ({ ...prev, default_ncm: e.target.value }))}
+              placeholder="Ex: 19059090"
+            />
+            <p className="text-xs text-muted-foreground mt-1">Código NCM padrão para produtos</p>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <Label>ICMS (CST)</Label>
-              <div className="flex items-center gap-2">
-                <Input value={settings.icms_cst} disabled className="bg-muted" />
-                <Badge variant="destructive">ST</Badge>
-              </div>
+              <Label htmlFor="icms_cst">ICMS (CST)</Label>
+              <Input
+                id="icms_cst"
+                value={settings.icms_cst}
+                onChange={(e) => setSettings(prev => ({ ...prev, icms_cst: e.target.value }))}
+                placeholder="Ex: 60"
+              />
               <p className="text-xs text-muted-foreground mt-1">{taxInfo.icms_description}</p>
             </div>
             <div>
-              <Label>PIS (CST)</Label>
-              <div className="flex items-center gap-2">
-                <Input value={`${settings.pis_cst} (${settings.pis_aliquota}%)`} disabled className="bg-muted" />
-                <Badge variant="secondary">Cum.</Badge>
-              </div>
-            </div>
-            <div>
-              <Label>COFINS (CST)</Label>
-              <div className="flex items-center gap-2">
-                <Input value={`${settings.cofins_cst} (${settings.cofins_aliquota}%)`} disabled className="bg-muted" />
-                <Badge variant="secondary">Cum.</Badge>
-              </div>
+              <Label htmlFor="icms_origem">ICMS Origem</Label>
+              <select
+                id="icms_origem"
+                value={settings.icms_origem}
+                onChange={(e) => setSettings(prev => ({ ...prev, icms_origem: Number(e.target.value) }))}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value={0}>0 - Nacional</option>
+                <option value={1}>1 - Estrangeira (importação direta)</option>
+                <option value={2}>2 - Estrangeira (mercado interno)</option>
+              </select>
             </div>
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="pis_cst">PIS (CST)</Label>
+              <Input
+                id="pis_cst"
+                value={settings.pis_cst}
+                onChange={(e) => setSettings(prev => ({ ...prev, pis_cst: e.target.value }))}
+                placeholder="Ex: 01"
+              />
+            </div>
+            <div>
+              <Label htmlFor="pis_aliquota">PIS Alíquota (%)</Label>
+              <Input
+                id="pis_aliquota"
+                type="number"
+                step="0.01"
+                value={settings.pis_aliquota}
+                onChange={(e) => setSettings(prev => ({ ...prev, pis_aliquota: Number(e.target.value) }))}
+                placeholder="Ex: 1.65"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="cofins_cst">COFINS (CST)</Label>
+              <Input
+                id="cofins_cst"
+                value={settings.cofins_cst}
+                onChange={(e) => setSettings(prev => ({ ...prev, cofins_cst: e.target.value }))}
+                placeholder="Ex: 01"
+              />
+            </div>
+            <div>
+              <Label htmlFor="cofins_aliquota">COFINS Alíquota (%)</Label>
+              <Input
+                id="cofins_aliquota"
+                type="number"
+                step="0.01"
+                value={settings.cofins_aliquota}
+                onChange={(e) => setSettings(prev => ({ ...prev, cofins_aliquota: Number(e.target.value) }))}
+                placeholder="Ex: 7.60"
+              />
+            </div>
+          </div>
+
+          <Button onClick={saveSettings} disabled={saving} className="flex items-center gap-2">
+            <Save className="h-4 w-4" />
+            {saving ? 'Salvando...' : 'Salvar Configurações Tributárias'}
+          </Button>
 
           <div className="bg-muted p-4 rounded-lg">
             <div className="flex items-center gap-2 mb-2">
