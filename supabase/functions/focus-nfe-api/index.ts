@@ -114,27 +114,29 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
   const valorTotalCOFINS = valorTotalItens * (7.6 / 100); // COFINS 7.6%
   const valorTotalTributos = valorTotalPIS + valorTotalCOFINS;
 
-  // Montar JSON da NFe usando dados da ARTISAN BREAD
+  // Montar JSON da NFe usando dados corretos da ARTISAN BREAD
   const nfeData = {
-    natureza_operacao: "Venda",
+    natureza_operacao: "VENDA",
     data_emissao: new Date().toISOString().split('T')[0],
     data_entrada_saida: new Date().toISOString().split('T')[0],
     tipo_documento: 1,
     finalidade_emissao: 1,
     
-    // Dados da ARTISAN BREAD (empresa emitente)
+    // Dados corretos da ARTISAN BREAD conforme XML autorizado
     cnpj_emitente: "39524018000128",
     nome_emitente: "ARTISAN BREAD PAES ARTESANAIS LTDA",
     nome_fantasia_emitente: "ARTISAN",
-    logradouro_emitente: "Rua Flora Rica",
-    numero_emitente: "30",
-    bairro_emitente: "Engenho da Rainha",
+    logradouro_emitente: "V PASTOR MARTIN LUTHER KING JR.",
+    numero_emitente: "11026",
+    complemento_emitente: "LOJA A",
+    bairro_emitente: "ACARI",
     municipio_emitente: "Rio de Janeiro",
     uf_emitente: "RJ",
-    cep_emitente: "20766620",
+    cep_emitente: "21530014",
     codigo_municipio_emitente: "3304557",
     inscricao_estadual_emitente: "11867847",
     regime_tributario_emitente: 3, // Regime Normal
+    telefone_emitente: "2164335206",
     
     // Dados do destinatário (cliente)
     nome_destinatario: pedido.clients?.name || pedido.client_name || "CONSUMIDOR FINAL",
@@ -172,58 +174,63 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     // Outras despesas
     valor_outras_despesas: 0,
     
-    // Itens com campos obrigatórios conforme documentação
+    // Itens com campos conforme XML autorizado
     items: pedido.order_items.map((item: any, index: number) => ({
       numero_item: index + 1,
       codigo_produto: item.product_id,
       descricao: item.product_name,
+      codigo_ncm: "19059090", // NCM padrão ARTISAN BREAD
+      cest: "1706200", // CEST conforme XML autorizado
       cfop: "5405", // CFOP da ARTISAN BREAD
-      unidade_comercial: "UN",
+      unidade_comercial: "CX", // Conforme XML (era UN)
       quantidade_comercial: Number(item.quantity),
       valor_unitario_comercial: Number(item.unit_price),
       valor_total_bruto: Number(item.total_price),
-      unidade_tributavel: "UN",
+      unidade_tributavel: "CX", // Conforme XML
       quantidade_tributavel: Number(item.quantity),
       valor_unitario_tributacao: Number(item.unit_price),
-      codigo_ncm: "19059090", // NCM padrão da ARTISAN BREAD
+      codigo_ean: "SEM GTIN", // Conforme XML
+      codigo_ean_tributavel: "SEM GTIN", // Conforme XML
       
-      // ICMS - Substituição Tributária conforme empresa
-      icms_situacao_tributaria: "60", // Substituição tributária
+      // ICMS - Substituição Tributária conforme XML autorizado
+      icms_situacao_tributaria: "60", // ICMS60
       icms_origem: 0,
-      icms_base_calculo: 0,
-      icms_valor: 0,
-      icms_aliquota_porcentual: 0,
       
-      // IPI
+      // IPI conforme XML
       ipi_situacao_tributaria: "53", // Saída não tributada
-      ipi_valor: 0,
       
-      // PIS conforme ARTISAN BREAD
+      // PIS conforme XML autorizado
       pis_situacao_tributaria: "01",
       pis_aliquota_porcentual: 1.65,
       pis_valor: Number(item.total_price) * (1.65 / 100),
       pis_base_calculo: Number(item.total_price),
       
-      // COFINS conforme ARTISAN BREAD
+      // COFINS conforme XML autorizado
       cofins_situacao_tributaria: "01",
       cofins_aliquota_porcentual: 7.6,
       cofins_valor: Number(item.total_price) * (7.6 / 100),
       cofins_base_calculo: Number(item.total_price),
       
       // Valor total de tributos do item
-      valor_total_tributos: Number(item.total_price) * 0.2736, // PIS + COFINS + estimativa outros
+      valor_total_tributos: Number(item.total_price) * 0.092, // PIS + COFINS apenas
       
       // Inclui no total da nota
       inclui_no_total: 1
     }))
   };
 
-  // Adicionar CPF ou CNPJ do destinatário se disponível
+  // Adicionar CPF ou CNPJ do destinatário e campos específicos conforme XML
   if (pedido.clients?.cnpj) {
     nfeData['cnpj_destinatario'] = pedido.clients.cnpj.replace(/[^\d]/g, '');
+    nfeData['indicador_ie_destinatario'] = 1; // Contribuinte do ICMS
+    nfeData['inscricao_estadual_destinatario'] = pedido.clients?.ie || '';
   } else if (pedido.clients?.cpf) {
     nfeData['cpf_destinatario'] = pedido.clients.cpf.replace(/[^\d]/g, '');
+    nfeData['indicador_ie_destinatario'] = 9; // Não contribuinte
   }
+  
+  // Ajustar modalidade de frete conforme XML autorizado (3 = por conta do destinatário)
+  nfeData.modalidade_frete = 3;
 
   console.log('NFe Data montada:', JSON.stringify(nfeData, null, 2));
 
