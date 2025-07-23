@@ -88,7 +88,9 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     throw new Error('Token Focus NFe não configurado');
   }
 
-  // Buscar dados do pedido com JOIN correto
+  console.log('Buscando pedido:', { pedidoId, userId });
+
+  // Buscar dados do pedido - Service role tem acesso total, então não filtrar por user_id
   const { data: pedido } = await supabase
     .from('orders')
     .select(`
@@ -97,11 +99,43 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
       clients!orders_client_id_fkey(*)
     `)
     .eq('id', pedidoId)
+    .single();
+
+  console.log('Resultado da busca:', { found: !!pedido, pedidoId });
+
+  if (!pedido) {
+    throw new Error('Pedido não encontrado');
+  }
+
+  // Verificar se o usuário tem permissão para emitir nota deste pedido
+  // Admins podem emitir para qualquer pedido, vendedores só para os seus
+  const { data: userRole } = await supabase
+    .from('user_roles')
+    .select('role')
     .eq('user_id', userId)
     .single();
 
-  if (!pedido) {
-    throw new Error('Pedido não encontrado ou não pertence ao usuário');
+  const { data: userPosition } = await supabase
+    .from('user_positions')  
+    .select('position')
+    .eq('user_id', userId)
+    .single();
+
+  const isAdmin = userRole?.role === 'admin' || userRole?.role === 'master';
+  const isSeller = userPosition?.position === 'vendedor';
+
+  console.log('Verificação de permissões:', { 
+    userId, 
+    pedidoUserId: pedido.user_id, 
+    userRole: userRole?.role, 
+    userPosition: userPosition?.position,
+    isAdmin, 
+    isSeller 
+  });
+
+  // Se não é admin e é vendedor, só pode emitir nota dos próprios pedidos
+  if (!isAdmin && isSeller && pedido.user_id !== userId) {
+    throw new Error('Você não tem permissão para emitir nota fiscal deste pedido');
   }
 
   console.log('Pedido encontrado:', { id: pedido.id, client_name: pedido.client_name, items_count: pedido.order_items?.length });
