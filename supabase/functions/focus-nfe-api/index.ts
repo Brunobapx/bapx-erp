@@ -58,13 +58,17 @@ serve(async (req) => {
 async function emitirNFe(supabase: any, userId: string, payload: any) {
   const { pedidoId } = payload;
 
-  // Buscar configurações Focus NFe do sistema existente
-  const { data: focusSettings } = await supabase
+  // Buscar configurações Focus NFe e fiscais do sistema
+  const { data: allSettings } = await supabase
     .from('system_settings')
     .select('key, value')
-    .in('key', ['focus_nfe_token', 'focus_nfe_environment', 'focus_nfe_enabled']);
+    .in('key', [
+      'focus_nfe_token', 'focus_nfe_environment', 'focus_nfe_enabled',
+      'tax_regime', 'default_cfop', 'default_ncm', 'icms_cst', 'icms_origem',
+      'pis_cst', 'pis_aliquota', 'cofins_cst', 'cofins_aliquota'
+    ]);
 
-  const configMap = focusSettings?.reduce((acc, setting) => {
+  const configMap = allSettings?.reduce((acc, setting) => {
     try {
       acc[setting.key] = JSON.parse(setting.value as string);
     } catch {
@@ -99,19 +103,22 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
 
   console.log('Pedido encontrado:', { id: pedido.id, client_name: pedido.client_name, items_count: pedido.order_items?.length });
 
-  // Validar dados obrigatórios
-  if (!configMap.focus_nfe_token) {
-    throw new Error('Token Focus NFe não configurado');
-  }
-
   if (!pedido.order_items || pedido.order_items.length === 0) {
     throw new Error('Pedido sem itens');
   }
 
-  // Calcular valores totais usando configurações fiscais existentes
+  // Usar configurações fiscais dinâmicas
+  const pisAliquota = Number(configMap.pis_aliquota || 1.65);
+  const cofinsAliquota = Number(configMap.cofins_aliquota || 7.6);
+  const defaultCfop = configMap.default_cfop || "5405";
+  const defaultNcm = configMap.default_ncm || "19059090";
+  const icmsCst = configMap.icms_cst || "60";
+  const icmsOrigem = Number(configMap.icms_origem || 0);
+
+  // Calcular valores totais usando configurações fiscais dinâmicas
   const valorTotalItens = pedido.order_items.reduce((sum: number, item: any) => sum + Number(item.total_price), 0);
-  const valorTotalPIS = valorTotalItens * (1.65 / 100); // PIS 1.65%
-  const valorTotalCOFINS = valorTotalItens * (7.6 / 100); // COFINS 7.6%
+  const valorTotalPIS = valorTotalItens * (pisAliquota / 100);
+  const valorTotalCOFINS = valorTotalItens * (cofinsAliquota / 100);
   const valorTotalTributos = valorTotalPIS + valorTotalCOFINS;
 
   // Montar JSON da NFe usando dados corretos da ARTISAN BREAD
@@ -179,10 +186,10 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
       numero_item: index + 1,
       codigo_produto: item.product_id,
       descricao: item.product_name,
-      codigo_ncm: "19059090", // NCM padrão ARTISAN BREAD
+      codigo_ncm: defaultNcm, // NCM das configurações
       cest: "1706200", // CEST conforme XML autorizado
-      cfop: "5405", // CFOP da ARTISAN BREAD
-      unidade_comercial: "CX", // Conforme XML (era UN)
+      cfop: defaultCfop, // CFOP das configurações
+      unidade_comercial: "CX", // Conforme XML
       quantidade_comercial: Number(item.quantity),
       valor_unitario_comercial: Number(item.unit_price),
       valor_total_bruto: Number(item.total_price),
@@ -192,27 +199,24 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
       codigo_ean: "SEM GTIN", // Conforme XML
       codigo_ean_tributavel: "SEM GTIN", // Conforme XML
       
-      // ICMS - Substituição Tributária conforme XML autorizado
-      icms_situacao_tributaria: "60", // ICMS60
-      icms_origem: 0,
+      // ICMS - Substituição Tributária conforme configurações
+      icms_situacao_tributaria: icmsCst,
+      icms_origem: icmsOrigem,
       
-      // IPI conforme XML
-      ipi_situacao_tributaria: "53", // Saída não tributada
-      
-      // PIS conforme XML autorizado
+      // PIS conforme configurações fiscais
       pis_situacao_tributaria: "01",
-      pis_aliquota_porcentual: 1.65,
-      pis_valor: Number(item.total_price) * (1.65 / 100),
+      pis_aliquota_porcentual: pisAliquota,
+      pis_valor: Number(item.total_price) * (pisAliquota / 100),
       pis_base_calculo: Number(item.total_price),
       
-      // COFINS conforme XML autorizado
+      // COFINS conforme configurações fiscais
       cofins_situacao_tributaria: "01",
-      cofins_aliquota_porcentual: 7.6,
-      cofins_valor: Number(item.total_price) * (7.6 / 100),
+      cofins_aliquota_porcentual: cofinsAliquota,
+      cofins_valor: Number(item.total_price) * (cofinsAliquota / 100),
       cofins_base_calculo: Number(item.total_price),
       
       // Valor total de tributos do item
-      valor_total_tributos: Number(item.total_price) * 0.092, // PIS + COFINS apenas
+      valor_total_tributos: Number(item.total_price) * ((pisAliquota + cofinsAliquota) / 100),
       
       // Inclui no total da nota
       inclui_no_total: 1
