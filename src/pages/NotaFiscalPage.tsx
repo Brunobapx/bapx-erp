@@ -1,7 +1,6 @@
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, FileText, List } from 'lucide-react';
-import NotaFiscalConfig from '@/components/NotaFiscal/NotaFiscalConfig';
+import { FileText, List } from 'lucide-react';
 import EmitirNotaFiscal from '@/components/NotaFiscal/EmitirNotaFiscal';
 import NotasEmitidas from '@/components/NotaFiscal/NotasEmitidas';
 
@@ -16,7 +15,7 @@ const NotaFiscalPage = () => {
       </div>
 
       <Tabs defaultValue="emitir" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="emitir" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Emitir NFe
@@ -24,10 +23,6 @@ const NotaFiscalPage = () => {
           <TabsTrigger value="consultar" className="flex items-center gap-2">
             <List className="h-4 w-4" />
             Notas Emitidas
-          </TabsTrigger>
-          <TabsTrigger value="configurar" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            Configurações
           </TabsTrigger>
         </TabsList>
 
@@ -37,10 +32,6 @@ const NotaFiscalPage = () => {
 
         <TabsContent value="consultar" className="space-y-6">
           <NotasEmitidas />
-        </TabsContent>
-
-        <TabsContent value="configurar" className="space-y-6">
-          <NotaFiscalConfig />
         </TabsContent>
       </Tabs>
     </div>
