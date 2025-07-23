@@ -26,7 +26,7 @@ const Sidebar = () => {
     { icon: Box, label: 'Produção', href: '/producao', route: '/producao' },
     { icon: Box, label: 'Embalagem', href: '/embalagem', route: '/embalagem' },
     { icon: DollarSign, label: 'Vendas', href: '/vendas', route: '/vendas' },
-    { icon: FilePen, label: 'Emissão Fiscal', href: '/emissao-fiscal', route: '/emissao-fiscal' },
+    { icon: FileText, label: 'Nota Fiscal', href: '/nota-fiscal', route: '/nota-fiscal' },
     { icon: DollarSign, label: 'Financeiro', href: '/financeiro', route: '/financeiro' },
     { icon: FileText, label: 'Trocas', href: '/trocas', route: '/trocas' },
     { icon: Truck, label: 'Rotas', href: '/rotas', route: '/rotas' },

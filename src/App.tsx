@@ -24,7 +24,7 @@ import SettingsPage from "./pages/SettingsPage";
 import VendorsPage from "./pages/VendorsPage";
 import PurchasesPage from "./pages/PurchasesPage";
 import StockPage from "./pages/StockPage";
-import FiscalEmissionPage from "./pages/FiscalEmissionPage";
+
 import NotaFiscalPage from "./pages/NotaFiscalPage";
 import ServiceOrdersPage from "./pages/ServiceOrdersPage";
 import ReportsPage from "./pages/ReportsPage";
@@ -246,21 +246,9 @@ const App = () => (
                   </ModuleAccessCheck>
                 </ProtectedRoute>
               } />
-              <Route path="/emissao-fiscal" element={
-                <ProtectedRoute>
-                  <ModuleAccessCheck routePath="/emissao-fiscal">
-                    <div className="flex h-screen bg-gray-50">
-                      <Sidebar />
-                      <main className="flex-1 overflow-auto lg:ml-64">
-                        <FiscalEmissionPage />
-                      </main>
-                    </div>
-                  </ModuleAccessCheck>
-                </ProtectedRoute>
-              } />
               <Route path="/nota-fiscal" element={
                 <ProtectedRoute>
-                  <ModuleAccessCheck routePath="/emissao-fiscal">
+                  <ModuleAccessCheck routePath="/nota-fiscal">
                     <div className="flex h-screen bg-gray-50">
                       <Sidebar />
                       <main className="flex-1 overflow-auto lg:ml-64">
