@@ -133,14 +133,14 @@ export const useNotaFiscal = () => {
 
   const baixarPDF = async (nota: NotaEmitida) => {
     try {
-      // Verificar se a nota está autorizada e tem focus_id
+      // Verificar se a nota está autorizada e tem caminho_danfe
       if (nota.status !== 'autorizado') {
         toast.error('Apenas notas autorizadas podem ter o DANFE baixado');
         return;
       }
 
-      if (!nota.focus_id) {
-        toast.error('Nota não possui ID Focus NFe válido');
+      if (!nota.json_resposta?.caminho_danfe) {
+        toast.error('DANFE não disponível para esta nota');
         return;
       }
 
@@ -186,14 +186,14 @@ export const useNotaFiscal = () => {
 
   const baixarXML = async (nota: NotaEmitida) => {
     try {
-      // Verificar se a nota está autorizada e tem focus_id
+      // Verificar se a nota está autorizada e tem caminho_xml_nota_fiscal
       if (nota.status !== 'autorizado') {
         toast.error('Apenas notas autorizadas podem ter o XML baixado');
         return;
       }
 
-      if (!nota.focus_id) {
-        toast.error('Nota não possui ID Focus NFe válido');
+      if (!nota.json_resposta?.caminho_xml_nota_fiscal) {
+        toast.error('XML não disponível para esta nota');
         return;
       }
 

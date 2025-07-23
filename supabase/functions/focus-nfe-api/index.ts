@@ -547,8 +547,8 @@ async function obterPDF(supabase: any, userId: string, payload: any) {
     throw new Error('Nota não encontrada');
   }
 
-  if (!nota.focus_id) {
-    throw new Error('Nota não possui ID Focus NFe válido');
+  if (!nota.json_resposta?.caminho_danfe) {
+    throw new Error('DANFE não disponível para esta nota');
   }
 
   // Buscar configurações Focus NFe
@@ -570,9 +570,12 @@ async function obterPDF(supabase: any, userId: string, payload: any) {
     ? 'https://api.focusnfe.com.br'
     : 'https://homologacao.focusnfe.com.br';
 
-  console.log('Fazendo requisição para Focus NFe:', { baseUrl, focusId: nota.focus_id });
+  // Formar URL completa usando o caminho retornado pela Focus NFe
+  const danfeUrl = `${baseUrl}${nota.json_resposta.caminho_danfe}`;
+  
+  console.log('Fazendo requisição para Focus NFe:', { danfeUrl });
 
-  const response = await fetch(`${baseUrl}/v2/nfe/${nota.focus_id}/danfe`, {
+  const response = await fetch(danfeUrl, {
     headers: {
       'Authorization': `Basic ${btoa(configMap.focus_nfe_token + ':')}`
     }
@@ -623,8 +626,8 @@ async function obterXML(supabase: any, userId: string, payload: any) {
     throw new Error('Nota não encontrada');
   }
 
-  if (!nota.focus_id) {
-    throw new Error('Nota não possui ID Focus NFe válido');
+  if (!nota.json_resposta?.caminho_xml_nota_fiscal) {
+    throw new Error('XML não disponível para esta nota');
   }
 
   // Buscar configurações Focus NFe
@@ -646,9 +649,12 @@ async function obterXML(supabase: any, userId: string, payload: any) {
     ? 'https://api.focusnfe.com.br'
     : 'https://homologacao.focusnfe.com.br';
 
-  console.log('Fazendo requisição para Focus NFe:', { baseUrl, focusId: nota.focus_id });
+  // Formar URL completa usando o caminho retornado pela Focus NFe
+  const xmlUrl = `${baseUrl}${nota.json_resposta.caminho_xml_nota_fiscal}`;
+  
+  console.log('Fazendo requisição para Focus NFe:', { xmlUrl });
 
-  const response = await fetch(`${baseUrl}/v2/nfe/${nota.focus_id}/xml`, {
+  const response = await fetch(xmlUrl, {
     headers: {
       'Authorization': `Basic ${btoa(configMap.focus_nfe_token + ':')}`
     }

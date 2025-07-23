@@ -179,7 +179,7 @@ const NotasEmitidas = () => {
                             )}
                           </Button>
 
-                          {nota.status === 'autorizado' && nota.focus_id && (
+                          {nota.status === 'autorizado' && nota.json_resposta?.caminho_danfe && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -191,7 +191,7 @@ const NotasEmitidas = () => {
                             </Button>
                           )}
 
-                          {nota.status === 'autorizado' && nota.focus_id && (
+                          {nota.status === 'autorizado' && nota.json_resposta?.caminho_xml_nota_fiscal && (
                             <Button
                               variant="ghost"
                               size="sm"
