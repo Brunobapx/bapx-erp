@@ -561,7 +561,7 @@ export const CompanyFiscalInfo = () => {
               <div className="space-y-1">
                 <Label>Destacar ICMS ST por Item</Label>
                 <p className="text-xs text-muted-foreground">
-                  Habilitar informação de vBCSTRet, vICMSSTRet por item
+                  Quando ativado, os valores de ICMS ST serão calculados automaticamente e exibidos na NFe
                 </p>
               </div>
               <Switch
@@ -572,38 +572,6 @@ export const CompanyFiscalInfo = () => {
                 }))}
               />
             </div>
-            
-            {settings.icms_st_destacado_por_item && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-4 border-l-2 border-primary/20">
-                <div>
-                  <Label htmlFor="icms_st_base_calculo_retido">Base de Cálculo ST Retido (vBCSTRet)</Label>
-                  <Input
-                    id="icms_st_base_calculo_retido"
-                    value={settings.icms_st_base_calculo_retido}
-                    onChange={(e) => setSettings(prev => ({ ...prev, icms_st_base_calculo_retido: e.target.value }))}
-                    placeholder="Ex: 100.00"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="icms_st_valor_retido">Valor ICMS ST Retido (vICMSSTRet)</Label>
-                  <Input
-                    id="icms_st_valor_retido"
-                    value={settings.icms_st_valor_retido}
-                    onChange={(e) => setSettings(prev => ({ ...prev, icms_st_valor_retido: e.target.value }))}
-                    placeholder="Ex: 18.00"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="icms_st_aliquota">Alíquota ICMS ST (%)</Label>
-                  <Input
-                    id="icms_st_aliquota"
-                    value={settings.icms_st_aliquota}
-                    onChange={(e) => setSettings(prev => ({ ...prev, icms_st_aliquota: e.target.value }))}
-                    placeholder="Ex: 18.00"
-                  />
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Grupo 8: FCP ST */}
@@ -615,7 +583,7 @@ export const CompanyFiscalInfo = () => {
               <div className="space-y-1">
                 <Label>Habilitar FCP ST</Label>
                 <p className="text-xs text-muted-foreground">
-                  Informar FCP ST por item com vFCPSTRet
+                  Quando ativado, os valores de FCP ST serão calculados automaticamente e exibidos na NFe
                 </p>
               </div>
               <Switch
@@ -627,37 +595,6 @@ export const CompanyFiscalInfo = () => {
               />
             </div>
             
-            {settings.fcp_st_habilitado && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-4 border-l-2 border-primary/20">
-                <div>
-                  <Label htmlFor="fcp_st_base_calculo_retido">Base de Cálculo FCP ST Retido</Label>
-                  <Input
-                    id="fcp_st_base_calculo_retido"
-                    value={settings.fcp_st_base_calculo_retido}
-                    onChange={(e) => setSettings(prev => ({ ...prev, fcp_st_base_calculo_retido: e.target.value }))}
-                    placeholder="Ex: 100.00"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="fcp_st_valor_retido">Valor FCP ST Retido (vFCPSTRet)</Label>
-                  <Input
-                    id="fcp_st_valor_retido"
-                    value={settings.fcp_st_valor_retido}
-                    onChange={(e) => setSettings(prev => ({ ...prev, fcp_st_valor_retido: e.target.value }))}
-                    placeholder="Ex: 2.00"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="fcp_st_aliquota">Alíquota FCP ST (%)</Label>
-                  <Input
-                    id="fcp_st_aliquota"
-                    value={settings.fcp_st_aliquota}
-                    onChange={(e) => setSettings(prev => ({ ...prev, fcp_st_aliquota: e.target.value }))}
-                    placeholder="Ex: 2.00"
-                  />
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Grupo 9: Valor Total de Tributos */}

@@ -106,19 +106,19 @@ export const useCompanyFiscalSettings = () => {
     focus_nfe_enabled: false,
     nfe_initial_number: "",
     
-    // ICMS ST Destacado - valores padrão
+    // ICMS ST Destacado - apenas flag de habilitação
     icms_st_destacado_por_item: false,
     icms_st_base_calculo_retido: "",
     icms_st_valor_retido: "",
     icms_st_aliquota: "",
     
-    // FCP ST - valores padrão
+    // FCP ST - apenas flag de habilitação
     fcp_st_habilitado: false,
     fcp_st_base_calculo_retido: "",
     fcp_st_valor_retido: "",
     fcp_st_aliquota: "",
     
-    // Valor Total de Tributos - valores padrão
+    // Valor Total de Tributos - flag + percentual para cálculo
     informar_valor_total_tributos: false,
     percentual_carga_tributaria: ""
   });
