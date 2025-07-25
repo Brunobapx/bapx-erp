@@ -93,7 +93,7 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
 
   console.log('Buscando pedido:', { pedidoId, userId });
 
-  // Buscar dados do pedido - Service role tem acesso total, então não filtrar por user_id
+  // Buscar dados do pedido com produtos para obter códigos
   const { data: pedido } = await supabase
     .from('orders')
     .select(`
@@ -103,6 +103,22 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     `)
     .eq('id', pedidoId)
     .single();
+
+  if (!pedido || !pedido.order_items || pedido.order_items.length === 0) {
+    throw new Error('Pedido não encontrado ou sem itens');
+  }
+
+  // Buscar dados dos produtos para obter os códigos
+  const productIds = pedido.order_items.map((item: any) => item.product_id);
+  const { data: products } = await supabase
+    .from('products')
+    .select('id, code')
+    .in('id', productIds);
+
+  const productCodeMap = products?.reduce((acc: any, product: any) => {
+    acc[product.id] = product.code || product.id;
+    return acc;
+  }, {}) || {};
 
   console.log('Resultado da busca:', { found: !!pedido, pedidoId });
 
@@ -200,7 +216,7 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     telefone_emitente: "2164335206", // Fixo por enquanto
     
     // Informações adicionais com número do pedido e forma de pagamento
-    informacoes_adicionais: `Pedido: ${pedido.order_number || pedido.id}${pedido.payment_type ? ` | Forma de Pagamento: ${pedido.payment_type}` : ''}${pedido.payment_term ? ` | Prazo: ${pedido.payment_term}` : ''} | Data: ${new Date().toLocaleDateString('pt-BR')}`,
+    informacoes_adicionais: `Pedido: ${pedido.order_number || pedido.id}${pedido.payment_method ? ` | Forma de Pagamento: ${pedido.payment_method}` : ''}${pedido.payment_term ? ` | Prazo: ${pedido.payment_term}` : ''} | Data: ${new Date().toLocaleDateString('pt-BR')}`,
     
     // Dados do destinatário (cliente)
     nome_destinatario: pedido.clients?.name || pedido.client_name || "CONSUMIDOR FINAL",
@@ -241,7 +257,7 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     // Itens com campos conforme XML autorizado
     items: pedido.order_items.map((item: any, index: number) => ({
       numero_item: index + 1,
-      codigo_produto: item.product_id,
+      codigo_produto: productCodeMap[item.product_id] || item.product_id,
       descricao: item.product_name,
       codigo_ncm: defaultNcm, // NCM das configurações
       cest: "1706200", // CEST conforme XML autorizado
