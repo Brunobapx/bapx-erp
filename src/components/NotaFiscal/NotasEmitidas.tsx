@@ -21,6 +21,8 @@ import {
   Printer
 } from 'lucide-react';
 import { useNotaFiscal } from '@/hooks/useNotaFiscal';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const NotasEmitidas = () => {
   const { 
@@ -84,14 +86,48 @@ const NotasEmitidas = () => {
     }
   };
 
-  const handleImprimirDANFE = (nota: any) => {
-    if (nota.json_resposta?.caminho_danfe) {
-      const printWindow = window.open(nota.json_resposta.caminho_danfe, '_blank');
-      if (printWindow) {
-        printWindow.onload = () => {
-          printWindow.print();
-        };
+  const handleImprimirDANFE = async (nota: any) => {
+    try {
+      if (nota.status !== 'autorizado' || !nota.json_resposta?.caminho_danfe) {
+        toast.error('DANFE não disponível para impressão');
+        return;
       }
+
+      // Usar a mesma lógica do baixarPDF mas abrir em nova janela para impressão
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Usuário não autenticado');
+
+      const { data, error } = await supabase.functions.invoke('focus-nfe-api', {
+        body: {
+          action: 'obter_danfe',
+          notaId: nota.id
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error) throw error;
+
+      // Criar URL temporária do blob e abrir para impressão
+      if (data instanceof Blob || (data && typeof data === 'object')) {
+        const blob = data instanceof Blob ? data : new Blob([JSON.stringify(data)]);
+        const url = window.URL.createObjectURL(blob);
+        const printWindow = window.open(url, '_blank');
+        if (printWindow) {
+          printWindow.onload = () => {
+            setTimeout(() => {
+              printWindow.print();
+              window.URL.revokeObjectURL(url);
+            }, 500);
+          };
+        }
+      } else {
+        throw new Error('Resposta inválida do servidor');
+      }
+    } catch (error) {
+      console.error('Erro ao imprimir DANFE:', error);
+      toast.error(`Erro ao imprimir DANFE: ${error.message}`);
     }
   };
 
