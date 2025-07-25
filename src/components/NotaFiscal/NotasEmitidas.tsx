@@ -17,7 +17,8 @@ import {
   Calendar,
   CheckCircle,
   XCircle,
-  Clock
+  Clock,
+  Printer
 } from 'lucide-react';
 import { useNotaFiscal } from '@/hooks/useNotaFiscal';
 
@@ -80,6 +81,17 @@ const NotasEmitidas = () => {
     if (success) {
       setCancelModal({ open: false, notaId: '' });
       setCancelReason('');
+    }
+  };
+
+  const handleImprimirDANFE = (nota: any) => {
+    if (nota.json_resposta?.caminho_danfe) {
+      const printWindow = window.open(nota.json_resposta.caminho_danfe, '_blank');
+      if (printWindow) {
+        printWindow.onload = () => {
+          printWindow.print();
+        };
+      }
     }
   };
 
@@ -180,15 +192,26 @@ const NotasEmitidas = () => {
                           </Button>
 
                           {nota.status === 'autorizado' && nota.json_resposta?.caminho_danfe && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => baixarPDF(nota)}
-                              title="Baixar DANFE (PDF)"
-                            >
-                              <Download className="h-3 w-3" />
-                              DANFE
-                            </Button>
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => baixarPDF(nota)}
+                                title="Baixar DANFE (PDF)"
+                              >
+                                <Download className="h-3 w-3" />
+                                DANFE
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleImprimirDANFE(nota)}
+                                title="Imprimir DANFE"
+                              >
+                                <Printer className="h-3 w-3" />
+                                Imprimir
+                              </Button>
+                            </>
                           )}
 
                           {nota.status === 'autorizado' && nota.json_resposta?.caminho_xml_nota_fiscal && (
