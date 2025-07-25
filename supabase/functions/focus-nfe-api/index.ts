@@ -199,6 +199,9 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     regime_tributario_emitente: taxRegime,
     telefone_emitente: "2164335206", // Fixo por enquanto
     
+    // Informações adicionais com número do pedido e forma de pagamento
+    informacoes_adicionais: `Pedido: ${pedido.order_number || pedido.id}${pedido.payment_type ? ` | Forma de Pagamento: ${pedido.payment_type}` : ''}${pedido.payment_term ? ` | Prazo: ${pedido.payment_term}` : ''} | Data: ${new Date().toLocaleDateString('pt-BR')}`,
+    
     // Dados do destinatário (cliente)
     nome_destinatario: pedido.clients?.name || pedido.client_name || "CONSUMIDOR FINAL",
     logradouro_destinatario: pedido.clients?.address || "Não informado",
