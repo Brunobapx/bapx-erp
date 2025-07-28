@@ -349,8 +349,21 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
         } : {})
       }),
       
-      // PIS e COFINS - removidos detalhes para não aparecer na DANFE
-      // Apenas valor total de tributos será informado
+      // PIS - campos obrigatórios mas simplificados
+      pis_situacao_tributaria: pisCST,
+      ...(pisAliquota > 0 ? {
+        pis_base_calculo: Number(item.total_price),
+        pis_aliquota_porcentual: pisAliquota,
+        pis_valor: Number(item.total_price) * (pisAliquota / 100)
+      } : {}),
+      
+      // COFINS - campos obrigatórios mas simplificados  
+      cofins_situacao_tributaria: cofinsCST,
+      ...(cofinsAliquota > 0 ? {
+        cofins_base_calculo: Number(item.total_price),
+        cofins_aliquota_porcentual: cofinsAliquota,
+        cofins_valor: Number(item.total_price) * (cofinsAliquota / 100)
+      } : {}),
       
       // Valor total de tributos do item
       valor_total_tributos: Number(item.total_price) * ((pisAliquota + cofinsAliquota) / 100),
