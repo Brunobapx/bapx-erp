@@ -108,15 +108,20 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     throw new Error('Pedido não encontrado ou sem itens');
   }
 
-  // Buscar dados dos produtos para obter os códigos
+  // Buscar dados dos produtos para obter os códigos e pesos
   const productIds = pedido.order_items.map((item: any) => item.product_id);
   const { data: products } = await supabase
     .from('products')
-    .select('id, code')
+    .select('id, code, weight')
     .in('id', productIds);
 
   const productCodeMap = products?.reduce((acc: any, product: any) => {
     acc[product.id] = product.code || product.id;
+    return acc;
+  }, {}) || {};
+
+  const productWeightMap = products?.reduce((acc: any, product: any) => {
+    acc[product.id] = Number(product.weight) || 0;
     return acc;
   }, {}) || {};
 
@@ -313,6 +318,9 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
       valor_unitario_tributacao: Number(item.unit_price),
       codigo_ean: "SEM GTIN", // Conforme XML
       codigo_ean_tributavel: "SEM GTIN", // Conforme XML
+      
+      // Peso líquido (quantidade × peso do produto)
+      peso_liquido: Number(item.quantity) * (productWeightMap[item.product_id] || 0),
       
       // ICMS conforme regime tributário
       ...(isSimplesToNacional ? {
