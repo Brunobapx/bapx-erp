@@ -236,6 +236,16 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
   const valorTotalItens = pedido.order_items.reduce((sum: number, item: any) => sum + Number(item.total_price), 0);
   const valorTotalPIS = valorTotalItens * (pisAliquota / 100);
   const valorTotalCOFINS = valorTotalItens * (cofinsAliquota / 100);
+  
+  // Calcular valores totais de ICMS se não for Simples Nacional
+  let valorTotalICMSBase = 0;
+  let valorTotalICMS = 0;
+  
+  if (!isSimplesToNacional && icmsConfig.aliquota > 0) {
+    valorTotalICMSBase = valorTotalItens;
+    valorTotalICMS = valorTotalItens * (icmsConfig.aliquota / 100);
+  }
+  
   const valorTotalTributos = valorTotalPIS + valorTotalCOFINS;
 
   // Montar JSON da NFe usando dados corretos da ARTISAN BREAD
@@ -286,8 +296,8 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     modalidade_frete: 9, // Sem frete
     
     // Totais ICMS
-    icms_base_calculo: 0,
-    icms_valor_total: 0,
+    icms_base_calculo: valorTotalICMSBase,
+    icms_valor_total: valorTotalICMS,
     icms_base_calculo_st: 0,
     icms_valor_total_st: 0,
     
