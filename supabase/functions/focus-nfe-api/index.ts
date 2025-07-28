@@ -304,9 +304,9 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     // Totais IPI
     ipi_valor: 0,
     
-    // Totais PIS/COFINS
-    pis_valor: valorTotalPIS,
-    cofins_valor: valorTotalCOFINS,
+    // Totais PIS/COFINS - removidos para não aparecer na DANFE
+    // pis_valor: valorTotalPIS,
+    // cofins_valor: valorTotalCOFINS,
     
     // Outras despesas
     valor_outras_despesas: 0,
@@ -349,21 +349,8 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
         } : {})
       }),
       
-      // PIS conforme configurações fiscais
-      pis_situacao_tributaria: pisCST,
-      ...(pisAliquota > 0 ? {
-        pis_aliquota_porcentual: pisAliquota,
-        pis_valor: Number(item.total_price) * (pisAliquota / 100),
-        pis_base_calculo: Number(item.total_price)
-      } : {}),
-      
-      // COFINS conforme configurações fiscais
-      cofins_situacao_tributaria: cofinsCST,
-      ...(cofinsAliquota > 0 ? {
-        cofins_aliquota_porcentual: cofinsAliquota,
-        cofins_valor: Number(item.total_price) * (cofinsAliquota / 100),
-        cofins_base_calculo: Number(item.total_price)
-      } : {}),
+      // PIS e COFINS - removidos detalhes para não aparecer na DANFE
+      // Apenas valor total de tributos será informado
       
       // Valor total de tributos do item
       valor_total_tributos: Number(item.total_price) * ((pisAliquota + cofinsAliquota) / 100),
