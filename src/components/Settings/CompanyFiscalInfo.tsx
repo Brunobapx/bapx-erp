@@ -10,6 +10,7 @@ import { Building, FileText, Percent, Save, ExternalLink } from 'lucide-react';
 import { useCompanyFiscalSettings } from '@/hooks/useCompanyFiscalSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { FiscalValidation } from './FiscalValidation';
 
 export const CompanyFiscalInfo = () => {
   const { settings, setSettings, loading, saving, saveSettings, getTaxInfo } = useCompanyFiscalSettings();
@@ -687,6 +688,22 @@ export const CompanyFiscalInfo = () => {
               <p>• <strong>Compatibilidade:</strong> Configurações funcionam para NFe, NFCe e NFSe</p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Validação da Configuração Fiscal */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Validação da Configuração Fiscal
+          </CardTitle>
+          <CardDescription>
+            Verificação automática das configurações fiscais para emissão de NFe
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <FiscalValidation settings={settings} />
         </CardContent>
       </Card>
     </div>

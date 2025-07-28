@@ -163,13 +163,46 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     throw new Error('Pedido sem itens');
   }
 
-  // Usar configurações fiscais e dados da empresa dinâmicos
-  const pisAliquota = Number(configMap.pis_percentual || configMap.pis_aliquota || 1.65);
-  const cofinsAliquota = Number(configMap.cofins_percentual || configMap.cofins_aliquota || 7.6);
+  // Detectar regime tributário e aplicar configurações específicas
+  const taxRegime = Number(configMap.tax_regime || 3);
+  const isSimplesToNacional = taxRegime === 1 || taxRegime === 2;
+  
+  // Configurações de impostos específicas por regime
+  let pisAliquota: number, cofinsAliquota: number, pisCST: string, cofinsCST: string;
+  let icmsConfig: any = {};
+  
+  if (isSimplesToNacional) {
+    // Simples Nacional - usar CSOSN ao invés de CST
+    pisAliquota = 0; // Simples Nacional não recolhe PIS/COFINS separadamente
+    cofinsAliquota = 0;
+    pisCST = "49"; // PIS não tributado pelo Simples Nacional
+    cofinsCST = "49"; // COFINS não tributado pelo Simples Nacional
+    
+    icmsConfig = {
+      situacao_tributaria: configMap.csosn_padrao || "101", // CSOSN para Simples Nacional
+      origem: Number(configMap.icms_origem || 0),
+      aliquota: 0, // Simples Nacional não destaca ICMS separadamente
+      tipo_tributacao: "CSOSN"
+    };
+  } else {
+    // Regime Normal - usar configurações manuais de impostos
+    pisAliquota = Number(configMap.pis_percentual || configMap.pis_aliquota || 1.65);
+    cofinsAliquota = Number(configMap.cofins_percentual || configMap.cofins_aliquota || 7.6);
+    pisCST = configMap.pis_cst || "01";
+    cofinsCST = configMap.cofins_cst || "01";
+    
+    const icmsAliquota = Number(configMap.icms_percentual || 18);
+    icmsConfig = {
+      situacao_tributaria: configMap.cst_padrao || configMap.icms_cst || "60",
+      origem: Number(configMap.icms_origem || 0),
+      aliquota: icmsAliquota,
+      tipo_tributacao: "CST"
+    };
+  }
+  
+  // Outras configurações fiscais
   const defaultCfop = configMap.default_cfop || "5405";
   const defaultNcm = configMap.default_ncm || "19059090";
-  const icmsCst = configMap.icms_cst || "60";
-  const icmsOrigem = Number(configMap.icms_origem || 0);
   
   // Dados da empresa do emissor (usar cnpj_emissor se configurado, senão company_cnpj)
   const companyCnpj = (configMap.cnpj_emissor || configMap.company_cnpj || "39524018000128").replace(/[^\d]/g, '');
@@ -183,7 +216,16 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
   const companyState = configMap.company_state || "RJ";
   const companyCep = (configMap.company_cep || "21530014").replace(/[^\d]/g, '');
   const companyIe = configMap.company_ie || "11867847";
-  const taxRegime = Number(configMap.tax_regime || 3);
+  
+  console.log('Configurações fiscais aplicadas:', {
+    taxRegime,
+    isSimplesToNacional,
+    pisAliquota,
+    cofinsAliquota,
+    pisCST,
+    cofinsCST,
+    icmsConfig
+  });
 
   // Calcular valores totais usando configurações fiscais dinâmicas
   const valorTotalItens = pedido.order_items.reduce((sum: number, item: any) => sum + Number(item.total_price), 0);
@@ -272,21 +314,37 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
       codigo_ean: "SEM GTIN", // Conforme XML
       codigo_ean_tributavel: "SEM GTIN", // Conforme XML
       
-      // ICMS - Substituição Tributária conforme configurações
-      icms_situacao_tributaria: icmsCst,
-      icms_origem: icmsOrigem,
+      // ICMS conforme regime tributário
+      ...(isSimplesToNacional ? {
+        // Simples Nacional usa CSOSN
+        icms_csosn: icmsConfig.situacao_tributaria,
+        icms_origem: icmsConfig.origem
+      } : {
+        // Regime Normal usa CST
+        icms_situacao_tributaria: icmsConfig.situacao_tributaria,
+        icms_origem: icmsConfig.origem,
+        ...(icmsConfig.aliquota > 0 ? {
+          icms_aliquota: icmsConfig.aliquota,
+          icms_base_calculo: Number(item.total_price),
+          icms_valor: Number(item.total_price) * (icmsConfig.aliquota / 100)
+        } : {})
+      }),
       
       // PIS conforme configurações fiscais
-      pis_situacao_tributaria: "01",
-      pis_aliquota_porcentual: pisAliquota,
-      pis_valor: Number(item.total_price) * (pisAliquota / 100),
-      pis_base_calculo: Number(item.total_price),
+      pis_situacao_tributaria: pisCST,
+      ...(pisAliquota > 0 ? {
+        pis_aliquota_porcentual: pisAliquota,
+        pis_valor: Number(item.total_price) * (pisAliquota / 100),
+        pis_base_calculo: Number(item.total_price)
+      } : {}),
       
       // COFINS conforme configurações fiscais
-      cofins_situacao_tributaria: "01",
-      cofins_aliquota_porcentual: cofinsAliquota,
-      cofins_valor: Number(item.total_price) * (cofinsAliquota / 100),
-      cofins_base_calculo: Number(item.total_price),
+      cofins_situacao_tributaria: cofinsCST,
+      ...(cofinsAliquota > 0 ? {
+        cofins_aliquota_porcentual: cofinsAliquota,
+        cofins_valor: Number(item.total_price) * (cofinsAliquota / 100),
+        cofins_base_calculo: Number(item.total_price)
+      } : {}),
       
       // Valor total de tributos do item
       valor_total_tributos: Number(item.total_price) * ((pisAliquota + cofinsAliquota) / 100),
