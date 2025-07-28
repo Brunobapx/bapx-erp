@@ -332,6 +332,7 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
         icms_situacao_tributaria: icmsConfig.situacao_tributaria,
         icms_origem: icmsConfig.origem,
         ...(icmsConfig.aliquota > 0 ? {
+          icms_modalidade_base_calculo: 3, // 3 = Valor da operação
           icms_aliquota: icmsConfig.aliquota,
           icms_base_calculo: Number(item.total_price),
           icms_valor: Number(item.total_price) * (icmsConfig.aliquota / 100)
