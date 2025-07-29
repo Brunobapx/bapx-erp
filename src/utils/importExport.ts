@@ -315,42 +315,12 @@ export const createClientTemplate = (): void => {
     'Complemento', 'Bairro', 'Cidade', 'Estado', 'CEP'
   ];
   
-  const exampleData = [
-    {
-      nome: 'João da Silva',
-      tipo: 'PF',
-      cpf: '123.456.789-10',
-      rg: '12.345.678-9',
-      cnpj: '',
-      ie: '',
-      email: 'joao@email.com',
-      telefone: '(11) 99999-9999',
-      endereco: 'Rua das Flores, 123',
-      numero: '123',
-      complemento: 'Apto 45',
-      bairro: 'Centro',
-      cidade: 'São Paulo',
-      estado: 'SP',
-      cep: '01234-567'
-    },
-    {
-      nome: 'Empresa XYZ Ltda',
-      tipo: 'PJ',
-      cpf: '',
-      rg: '',
-      cnpj: '12.345.678/0001-90',
-      ie: '123.456.789.123',
-      email: 'contato@empresa.com',
-      telefone: '(11) 3333-4444',
-      endereco: 'Av. Paulista, 1000',
-      numero: '1000',
-      complemento: 'Sala 15',
-      bairro: 'Bela Vista',
-      cidade: 'São Paulo',
-      estado: 'SP',
-      cep: '01310-100'
-    }
-  ];
+  // Criar apenas com cabeçalhos vazios
+  const workbook = XLSX.utils.book_new();
+  const worksheet = XLSX.utils.aoa_to_sheet([headers]);
   
-  exportToExcel(exampleData, headers, 'template_clientes', 'Template para Importação de Clientes');
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Template');
+  XLSX.writeFile(workbook, 'template_clientes.xlsx');
+  
+  toast.success('Template de clientes baixado com sucesso!');
 };
