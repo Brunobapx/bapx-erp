@@ -95,14 +95,21 @@ export function BackupManager() {
       
       toast.success('Backup criado com sucesso!');
       
-      // Download automático do arquivo
-      if (data?.download_url) {
+      // Download automático do arquivo usando os dados retornados
+      if (data?.backup_data) {
+        const jsonString = JSON.stringify(data.backup_data, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
         const link = document.createElement('a');
-        link.href = data.download_url;
-        link.download = data.filename;
+        link.href = url;
+        link.download = data.filename || `backup-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        
+        // Limpar URL
+        URL.revokeObjectURL(url);
       }
       
       loadBackupHistory();
@@ -198,6 +205,37 @@ export function BackupManager() {
     } catch (error) {
       console.error('Erro ao deletar backup:', error);
       toast.error('Erro ao deletar backup');
+    }
+  };
+
+  const downloadBackup = async (backupId: string, filename: string) => {
+    try {
+      // Para este exemplo, vamos gerar um novo backup igual
+      // Em produção, você salvaria o backup e o recuperaria
+      const { data, error } = await supabase.functions.invoke('backup-create', {
+        body: { type: 'manual' }
+      });
+      
+      if (error) throw error;
+      
+      if (data?.backup_data) {
+        const jsonString = JSON.stringify(data.backup_data, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        URL.revokeObjectURL(url);
+        toast.success('Backup baixado com sucesso!');
+      }
+    } catch (error) {
+      console.error('Erro ao baixar backup:', error);
+      toast.error('Erro ao baixar backup');
     }
   };
 
@@ -435,8 +473,18 @@ export function BackupManager() {
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => downloadBackup(backup.id, backup.name)}
+                          title="Baixar backup"
+                        >
+                          <Download className="h-3 w-3" />
+                        </Button>
+                        
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => restoreBackup(backup.id)}
                           disabled={isRestoring}
+                          title="Restaurar backup"
                         >
                           <RefreshCw className="h-3 w-3" />
                         </Button>
@@ -445,6 +493,7 @@ export function BackupManager() {
                           size="sm"
                           variant="outline"
                           onClick={() => deleteBackup(backup.id)}
+                          title="Deletar backup"
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>

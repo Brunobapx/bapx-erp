@@ -152,16 +152,35 @@ serve(async (req) => {
       console.error('Erro ao salvar histórico de backup:', error);
     }
 
-    // Retornar arquivo para download
-    return new Response(JSON.stringify(backupStructure, null, 2), {
-      status: 200,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json',
-        'Content-Disposition': `attachment; filename="${filename}"`,
-        'Content-Length': sizeBytes.toString(),
-      },
-    });
+    // Verificar se é para download direto ou retornar dados
+    const url = new URL(req.url);
+    const downloadDirect = url.searchParams.get('download') === 'true';
+
+    if (downloadDirect) {
+      // Retornar arquivo para download direto
+      return new Response(JSON.stringify(backupStructure, null, 2), {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+          'Content-Disposition': `attachment; filename="${filename}"`,
+          'Content-Length': sizeBytes.toString(),
+        },
+      });
+    } else {
+      // Retornar informações do backup
+      return new Response(JSON.stringify({
+        success: true,
+        filename,
+        size_bytes: sizeBytes,
+        total_records: totalRecords,
+        download_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/backup-create?download=true`,
+        backup_data: backupStructure
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
   } catch (error) {
     console.error('Erro na criação do backup:', error);
