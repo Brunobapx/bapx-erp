@@ -1,6 +1,6 @@
 # Deployment Guide
 
-## EasyPanel Deployment
+## EasyPanel Deployment (com Setup Automático)
 
 ### Prerequisites
 - EasyPanel instance running
@@ -35,7 +35,18 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 
 1. Click "Deploy" in EasyPanel
 2. Wait for the build to complete
-3. Access your application via the provided URL
+3. **O sistema irá configurar automaticamente o banco de dados na primeira execução**
+4. Access your application via the provided URL
+
+### 🎉 Setup Automático
+
+O sistema agora **cria automaticamente todas as tabelas** quando instalado em uma VPS com banco vazio:
+
+- ✅ **Detecção Automática**: Verifica se é primeira instalação
+- ✅ **Criação de Tabelas**: Cria todas as tabelas e relacionamentos
+- ✅ **Dados Iniciais**: Módulos, categorias, métodos de pagamento
+- ✅ **Usuário Master**: Cria automaticamente (bapx@bapx.com.br / 123456)
+- ✅ **Configurações Padrão**: Markup, fiscal, sistema
 
 ## Docker Deployment
 

@@ -1,73 +1,131 @@
-# Welcome to your Lovable project
+# Sistema ERP - Setup Automático
 
-## Project info
+Sistema completo de gestão empresarial desenvolvido com React, TypeScript e Supabase.
 
-**URL**: https://lovable.dev/projects/371b12f9-f6fd-4dc1-93ac-a06f8ee2f13d
+## 🚀 Setup Automático de Banco de Dados
 
-## How can I edit this code?
+**Novidade**: O sistema agora **cria automaticamente todas as tabelas** quando instalado em uma VPS com banco vazio!
 
-There are several ways of editing your application.
+### ✨ Recursos do Setup Automático
 
-**Use Lovable**
+- 🔍 **Detecção Inteligente**: Verifica automaticamente se é a primeira instalação
+- 📊 **Criação Completa**: Todas as tabelas, funções e relacionamentos
+- 👤 **Usuário Master**: Cria automaticamente (bapx@bapx.com.br / 123456)
+- ⚙️ **Configurações Padrão**: Módulos do sistema, categorias financeiras, métodos de pagamento
+- 🛡️ **Segurança**: Políticas RLS e permissões já configuradas
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/371b12f9-f6fd-4dc1-93ac-a06f8ee2f13d) and start prompting.
+### 🔧 Como Funciona
 
-Changes made via Lovable will be committed automatically to this repo.
+1. **Deploy Automático**: Ao fazer deploy, o sistema detecta se o banco está vazio
+2. **Inicialização**: Executa automaticamente o setup do banco de dados
+3. **Pronto para Usar**: Sistema completamente configurado na primeira execução
 
-**Use your preferred IDE**
+### 📋 Scripts Disponíveis
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+```bash
+# Setup automático (executado automaticamente no deploy)
+./scripts/setup-database.sh
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+# Setup manual (para desenvolvimento/troubleshooting)
+./scripts/manual-setup.sh
 ```
 
-**Edit a file directly in GitHub**
+## Características do Sistema
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+- **Dashboard Interativo**: Visão geral de vendas, estoque e métricas
+- **Gestão de Vendas**: Pedidos, vendas e controle de estoque
+- **Financeiro**: Contas a receber, contas a pagar e fluxo de caixa
+- **Produção**: Controle de produção e embalagem
+- **Nota Fiscal**: Integração com Focus NFe
+- **Multi-usuário**: Sistema de permissões e roles
 
-**Use GitHub Codespaces**
+## Tecnologias Utilizadas
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
+Este projeto foi construído com:
 
 - Vite
 - TypeScript
 - React
 - shadcn-ui
 - Tailwind CSS
+- Supabase (Database & Auth)
 
-## How can I deploy this project?
+## 🚀 Deploy Rápido
 
-Simply open [Lovable](https://lovable.dev/projects/371b12f9-f6fd-4dc1-93ac-a06f8ee2f13d) and click on Share -> Publish.
+### Opção 1: EasyPanel (Recomendado)
+1. Configure suas variáveis de ambiente no EasyPanel
+2. Faça deploy do projeto
+3. **O banco será configurado automaticamente na primeira execução**
 
-## Can I connect a custom domain to my Lovable project?
+### Opção 2: Docker
+```bash
+# Clone o repositório
+git clone <YOUR_GIT_URL>
 
-Yes, you can!
+# Configure o .env com suas credenciais Supabase
+cp .env.example .env
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+# Execute com Docker
+docker-compose up -d
+```
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+### Opção 3: Manual
+```bash
+# Clone e instale dependências
+git clone <YOUR_GIT_URL>
+cd <YOUR_PROJECT_NAME>
+npm install
+
+# Execute setup manual do banco
+./scripts/manual-setup.sh
+
+# Inicie o desenvolvimento
+npm run dev
+```
+
+## 🔑 Credenciais Padrão
+
+Após a instalação automática, use estas credenciais para primeiro acesso:
+
+- **Email**: bapx@bapx.com.br
+- **Senha**: 123456
+
+⚠️ **IMPORTANTE**: Altere a senha do usuário master após o primeiro login!
+
+## 📝 Edição do Código
+
+**Use Lovable**
+
+Visite o [Projeto Lovable](https://lovable.dev/projects/371b12f9-f6fd-4dc1-93ac-a06f8ee2f13d) e comece a fazer prompts.
+
+**Use seu IDE preferido**
+
+Se quiser trabalhar localmente:
+
+```sh
+# Instale Node.js & npm - [instalar com nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+
+# Clone o repositório
+git clone <YOUR_GIT_URL>
+
+# Navegue para o diretório
+cd <YOUR_PROJECT_NAME>
+
+# Instale dependências
+npm i
+
+# Inicie o servidor de desenvolvimento
+npm run dev
+```
+
+## 📖 Documentação
+
+Para documentação completa de deployment, consulte [DEPLOYMENT.md](./DEPLOYMENT.md)
+
+## 🆘 Suporte
+
+Se encontrar problemas durante a instalação:
+
+1. Verifique se as variáveis de ambiente estão corretas
+2. Execute o setup manual: `./scripts/manual-setup.sh`
+3. Consulte os logs do container para mais detalhes
