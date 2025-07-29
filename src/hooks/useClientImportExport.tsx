@@ -53,8 +53,11 @@ export const useClientImportExport = () => {
     const errors: string[] = [];
     let successCount = 0;
 
+    console.log('Iniciando importação de clientes:', clientsData);
+
     for (const [index, clientData] of clientsData.entries()) {
       try {
+        console.log(`Processando cliente ${index + 1}:`, clientData);
         // Normalizar tipo automaticamente baseado no texto
         let normalizedType: 'PF' | 'PJ' = 'PF'; // padrão
         const tipoTexto = (clientData.tipo || '').toLowerCase().trim();
@@ -102,7 +105,10 @@ export const useClientImportExport = () => {
           zip: clientData.cep || undefined
         };
 
+        console.log(`Cliente normalizado para criação:`, clientToCreate);
+        
         await createClient(clientToCreate);
+        console.log(`Cliente ${index + 1} criado com sucesso`);
         successCount++;
       } catch (error: any) {
         errors.push(`Linha ${index + 1}: ${error.message}`);
