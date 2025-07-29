@@ -55,12 +55,33 @@ export const useClientImportExport = () => {
 
     for (const [index, clientData] of clientsData.entries()) {
       try {
-        // Normalizar tipo
-        let normalizedType = clientData.tipo;
-        if (normalizedType === 'Física' || normalizedType === 'física') {
-          normalizedType = 'PF';
-        } else if (normalizedType === 'Jurídica' || normalizedType === 'jurídica') {
+        // Normalizar tipo automaticamente baseado no texto
+        let normalizedType: 'PF' | 'PJ' = 'PF'; // padrão
+        const tipoTexto = (clientData.tipo || '').toLowerCase().trim();
+        
+        // Regras para determinar o tipo automaticamente
+        if (tipoTexto.includes('juridica') || 
+            tipoTexto.includes('jurídica') || 
+            tipoTexto === 'pj' || 
+            tipoTexto === 'j' ||
+            tipoTexto.includes('empresa') ||
+            tipoTexto.includes('cnpj')) {
           normalizedType = 'PJ';
+        } else if (tipoTexto.includes('fisica') || 
+                   tipoTexto.includes('física') || 
+                   tipoTexto === 'pf' || 
+                   tipoTexto === 'f' ||
+                   tipoTexto.includes('pessoa') ||
+                   tipoTexto.includes('cpf')) {
+          normalizedType = 'PF';
+        }
+        // Se tiver CNPJ preenchido, automaticamente é PJ
+        else if (clientData.cnpj && clientData.cnpj.trim()) {
+          normalizedType = 'PJ';
+        }
+        // Se tiver CPF preenchido, automaticamente é PF
+        else if (clientData.cpf && clientData.cpf.trim()) {
+          normalizedType = 'PF';
         }
 
         const clientToCreate = {
