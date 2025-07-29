@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { validateClientData, createClientTemplate } from '@/utils/importExport';
-import { useClients } from '@/hooks/useClients';
+import { useClients } from '@/hooks/useClients.ts';
 import { toast } from 'sonner';
 
 export const useClientImportExport = () => {
