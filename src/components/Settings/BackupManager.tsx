@@ -75,12 +75,17 @@ export function BackupManager() {
   const loadGoogleDriveConfig = async () => {
     try {
       const { data, error } = await supabase.functions.invoke('google-drive-config');
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao carregar configuração do Google Drive:', error);
+        // Não mostrar erro para o usuário, apenas usar valores padrão
+        return;
+      }
       if (data?.config) {
         setGoogleDriveConfig(data.config);
       }
     } catch (error) {
       console.error('Erro ao carregar configuração do Google Drive:', error);
+      // Usar configuração padrão em caso de erro
     }
   };
 

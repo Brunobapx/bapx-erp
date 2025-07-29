@@ -31,53 +31,59 @@ serve(async (req) => {
     let backupData: any;
 
     // Verificar se é upload de arquivo ou restore de backup existente
-    const contentType = req.headers.get('content-type');
+    const contentType = req.headers.get('content-type') || '';
     
-    if (contentType?.includes('multipart/form-data')) {
+    if (contentType.includes('multipart/form-data')) {
       // Upload de arquivo
-      const formData = await req.formData();
-      const file = formData.get('backup_file') as File;
-      
-      if (!file) {
-        return new Response(JSON.stringify({ error: 'Arquivo de backup não encontrado' }), {
+      try {
+        const formData = await req.formData();
+        const file = formData.get('backup_file') as File;
+        
+        if (!file) {
+          return new Response(JSON.stringify({ error: 'Arquivo de backup não encontrado' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        console.log(`Arquivo recebido: ${file.name}, tamanho: ${file.size} bytes`);
+        const fileContent = await file.text();
+        backupData = JSON.parse(fileContent);
+      } catch (error) {
+        console.error('Erro ao processar arquivo:', error);
+        return new Response(JSON.stringify({ error: 'Erro ao processar arquivo de backup' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-
-      const fileContent = await file.text();
-      backupData = JSON.parse(fileContent);
     } else {
-      // Restore de backup existente
-      const { backup_id } = await req.json();
-      
-      if (!backup_id) {
-        return new Response(JSON.stringify({ error: 'ID do backup não fornecido' }), {
+      // Restore de backup existente via JSON
+      try {
+        const body = await req.json();
+        const { backup_id } = body;
+        
+        if (!backup_id) {
+          return new Response(JSON.stringify({ error: 'ID do backup não fornecido' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        // Para simplicidade, vamos simular que encontramos o backup
+        // Em produção, você carregaria do storage/Google Drive
+        console.log(`Tentando restaurar backup ID: ${backup_id}`);
+        
+        return new Response(JSON.stringify({ error: 'Restore de backup existente ainda não implementado. Use upload de arquivo.' }), {
+          status: 501,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (error) {
+        console.error('Erro ao processar request JSON:', error);
+        return new Response(JSON.stringify({ error: 'Erro ao processar requisição' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-
-      // Buscar backup no histórico
-      const { data: backupRecord, error } = await supabase
-        .from('backup_history')
-        .select('*')
-        .eq('id', backup_id)
-        .single();
-
-      if (error || !backupRecord) {
-        return new Response(JSON.stringify({ error: 'Backup não encontrado' }), {
-          status: 404,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
-      // Para este exemplo, assumimos que o backup está armazenado localmente
-      // Em produção, você carregaria do Google Drive ou storage
-      return new Response(JSON.stringify({ error: 'Restore de backup existente não implementado' }), {
-        status: 501,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
     }
 
     // Validar estrutura do backup
@@ -158,19 +164,18 @@ serve(async (req) => {
       try {
         console.log(`Restaurando tabela ${tableName} (${tableData.length} registros)...`);
 
-        // Limpar tabela existente (cuidado!)
+        // ATENÇÃO: Limpar tabela existente (muito perigoso!)
         const { error: deleteError } = await supabase
           .from(tableName)
           .delete()
           .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
 
-        if (deleteError) {
+        if (deleteError && !deleteError.message.includes('violates foreign key constraint')) {
           console.error(`Erro ao limpar tabela ${tableName}:`, deleteError);
-          // Continuar mesmo com erro de limpeza
         }
 
-        // Inserir dados em lotes
-        const batchSize = 100;
+        // Inserir dados em lotes menores para evitar timeouts
+        const batchSize = 50; // Reduzido para maior confiabilidade
         for (let i = 0; i < tableData.length; i += batchSize) {
           const batch = tableData.slice(i, i + batchSize);
           
@@ -180,13 +185,21 @@ serve(async (req) => {
 
           if (insertError) {
             console.error(`Erro ao inserir lote ${i} da tabela ${tableName}:`, insertError);
-            // Tentar inserir registro por registro
+            
+            // Tentar inserir registro por registro em caso de erro no lote
             for (const record of batch) {
               try {
-                await supabase.from(tableName).insert(record);
-                restoredRecords++;
+                const { error: singleError } = await supabase
+                  .from(tableName)
+                  .insert(record);
+                
+                if (!singleError) {
+                  restoredRecords++;
+                } else {
+                  console.error(`Erro ao inserir registro individual:`, singleError);
+                }
               } catch (recordError) {
-                console.error(`Erro ao inserir registro individual:`, recordError);
+                console.error(`Erro crítico ao inserir registro:`, recordError);
               }
             }
           } else {
