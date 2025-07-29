@@ -8,6 +8,7 @@ import { CurrentUserProfile } from '@/components/Settings/CurrentUserProfile';
 import { DatabaseReset } from '@/components/Settings/DatabaseReset';
 import { CompanyFiscalInfo } from '@/components/Settings/CompanyFiscalInfo';
 import { SellerCommissionsSection } from '@/components/Settings/SellerCommissionsSection';
+import { BackupManager } from '@/components/Settings/BackupManager';
 
 interface TabContentProps {
   tabName: string;
@@ -64,6 +65,14 @@ export const SettingsPageContent: React.FC<SettingsPageContentProps> = ({ isAdmi
         <TabsContent value="fiscal">
           <TabContent tabName="Fiscal">
             <CompanyFiscalInfo />
+          </TabContent>
+        </TabsContent>
+      )}
+
+      {isAdmin && (
+        <TabsContent value="backup">
+          <TabContent tabName="Backup">
+            <BackupManager />
           </TabContent>
         </TabsContent>
       )}

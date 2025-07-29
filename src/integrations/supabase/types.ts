@@ -79,6 +79,48 @@ export type Database = {
           },
         ]
       }
+      backup_history: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          filename: string
+          id: string
+          location: string | null
+          metadata: Json | null
+          size_bytes: number | null
+          status: string
+          total_records: number | null
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          filename: string
+          id?: string
+          location?: string | null
+          metadata?: Json | null
+          size_bytes?: number | null
+          status?: string
+          total_records?: number | null
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          filename?: string
+          id?: string
+          location?: string | null
+          metadata?: Json | null
+          size_bytes?: number | null
+          status?: string
+          total_records?: number | null
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           address: string | null
