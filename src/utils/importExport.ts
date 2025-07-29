@@ -142,13 +142,70 @@ export const processImportFile = async (file: File, validator: (data: any) => st
         rows.forEach((row, index) => {
           const rowData: any = {};
           headers.forEach((header, colIndex) => {
-            if (row[colIndex] !== undefined && row[colIndex] !== null) {
-              rowData[header.toLowerCase().replace(/\s+/g, '_')] = row[colIndex];
+            if (row[colIndex] !== undefined && row[colIndex] !== null && String(row[colIndex]).trim() !== '') {
+              // Mapear cabeçalhos do Excel para os campos corretos
+              const normalizedHeader = header.toLowerCase().trim();
+              let fieldName = normalizedHeader;
+              
+              // Mapeamento específico para os campos de cliente
+              switch (normalizedHeader) {
+                case 'nome':
+                  fieldName = 'nome';
+                  break;
+                case 'tipo':
+                  fieldName = 'tipo';
+                  break;
+                case 'cpf':
+                  fieldName = 'cpf';
+                  break;
+                case 'rg':
+                  fieldName = 'rg';
+                  break;
+                case 'cnpj':
+                  fieldName = 'cnpj';
+                  break;
+                case 'ie':
+                  fieldName = 'ie';
+                  break;
+                case 'email':
+                  fieldName = 'email';
+                  break;
+                case 'telefone':
+                  fieldName = 'telefone';
+                  break;
+                case 'endereço':
+                case 'endereco':
+                  fieldName = 'endereco';
+                  break;
+                case 'número':
+                case 'numero':
+                  fieldName = 'numero';
+                  break;
+                case 'complemento':
+                  fieldName = 'complemento';
+                  break;
+                case 'bairro':
+                  fieldName = 'bairro';
+                  break;
+                case 'cidade':
+                  fieldName = 'cidade';
+                  break;
+                case 'estado':
+                  fieldName = 'estado';
+                  break;
+                case 'cep':
+                  fieldName = 'cep';
+                  break;
+                default:
+                  fieldName = normalizedHeader.replace(/\s+/g, '_');
+              }
+              
+              rowData[fieldName] = String(row[colIndex]).trim();
             }
           });
           
-          // Pular linhas vazias
-          if (Object.keys(rowData).length === 0) {
+          // Pular linhas vazias (que não tenham pelo menos nome e tipo)
+          if (!rowData.nome || !rowData.tipo) {
             return;
           }
           
