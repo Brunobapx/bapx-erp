@@ -62,7 +62,7 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
   const { products, loading: productsLoading } = useProducts();
   const serviceProducts = products.filter(p => (p as any).is_service === true);
   const { data: technicians } = useTechnicians();
-  const { currentUserPosition } = useUserPositions();
+  const { currentUserPosition, isTecnico } = useUserPositions();
   const { user } = useAuth();
   const { isAdmin, isMaster } = useUserPermissions();
   
@@ -84,13 +84,13 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
 
   // Auto-preencher técnico se o usuário logado for técnico
   useEffect(() => {
-    if (currentUserPosition === 'tecnico' && user && !order) {
+    if (isTecnico && user && !order && !form.technician_id) {
       setForm(prev => ({
         ...prev,
         technician_id: user.id
       }));
     }
-  }, [currentUserPosition, user, order]);
+  }, [isTecnico, user, order, form.technician_id]);
 
   // Verificar se o usuário pode editar o campo técnico
   const canEditTechnician = currentUserPosition === 'gerente' || 
@@ -98,7 +98,7 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
                            isAdmin || 
                            isMaster;
 
-  const isTechnician = currentUserPosition === 'tecnico';
+  const isTechnicianUser = isTecnico;
 
   // Carregar materiais se editando
   useEffect(() => {
@@ -273,16 +273,20 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
           <div>
             <Label>
               Técnico responsável *
-              {isTechnician && (
+              {isTechnicianUser && (
                 <span className="text-xs text-muted-foreground ml-2">
                   (Preenchido automaticamente)
                 </span>
               )}
             </Label>
-            {isTechnician && !canEditTechnician ? (
+            {isTechnicianUser && !canEditTechnician ? (
               // Se for técnico, mostrar apenas um input desabilitado com o nome
               <Input
-                value={technicians?.find(t => t.id === user?.id)?.full_name || 'Técnico não encontrado'}
+                value={
+                  user?.user_metadata?.first_name && user?.user_metadata?.last_name
+                    ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`.trim()
+                    : technicians?.find(t => t.id === user?.id)?.full_name || 'Carregando...'
+                }
                 readOnly
                 className="bg-muted"
               />
@@ -291,7 +295,7 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
               <Select
                 value={form.technician_id || ""}
                 onValueChange={(v) => setForm((x) => ({ ...x, technician_id: v }))}
-                disabled={!technicians?.length || (!canEditTechnician && !isTechnician)}
+                disabled={!technicians?.length || (!canEditTechnician && !isTechnicianUser)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o técnico..." />
@@ -305,7 +309,7 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
                 </SelectContent>
               </Select>
             )}
-            {!canEditTechnician && !isTechnician && (
+            {!canEditTechnician && !isTechnicianUser && (
               <p className="text-xs text-muted-foreground mt-1">
                 Apenas administradores ou gerentes podem alterar o técnico responsável
               </p>

@@ -101,6 +101,7 @@ export const useUserPositions = () => {
     updateUserPosition,
     getUserPosition,
     refetch: fetchCurrentUserPosition,
-    isVendedor: currentUserPosition === 'vendedor'
+    isVendedor: currentUserPosition === 'vendedor',
+    isTecnico: currentUserPosition === 'tecnico'
   };
 };
