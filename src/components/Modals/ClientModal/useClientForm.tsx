@@ -98,7 +98,24 @@ export const useClientForm = (clientData: Client | null, onClose: (refresh?: boo
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Atualizar dados do formulário
+    const updatedData = { ...formData, [name]: value };
+    
+    // Regra automática para tipo de pessoa baseado no preenchimento
+    if (name === 'cnpj' && value.trim() !== '') {
+      updatedData.type = 'Jurídica';
+      // Limpar campo CPF quando CNPJ for preenchido
+      updatedData.cpf = '';
+      updatedData.rg = '';
+    } else if (name === 'cpf' && value.trim() !== '') {
+      updatedData.type = 'Física';
+      // Limpar campo CNPJ quando CPF for preenchido
+      updatedData.cnpj = '';
+      updatedData.ie = '';
+    }
+    
+    setFormData(updatedData);
   };
 
   const handleTypeChange = (value: string) => {
