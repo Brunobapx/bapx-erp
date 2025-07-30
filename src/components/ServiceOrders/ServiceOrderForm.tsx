@@ -4,6 +4,7 @@ import { useClients } from "@/hooks/useClients";
 import { useProducts } from "@/hooks/useProducts";
 import { useTechnicians } from "@/hooks/useTechnicians";
 import { useUserPositions } from "@/hooks/useUserPositions";
+import { useUserPermissions } from "@/hooks/useUserPermissions";
 import { useAuth } from "@/components/Auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -63,6 +64,7 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
   const { data: technicians } = useTechnicians();
   const { currentUserPosition } = useUserPositions();
   const { user } = useAuth();
+  const { isAdmin, isMaster } = useUserPermissions();
   
   const [materials, setMaterials] = useState<ServiceOrderMaterial[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
@@ -93,8 +95,8 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
   // Verificar se o usuário pode editar o campo técnico
   const canEditTechnician = currentUserPosition === 'gerente' || 
                            currentUserPosition === 'administrativo' ||
-                           user?.role === 'admin' || 
-                           user?.role === 'master';
+                           isAdmin || 
+                           isMaster;
 
   const isTechnician = currentUserPosition === 'tecnico';
 
@@ -149,6 +151,24 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
 
   // Salvar ordem
   const handleSave = async () => {
+    // Validações básicas
+    if (!form.client_id) {
+      toast.error("Por favor, selecione um cliente.");
+      return;
+    }
+    if (!form.technician_id) {
+      toast.error("Por favor, selecione um técnico responsável.");
+      return;
+    }
+    if (!form.service_type) {
+      toast.error("Por favor, selecione o tipo de serviço.");
+      return;
+    }
+    if (!form.description) {
+      toast.error("Por favor, insira uma descrição do serviço.");
+      return;
+    }
+
     setSaving(true);
     try {
       const totalMaterialsCost = materials.reduce((sum, m) => sum + (Number(m.subtotal) || 0), 0);
@@ -158,12 +178,15 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
       const orderData = {
         ...form,
         total_value: totalValue,
+        user_id: user?.id, // Garantir que o user_id seja sempre incluído
       };
       
       await saveServiceOrder(orderData);
+      toast.success("Ordem de serviço salva com sucesso!");
       onSaved();
     } catch (error) {
       console.error('Erro ao salvar OS:', error);
+      toast.error("Erro ao salvar ordem de serviço. Tente novamente.");
     } finally {
       setSaving(false);
     }
@@ -259,7 +282,7 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
             {isTechnician && !canEditTechnician ? (
               // Se for técnico, mostrar apenas um input desabilitado com o nome
               <Input
-                value={technicians?.find(t => t.id === user?.id)?.full_name || 'Você'}
+                value={technicians?.find(t => t.id === user?.id)?.full_name || 'Técnico não encontrado'}
                 readOnly
                 className="bg-muted"
               />
