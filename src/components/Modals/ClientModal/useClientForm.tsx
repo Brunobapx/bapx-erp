@@ -5,16 +5,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Client } from '@/hooks/useClients';
 import { validateClientForm } from "./useClientFormValidation";
 import { buildClientData } from "./buildClientData";
+import { applyPersonTypeRule, ClientFormData as BaseClientFormData } from "@/lib/clientFormUtils";
 
 
-interface FormData {
+interface FormData extends BaseClientFormData {
   id: string;
   name: string;
-  type: string;
-  cnpj: string;
-  ie: string;
-  cpf: string;
-  rg: string;
   email: string;
   phone: string;
   address: string;
@@ -99,22 +95,8 @@ export const useClientForm = (clientData: Client | null, onClose: (refresh?: boo
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     
-    // Atualizar dados do formulário
-    const updatedData = { ...formData, [name]: value };
-    
-    // Regra automática para tipo de pessoa baseado no preenchimento
-    if (name === 'cnpj' && value.trim() !== '') {
-      updatedData.type = 'Jurídica';
-      // Limpar campo CPF quando CNPJ for preenchido
-      updatedData.cpf = '';
-      updatedData.rg = '';
-    } else if (name === 'cpf' && value.trim() !== '') {
-      updatedData.type = 'Física';
-      // Limpar campo CNPJ quando CPF for preenchido
-      updatedData.cnpj = '';
-      updatedData.ie = '';
-    }
-    
+    // Aplicar regra automática de tipo de pessoa
+    const updatedData = applyPersonTypeRule(formData, name, value) as FormData;
     setFormData(updatedData);
   };
 

@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Save, Building, FileText, MapPin, User } from 'lucide-react';
+import { applyCNPJRule, applyCPFRule } from "@/lib/clientFormUtils";
 
 interface CompanySetting {
   key: string;
@@ -167,10 +168,16 @@ export const CompanySettings = () => {
   };
 
   const handleInputChange = (key: string, value: string) => {
-    setCompanyData(prev => ({
-      ...prev,
-      [key]: value
-    }));
+    let updatedData = { ...companyData, [key]: value };
+    
+    // Aplicar regras de CNPJ/CPF
+    if (key === 'company_cnpj') {
+      updatedData = applyCNPJRule(updatedData, key, value);
+    } else if (key === 'company_responsible_cpf') {
+      updatedData = applyCPFRule(updatedData, key, value);
+    }
+    
+    setCompanyData(updatedData);
   };
 
   const formatCNPJ = (value: string) => {

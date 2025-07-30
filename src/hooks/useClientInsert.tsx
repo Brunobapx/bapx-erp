@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { applyPersonTypeRule } from "@/lib/clientFormUtils";
 
 
 export type ClientFormData = {
@@ -21,7 +22,6 @@ export type ClientFormData = {
 export const useClientInsert = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-
   const createClient = async (clientData: ClientFormData) => {
     setIsSubmitting(true);
     try {
@@ -51,8 +51,16 @@ export const useClientInsert = () => {
     }
   };
 
+  /**
+   * Função para aplicar regra de tipo de pessoa em formulários externos
+   */
+  const applyClientFormRule = (formData: any, fieldName: string, fieldValue: string) => {
+    return applyPersonTypeRule(formData, fieldName, fieldValue);
+  };
+
   return {
     createClient,
-    isSubmitting
+    isSubmitting,
+    applyClientFormRule
   };
 };
