@@ -185,6 +185,7 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
         ...form,
         total_value: totalValue,
         user_id: user?.id, // Garantir que o user_id seja sempre incluído
+        company_id: user?.id, // Adicionar company_id baseado no usuário
       };
       
       console.log("=== DEBUG: Dados que serão salvos ===");
