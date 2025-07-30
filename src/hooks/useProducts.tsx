@@ -20,6 +20,7 @@ export type Product = {
   is_manufactured?: boolean;
   is_direct_sale?: boolean;
   is_active?: boolean;
+  is_service?: boolean;
   commission_type?: string;
   commission_value?: number;
   tax_type?: string;
@@ -171,8 +172,12 @@ export const useProducts = () => {
 
   const filteredProducts = searchProducts(searchQuery);
 
+  // Filtros específicos
+  const serviceProducts = allProducts?.filter(product => product.is_service === true) || [];
+
   return {
     products: Array.isArray(filteredProducts) ? filteredProducts : [],
+    serviceProducts,
     loading,
     error: error ? error.message : null,
     searchQuery,

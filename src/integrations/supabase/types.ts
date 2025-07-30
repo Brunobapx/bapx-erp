@@ -2356,6 +2356,15 @@ export type Database = {
         Args: { table_name: string }
         Returns: number
       }
+      get_technicians: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          first_name: string
+          last_name: string
+          email: string
+        }[]
+      }
       has_module_permission: {
         Args: { user_id: string; module_route: string }
         Returns: boolean
