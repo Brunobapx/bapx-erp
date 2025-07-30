@@ -151,6 +151,12 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
 
   // Salvar ordem
   const handleSave = async () => {
+    console.log("=== DEBUG: Dados do formulário ===");
+    console.log("form:", form);
+    console.log("user:", user);
+    console.log("isTecnico:", isTecnico);
+    console.log("technicians:", technicians);
+    
     // Validações básicas
     if (!form.client_id) {
       toast.error("Por favor, selecione um cliente.");
@@ -181,11 +187,15 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
         user_id: user?.id, // Garantir que o user_id seja sempre incluído
       };
       
+      console.log("=== DEBUG: Dados que serão salvos ===");
+      console.log("orderData:", orderData);
+      
       await saveServiceOrder(orderData);
       toast.success("Ordem de serviço salva com sucesso!");
       onSaved();
     } catch (error) {
-      console.error('Erro ao salvar OS:', error);
+      console.error('=== DEBUG: Erro ao salvar ===');
+      console.error('error:', error);
       toast.error("Erro ao salvar ordem de serviço. Tente novamente.");
     } finally {
       setSaving(false);
