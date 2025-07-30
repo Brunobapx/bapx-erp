@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { applyPersonTypeRule } from "@/lib/clientFormUtils";
+import { applyPersonTypeRule, detectPersonTypeFromData } from "@/lib/clientFormUtils";
 
 
 export type ClientFormData = {
@@ -58,9 +58,17 @@ export const useClientInsert = () => {
     return applyPersonTypeRule(formData, fieldName, fieldValue);
   };
 
+  /**
+   * Função para detectar automaticamente o tipo de pessoa baseado nos dados
+   */
+  const detectClientPersonType = (formData: any) => {
+    return detectPersonTypeFromData(formData);
+  };
+
   return {
     createClient,
     isSubmitting,
-    applyClientFormRule
+    applyClientFormRule,
+    detectClientPersonType
   };
 };

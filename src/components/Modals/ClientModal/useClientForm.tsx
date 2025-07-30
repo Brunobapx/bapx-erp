@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Client } from '@/hooks/useClients';
 import { validateClientForm } from "./useClientFormValidation";
 import { buildClientData } from "./buildClientData";
-import { applyPersonTypeRule, ClientFormData as BaseClientFormData } from "@/lib/clientFormUtils";
+import { applyPersonTypeRule, detectPersonTypeFromData, ClientFormData as BaseClientFormData } from "@/lib/clientFormUtils";
 
 
 interface FormData extends BaseClientFormData {
@@ -48,7 +48,7 @@ export const useClientForm = (clientData: Client | null, onClose: (refresh?: boo
 
   useEffect(() => {
     if (clientData) {
-      setFormData({
+      const initialData = {
         id: clientData.id || '',
         name: clientData.name || '',
         type: clientData.type || 'Jurídica',
@@ -65,7 +65,11 @@ export const useClientForm = (clientData: Client | null, onClose: (refresh?: boo
         state: clientData.state || '',
         zip: clientData.zip || '',
         bairro: (clientData as any).bairro || ''
-      });
+      };
+      
+      // Detecta automaticamente o tipo de pessoa baseado nos dados existentes
+      const dataWithDetectedType = detectPersonTypeFromData(initialData);
+      setFormData(dataWithDetectedType as FormData);
     } else {
       resetForm();
     }
