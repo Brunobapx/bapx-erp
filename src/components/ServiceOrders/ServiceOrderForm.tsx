@@ -82,13 +82,21 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
 
   // Auto-preencher técnico se o usuário logado for técnico
   useEffect(() => {
-    if (currentUserPosition === 'producao' && user && !order) {
+    if (currentUserPosition === 'tecnico' && user && !order) {
       setForm(prev => ({
         ...prev,
         technician_id: user.id
       }));
     }
   }, [currentUserPosition, user, order]);
+
+  // Verificar se o usuário pode editar o campo técnico
+  const canEditTechnician = currentUserPosition === 'gerente' || 
+                           currentUserPosition === 'administrativo' ||
+                           user?.role === 'admin' || 
+                           user?.role === 'master';
+
+  const isTechnician = currentUserPosition === 'tecnico';
 
   // Carregar materiais se editando
   useEffect(() => {
@@ -240,23 +248,45 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
             </Select>
           </div>
           <div>
-            <Label>Técnico responsável *</Label>
-            <Select
-              value={form.technician_id || ""}
-              onValueChange={(v) => setForm((x) => ({ ...x, technician_id: v }))}
-              disabled={!technicians?.length}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o técnico..." />
-              </SelectTrigger>
-              <SelectContent>
-                {technicians?.map((t) => (
-                  <SelectItem value={t.id} key={t.id}>
-                    {t.full_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>
+              Técnico responsável *
+              {isTechnician && (
+                <span className="text-xs text-muted-foreground ml-2">
+                  (Preenchido automaticamente)
+                </span>
+              )}
+            </Label>
+            {isTechnician && !canEditTechnician ? (
+              // Se for técnico, mostrar apenas um input desabilitado com o nome
+              <Input
+                value={technicians?.find(t => t.id === user?.id)?.full_name || 'Você'}
+                readOnly
+                className="bg-muted"
+              />
+            ) : (
+              // Se for admin/gerente, mostrar select com todos os técnicos
+              <Select
+                value={form.technician_id || ""}
+                onValueChange={(v) => setForm((x) => ({ ...x, technician_id: v }))}
+                disabled={!technicians?.length || (!canEditTechnician && !isTechnician)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o técnico..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {technicians?.map((t) => (
+                    <SelectItem value={t.id} key={t.id}>
+                      {t.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {!canEditTechnician && !isTechnician && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Apenas administradores ou gerentes podem alterar o técnico responsável
+              </p>
+            )}
           </div>
         </div>
 
