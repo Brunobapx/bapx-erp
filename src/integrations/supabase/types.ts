@@ -1309,6 +1309,7 @@ export type Database = {
           is_active: boolean
           is_direct_sale: boolean
           is_manufactured: boolean | null
+          is_service: boolean
           name: string
           ncm: string | null
           pis: string | null
@@ -1336,6 +1337,7 @@ export type Database = {
           is_active?: boolean
           is_direct_sale?: boolean
           is_manufactured?: boolean | null
+          is_service?: boolean
           name: string
           ncm?: string | null
           pis?: string | null
@@ -1363,6 +1365,7 @@ export type Database = {
           is_active?: boolean
           is_direct_sale?: boolean
           is_manufactured?: boolean | null
+          is_service?: boolean
           name?: string
           ncm?: string | null
           pis?: string | null
