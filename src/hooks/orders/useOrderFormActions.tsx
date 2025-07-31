@@ -138,10 +138,13 @@ export const useOrderFormActions = ({
 
     try {
       setIsSubmitting(true);
+      console.log('[handleSubmit] Iniciando criação/atualização de pedido');
       
       const { data: { user }, error: userError } = await supabase.auth.getUser();
+      console.log('[handleSubmit] Usuário autenticado:', !!user, user?.id);
       
       if (userError || !user) {
+        console.error('[handleSubmit] Erro de autenticação:', userError);
         toast.error("Usuário não autenticado. Faça login para continuar.");
         return null;
       }
@@ -161,13 +164,20 @@ export const useOrderFormActions = ({
           status: 'pending'
         };
         
+        console.log('[handleSubmit] Dados do pedido a ser criado:', orderData);
+        
         const { data: insertedOrder, error: orderError } = await supabase
           .from('orders')
           .insert([orderData])
           .select()
           .single();
           
-        if (orderError) throw orderError;
+        if (orderError) {
+          console.error('[handleSubmit] Erro ao criar pedido:', orderError);
+          throw orderError;
+        }
+        
+        console.log('[handleSubmit] Pedido criado com sucesso:', insertedOrder.id);
         
         // Criar todos os itens do pedido
         const itemsData = items.map(item => ({
@@ -180,11 +190,18 @@ export const useOrderFormActions = ({
           total_price: item.total_price
         }));
         
+        console.log('[handleSubmit] Dados dos itens a serem criados:', itemsData.length, 'itens');
+        
         const { error: itemsError } = await supabase
           .from('order_items')
           .insert(itemsData);
           
-        if (itemsError) throw itemsError;
+        if (itemsError) {
+          console.error('[handleSubmit] Erro ao criar itens do pedido:', itemsError);
+          throw itemsError;
+        }
+        
+        console.log('[handleSubmit] Itens do pedido criados com sucesso');
         
         // Verificar estoque e processar para produção/embalagem
         console.log('Iniciando verificação de estoque e processamento...');
