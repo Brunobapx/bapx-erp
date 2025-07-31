@@ -139,29 +139,94 @@ export const useOrderFormActions = ({
     try {
       setIsSubmitting(true);
       console.log('[handleSubmit] Iniciando criação/atualização de pedido');
+      console.log('[handleSubmit] RLS TEMPORARIAMENTE DESABILITADO PARA DEBUGGING');
       
-      // Verificar sessão e usuário com mais detalhes
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      console.log('[handleSubmit] Sessão ativa:', !!session, session?.user?.id);
+      // Verificação robusta de autenticação com retry
+      let session = null;
+      let attempts = 0;
+      const maxAttempts = 3;
       
-      if (sessionError) {
-        console.error('[handleSubmit] Erro ao obter sessão:', sessionError);
-        toast.error("Erro de autenticação. Tente fazer login novamente.");
-        return null;
+      while (attempts < maxAttempts && !session) {
+        attempts++;
+        console.log(`[handleSubmit] Tentativa ${attempts}/${maxAttempts} de obter sessão`);
+        
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error(`[handleSubmit] Erro na tentativa ${attempts}:`, sessionError);
+          if (attempts === maxAttempts) {
+            toast.error("Erro de autenticação após múltiplas tentativas. Recarregue a página.");
+            return null;
+          }
+          continue;
+        }
+        
+        if (sessionData?.session?.user) {
+          session = sessionData.session;
+          console.log('[handleSubmit] ✅ Sessão obtida com sucesso:', {
+            userId: session.user.id,
+            email: session.user.email,
+            tokenPresent: !!session.access_token,
+            expiresAt: session.expires_at,
+            role: session.user.user_metadata?.role
+          });
+        } else {
+          console.warn(`[handleSubmit] ⚠️ Sessão vazia na tentativa ${attempts}`);
+          if (attempts < maxAttempts) {
+            console.log('[handleSubmit] 🔄 Tentando refresh do token...');
+            const { error: refreshError } = await supabase.auth.refreshSession();
+            if (refreshError) {
+              console.error('[handleSubmit] ❌ Erro no refresh:', refreshError);
+            }
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
       }
       
       if (!session?.user) {
-        console.error('[handleSubmit] Usuário não autenticado - sessão inválida');
-        toast.error("Usuário não autenticado. Faça login para continuar.");
+        console.error('[handleSubmit] ❌ FALHA CRÍTICA: Não foi possível obter sessão válida');
+        toast.error("Não foi possível autenticar. Faça login novamente.");
         return null;
       }
       
       const user = session.user;
-      console.log('[handleSubmit] Verificando token JWT...');
       const token = session.access_token;
+      
+      // Verificação adicional do token
       if (!token) {
-        console.error('[handleSubmit] Token JWT não encontrado');
-        toast.error("Token de autenticação inválido. Faça login novamente.");
+        console.error('[handleSubmit] ❌ Token JWT não encontrado na sessão');
+        toast.error("Token de autenticação não encontrado. Faça login novamente.");
+        return null;
+      }
+      
+      if (session.expires_at && new Date(session.expires_at * 1000) < new Date()) {
+        console.error('[handleSubmit] ❌ Token JWT expirado');
+        toast.error("Sessão expirada. Faça login novamente.");
+        return null;
+      }
+      
+      console.log('[handleSubmit] ✅ Autenticação verificada. Testando acesso direto ao banco...');
+      
+      // Teste direto de acesso ao banco
+      try {
+        const { data: testData, error: testError } = await supabase
+          .from('orders')
+          .select('count')
+          .limit(1);
+        
+        if (testError) {
+          console.error('[handleSubmit] ❌ Erro no teste de acesso:', testError);
+          console.error('[handleSubmit] Código do erro:', testError.code);
+          console.error('[handleSubmit] Detalhes:', testError.details);
+          console.error('[handleSubmit] Hint:', testError.hint);
+          toast.error(`Erro de acesso ao banco: ${testError.message}`);
+          return null;
+        } else {
+          console.log('[handleSubmit] ✅ Teste de acesso bem-sucedido!');
+        }
+      } catch (error) {
+        console.error('[handleSubmit] ❌ Erro no teste de acesso (catch):', error);
+        toast.error("Erro inesperado no teste de acesso ao banco");
         return null;
       }
 
