@@ -29,10 +29,25 @@ export const useOrderInsert = () => {
     setIsSubmitting(true);
     
     try {
+      // Verificar sessão atual
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('[DEBUG] Verificação de sessão:', {
+        hasSession: !!session,
+        sessionError: sessionError?.message,
+        user: session?.user ? { id: session.user.id, email: session.user.email } : null
+      });
+
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
-      if (userError || !user) {
-        throw new Error('Usuário não autenticado');
+      console.log('[DEBUG] Resultado da autenticação:', {
+        user: user ? { id: user.id, email: user.email } : null,
+        userError: userError?.message,
+        hasUser: !!user
+      });
+      
+      if (userError || !user || !session) {
+        console.error('[DEBUG] Erro de autenticação:', { userError, sessionError, hasUser: !!user, hasSession: !!session });
+        throw new Error('Usuário não autenticado ou sessão inválida');
       }
 
       console.log('Criando pedido com dados:', {
@@ -43,7 +58,14 @@ export const useOrderInsert = () => {
 
       const totalAmount = orderData.items.reduce((sum, item) => sum + item.total_price, 0);
 
-      // Criar o pedido
+      // Criar o pedido com logs detalhados
+      console.log('[DEBUG] Dados da inserção:', {
+        user_id: user.id,
+        client_id: orderData.client_id,
+        client_name: orderData.client_name,
+        total_amount: totalAmount
+      });
+      
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -60,6 +82,12 @@ export const useOrderInsert = () => {
         })
         .select()
         .single();
+
+      console.log('[DEBUG] Resultado da inserção do pedido:', {
+        order: order ? { id: order.id, user_id: order.user_id } : null,
+        orderError: orderError?.message,
+        orderErrorCode: orderError?.code
+      });
 
       if (orderError) {
         console.error('Erro ao criar pedido:', orderError);
