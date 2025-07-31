@@ -29,9 +29,15 @@ export const useOrderInsert = () => {
     setIsSubmitting(true);
     
     try {
+      console.log('[ORDER INSERT] Iniciando criação de pedido:', {
+        clientId: orderData.client_id,
+        clientName: orderData.client_name,
+        itemsCount: orderData.items.length
+      });
+
       // Verificar sessão atual
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      console.log('[DEBUG] Verificação de sessão:', {
+      console.log('[ORDER INSERT] Verificação de sessão:', {
         hasSession: !!session,
         sessionError: sessionError?.message,
         user: session?.user ? { id: session.user.id, email: session.user.email } : null
