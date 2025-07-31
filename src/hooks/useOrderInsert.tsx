@@ -82,6 +82,23 @@ export const useOrderInsert = () => {
         total_amount: totalAmount
       });
       
+      // TESTE CRÍTICO: Tentar SELECT primeiro para verificar se a tabela é visível
+      try {
+        const { data: testOrders, error: selectError } = await supabase
+          .from('orders')
+          .select('id')
+          .limit(1);
+        
+        console.log('[DEBUG] Teste SELECT na tabela orders:', {
+          success: !selectError,
+          ordersCount: testOrders?.length || 0,
+          selectError: selectError?.message,
+          selectErrorCode: selectError?.code
+        });
+      } catch (selectErr) {
+        console.error('[DEBUG] Erro no teste SELECT orders:', selectErr);
+      }
+
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
