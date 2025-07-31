@@ -1309,6 +1309,7 @@ export type Database = {
           is_active: boolean
           is_direct_sale: boolean
           is_manufactured: boolean | null
+          is_service: boolean
           name: string
           ncm: string | null
           pis: string | null
@@ -1336,6 +1337,7 @@ export type Database = {
           is_active?: boolean
           is_direct_sale?: boolean
           is_manufactured?: boolean | null
+          is_service?: boolean
           name: string
           ncm?: string | null
           pis?: string | null
@@ -1363,6 +1365,7 @@ export type Database = {
           is_active?: boolean
           is_direct_sale?: boolean
           is_manufactured?: boolean | null
+          is_service?: boolean
           name?: string
           ncm?: string | null
           pis?: string | null
@@ -2353,6 +2356,15 @@ export type Database = {
         Args: { table_name: string }
         Returns: number
       }
+      get_technicians: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          first_name: string
+          last_name: string
+          email: string
+        }[]
+      }
       has_module_permission: {
         Args: { user_id: string; module_route: string }
         Returns: boolean
@@ -2434,6 +2446,7 @@ export type Database = {
         | "financeiro"
         | "producao"
         | "estoque"
+        | "tecnico"
       user_type: "admin" | "user" | "master" | "seller"
     }
     CompositeTypes: {
@@ -2616,6 +2629,7 @@ export const Constants = {
         "financeiro",
         "producao",
         "estoque",
+        "tecnico",
       ],
       user_type: ["admin", "user", "master", "seller"],
     },

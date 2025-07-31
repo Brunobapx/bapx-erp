@@ -140,12 +140,28 @@ export const useOrderFormActions = ({
       setIsSubmitting(true);
       console.log('[handleSubmit] Iniciando criação/atualização de pedido');
       
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      console.log('[handleSubmit] Usuário autenticado:', !!user, user?.id);
+      // Verificar sessão e usuário com mais detalhes
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('[handleSubmit] Sessão ativa:', !!session, session?.user?.id);
       
-      if (userError || !user) {
-        console.error('[handleSubmit] Erro de autenticação:', userError);
+      if (sessionError) {
+        console.error('[handleSubmit] Erro ao obter sessão:', sessionError);
+        toast.error("Erro de autenticação. Tente fazer login novamente.");
+        return null;
+      }
+      
+      if (!session?.user) {
+        console.error('[handleSubmit] Usuário não autenticado - sessão inválida');
         toast.error("Usuário não autenticado. Faça login para continuar.");
+        return null;
+      }
+      
+      const user = session.user;
+      console.log('[handleSubmit] Verificando token JWT...');
+      const token = session.access_token;
+      if (!token) {
+        console.error('[handleSubmit] Token JWT não encontrado');
+        toast.error("Token de autenticação inválido. Faça login novamente.");
         return null;
       }
 
