@@ -2446,7 +2446,6 @@ export type Database = {
         | "financeiro"
         | "producao"
         | "estoque"
-        | "tecnico"
       user_type: "admin" | "user" | "master" | "seller"
     }
     CompositeTypes: {
@@ -2629,7 +2628,6 @@ export const Constants = {
         "financeiro",
         "producao",
         "estoque",
-        "tecnico",
       ],
       user_type: ["admin", "user", "master", "seller"],
     },

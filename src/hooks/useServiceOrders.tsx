@@ -68,9 +68,6 @@ export const useServiceOrders = () => {
   // Create or update service order
   const mutation = useMutation({
     mutationFn: async (order: Partial<ServiceOrder>) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado!");
-      
       let resp;
       if (order.id) {
         // Update
@@ -81,14 +78,10 @@ export const useServiceOrders = () => {
           .select()
           .single();
       } else {
-        // Insert - incluir user_id obrigatório
-        const orderData = {
-          ...order,
-          user_id: user.id
-        };
+        // Insert
         resp = await supabase
           .from("service_orders")
-          .insert([orderData])
+          .insert([order])
           .select()
           .single();
       }

@@ -4,7 +4,6 @@ import { useClients } from "@/hooks/useClients";
 import { useProducts } from "@/hooks/useProducts";
 import { useTechnicians } from "@/hooks/useTechnicians";
 import { useUserPositions } from "@/hooks/useUserPositions";
-import { useUserPermissions } from "@/hooks/useUserPermissions";
 import { useAuth } from "@/components/Auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -62,9 +61,8 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
   const { products, loading: productsLoading } = useProducts();
   const serviceProducts = products.filter(p => (p as any).is_service === true);
   const { data: technicians } = useTechnicians();
-  const { currentUserPosition, isTecnico } = useUserPositions();
+  const { currentUserPosition } = useUserPositions();
   const { user } = useAuth();
-  const { isAdmin, isMaster } = useUserPermissions();
   
   const [materials, setMaterials] = useState<ServiceOrderMaterial[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
@@ -84,21 +82,13 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
 
   // Auto-preencher técnico se o usuário logado for técnico
   useEffect(() => {
-    if (isTecnico && user && !order && !form.technician_id) {
+    if (currentUserPosition === 'producao' && user && !order) {
       setForm(prev => ({
         ...prev,
         technician_id: user.id
       }));
     }
-  }, [isTecnico, user, order, form.technician_id]);
-
-  // Verificar se o usuário pode editar o campo técnico
-  const canEditTechnician = currentUserPosition === 'gerente' || 
-                           currentUserPosition === 'administrativo' ||
-                           isAdmin || 
-                           isMaster;
-
-  const isTechnicianUser = isTecnico;
+  }, [currentUserPosition, user, order]);
 
   // Carregar materiais se editando
   useEffect(() => {
@@ -151,30 +141,6 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
 
   // Salvar ordem
   const handleSave = async () => {
-    console.log("=== DEBUG: Dados do formulário ===");
-    console.log("form:", form);
-    console.log("user:", user);
-    console.log("isTecnico:", isTecnico);
-    console.log("technicians:", technicians);
-    
-    // Validações básicas
-    if (!form.client_id) {
-      toast.error("Por favor, selecione um cliente.");
-      return;
-    }
-    if (!form.technician_id) {
-      toast.error("Por favor, selecione um técnico responsável.");
-      return;
-    }
-    if (!form.service_type) {
-      toast.error("Por favor, selecione o tipo de serviço.");
-      return;
-    }
-    if (!form.description) {
-      toast.error("Por favor, insira uma descrição do serviço.");
-      return;
-    }
-
     setSaving(true);
     try {
       const totalMaterialsCost = materials.reduce((sum, m) => sum + (Number(m.subtotal) || 0), 0);
@@ -184,19 +150,12 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
       const orderData = {
         ...form,
         total_value: totalValue,
-        user_id: user?.id, // Garantir que o user_id seja sempre incluído
       };
       
-      console.log("=== DEBUG: Dados que serão salvos ===");
-      console.log("orderData:", orderData);
-      
       await saveServiceOrder(orderData);
-      toast.success("Ordem de serviço salva com sucesso!");
       onSaved();
     } catch (error) {
-      console.error('=== DEBUG: Erro ao salvar ===');
-      console.error('error:', error);
-      toast.error("Erro ao salvar ordem de serviço. Tente novamente.");
+      console.error('Erro ao salvar OS:', error);
     } finally {
       setSaving(false);
     }
@@ -281,49 +240,23 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
             </Select>
           </div>
           <div>
-            <Label>
-              Técnico responsável *
-              {isTechnicianUser && (
-                <span className="text-xs text-muted-foreground ml-2">
-                  (Preenchido automaticamente)
-                </span>
-              )}
-            </Label>
-            {isTechnicianUser && !canEditTechnician ? (
-              // Se for técnico, mostrar apenas um input desabilitado com o nome
-              <Input
-                value={
-                  user?.user_metadata?.first_name && user?.user_metadata?.last_name
-                    ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`.trim()
-                    : technicians?.find(t => t.id === user?.id)?.full_name || 'Carregando...'
-                }
-                readOnly
-                className="bg-muted"
-              />
-            ) : (
-              // Se for admin/gerente, mostrar select com todos os técnicos
-              <Select
-                value={form.technician_id || ""}
-                onValueChange={(v) => setForm((x) => ({ ...x, technician_id: v }))}
-                disabled={!technicians?.length || (!canEditTechnician && !isTechnicianUser)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o técnico..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {technicians?.map((t) => (
-                    <SelectItem value={t.id} key={t.id}>
-                      {t.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            {!canEditTechnician && !isTechnicianUser && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Apenas administradores ou gerentes podem alterar o técnico responsável
-              </p>
-            )}
+            <Label>Técnico responsável *</Label>
+            <Select
+              value={form.technician_id || ""}
+              onValueChange={(v) => setForm((x) => ({ ...x, technician_id: v }))}
+              disabled={!technicians?.length}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o técnico..." />
+              </SelectTrigger>
+              <SelectContent>
+                {technicians?.map((t) => (
+                  <SelectItem value={t.id} key={t.id}>
+                    {t.full_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

@@ -16,52 +16,37 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
     if (!supabaseUrl || !serviceRoleKey) {
-      console.error('Missing environment variables');
       throw new Error('Configuração do servidor incompleta');
     }
 
     const supabaseClient = createClient(supabaseUrl, serviceRoleKey)
 
-    const requestBody = await req.json();
-    const { userId, updates, moduleIds } = requestBody;
+    const { userId, updates, moduleIds } = await req.json();
 
     console.log('Updating user:', { userId, updates, moduleIds })
-    console.log('Request body:', requestBody)
 
     // Verificar autorização
     const authHeader = req.headers.get('Authorization')
-    console.log('Auth header:', authHeader ? 'Present' : 'Missing')
-    
     if (!authHeader) {
       throw new Error('Token de autorização não encontrado');
     }
 
     const token = authHeader.replace('Bearer ', '')
-    console.log('Token extracted, attempting to get user...')
-    
     const { data: { user: requestingUser }, error: userError } = await supabaseClient.auth.getUser(token)
-    
-    console.log('Auth user result:', { user: requestingUser?.id, error: userError })
 
     if (userError || !requestingUser) {
-      console.error('Auth error:', userError)
       throw new Error('Token de autorização inválido');
     }
 
     // Verificar se é admin/master ou o próprio usuário
-    console.log('Checking admin status for user:', requestingUser.id)
     const { data: adminCheck, error: adminError } = await supabaseClient
       .from('user_roles')
       .select('role')
       .eq('user_id', requestingUser.id)
       .maybeSingle()
 
-    console.log('Admin check result:', { adminCheck, adminError })
-
     const isAdmin = adminCheck && ['admin', 'master'].includes(adminCheck.role);
     const isSelfUpdate = requestingUser.id === userId;
-    
-    console.log('Permission check:', { isAdmin, isSelfUpdate, requestingUserId: requestingUser.id, targetUserId: userId })
 
     if (!isAdmin && !isSelfUpdate) {
       throw new Error('Permissão negada');
