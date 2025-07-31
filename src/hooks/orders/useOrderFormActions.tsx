@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { OrderFormState, OrderFormItem } from './useOrderFormState';
 import { useNavigate } from 'react-router-dom';
 import { checkStockAndSendToProduction } from './stockProcessor';
+import { useOrderInsert } from '../useOrderInsert';
 
 interface UseOrderFormActionsProps {
   formData: OrderFormState;
@@ -25,6 +26,7 @@ export const useOrderFormActions = ({
 }: UseOrderFormActionsProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const { createOrder } = useOrderInsert();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -141,90 +143,65 @@ export const useOrderFormActions = ({
     try {
       setIsSubmitting(true);
       
-      // Usar a mesma abordagem do useOrderInsert que está funcionando
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError || !user) {
-        toast.error("Usuário não autenticado. Faça login novamente para continuar.");
-        return null;
-      }
-
       if (isNewOrder) {
-        // Criar novo pedido usando a mesma estrutura do useOrderInsert
+        console.log('[ORDER DEBUG] Usando useOrderInsert para criação...');
+        
+        // Preparar dados para o useOrderInsert (formato correto)
         const orderData = {
-          user_id: user.id,
           client_id: formData.client_id,
           client_name: formData.client_name,
-          seller: formData.seller || null,
-          total_amount: formData.total_amount,
-          delivery_deadline: formData.delivery_deadline?.toISOString().split('T')[0] || null,
-          payment_method: formData.payment_method || null,
-          payment_term: formData.payment_term || null,
-          notes: formData.notes || null,
-          status: 'pending'
+          seller: formData.seller,
+          delivery_deadline: formData.delivery_deadline?.toISOString().split('T')[0],
+          payment_method: formData.payment_method,
+          payment_term: formData.payment_term,
+          notes: formData.notes,
+          items: items.map(item => ({
+            product_id: item.product_id,
+            product_name: item.product_name,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            total_price: item.total_price,
+          }))
         };
+
+        console.log('[ORDER DEBUG] Dados preparados para useOrderInsert:', orderData);
+
+        // Usar o hook useOrderInsert que já funciona
+        const orderId = await createOrder(orderData);
         
-        console.log('Tentando inserir pedido:', orderData);
-        const { data: insertedOrder, error: orderError } = await supabase
-          .from('orders')
-          .insert(orderData)
-          .select()
-          .single();
+        if (orderId) {
+          console.log('[ORDER DEBUG] Pedido criado com sucesso, ID:', orderId);
           
-        console.log('Resultado da inserção:', { insertedOrder, orderError });
+          // Processar estoque após criação completa
+          try {
+            console.log('[ORDER DEBUG] Iniciando processamento de estoque...');
+            await checkStockAndSendToProduction(orderId);
+          } catch (stockError) {
+            console.warn('[ORDER DEBUG] Erro ao processar estoque (não crítico):', stockError);
+          }
           
-        if (orderError) {
-          console.error('Erro ao criar pedido:', orderError);
-          throw orderError;
-        }
-        
-        // Criar todos os itens do pedido
-        const itemsData = items.map(item => ({
-          user_id: user.id,
-          order_id: insertedOrder.id,
-          product_id: item.product_id,
-          product_name: item.product_name,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          total_price: item.total_price
-        }));
-        
-        const { error: itemsError } = await supabase
-          .from('order_items')
-          .insert(itemsData);
+          // Verificar produtos de venda direta
+          const hasDirectSaleProducts = await checkDirectSaleProducts(items);
           
-        if (itemsError) throw itemsError;
-        
-        // Verificar estoque e processar para produção/embalagem
-        console.log('Iniciando verificação de estoque e processamento...');
-        let stockProcessed = false;
-        try {
-          stockProcessed = await checkStockAndSendToProduction(insertedOrder.id);
-        } catch (stockError) {
-          console.warn('Erro ao processar estoque:', stockError);
-          // Não falha a criação do pedido por problemas de estoque
-          stockProcessed = false;
-        }
-        
-        // Verificar se algum produto é de venda direta
-        const hasDirectSaleProducts = await checkDirectSaleProducts(items);
-        
-        if (hasDirectSaleProducts) {
-          console.log('Produto de venda direta detectado, criando venda automaticamente...');
-          await createSaleFromOrder(insertedOrder.id);
-        } else if (stockProcessed) {
-          // Não mostra toast aqui pois checkStockAndSendToProduction já mostra as mensagens
-          console.log("Pedido criado e processado com sucesso");
+          if (hasDirectSaleProducts) {
+            console.log('[ORDER DEBUG] Produto de venda direta detectado, criando venda...');
+            await createSaleFromOrder(orderId);
+          }
+          
+          // Fechar modal e atualizar lista
+          onClose(true);
+          return orderId;
         } else {
-          toast.success("Pedido criado com sucesso");
+          throw new Error('Falha na criação do pedido');
         }
-        
-        // Fechar modal e atualizar lista
-        onClose(true);
-        
-        return insertedOrder.id;
       } else {
-        // Atualizar pedido existente
+        // Atualizar pedido existente - buscar usuário
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+          toast.error("Usuário não autenticado");
+          return null;
+        }
+
         const orderUpdateData = {
           client_id: formData.client_id,
           client_name: formData.client_name,
