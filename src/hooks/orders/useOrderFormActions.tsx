@@ -166,11 +166,14 @@ export const useOrderFormActions = ({
           status: 'pending'
         };
         
+        console.log('Tentando inserir pedido:', orderData);
         const { data: insertedOrder, error: orderError } = await supabase
           .from('orders')
           .insert([orderData])
           .select()
           .single();
+          
+        console.log('Resultado da inserção:', { insertedOrder, orderError });
           
         if (orderError) throw orderError;
         
