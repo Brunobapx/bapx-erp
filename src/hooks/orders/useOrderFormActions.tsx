@@ -86,11 +86,13 @@ export const useOrderFormActions = ({
 
   const createSaleFromOrder = async (orderId: string) => {
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (userError || !user) {
+      if (sessionError || !session || !session.user) {
         throw new Error('Usuário não autenticado');
       }
+      
+      const user = session.user;
 
       // Criar a venda baseada no pedido
       const saleData = {
@@ -139,12 +141,15 @@ export const useOrderFormActions = ({
     try {
       setIsSubmitting(true);
       
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      // Primeiro, verificar se a sessão está ativa
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (userError || !user) {
-        toast.error("Usuário não autenticado. Faça login para continuar.");
+      if (sessionError || !session || !session.user) {
+        toast.error("Sessão expirada. Faça login novamente para continuar.");
         return null;
       }
+      
+      const user = session.user;
 
       if (isNewOrder) {
         // Criar novo pedido
