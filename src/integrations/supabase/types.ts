@@ -337,13 +337,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "delivery_routes_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "delivery_routes_sale_id_fkey"
             columns: ["sale_id"]
             isOneToOne: false
@@ -527,13 +520,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "financial_entries_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "financial_entries_sale_id_fkey"
             columns: ["sale_id"]
             isOneToOne: false
@@ -630,13 +616,6 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fiscal_invoices_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
           {
@@ -825,15 +804,7 @@ export type Database = {
           user_id?: string
           xml_url?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "notas_emitidas_pedido_id_fkey"
-            columns: ["pedido_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       order_items: {
         Row: {
@@ -880,13 +851,6 @@ export type Database = {
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "order_items_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
         ]
       }
       orders: {
@@ -902,7 +866,7 @@ export type Database = {
           payment_term: string | null
           salesperson_id: string | null
           seller: string | null
-          status: Database["public"]["Enums"]["order_status"] | null
+          status: string | null
           total_amount: number | null
           updated_at: string
           user_id: string
@@ -919,7 +883,7 @@ export type Database = {
           payment_term?: string | null
           salesperson_id?: string | null
           seller?: string | null
-          status?: Database["public"]["Enums"]["order_status"] | null
+          status?: string | null
           total_amount?: number | null
           updated_at?: string
           user_id: string
@@ -936,20 +900,12 @@ export type Database = {
           payment_term?: string | null
           salesperson_id?: string | null
           seller?: string | null
-          status?: Database["public"]["Enums"]["order_status"] | null
+          status?: string | null
           total_amount?: number | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "orders_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       packaging: {
         Row: {
@@ -1278,13 +1234,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "production_order_item_id_fkey"
-            columns: ["order_item_id"]
-            isOneToOne: false
-            referencedRelation: "order_items"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "production_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
@@ -1586,13 +1535,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "route_items_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "route_items_route_assignment_id_fkey"
             columns: ["route_assignment_id"]
             isOneToOne: false
@@ -1674,13 +1616,6 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sales_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
         ]
