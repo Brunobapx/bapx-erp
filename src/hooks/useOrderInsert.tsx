@@ -29,40 +29,68 @@ export const useOrderInsert = () => {
     setIsSubmitting(true);
     
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      // Múltiplas verificações de autenticação para garantir que o usuário está logado
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (userError || !user) {
-        throw new Error('Usuário não autenticado');
+      if (sessionError) {
+        console.error('Erro ao verificar sessão:', sessionError);
+        throw new Error('Erro na verificação de autenticação');
+      }
+
+      if (!session?.user) {
+        console.error('Usuário não autenticado - sessão não encontrada');
+        throw new Error('Você precisa estar logado para criar pedidos');
+      }
+
+      const user = session.user;
+
+      // Verificação adicional do usuário
+      const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !currentUser || currentUser.id !== user.id) {
+        console.error('Erro na verificação do usuário atual:', userError);
+        throw new Error('Sessão inválida. Faça login novamente.');
       }
 
       console.log('Criando pedido com dados:', {
         userId: user.id,
+        userEmail: user.email,
         clientId: orderData.client_id,
         itemsCount: orderData.items.length
       });
 
       const totalAmount = orderData.items.reduce((sum, item) => sum + item.total_price, 0);
 
-      // Criar o pedido
+      // Criar o pedido com dados explícitos
+      const orderInsertData = {
+        user_id: user.id,
+        client_id: orderData.client_id,
+        client_name: orderData.client_name,
+        seller: orderData.seller || null,
+        delivery_deadline: orderData.delivery_deadline || null,
+        payment_method: orderData.payment_method || null,
+        payment_term: orderData.payment_term || null,
+        notes: orderData.notes || null,
+        total_amount: totalAmount,
+        status: 'pending'
+      };
+
+      console.log('Inserindo pedido na tabela orders:', orderInsertData);
+
       const { data: order, error: orderError } = await supabase
         .from('orders')
-        .insert({
-          user_id: user.id,
-          client_id: orderData.client_id,
-          client_name: orderData.client_name,
-          seller: orderData.seller,
-          delivery_deadline: orderData.delivery_deadline,
-          payment_method: orderData.payment_method,
-          payment_term: orderData.payment_term,
-          notes: orderData.notes,
-          total_amount: totalAmount,
-          status: 'pending'
-        })
+        .insert(orderInsertData)
         .select()
         .single();
 
       if (orderError) {
-        console.error('Erro ao criar pedido:', orderError);
+        console.error('Erro detalhado ao criar pedido:', {
+          error: orderError,
+          code: orderError.code,
+          message: orderError.message,
+          details: orderError.details,
+          hint: orderError.hint
+        });
         
         // Tratar erros específicos
         if (orderError.code === '23505') {
@@ -71,9 +99,13 @@ export const useOrderInsert = () => {
           throw new Error('Dados de referência inválidos. Verifique cliente e produtos.');
         } else if (orderError.code === '23502') {
           throw new Error('Dados obrigatórios não fornecidos.');
+        } else if (orderError.code === '42P01') {
+          throw new Error('Tabela não encontrada. Verifique a configuração do banco.');
+        } else if (orderError.message?.includes('RLS')) {
+          throw new Error('Erro de permissão. Verifique se você está autenticado.');
         }
         
-        throw orderError;
+        throw new Error(`Erro ao criar pedido: ${orderError.message}`);
       }
 
       console.log('Pedido criado com sucesso:', order.id);
@@ -89,15 +121,27 @@ export const useOrderInsert = () => {
         total_price: item.total_price
       }));
 
+      console.log('Inserindo itens do pedido:', orderItems);
+
       const { error: itemsError } = await supabase
         .from('order_items')
         .insert(orderItems);
 
       if (itemsError) {
-        console.error('Erro ao criar itens do pedido:', itemsError);
+        console.error('Erro detalhado ao criar itens:', {
+          error: itemsError,
+          code: itemsError.code,
+          message: itemsError.message,
+          items: orderItems
+        });
         
         // Tentar excluir o pedido criado se houve erro nos itens
-        await supabase.from('orders').delete().eq('id', order.id);
+        try {
+          await supabase.from('orders').delete().eq('id', order.id);
+          console.log('Pedido excluído devido ao erro nos itens');
+        } catch (deleteError) {
+          console.error('Erro ao excluir pedido após falha nos itens:', deleteError);
+        }
         
         throw new Error('Erro ao criar itens do pedido: ' + itemsError.message);
       }
