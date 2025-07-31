@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-export type UserPosition = 'vendedor' | 'administrativo' | 'entregador' | 'gerente' | 'financeiro' | 'producao' | 'estoque' | 'tecnico';
+export type UserPosition = 'vendedor' | 'administrativo' | 'entregador' | 'gerente' | 'financeiro' | 'producao' | 'estoque';
 
 export const POSITION_LABELS: Record<UserPosition, string> = {
   vendedor: 'Vendedor',
@@ -11,8 +11,7 @@ export const POSITION_LABELS: Record<UserPosition, string> = {
   gerente: 'Gerente',
   financeiro: 'Financeiro',
   producao: 'Produção',
-  estoque: 'Estoque',
-  tecnico: 'Técnico'
+  estoque: 'Estoque'
 };
 
 export const useUserPositions = () => {

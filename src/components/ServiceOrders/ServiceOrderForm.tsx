@@ -1,10 +1,7 @@
+
 import React, { useEffect, useState } from "react";
 import { useServiceOrders, ServiceOrder, ServiceOrderMaterial } from "@/hooks/useServiceOrders";
 import { useClients } from "@/hooks/useClients";
-import { useProducts } from "@/hooks/useProducts";
-import { useTechnicians } from "@/hooks/useTechnicians";
-import { useUserPositions } from "@/hooks/useUserPositions";
-import { useAuth } from "@/components/Auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,58 +9,24 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectItem, SelectTrigger, SelectContent, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, Save, Printer, Check, Clock, AlertTriangle } from "lucide-react";
+import { Loader2, Save, Printer, Check } from "lucide-react";
+import { useProducts } from "@/hooks/useProducts";
 
-const serviceTypes = ["Instalação", "Manutenção", "Reparo", "Suporte", "Consultoria", "Outros"];
-const priorities = ["Baixa", "Média", "Alta", "Crítica"];
-const statusOptions = ["Aberta", "Em Andamento", "Finalizada", "Cancelada"];
+const serviceTypes = ["Instalação", "Manutenção", "Suporte", "Outros"];
+const priorities = ["Baixa", "Média", "Alta"];
+const statusOptions = ["Aberta", "Em andamento", "Finalizada", "Cancelada"];
 
 type Props = {
   order?: ServiceOrder;
   onSaved: () => void;
 };
 
-const getPriorityColor = (priority: string) => {
-  switch (priority) {
-    case 'Crítica': return 'destructive';
-    case 'Alta': return 'default';
-    case 'Média': return 'secondary';
-    case 'Baixa': return 'outline';
-    default: return 'outline';
-  }
-};
-
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'Aberta': return 'destructive';
-    case 'Em Andamento': return 'default';
-    case 'Finalizada': return 'outline';
-    case 'Cancelada': return 'secondary';
-    default: return 'outline';
-  }
-};
-
-const calculateTimeSinceOpened = (openedAt: string) => {
-  const opened = new Date(openedAt);
-  const now = new Date();
-  const diffHours = Math.floor((now.getTime() - opened.getTime()) / (1000 * 60 * 60));
-  
-  if (diffHours < 1) return 'Menos de 1h';
-  if (diffHours < 24) return `${diffHours}h`;
-  return `${Math.floor(diffHours / 24)}d ${diffHours % 24}h`;
-};
-
 export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
-  const { saveServiceOrder } = useServiceOrders();
+  const { saveServiceOrder, isLoading } = useServiceOrders();
   const { clients, isLoading: clientsLoading } = useClients();
+  const [technicians, setTechnicians] = useState<{ id: string; name: string }[]>([]);
   const { products, loading: productsLoading } = useProducts();
-  const serviceProducts = products.filter(p => (p as any).is_service === true);
-  const { data: technicians } = useTechnicians();
-  const { currentUserPosition } = useUserPositions();
-  const { user } = useAuth();
-  
   const [materials, setMaterials] = useState<ServiceOrderMaterial[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [selectedProductQuantity, setSelectedProductQuantity] = useState<number>(1);
@@ -80,15 +43,24 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
   );
   const [saving, setSaving] = useState(false);
 
-  // Auto-preencher técnico se o usuário logado for técnico
+  // Buscar técnicos (usuários da função)
   useEffect(() => {
-    if (currentUserPosition === 'producao' && user && !order) {
-      setForm(prev => ({
-        ...prev,
-        technician_id: user.id
-      }));
+    async function fetchTechnicians() {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, role")
+        .eq("role", "técnico");
+      if (!error && Array.isArray(data)) {
+        setTechnicians(
+          data.map((t) => ({
+            id: t.id,
+            name: (t.first_name || "") + " " + (t.last_name || ""),
+          }))
+        );
+      }
     }
-  }, [currentUserPosition, user, order]);
+    fetchTechnicians();
+  }, []);
 
   // Carregar materiais se editando
   useEffect(() => {
@@ -110,27 +82,41 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
     fetchMaterials();
   }, [order]);
 
-  // Adicionar material de serviço
+  // Adicionar material
   const addMaterial = async () => {
     if (!selectedProductId || selectedProductQuantity < 1) return;
-    const product = serviceProducts.find((p) => p.id === selectedProductId);
+    const product = products.find((p) => p.id === selectedProductId);
     if (!product) return;
-    
-    // Registrar material na ordem
-    const newMaterial = {
-      id: Date.now().toString(),
-      service_order_id: order?.id,
-      product_id: product.id,
-      quantity: selectedProductQuantity,
-      unit_value: product.price,
-      subtotal: (product.price || 0) * selectedProductQuantity,
-      product: product,
-    };
-
-    setMaterials(prev => [...prev, newMaterial]);
+    // Registrar material na ordem e descontar estoque
+    const { data, error } = await supabase
+      .from("service_order_materials")
+      .insert([
+        {
+          service_order_id: order?.id,
+          product_id: product.id,
+          quantity: selectedProductQuantity,
+          unit_value: product.price,
+          subtotal: (product.price || 0) * selectedProductQuantity,
+        },
+      ])
+      .select()
+      .single();
+    if (error) {
+      toast.error("Erro ao adicionar material: " + error.message);
+      return;
+    }
+    // Atualizar estoque do produto
+    await supabase
+      .from("products")
+      .update({ stock: (product.stock || 0) - selectedProductQuantity })
+      .eq("id", product.id);
+    setMaterials((mats) => [
+      ...mats,
+      { ...data, product },
+    ]);
     setSelectedProductId("");
     setSelectedProductQuantity(1);
-    toast.success("Material de serviço adicionado!");
+    toast.success("Material adicionado!");
   };
 
   // Handle file upload (apenas simulado aqui)
@@ -142,22 +128,10 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
   // Salvar ordem
   const handleSave = async () => {
     setSaving(true);
-    try {
-      const totalMaterialsCost = materials.reduce((sum, m) => sum + (Number(m.subtotal) || 0), 0);
-      const serviceValue = form.service_value || 0;
-      const totalValue = serviceValue + totalMaterialsCost;
-      
-      const orderData = {
-        ...form,
-        total_value: totalValue,
-      };
-      
-      await saveServiceOrder(orderData);
+    const resp = await saveServiceOrder(form);
+    setSaving(false);
+    if (resp?.id) {
       onSaved();
-    } catch (error) {
-      console.error('Erro ao salvar OS:', error);
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -168,46 +142,22 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
     onSaved();
   };
 
-  // Imprimir
+  // Imprimir (simples: window.print)
   const handlePrint = () => {
     window.print();
   };
 
-  const totalMaterialsCost = materials.reduce((sum, m) => sum + (Number(m.subtotal) || 0), 0);
-  const serviceValue = form.service_value || 0;
-  const totalValue = serviceValue + totalMaterialsCost;
-
   return (
-    <Card className="max-w-4xl mx-auto">
+    <Card className="max-w-3xl mx-auto">
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            {order ? `Editar OS #${order.os_number}` : "Nova Ordem de Serviço"}
-            {order && (
-              <div className="flex gap-2">
-                <Badge variant={getPriorityColor(order.priority || '')}>
-                  {order.priority}
-                </Badge>
-                <Badge variant={getStatusColor(order.status || '')}>
-                  {order.status}
-                </Badge>
-              </div>
-            )}
-          </CardTitle>
-          {order && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Clock className="h-4 w-4" />
-              {calculateTimeSinceOpened(order.opened_at)}
-            </div>
-          )}
-        </div>
+        <CardTitle>{order ? `Editar OS #${order.os_number}` : "Nova Ordem de Serviço"}</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Informações Básicas */}
+      <CardContent className="space-y-4">
+        {/* Dados Básicos */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label>Número da OS</Label>
-            <Input value={order?.os_number || "Será gerado automaticamente"} readOnly />
+            <Input value={order?.os_number || "Automático"} readOnly />
           </div>
           <div>
             <Label>Data de abertura</Label>
@@ -221,14 +171,14 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
             />
           </div>
           <div>
-            <Label>Cliente *</Label>
+            <Label>Cliente</Label>
             <Select
               value={form.client_id || ""}
               onValueChange={(v) => setForm((x) => ({ ...x, client_id: v }))}
               disabled={clientsLoading}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecione o cliente..." />
+                <SelectValue placeholder="Selecione..." />
               </SelectTrigger>
               <SelectContent>
                 {clients.map((c) => (
@@ -240,36 +190,35 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
             </Select>
           </div>
           <div>
-            <Label>Técnico responsável *</Label>
+            <Label>Técnico responsável</Label>
             <Select
               value={form.technician_id || ""}
               onValueChange={(v) => setForm((x) => ({ ...x, technician_id: v }))}
-              disabled={!technicians?.length}
+              disabled={technicians.length === 0}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecione o técnico..." />
+                <SelectValue placeholder="Selecione..." />
               </SelectTrigger>
               <SelectContent>
-                {technicians?.map((t) => (
+                {technicians.map((t) => (
                   <SelectItem value={t.id} key={t.id}>
-                    {t.full_name}
+                    {t.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
         </div>
-
-        {/* Detalhes do Serviço */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Restantes */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <Label>Tipo de serviço *</Label>
+            <Label>Tipo de serviço</Label>
             <Select
               value={form.service_type || ""}
               onValueChange={(v) => setForm((x) => ({ ...x, service_type: v }))}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecione o tipo..." />
+                <SelectValue placeholder="Tipo..." />
               </SelectTrigger>
               <SelectContent>
                 {serviceTypes.map((type) => (
@@ -281,34 +230,31 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
             </Select>
           </div>
           <div>
-            <Label>Prioridade *</Label>
+            <Label>Prioridade</Label>
             <Select
               value={form.priority || ""}
               onValueChange={(v) => setForm((x) => ({ ...x, priority: v }))}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecione a prioridade..." />
+                <SelectValue placeholder="Prioridade..." />
               </SelectTrigger>
               <SelectContent>
                 {priorities.map((p) => (
                   <SelectItem key={p} value={p}>
-                    <div className="flex items-center gap-2">
-                      {p === 'Crítica' && <AlertTriangle className="h-4 w-4 text-red-500" />}
-                      {p}
-                    </div>
+                    {p}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div>
-            <Label>Status</Label>
+            <Label>Situação</Label>
             <Select
               value={form.status || ""}
               onValueChange={(v) => setForm((x) => ({ ...x, status: v }))}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecione o status..." />
+                <SelectValue placeholder="Situação..." />
               </SelectTrigger>
               <SelectContent>
                 {statusOptions.map((st) => (
@@ -320,21 +266,17 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
             </Select>
           </div>
         </div>
-
-        {/* Descrição */}
         <div>
-          <Label>Descrição detalhada *</Label>
+          <Label>Descrição detalhada</Label>
           <Textarea
             value={form.description || ""}
             onChange={(e) => setForm((x) => ({ ...x, description: e.target.value }))}
-            placeholder="Descreva detalhadamente o problema e/ou serviço a ser realizado..."
-            rows={4}
+            placeholder="Descreva detalhadamente o serviço..."
           />
         </div>
-
-        {/* Materiais de Serviço */}
-        <div className="space-y-4">
-          <Label className="text-lg font-semibold">Materiais/Produtos de Serviço</Label>
+        {/* Materiais utilizados */}
+        <div>
+          <Label>Materiais utilizados</Label>
           <div className="flex gap-2 w-full">
             <Select
               value={selectedProductId}
@@ -342,12 +284,12 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
               disabled={productsLoading}
             >
               <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Selecionar produto de serviço..." />
+                <SelectValue placeholder="Buscar material..." />
               </SelectTrigger>
               <SelectContent>
-                {serviceProducts.map((p) => (
+                {products.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
-                    {p.name} - R$ {(p.price || 0).toFixed(2)}
+                    {p.name} ({p.stock} em estoque)
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -358,48 +300,42 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
               min={1}
               value={selectedProductQuantity}
               onChange={(e) => setSelectedProductQuantity(Number(e.target.value))}
-              placeholder="Qtd"
             />
-            <Button size="sm" onClick={addMaterial} disabled={!selectedProductId}>
-              Adicionar
-            </Button>
+            <Button size="sm" onClick={addMaterial}>Adicionar</Button>
           </div>
-
-          {/* Tabela de Materiais */}
-          {materials.length > 0 && (
-            <div className="overflow-x-auto border rounded-lg">
-              <table className="w-full text-sm">
-                <thead className="bg-muted">
-                  <tr>
-                    <th className="p-3 text-left">Produto/Serviço</th>
-                    <th className="p-3 text-center">Quantidade</th>
-                    <th className="p-3 text-right">Valor Unitário</th>
-                    <th className="p-3 text-right">Subtotal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {materials.map((m, i) => (
-                    <tr key={i} className="border-t">
-                      <td className="p-3">{m.product?.name}</td>
-                      <td className="p-3 text-center">{m.quantity}</td>
-                      <td className="p-3 text-right">R$ {Number(m.unit_value || 0).toFixed(2)}</td>
-                      <td className="p-3 text-right font-semibold">R$ {Number(m.subtotal || 0).toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot className="bg-muted">
-                  <tr>
-                    <td colSpan={3} className="p-3 text-right font-bold">Total Materiais:</td>
-                    <td className="p-3 text-right font-bold">R$ {totalMaterialsCost.toFixed(2)}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          )}
+          {/* Tabela materiais */}
+          <div className="overflow-x-auto mt-2">
+          <table className="w-full text-sm border">
+            <thead>
+              <tr className="bg-muted">
+                <th className="p-2">Produto</th>
+                <th className="p-2">Qtd.</th>
+                <th className="p-2">Valor unit.</th>
+                <th className="p-2">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {materials.map((m, i) => (
+                <tr key={i}>
+                  <td className="p-2">{m.product?.name}</td>
+                  <td className="p-2">{m.quantity}</td>
+                  <td className="p-2">R$ {Number(m.unit_value || 0).toFixed(2)}</td>
+                  <td className="p-2 font-bold">R$ {Number(m.subtotal || 0).toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={3} className="p-2 text-right font-bold">Total Materiais</td>
+                <td className="p-2 font-bold">R$ {materials.reduce((s, m) => s + (Number(m.subtotal || 0)), 0).toFixed(2)}</td>
+              </tr>
+            </tfoot>
+          </table>
+          </div>
         </div>
 
-        {/* Valores e Cobrança */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Cobrança */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
           <div>
             <Label>Serviço sob contrato?</Label>
             <Select
@@ -410,86 +346,54 @@ export const ServiceOrderForm: React.FC<Props> = ({ order, onSaved }) => {
                 <SelectValue placeholder="Selecione..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Sim">Sim - Sem cobrança adicional</SelectItem>
-                <SelectItem value="Não">Não - Cobrança avulsa</SelectItem>
+                <SelectItem value="Sim">Sim</SelectItem>
+                <SelectItem value="Não">Não</SelectItem>
               </SelectContent>
             </Select>
           </div>
           {!form.contract_service && (
-            <div>
-              <Label>Valor do serviço (R$)</Label>
+            <div className="flex flex-col space-y-2">
+              <Label>Valor do serviço</Label>
               <Input
                 type="number"
                 min={0}
-                step="0.01"
                 value={form.service_value || ""}
                 onChange={e => setForm(x => ({ ...x, service_value: Number(e.target.value) }))}
-                placeholder="0,00"
               />
             </div>
           )}
         </div>
 
-        {/* Resumo de Valores */}
-        <div className="bg-muted p-4 rounded-lg">
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="flex justify-between">
-              <span>Valor dos Materiais:</span>
-              <span>R$ {totalMaterialsCost.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Valor do Serviço:</span>
-              <span>R$ {serviceValue.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between font-bold text-lg border-t pt-2">
-              <span>Total Geral:</span>
-              <span>R$ {totalValue.toFixed(2)}</span>
-            </div>
-          </div>
+        {/* Anexos */}
+        <div>
+          <Label>Anexos</Label>
+          <Input type="file" multiple onChange={handleFileUpload} />
         </div>
-
-        {/* Anexos e Observações */}
-        <div className="space-y-4">
-          <div>
-            <Label>Anexos (fotos, documentos)</Label>
-            <Input type="file" multiple onChange={handleFileUpload} />
-            {attachFiles.length > 0 && (
-              <p className="text-sm text-muted-foreground mt-1">
-                {attachFiles.length} arquivo(s) selecionado(s)
-              </p>
-            )}
-          </div>
-          <div>
-            <Label>Observações adicionais</Label>
-            <Textarea
-              value={form.notes || ""}
-              onChange={(e) => setForm((x) => ({ ...x, notes: e.target.value }))}
-              placeholder="Observações extras, condições especiais, etc..."
-              rows={3}
-            />
-          </div>
+        <div>
+          <Label>Observações adicionais</Label>
+          <Textarea
+            value={form.notes || ""}
+            onChange={(e) => setForm((x) => ({ ...x, notes: e.target.value }))}
+            placeholder="Observações extras..."
+          />
         </div>
-
-        {/* Ações */}
-        <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t">
-          <Button variant="outline" onClick={handlePrint} className="flex-1">
-            <Printer className="mr-2 h-4 w-4" /> Imprimir OS
+        <div className="flex gap-2 mt-4 justify-end">
+          <Button variant="secondary" onClick={handlePrint}>
+            <Printer className="mr-2" /> Imprimir OS
           </Button>
           <Button
             onClick={handleSave}
-            disabled={saving || !form.client_id || !form.technician_id}
-            className="flex-1"
+            disabled={saving}
           >
-            {saving ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Save className="mr-2 h-4 w-4" />}
-            {order ? 'Atualizar OS' : 'Criar OS'}
+            {saving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />}
+            Salvar OS
           </Button>
-          {order && form.status === "Em Andamento" && (
+          {form.status === "Em andamento" && (
             <Button 
               variant="default" 
               onClick={handleFinish}
-              className="flex-1"
             >
-              <Check className="mr-2 h-4 w-4" /> Finalizar OS
+              <Check className="mr-2" /> Finalizar OS
             </Button>
           )}
         </div>
