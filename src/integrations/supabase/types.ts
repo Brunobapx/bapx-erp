@@ -2391,6 +2391,10 @@ export type Database = {
         Args: { cnpj: string }
         Returns: boolean
       }
+      validate_company_access: {
+        Args: { target_user_id: string }
+        Returns: boolean
+      }
       validate_cpf: {
         Args: { cpf: string }
         Returns: boolean
