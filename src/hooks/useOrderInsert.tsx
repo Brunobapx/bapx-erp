@@ -58,6 +58,22 @@ export const useOrderInsert = () => {
 
       const totalAmount = orderData.items.reduce((sum, item) => sum + item.total_price, 0);
 
+      // TESTE: Verificar se consegue acessar outras tabelas primeiro
+      try {
+        const { data: testClients, error: testError } = await supabase
+          .from('clients')
+          .select('id')
+          .limit(1);
+        
+        console.log('[DEBUG] Teste de conexão com tabela clients:', {
+          success: !testError,
+          clientsCount: testClients?.length || 0,
+          testError: testError?.message
+        });
+      } catch (testErr) {
+        console.error('[DEBUG] Erro no teste de conexão:', testErr);
+      }
+
       // Criar o pedido com logs detalhados
       console.log('[DEBUG] Dados da inserção:', {
         user_id: user.id,
