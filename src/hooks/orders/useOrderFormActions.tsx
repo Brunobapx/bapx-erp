@@ -141,18 +141,16 @@ export const useOrderFormActions = ({
     try {
       setIsSubmitting(true);
       
-      // Primeiro, verificar se a sessão está ativa
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      // Usar a mesma abordagem do useOrderInsert que está funcionando
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
       
-      if (sessionError || !session || !session.user) {
-        toast.error("Sessão expirada. Faça login novamente para continuar.");
+      if (userError || !user) {
+        toast.error("Usuário não autenticado. Faça login novamente para continuar.");
         return null;
       }
-      
-      const user = session.user;
 
       if (isNewOrder) {
-        // Criar novo pedido
+        // Criar novo pedido usando a mesma estrutura do useOrderInsert
         const orderData = {
           user_id: user.id,
           client_id: formData.client_id,
@@ -169,13 +167,16 @@ export const useOrderFormActions = ({
         console.log('Tentando inserir pedido:', orderData);
         const { data: insertedOrder, error: orderError } = await supabase
           .from('orders')
-          .insert([orderData])
+          .insert(orderData)
           .select()
           .single();
           
         console.log('Resultado da inserção:', { insertedOrder, orderError });
           
-        if (orderError) throw orderError;
+        if (orderError) {
+          console.error('Erro ao criar pedido:', orderError);
+          throw orderError;
+        }
         
         // Criar todos os itens do pedido
         const itemsData = items.map(item => ({
