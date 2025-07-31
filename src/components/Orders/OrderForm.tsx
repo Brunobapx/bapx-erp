@@ -1,9 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useOrderInsert } from '@/hooks/useOrderInsert';
 
 import { OrderClientSection } from './Form/OrderClientSection';
 import { OrderItemsSection } from './Form/OrderItemsSection';
@@ -11,9 +8,6 @@ import { OrderPaymentSection } from './Form/OrderPaymentSection';
 import { OrderDeliverySection } from './Form/OrderDeliverySection';
 import { OrderFormActions } from './Form/OrderFormActions';
 import { useOrderForm } from '@/hooks/useOrderForm';
-import { toast } from "sonner";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, Loader2 } from "lucide-react";
 
 interface OrderFormProps {
   orderData?: any;
@@ -21,7 +15,6 @@ interface OrderFormProps {
 }
 
 export const OrderForm: React.FC<OrderFormProps> = ({ orderData, onClose }) => {
-  const navigate = useNavigate();
   
   // Use the comprehensive order form hook
   const {
