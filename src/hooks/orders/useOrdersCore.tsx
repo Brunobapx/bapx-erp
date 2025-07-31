@@ -46,10 +46,30 @@ export const useOrdersCore = () => {
     }
   }, [user, userRole]);
 
-  // DEPRECATED: createOrder movido para useOrders.ts
-  // Use useOrderInsert.tsx para criar novos pedidos
-  const createOrder = async () => {
-    throw new Error('DEPRECATED: Use useOrderInsert hook instead');
+  const createOrder = async (orderData: Omit<Order, 'id' | 'order_number' | 'created_at' | 'updated_at'>) => {
+    if (!user) throw new Error('Usuário não autenticado');
+
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .insert([{
+          ...orderData,
+          user_id: user.id,
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      await loadOrders();
+      toast.success('Pedido criado com sucesso!');
+
+      return data;
+    } catch (error: any) {
+      console.error('[useOrdersCore] Erro ao criar pedido:', error);
+      toast.error('Erro ao criar pedido: ' + (error.message || 'Erro desconhecido'));
+      throw error;
+    }
   };
 
   const updateOrder = async (id: string, orderData: Partial<Order>) => {

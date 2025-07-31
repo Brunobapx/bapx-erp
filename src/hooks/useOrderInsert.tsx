@@ -29,31 +29,10 @@ export const useOrderInsert = () => {
     setIsSubmitting(true);
     
     try {
-      console.log('[ORDER INSERT] Iniciando criação de pedido:', {
-        clientId: orderData.client_id,
-        clientName: orderData.client_name,
-        itemsCount: orderData.items.length
-      });
-
-      // Verificar sessão atual
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      console.log('[ORDER INSERT] Verificação de sessão:', {
-        hasSession: !!session,
-        sessionError: sessionError?.message,
-        user: session?.user ? { id: session.user.id, email: session.user.email } : null
-      });
-
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
-      console.log('[DEBUG] Resultado da autenticação:', {
-        user: user ? { id: user.id, email: user.email } : null,
-        userError: userError?.message,
-        hasUser: !!user
-      });
-      
-      if (userError || !user || !session) {
-        console.error('[DEBUG] Erro de autenticação:', { userError, sessionError, hasUser: !!user, hasSession: !!session });
-        throw new Error('Usuário não autenticado ou sessão inválida');
+      if (userError || !user) {
+        throw new Error('Usuário não autenticado');
       }
 
       console.log('Criando pedido com dados:', {
@@ -64,47 +43,7 @@ export const useOrderInsert = () => {
 
       const totalAmount = orderData.items.reduce((sum, item) => sum + item.total_price, 0);
 
-      // TESTE: Verificar se consegue acessar outras tabelas primeiro
-      try {
-        const { data: testClients, error: testError } = await supabase
-          .from('clients')
-          .select('id')
-          .limit(1);
-        
-        console.log('[DEBUG] Teste de conexão com tabela clients:', {
-          success: !testError,
-          clientsCount: testClients?.length || 0,
-          testError: testError?.message
-        });
-      } catch (testErr) {
-        console.error('[DEBUG] Erro no teste de conexão:', testErr);
-      }
-
-      // Criar o pedido com logs detalhados
-      console.log('[DEBUG] Dados da inserção:', {
-        user_id: user.id,
-        client_id: orderData.client_id,
-        client_name: orderData.client_name,
-        total_amount: totalAmount
-      });
-      
-      // TESTE CRÍTICO: Tentar SELECT primeiro para verificar se a tabela é visível
-      try {
-        const { data: testOrders, error: selectError } = await supabase
-          .from('orders')
-          .select('id')
-          .limit(1);
-        
-        console.log('[DEBUG] Teste SELECT na tabela orders:', {
-          success: !selectError,
-          ordersCount: testOrders?.length || 0,
-          selectError: selectError?.message,
-          selectErrorCode: selectError?.code
-        });
-      } catch (selectErr) {
-        console.error('[DEBUG] Erro no teste SELECT orders:', selectErr);
-      }
-
+      // Criar o pedido
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -121,12 +60,6 @@ export const useOrderInsert = () => {
         })
         .select()
         .single();
-
-      console.log('[DEBUG] Resultado da inserção do pedido:', {
-        order: order ? { id: order.id, user_id: order.user_id } : null,
-        orderError: orderError?.message,
-        orderErrorCode: orderError?.code
-      });
 
       if (orderError) {
         console.error('Erro ao criar pedido:', orderError);

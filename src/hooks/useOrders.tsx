@@ -44,7 +44,6 @@ export type OrderItem = {
   company_id?: string;
 };
 
-// DEPRECATED: Usar useOrders.ts diretamente
-// @deprecated Use import { useOrders } from '@/hooks/useOrders' instead
-export { useOrders } from "./useOrders";
-export * from "./useOrders";
+// Sub-hooks importados
+export { useOrdersCore as useOrders } from "./orders/useOrdersCore";
+export * from "./orders/useOrdersHelpers";

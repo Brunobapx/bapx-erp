@@ -79,48 +79,6 @@ export type Database = {
           },
         ]
       }
-      backup_history: {
-        Row: {
-          created_at: string | null
-          error_message: string | null
-          filename: string
-          id: string
-          location: string | null
-          metadata: Json | null
-          size_bytes: number | null
-          status: string
-          total_records: number | null
-          type: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          error_message?: string | null
-          filename: string
-          id?: string
-          location?: string | null
-          metadata?: Json | null
-          size_bytes?: number | null
-          status?: string
-          total_records?: number | null
-          type: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          error_message?: string | null
-          filename?: string
-          id?: string
-          location?: string | null
-          metadata?: Json | null
-          size_bytes?: number | null
-          status?: string
-          total_records?: number | null
-          type?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       clients: {
         Row: {
           address: string | null
@@ -337,6 +295,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "delivery_routes_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "delivery_routes_sale_id_fkey"
             columns: ["sale_id"]
             isOneToOne: false
@@ -520,6 +485,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "financial_entries_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "financial_entries_sale_id_fkey"
             columns: ["sale_id"]
             isOneToOne: false
@@ -616,6 +588,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiscal_invoices_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
           {
@@ -804,7 +783,15 @@ export type Database = {
           user_id?: string
           xml_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "notas_emitidas_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       order_items: {
         Row: {
@@ -851,6 +838,13 @@ export type Database = {
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
         ]
       }
       orders: {
@@ -866,7 +860,7 @@ export type Database = {
           payment_term: string | null
           salesperson_id: string | null
           seller: string | null
-          status: string | null
+          status: Database["public"]["Enums"]["order_status"] | null
           total_amount: number | null
           updated_at: string
           user_id: string
@@ -883,7 +877,7 @@ export type Database = {
           payment_term?: string | null
           salesperson_id?: string | null
           seller?: string | null
-          status?: string | null
+          status?: Database["public"]["Enums"]["order_status"] | null
           total_amount?: number | null
           updated_at?: string
           user_id: string
@@ -900,12 +894,20 @@ export type Database = {
           payment_term?: string | null
           salesperson_id?: string | null
           seller?: string | null
-          status?: string | null
+          status?: Database["public"]["Enums"]["order_status"] | null
           total_amount?: number | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       packaging: {
         Row: {
@@ -1234,6 +1236,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "production_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "production_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
@@ -1258,7 +1267,6 @@ export type Database = {
           is_active: boolean
           is_direct_sale: boolean
           is_manufactured: boolean | null
-          is_service: boolean
           name: string
           ncm: string | null
           pis: string | null
@@ -1286,7 +1294,6 @@ export type Database = {
           is_active?: boolean
           is_direct_sale?: boolean
           is_manufactured?: boolean | null
-          is_service?: boolean
           name: string
           ncm?: string | null
           pis?: string | null
@@ -1314,7 +1321,6 @@ export type Database = {
           is_active?: boolean
           is_direct_sale?: boolean
           is_manufactured?: boolean | null
-          is_service?: boolean
           name?: string
           ncm?: string | null
           pis?: string | null
@@ -1535,6 +1541,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "route_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "route_items_route_assignment_id_fkey"
             columns: ["route_assignment_id"]
             isOneToOne: false
@@ -1618,43 +1631,14 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "sales_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
         ]
-      }
-      security_audit_log: {
-        Row: {
-          action: string
-          created_at: string | null
-          details: Json | null
-          id: string
-          ip_address: unknown | null
-          resource_id: string | null
-          resource_type: string
-          user_agent: string | null
-          user_id: string | null
-        }
-        Insert: {
-          action: string
-          created_at?: string | null
-          details?: Json | null
-          id?: string
-          ip_address?: unknown | null
-          resource_id?: string | null
-          resource_type: string
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          action?: string
-          created_at?: string | null
-          details?: Json | null
-          id?: string
-          ip_address?: unknown | null
-          resource_id?: string | null
-          resource_type?: string
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
       }
       seller_commissions: {
         Row: {
@@ -2291,15 +2275,6 @@ export type Database = {
         Args: { table_name: string }
         Returns: number
       }
-      get_technicians: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          id: string
-          first_name: string
-          last_name: string
-          email: string
-        }[]
-      }
       has_module_permission: {
         Args: { user_id: string; module_route: string }
         Returns: boolean
@@ -2312,22 +2287,8 @@ export type Database = {
         Args: { user_id?: string }
         Returns: boolean
       }
-      log_security_event: {
-        Args: {
-          p_user_id: string
-          p_action: string
-          p_resource_type: string
-          p_resource_id?: string
-          p_details?: Json
-        }
-        Returns: undefined
-      }
       validate_cnpj: {
         Args: { cnpj: string }
-        Returns: boolean
-      }
-      validate_company_access: {
-        Args: { target_user_id: string }
         Returns: boolean
       }
       validate_cpf: {
@@ -2385,7 +2346,6 @@ export type Database = {
         | "financeiro"
         | "producao"
         | "estoque"
-        | "tecnico"
       user_type: "admin" | "user" | "master" | "seller"
     }
     CompositeTypes: {
@@ -2568,7 +2528,6 @@ export const Constants = {
         "financeiro",
         "producao",
         "estoque",
-        "tecnico",
       ],
       user_type: ["admin", "user", "master", "seller"],
     },

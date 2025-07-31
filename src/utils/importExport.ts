@@ -142,70 +142,13 @@ export const processImportFile = async (file: File, validator: (data: any) => st
         rows.forEach((row, index) => {
           const rowData: any = {};
           headers.forEach((header, colIndex) => {
-            if (row[colIndex] !== undefined && row[colIndex] !== null && String(row[colIndex]).trim() !== '') {
-              // Mapear cabeçalhos do Excel para os campos corretos
-              const normalizedHeader = header.toLowerCase().trim();
-              let fieldName = normalizedHeader;
-              
-              // Mapeamento específico para os campos de cliente
-              switch (normalizedHeader) {
-                case 'nome':
-                  fieldName = 'nome';
-                  break;
-                case 'tipo':
-                  fieldName = 'tipo';
-                  break;
-                case 'cpf':
-                  fieldName = 'cpf';
-                  break;
-                case 'rg':
-                  fieldName = 'rg';
-                  break;
-                case 'cnpj':
-                  fieldName = 'cnpj';
-                  break;
-                case 'ie':
-                  fieldName = 'ie';
-                  break;
-                case 'email':
-                  fieldName = 'email';
-                  break;
-                case 'telefone':
-                  fieldName = 'telefone';
-                  break;
-                case 'endereço':
-                case 'endereco':
-                  fieldName = 'endereco';
-                  break;
-                case 'número':
-                case 'numero':
-                  fieldName = 'numero';
-                  break;
-                case 'complemento':
-                  fieldName = 'complemento';
-                  break;
-                case 'bairro':
-                  fieldName = 'bairro';
-                  break;
-                case 'cidade':
-                  fieldName = 'cidade';
-                  break;
-                case 'estado':
-                  fieldName = 'estado';
-                  break;
-                case 'cep':
-                  fieldName = 'cep';
-                  break;
-                default:
-                  fieldName = normalizedHeader.replace(/\s+/g, '_');
-              }
-              
-              rowData[fieldName] = String(row[colIndex]).trim();
+            if (row[colIndex] !== undefined && row[colIndex] !== null) {
+              rowData[header.toLowerCase().replace(/\s+/g, '_')] = row[colIndex];
             }
           });
           
-          // Pular linhas vazias (que não tenham pelo menos nome e tipo)
-          if (!rowData.nome || !rowData.tipo) {
+          // Pular linhas vazias
+          if (Object.keys(rowData).length === 0) {
             return;
           }
           
@@ -372,12 +315,42 @@ export const createClientTemplate = (): void => {
     'Complemento', 'Bairro', 'Cidade', 'Estado', 'CEP'
   ];
   
-  // Criar apenas com cabeçalhos vazios
-  const workbook = XLSX.utils.book_new();
-  const worksheet = XLSX.utils.aoa_to_sheet([headers]);
+  const exampleData = [
+    {
+      nome: 'João da Silva',
+      tipo: 'PF',
+      cpf: '123.456.789-10',
+      rg: '12.345.678-9',
+      cnpj: '',
+      ie: '',
+      email: 'joao@email.com',
+      telefone: '(11) 99999-9999',
+      endereco: 'Rua das Flores, 123',
+      numero: '123',
+      complemento: 'Apto 45',
+      bairro: 'Centro',
+      cidade: 'São Paulo',
+      estado: 'SP',
+      cep: '01234-567'
+    },
+    {
+      nome: 'Empresa XYZ Ltda',
+      tipo: 'PJ',
+      cpf: '',
+      rg: '',
+      cnpj: '12.345.678/0001-90',
+      ie: '123.456.789.123',
+      email: 'contato@empresa.com',
+      telefone: '(11) 3333-4444',
+      endereco: 'Av. Paulista, 1000',
+      numero: '1000',
+      complemento: 'Sala 15',
+      bairro: 'Bela Vista',
+      cidade: 'São Paulo',
+      estado: 'SP',
+      cep: '01310-100'
+    }
+  ];
   
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Template');
-  XLSX.writeFile(workbook, 'template_clientes.xlsx');
-  
-  toast.success('Template de clientes baixado com sucesso!');
+  exportToExcel(exampleData, headers, 'template_clientes', 'Template para Importação de Clientes');
 };

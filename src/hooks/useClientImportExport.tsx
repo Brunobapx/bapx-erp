@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { validateClientData, createClientTemplate } from '@/utils/importExport';
-import { useClients } from '@/hooks/useClients.ts';
+import { useClients } from '@/hooks/useClients';
 import { toast } from 'sonner';
 
 export const useClientImportExport = () => {
@@ -27,23 +27,23 @@ export const useClientImportExport = () => {
   ];
 
   const validateClient = (clientData: any): string[] => {
-    // Normalizar dados vindos do arquivo (agora os dados já vêm com os nomes corretos)
+    // Normalizar dados vindos do arquivo
     const normalizedClient = {
-      name: clientData.nome,
-      type: clientData.tipo,
+      name: clientData.nome || clientData.name,
+      type: clientData.tipo || clientData.type,
       cpf: clientData.cpf,
       rg: clientData.rg,
       cnpj: clientData.cnpj,
       ie: clientData.ie,
       email: clientData.email,
-      phone: clientData.telefone,
-      address: clientData.endereco,
-      number: clientData.numero,
-      complement: clientData.complemento,
+      phone: clientData.telefone || clientData.phone,
+      address: clientData.endereco || clientData.address,
+      number: clientData.numero || clientData.number,
+      complement: clientData.complemento || clientData.complement,
       bairro: clientData.bairro,
-      city: clientData.cidade,
-      state: clientData.estado,
-      zip: clientData.cep
+      city: clientData.cidade || clientData.city,
+      state: clientData.estado || clientData.state,
+      zip: clientData.cep || clientData.zip
     };
 
     return validateClientData(normalizedClient);
@@ -53,62 +53,35 @@ export const useClientImportExport = () => {
     const errors: string[] = [];
     let successCount = 0;
 
-    console.log('Iniciando importação de clientes:', clientsData);
-
     for (const [index, clientData] of clientsData.entries()) {
       try {
-        console.log(`Processando cliente ${index + 1}:`, clientData);
-        // Normalizar tipo automaticamente baseado no texto
-        let normalizedType: 'PF' | 'PJ' = 'PF'; // padrão
-        const tipoTexto = (clientData.tipo || '').toLowerCase().trim();
-        
-        // Regras para determinar o tipo automaticamente
-        if (tipoTexto.includes('juridica') || 
-            tipoTexto.includes('jurídica') || 
-            tipoTexto === 'pj' || 
-            tipoTexto === 'j' ||
-            tipoTexto.includes('empresa') ||
-            tipoTexto.includes('cnpj')) {
-          normalizedType = 'PJ';
-        } else if (tipoTexto.includes('fisica') || 
-                   tipoTexto.includes('física') || 
-                   tipoTexto === 'pf' || 
-                   tipoTexto === 'f' ||
-                   tipoTexto.includes('pessoa') ||
-                   tipoTexto.includes('cpf')) {
+        // Normalizar tipo
+        let normalizedType = clientData.tipo || clientData.type;
+        if (normalizedType === 'Física' || normalizedType === 'PF') {
           normalizedType = 'PF';
-        }
-        // Se tiver CNPJ preenchido, automaticamente é PJ
-        else if (clientData.cnpj && clientData.cnpj.trim()) {
+        } else if (normalizedType === 'Jurídica' || normalizedType === 'PJ') {
           normalizedType = 'PJ';
-        }
-        // Se tiver CPF preenchido, automaticamente é PF
-        else if (clientData.cpf && clientData.cpf.trim()) {
-          normalizedType = 'PF';
         }
 
         const clientToCreate = {
-          name: clientData.nome,
+          name: clientData.nome || clientData.name,
           type: normalizedType,
           cpf: clientData.cpf || undefined,
           rg: clientData.rg || undefined,
           cnpj: clientData.cnpj || undefined,
           ie: clientData.ie || undefined,
           email: clientData.email || undefined,
-          phone: clientData.telefone || undefined,
-          address: clientData.endereco || undefined,
-          number: clientData.numero || undefined,
-          complement: clientData.complemento || undefined,
+          phone: clientData.telefone || clientData.phone || undefined,
+          address: clientData.endereco || clientData.address || undefined,
+          number: clientData.numero || clientData.number || undefined,
+          complement: clientData.complemento || clientData.complement || undefined,
           bairro: clientData.bairro || undefined,
-          city: clientData.cidade || undefined,
-          state: clientData.estado || undefined,
-          zip: clientData.cep || undefined
+          city: clientData.cidade || clientData.city || undefined,
+          state: clientData.estado || clientData.state || undefined,
+          zip: clientData.cep || clientData.zip || undefined
         };
 
-        console.log(`Cliente normalizado para criação:`, clientToCreate);
-        
         await createClient(clientToCreate);
-        console.log(`Cliente ${index + 1} criado com sucesso`);
         successCount++;
       } catch (error: any) {
         errors.push(`Linha ${index + 1}: ${error.message}`);
@@ -117,11 +90,6 @@ export const useClientImportExport = () => {
 
     if (errors.length > 0) {
       console.warn('Erros na importação:', errors);
-      toast.error(`Importação concluída com ${errors.length} erros. Verifique o console para detalhes.`);
-    }
-
-    if (successCount > 0) {
-      toast.success(`${successCount} clientes importados com sucesso!`);
     }
 
     // Atualizar lista

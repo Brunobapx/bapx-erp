@@ -49,12 +49,7 @@ export const useClients = () => {
       if (error) throw error;
 
       console.log('[useClients] Clientes carregados:', data?.length);
-      // Converter tipo do banco de dados para o formato da aplicação
-      const clientsWithType = (data || []).map(client => ({
-        ...client,
-        type: client.type === 'Física' ? 'PF' : 'PJ'
-      }));
-      setClients(clientsWithType);
+      setClients(data || []);
     } catch (error: any) {
       console.error('[useClients] Erro ao carregar clientes:', error);
       const errorMessage = error.message || "Erro ao carregar clientes";
@@ -73,14 +68,10 @@ export const useClients = () => {
     if (!user) throw new Error('Usuário não autenticado');
 
     try {
-      // Converter tipo para o formato do banco de dados
-      const typeForDatabase = clientData.type === 'PF' ? 'Física' : 'Jurídica';
-      
       const { data, error } = await supabase
         .from('clients')
         .insert([{
           ...clientData,
-          type: typeForDatabase,
           user_id: user.id,
         }])
         .select()
