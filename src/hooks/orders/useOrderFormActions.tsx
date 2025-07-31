@@ -197,10 +197,13 @@ export const useOrderFormActions = ({
         
         // Verificar estoque e processar para produção/embalagem
         console.log('Iniciando verificação de estoque e processamento...');
-        const stockProcessed = await checkStockAndSendToProduction(insertedOrder.id);
-        
-        if (!stockProcessed) {
-          toast.error("Erro ao processar estoque. Verifique o pedido criado.");
+        let stockProcessed = false;
+        try {
+          stockProcessed = await checkStockAndSendToProduction(insertedOrder.id);
+        } catch (stockError) {
+          console.warn('Erro ao processar estoque:', stockError);
+          // Não falha a criação do pedido por problemas de estoque
+          stockProcessed = false;
         }
         
         // Verificar se algum produto é de venda direta
