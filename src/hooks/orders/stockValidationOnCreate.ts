@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useStockMovements } from "../useStockMovements";
 
 export interface OrderItem {
   product_id: string;

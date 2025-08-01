@@ -85,13 +85,18 @@ export const useSimpleOrders = () => {
     try {
       setSubmitting(true);
       
+      console.log('[SIMPLE ORDER] Iniciando criação de pedido:', orderData);
+      
       // Validar estoque antes de criar o pedido
       const orderItems = orderData.items.map(item => ({
         ...item,
         total_price: item.quantity * item.unit_price
       }));
       
+      console.log('[SIMPLE ORDER] Itens para validação:', orderItems);
+      
       const stockValidation = await validateStockForOrder(orderItems);
+      console.log('[SIMPLE ORDER] Resultado da validação:', stockValidation);
       
       // Mostrar dialog de confirmação se houver problemas
       const userConfirmed = await showStockValidationDialog(stockValidation);
@@ -140,8 +145,12 @@ export const useSimpleOrders = () => {
 
       if (itemsError) throw itemsError;
 
+      console.log('[SIMPLE ORDER] Pedido criado, iniciando abatimento de estoque');
+      
       // Abater estoque após criar o pedido
       const stockDeducted = await deductStockFromOrder(orderItems, order.id);
+      
+      console.log('[SIMPLE ORDER] Resultado do abatimento:', stockDeducted);
       
       if (!stockDeducted) {
         toast({
