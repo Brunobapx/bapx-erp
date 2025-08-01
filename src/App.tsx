@@ -30,7 +30,7 @@ import ServiceOrdersPage from "./pages/ServiceOrdersPage";
 import ReportsPage from "./pages/ReportsPage";
 
 import NotFound from "./pages/NotFound";
-import OrderFormPage from "./pages/OrderFormPage";
+import SimpleOrderFormPage from "./pages/SimpleOrderFormPage";
 import { FinancialProvider } from "./contexts/FinancialContext";
 
 const queryClient = new QueryClient();
@@ -78,37 +78,25 @@ const App = () => (
                   </ModuleAccessCheck>
                 </ProtectedRoute>
               } />
-              <Route path="/pedidos/novo" element={
-                <ProtectedRoute>
-                  <ModuleAccessCheck routePath="/pedidos">
-                    <div className="flex h-screen bg-gray-50">
-                      <Sidebar />
-                      <main className="flex-1 overflow-auto lg:ml-64">
-                        <OrderFormPage />
-                      </main>
-                    </div>
-                  </ModuleAccessCheck>
-                </ProtectedRoute>
-              } />
               <Route path="/pedidos/new" element={
                 <ProtectedRoute>
                   <ModuleAccessCheck routePath="/pedidos">
                     <div className="flex h-screen bg-gray-50">
                       <Sidebar />
                       <main className="flex-1 overflow-auto lg:ml-64">
-                        <OrderFormPage />
+                        <SimpleOrderFormPage />
                       </main>
                     </div>
                   </ModuleAccessCheck>
                 </ProtectedRoute>
               } />
-              <Route path="/pedidos/:id" element={
+              <Route path="/pedidos/edit/:id" element={
                 <ProtectedRoute>
                   <ModuleAccessCheck routePath="/pedidos">
                     <div className="flex h-screen bg-gray-50">
                       <Sidebar />
                       <main className="flex-1 overflow-auto lg:ml-64">
-                        <OrderFormPage />
+                        <SimpleOrderFormPage />
                       </main>
                     </div>
                   </ModuleAccessCheck>

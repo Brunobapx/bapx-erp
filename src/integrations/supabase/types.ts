@@ -520,13 +520,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "financial_entries_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "financial_entries_sale_id_fkey"
             columns: ["sale_id"]
             isOneToOne: false
@@ -858,13 +851,6 @@ export type Database = {
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "order_items_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
         ]
       }
       orders: {
@@ -878,10 +864,8 @@ export type Database = {
           order_number: string
           payment_method: string | null
           payment_term: string | null
-          salesperson_id: string | null
-          seller: string | null
-          status: string | null
-          total_amount: number | null
+          status: string
+          total_amount: number
           updated_at: string
           user_id: string
         }
@@ -892,13 +876,11 @@ export type Database = {
           delivery_deadline?: string | null
           id?: string
           notes?: string | null
-          order_number: string
+          order_number?: string
           payment_method?: string | null
           payment_term?: string | null
-          salesperson_id?: string | null
-          seller?: string | null
-          status?: string | null
-          total_amount?: number | null
+          status?: string
+          total_amount?: number
           updated_at?: string
           user_id: string
         }
@@ -912,22 +894,12 @@ export type Database = {
           order_number?: string
           payment_method?: string | null
           payment_term?: string | null
-          salesperson_id?: string | null
-          seller?: string | null
-          status?: string | null
-          total_amount?: number | null
+          status?: string
+          total_amount?: number
           updated_at?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "orders_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       packaging: {
         Row: {
@@ -1255,13 +1227,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "production_order_item_id_fkey"
-            columns: ["order_item_id"]
-            isOneToOne: false
-            referencedRelation: "order_items"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "production_product_id_fkey"
             columns: ["product_id"]
@@ -1645,13 +1610,6 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sales_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
         ]
