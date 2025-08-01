@@ -20,17 +20,21 @@ Deno.serve(async (req) => {
   }
 
   try {
-    console.log('[TEST-ORDER-INSERT] Starting test order insertion...');
+    console.log('[TEST-ORDER-INSERT] Starting test order insertion with enhanced logging...');
     
     // Get authorization header
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
+      console.error('[TEST-ORDER-INSERT] No authorization header found');
       throw new Error('No authorization header');
     }
 
-    // Create Supabase client
+    // Create Supabase client with service role
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    
+    console.log('[TEST-ORDER-INSERT] Supabase URL:', supabaseUrl);
+    console.log('[TEST-ORDER-INSERT] Using service role key:', supabaseKey ? 'Present' : 'Missing');
     
     const supabase = createClient(supabaseUrl, supabaseKey, {
       auth: {
@@ -39,13 +43,31 @@ Deno.serve(async (req) => {
       }
     });
 
+    // Test the generate_sequence_number function first
+    console.log('[TEST-ORDER-INSERT] Testing generate_sequence_number function...');
+    try {
+      const { data: testSeq, error: seqError } = await supabase.rpc('generate_sequence_number', {
+        prefix: 'TEST',
+        table_name: 'orders', 
+        user_id: 'test-user-id'
+      });
+      
+      if (seqError) {
+        console.error('[TEST-ORDER-INSERT] Sequence function error:', seqError);
+      } else {
+        console.log('[TEST-ORDER-INSERT] Sequence function works:', testSeq);
+      }
+    } catch (seqErr) {
+      console.error('[TEST-ORDER-INSERT] Sequence function exception:', seqErr);
+    }
+
     // Set the user session manually
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     
     if (userError || !user) {
       console.error('[TEST-ORDER-INSERT] Auth error:', userError);
-      throw new Error('Authentication failed');
+      throw new Error(`Authentication failed: ${userError?.message || 'No user'}`);
     }
 
     console.log('[TEST-ORDER-INSERT] User authenticated:', user.id);
