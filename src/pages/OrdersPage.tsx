@@ -12,6 +12,7 @@ import { ExportModal } from '@/components/ImportExport/ExportModal';
 import { useOrders, Order } from '@/hooks/useOrders';
 import { useOrderImportExport } from '@/hooks/useOrderImportExport';
 import { OrderDetailsModal } from '@/components/Orders/OrderDetailsModal';
+import { useOrderProductCheck } from '@/hooks/useOrderProductCheck';
 
 const OrdersPage = () => {
   // State management
@@ -29,6 +30,9 @@ const OrdersPage = () => {
 
   // Custom hook for orders data
   const { orders, loading, deleteOrder, sendToProduction, refreshOrders, isOrderCompleted, getFirstOrderItem, translateStatus } = useOrders();
+  
+  // Hook para verificar produtos de venda direta
+  const { hasDirectSaleProduct } = useOrderProductCheck(orders);
   
   // Import/Export hook
   const { 
@@ -222,6 +226,7 @@ const OrdersPage = () => {
                 showCheckboxes={showExportMode}
                 selectedOrders={selectedOrders}
                 onOrderSelect={handleOrderSelect}
+                hasDirectSaleProduct={hasDirectSaleProduct}
               />
             </CardContent>
           </Card>

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, Edit, Trash2, Factory } from 'lucide-react';
 import { Order } from '@/hooks/useOrders';
+import { useAuth } from '@/components/Auth/AuthProvider';
 
 interface OrdersTableProps {
   orders: Order[];
@@ -25,6 +26,7 @@ interface OrdersTableProps {
   showCheckboxes?: boolean;
   selectedOrders?: string[];
   onOrderSelect?: (orderId: string, selected: boolean) => void;
+  hasDirectSaleProduct?: (order: Order) => boolean;
 }
 
 export const OrdersTable: React.FC<OrdersTableProps> = ({
@@ -38,8 +40,10 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
   translateStatus,
   showCheckboxes = false,
   selectedOrders = [],
-  onOrderSelect
+  onOrderSelect,
+  hasDirectSaleProduct
 }) => {
+  const { isAdmin } = useAuth();
   const getFirstOrderItem = (order: Order) => {
     return order.order_items?.[0] || null;
   };
@@ -60,7 +64,10 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
   };
 
   const canSendToProduction = (order: Order) => {
-    return order.status === 'pending';
+    if (order.status !== 'pending') return false;
+    // Se o pedido tem produto de venda direta, não pode enviar para produção
+    if (hasDirectSaleProduct && hasDirectSaleProduct(order)) return false;
+    return true;
   };
 
   return (
@@ -121,15 +128,17 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-8 w-8" 
-                    onClick={(e) => onEditOrder(e, order)}
-                    title="Editar"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
+                  {isAdmin && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8" 
+                      onClick={(e) => onEditOrder(e, order)}
+                      title="Editar"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  )}
                   {canSendToProduction(order) && onSendToProduction && (
                     <Button 
                       variant="ghost" 
