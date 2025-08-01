@@ -9,104 +9,24 @@ export const useTestOrderCreate = () => {
     setIsTestingCreate(true);
     
     try {
-      console.log('[TEST] Iniciando teste de criação de pedido...');
+      console.log('[TEST] Iniciando teste via Edge Function...');
       
-      // Verificar conexão
-      const { data: authData, error: authError } = await supabase.auth.getSession();
-      if (authError || !authData?.session) {
-        throw new Error('Não autenticado');
+      // Testar via edge function que contorna problemas de cache do PostgREST
+      const { data: result, error: edgeError } = await supabase.functions.invoke('test-order-insert');
+      
+      if (edgeError) {
+        console.error('[TEST] Erro na edge function:', edgeError);
+        throw new Error(`Edge function falhou: ${edgeError.message}`);
       }
       
-      console.log('[TEST] Usuário autenticado:', authData.session.user.id);
-      
-      // Buscar um cliente para usar no teste
-      const { data: clients, error: clientError } = await supabase
-        .from('clients')
-        .select('id, name')
-        .limit(1);
-        
-      if (clientError || !clients || clients.length === 0) {
-        throw new Error('Nenhum cliente encontrado para teste');
+      if (!result.success) {
+        console.error('[TEST] Edge function retornou erro:', result.error);
+        throw new Error(`Erro interno: ${result.error}`);
       }
       
-      const testClient = clients[0];
-      console.log('[TEST] Cliente para teste:', testClient);
-      
-      // Testar consulta simples primeiro na tabela orders
-      console.log('[TEST] Testando SELECT simples...');
-      const { data: existingOrders, error: selectError } = await supabase
-        .from('orders')
-        .select('id')
-        .limit(1);
-        
-      if (selectError) {
-        console.error('[TEST] Erro na consulta SELECT:', selectError);
-        throw new Error(`Erro SELECT na tabela orders: ${selectError.message}`);
-      }
-      
-      console.log('[TEST] SELECT funcionou! Pedidos existentes:', existingOrders?.length || 0);
-      
-      // Se chegou até aqui, o problema não é na tabela, é no INSERT
-      // Vamos tentar um INSERT simples
-      console.log('[TEST] Tentando INSERT simples...');
-      
-      const orderData = {
-        user_id: authData.session.user.id,
-        client_id: testClient.id,
-        client_name: testClient.name,
-        total_amount: 29.01,
-        status: 'pending'
-      };
-      
-      console.log('[TEST] Dados do pedido:', orderData);
-      
-      // Tentar com conexão direta forçando o schema
-      console.log('[TEST] Testando conexão direta...');
-      
-      const { data: schemaTest, error: schemaError } = await supabase
-        .schema('public')
-        .from('orders')
-        .select('id')
-        .limit(1);
-        
-      if (schemaError) {
-        console.error('[TEST] Erro no schema test:', schemaError);
-        throw new Error(`Erro schema test: ${schemaError.message}`);
-      }
-      
-      console.log('[TEST] Schema test passou!', schemaTest);
-      
-      const { data: insertResult, error: insertError } = await supabase
-        .schema('public')
-        .from('orders')
-        .insert(orderData)
-        .select()
-        .single();
-        
-      if (insertError) {
-        console.error('[TEST] Erro no INSERT:', insertError);
-        
-        // Tentar inserção via SQL direto
-        console.log('[TEST] Tentando SQL direto via query...');
-        
-        const { data: sqlResult, error: sqlError } = await supabase
-          .from('orders')
-          .insert([orderData])
-          .select();
-          
-        if (sqlError) {
-          console.error('[TEST] SQL direto também falhou:', sqlError);
-          throw new Error(`INSERT falhou: ${sqlError.message}`);
-        }
-        
-        console.log('[TEST] SQL direto funcionou!', sqlResult);
-        toast.success(`Teste passou com SQL direto! ID: ${sqlResult[0]?.id}`);
-        return sqlResult[0];
-      }
-      
-      console.log('[TEST] INSERT funcionou!', insertResult);
-      toast.success(`Teste passou! ID: ${insertResult.id}`);
-      return insertResult;
+      console.log('[TEST] Edge function funcionou!', result.data);
+      toast.success(`Teste passou via Edge Function! ID: ${result.data.id}`);
+      return result.data;
       
     } catch (error: any) {
       console.error('[TEST] Falha no teste de criação:', error);
