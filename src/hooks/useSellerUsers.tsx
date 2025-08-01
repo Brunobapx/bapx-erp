@@ -24,7 +24,12 @@ export const useSellerUsers = () => {
       },
       '6c0bf94a-f544-4452-9aaf-9a702c028967': {
         firstName: 'Nathalia',
-        lastName: 'Albuquerque',
+        lastName: 'Lopes',
+        email: 'nathalia@bapx.com.br'
+      },
+      '4d5d2bf8-8555-41b1-98be-4ed3f88b4fdf': {
+        firstName: 'Nathalia',
+        lastName: 'Lopes',
         email: 'nathalia@bapx.com.br'
       }
     };

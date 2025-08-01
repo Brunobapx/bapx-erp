@@ -41,7 +41,7 @@ export default function SimpleOrderFormPage() {
     payment_term: '',
     notes: '',
     seller_id: isSeller ? user?.id || '' : '',
-    seller_name: isSeller ? `${user?.user_metadata?.firstName || ''} ${user?.user_metadata?.lastName || ''}`.trim() : '',
+    seller_name: isSeller ? `${user?.user_metadata?.first_name || ''} ${user?.user_metadata?.last_name || ''}`.trim() : '',
     items: [{ product_id: '', product_name: '', quantity: 1, unit_price: 0 }]
   });
 
@@ -246,7 +246,11 @@ export default function SimpleOrderFormPage() {
                 disabled={isSeller}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione um vendedor" />
+                  <SelectValue 
+                    placeholder="Selecione um vendedor"
+                  >
+                    {formData.seller_name || "Selecione um vendedor"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {sellers.map((seller) => (
