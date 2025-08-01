@@ -13,6 +13,7 @@ import { useOrders, Order } from '@/hooks/useOrders';
 import { useOrderImportExport } from '@/hooks/useOrderImportExport';
 import { OrderDetailsModal } from '@/components/Orders/OrderDetailsModal';
 import { CancelOrderModal } from '@/components/Orders/CancelOrderModal';
+import { EditOrderModal } from '@/components/Modals/EditOrderModal';
 import { useOrderProductCheck } from '@/hooks/useOrderProductCheck';
 import { useCancelOrder } from '@/hooks/useCancelOrder';
 
@@ -31,6 +32,8 @@ const OrdersPage = () => {
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [orderToEdit, setOrderToEdit] = useState<Order | null>(null);
 
   // Custom hook for orders data
   const { orders, loading, deleteOrder, sendToProduction, refreshOrders, isOrderCompleted, getFirstOrderItem, translateStatus } = useOrders();
@@ -114,8 +117,10 @@ const OrdersPage = () => {
     setShowOrderModal(true);
   };
 
-  const handleEditOrder = (order) => {
-    navigate(`/pedidos/${order.id}`);
+  const handleEditOrder = (e: React.MouseEvent, order: Order) => {
+    e.stopPropagation();
+    setOrderToEdit(order);
+    setShowEditModal(true);
   };
 
   const handleDeleteOrder = async (e, order) => {
@@ -244,10 +249,7 @@ const OrdersPage = () => {
                 orders={sortedOrders}
                 loading={loading}
                 onViewOrder={handleViewOrder}
-                onEditOrder={(e, order) => {
-                  e.stopPropagation();
-                  handleEditOrder(order);
-                }}
+                onEditOrder={handleEditOrder}
                 onDeleteOrder={handleDeleteOrder}
                 onSendToProduction={handleSendToProduction}
                 onCancelOrder={handleCancelOrder}
@@ -279,7 +281,10 @@ const OrdersPage = () => {
         isOpen={showOrderModal}
         onClose={handleCloseModal}
         order={selectedOrder}
-        onEdit={handleEditOrder}
+        onEdit={(order) => {
+          setOrderToEdit(order);
+          setShowEditModal(true);
+        }}
         translateStatus={translateStatus}
       />
 
@@ -307,6 +312,18 @@ const OrdersPage = () => {
         onConfirm={handleConfirmCancel}
         order={orderToCancel}
         loading={cancelLoading}
+      />
+
+      <EditOrderModal
+        isOpen={showEditModal}
+        onClose={(refresh?: boolean) => {
+          setShowEditModal(false);
+          setOrderToEdit(null);
+          if (refresh) {
+            refreshOrders();
+          }
+        }}
+        orderData={orderToEdit}
       />
     </div>
   );
