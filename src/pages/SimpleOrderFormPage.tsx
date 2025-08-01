@@ -10,8 +10,13 @@ import { useClients } from '@/hooks/useClients';
 import { useProducts } from '@/hooks/useProducts';
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 import { usePaymentTerms } from '@/hooks/usePaymentTerms';
+import { useSellerUsers } from '@/hooks/useSellerUsers';
+import { useAuth } from '@/components/Auth/AuthProvider';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ClientSelector } from '@/components/Orders/ClientSelector';
+import { ProductSelector } from '@/components/Orders/ProductSelector';
+import { DateSelector } from '@/components/Orders/DateSelector';
 
 export default function SimpleOrderFormPage() {
   const navigate = useNavigate();
@@ -20,16 +25,32 @@ export default function SimpleOrderFormPage() {
   const { products } = useProducts();
   const { items: paymentMethods } = usePaymentMethods();
   const { items: paymentTerms } = usePaymentTerms();
+  const { sellers } = useSellerUsers();
+  const { user, isSeller, userPosition } = useAuth();
+
+  // Estados para controlar popovers/calendários
+  const [openClientCombobox, setOpenClientCombobox] = useState(false);
+  const [openProductCombobox, setOpenProductCombobox] = useState<Record<string, boolean>>({});
+  const [openCalendar, setOpenCalendar] = useState(false);
 
   const [formData, setFormData] = useState<SimpleOrderFormData>({
     client_id: '',
     client_name: '',
-    delivery_deadline: '',
+    delivery_deadline: null,
     payment_method: '',
     payment_term: '',
     notes: '',
+    seller_id: isSeller ? user?.id || '' : '',
+    seller_name: isSeller ? `${user?.user_metadata?.firstName || ''} ${user?.user_metadata?.lastName || ''}`.trim() : '',
     items: [{ product_id: '', product_name: '', quantity: 1, unit_price: 0 }]
   });
+
+  const setOpenProductComboboxForItem = (itemId: string, open: boolean) => {
+    setOpenProductCombobox(prev => ({
+      ...prev,
+      [itemId]: open
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,22 +92,34 @@ export default function SimpleOrderFormPage() {
     }));
   };
 
-  const handleClientSelect = (clientId: string) => {
-    const client = clients.find(c => c.id === clientId);
+  const handleClientSelect = (clientId: string, clientName: string) => {
     setFormData(prev => ({
       ...prev,
       client_id: clientId,
-      client_name: client?.name || ''
+      client_name: clientName
     }));
   };
 
-  const handleProductSelect = (index: number, productId: string) => {
+  const handleProductSelect = (index: number, productId: string, productName: string) => {
     const product = products.find(p => p.id === productId);
     if (product) {
       updateItem(index, 'product_id', productId);
-      updateItem(index, 'product_name', product.name);
+      updateItem(index, 'product_name', productName);
       updateItem(index, 'unit_price', product.price || 0);
     }
+  };
+
+  const handleDateSelect = (date: Date | null) => {
+    setFormData(prev => ({ ...prev, delivery_deadline: date }));
+  };
+
+  const handleSellerSelect = (sellerId: string) => {
+    const seller = sellers.find(s => s.user_id === sellerId);
+    setFormData(prev => ({
+      ...prev,
+      seller_id: sellerId,
+      seller_name: seller?.display_name || ''
+    }));
   };
 
   const totalAmount = formData.items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
@@ -107,19 +140,17 @@ export default function SimpleOrderFormPage() {
             <CardTitle>Cliente</CardTitle>
           </CardHeader>
           <CardContent>
-            <Label htmlFor="client">Cliente *</Label>
-            <Select value={formData.client_id} onValueChange={handleClientSelect}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione um cliente" />
-              </SelectTrigger>
-              <SelectContent>
-                {clients.map(client => (
-                  <SelectItem key={client.id} value={client.id}>
-                    {client.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="grid gap-2">
+              <Label htmlFor="client">Cliente *</Label>
+              <ClientSelector 
+                clients={clients}
+                selectedClientId={formData.client_id}
+                selectedClientName={formData.client_name}
+                onClientSelect={handleClientSelect}
+                open={openClientCombobox}
+                setOpen={setOpenClientCombobox}
+              />
+            </div>
           </CardContent>
         </Card>
 
@@ -138,21 +169,14 @@ export default function SimpleOrderFormPage() {
                 <div key={index} className="grid grid-cols-12 gap-4 items-end p-4 border rounded">
                   <div className="col-span-5">
                     <Label>Produto *</Label>
-                    <Select 
-                      value={item.product_id} 
-                      onValueChange={(value) => handleProductSelect(index, value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um produto" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {products.map(product => (
-                          <SelectItem key={product.id} value={product.id}>
-                            {product.name} (Estoque: {product.stock || 0})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <ProductSelector 
+                      products={products}
+                      selectedProductId={item.product_id}
+                      selectedProductName={item.product_name}
+                      onProductSelect={(productId, productName) => handleProductSelect(index, productId, productName)}
+                      open={openProductCombobox[`item-${index}`] || false}
+                      setOpen={(open) => setOpenProductComboboxForItem(`item-${index}`, open)}
+                    />
                   </div>
                   
                   <div className="col-span-2">
@@ -214,13 +238,37 @@ export default function SimpleOrderFormPage() {
             <CardTitle>Informações Adicionais</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
+            <div className="grid gap-2">
+              <Label htmlFor="seller">Vendedor *</Label>
+              <Select 
+                value={formData.seller_id}
+                onValueChange={handleSellerSelect}
+                disabled={isSeller}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um vendedor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sellers.map((seller) => (
+                    <SelectItem key={seller.user_id} value={seller.user_id}>
+                      {seller.display_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {isSeller && (
+                <p className="text-sm text-muted-foreground">Preenchido automaticamente (você é vendedor)</p>
+              )}
+            </div>
+
+            <div className="grid gap-2">
               <Label htmlFor="delivery_deadline">Prazo de Entrega</Label>
-              <Input
-                type="date"
-                id="delivery_deadline"
-                value={formData.delivery_deadline}
-                onChange={(e) => setFormData(prev => ({ ...prev, delivery_deadline: e.target.value }))}
+              <DateSelector 
+                selectedDate={formData.delivery_deadline}
+                onDateSelect={handleDateSelect}
+                open={openCalendar}
+                setOpen={setOpenCalendar}
+                label="Selecione a data de entrega"
               />
             </div>
             

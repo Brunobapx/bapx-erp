@@ -33,10 +33,12 @@ export interface SimpleOrderItem {
 export interface SimpleOrderFormData {
   client_id: string;
   client_name: string;
-  delivery_deadline?: string;
+  delivery_deadline?: Date | null;
   payment_method?: string;
   payment_term?: string;
   notes?: string;
+  seller_id?: string;
+  seller_name?: string;
   items: {
     product_id: string;
     product_name: string;
@@ -116,10 +118,12 @@ export const useSimpleOrders = () => {
           client_id: orderData.client_id,
           client_name: orderData.client_name,
           total_amount: totalAmount,
-          delivery_deadline: orderData.delivery_deadline || null,
+          delivery_deadline: orderData.delivery_deadline ? orderData.delivery_deadline.toISOString().split('T')[0] : null,
           payment_method: orderData.payment_method || null,
           payment_term: orderData.payment_term || null,
           notes: orderData.notes || null,
+          seller_id: orderData.seller_id || user.id,
+          seller_name: orderData.seller_name || null,
           user_id: user.id,
           order_number: 'PED-' + Date.now() // Numeração simples por enquanto
         }])
