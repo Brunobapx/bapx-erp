@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -24,11 +23,9 @@ import SettingsPage from "./pages/SettingsPage";
 import VendorsPage from "./pages/VendorsPage";
 import PurchasesPage from "./pages/PurchasesPage";
 import StockPage from "./pages/StockPage";
-
 import NotaFiscalPage from "./pages/NotaFiscalPage";
 import ServiceOrdersPage from "./pages/ServiceOrdersPage";
 import ReportsPage from "./pages/ReportsPage";
-
 import NotFound from "./pages/NotFound";
 import SimpleOrderFormPage from "./pages/SimpleOrderFormPage";
 import { FinancialProvider } from "./contexts/FinancialContext";
@@ -56,6 +53,7 @@ const App = () => (
                   </div>
                 </ProtectedRoute>
               } />
+              
               <Route path="/trocas" element={
                 <ProtectedRoute>
                   <div className="flex h-screen bg-gray-50">
@@ -66,6 +64,7 @@ const App = () => (
                   </div>
                 </ProtectedRoute>
               } />
+              
               <Route path="/pedidos" element={
                 <ProtectedRoute>
                   <ModuleAccessCheck routePath="/pedidos">
@@ -78,6 +77,7 @@ const App = () => (
                   </ModuleAccessCheck>
                 </ProtectedRoute>
               } />
+              
               <Route path="/pedidos/new" element={
                 <ProtectedRoute>
                   <ModuleAccessCheck routePath="/pedidos">
@@ -90,6 +90,7 @@ const App = () => (
                   </ModuleAccessCheck>
                 </ProtectedRoute>
               } />
+              
               <Route path="/pedidos/edit/:id" element={
                 <ProtectedRoute>
                   <ModuleAccessCheck routePath="/pedidos">
@@ -102,6 +103,7 @@ const App = () => (
                   </ModuleAccessCheck>
                 </ProtectedRoute>
               } />
+              
               <Route path="/produtos" element={
                 <ProtectedRoute>
                   <ModuleAccessCheck routePath="/produtos">
@@ -114,6 +116,7 @@ const App = () => (
                   </ModuleAccessCheck>
                 </ProtectedRoute>
               } />
+              
               <Route path="/clientes" element={
                 <ProtectedRoute>
                   <ModuleAccessCheck routePath="/clientes">
@@ -126,6 +129,7 @@ const App = () => (
                   </ModuleAccessCheck>
                 </ProtectedRoute>
               } />
+              
               <Route path="/producao" element={
                 <ProtectedRoute>
                   <ModuleAccessCheck routePath="/producao">
@@ -138,6 +142,7 @@ const App = () => (
                   </ModuleAccessCheck>
                 </ProtectedRoute>
               } />
+              
               <Route path="/embalagem" element={
                 <ProtectedRoute>
                   <ModuleAccessCheck routePath="/embalagem">
@@ -150,6 +155,7 @@ const App = () => (
                   </ModuleAccessCheck>
                 </ProtectedRoute>
               } />
+              
               <Route path="/vendas" element={
                 <ProtectedRoute>
                   <ModuleAccessCheck routePath="/vendas">
@@ -162,6 +168,7 @@ const App = () => (
                   </ModuleAccessCheck>
                 </ProtectedRoute>
               } />
+              
               <Route path="/financeiro" element={
                 <ProtectedRoute>
                   <ModuleAccessCheck routePath="/financeiro">
@@ -174,6 +181,7 @@ const App = () => (
                   </ModuleAccessCheck>
                 </ProtectedRoute>
               } />
+              
               <Route path="/rotas" element={
                 <ProtectedRoute>
                   <ModuleAccessCheck routePath="/rotas">
@@ -186,6 +194,7 @@ const App = () => (
                   </ModuleAccessCheck>
                 </ProtectedRoute>
               } />
+              
               <Route path="/calendario" element={
                 <ProtectedRoute>
                   <ModuleAccessCheck routePath="/calendario">
@@ -198,6 +207,7 @@ const App = () => (
                   </ModuleAccessCheck>
                 </ProtectedRoute>
               } />
+              
               <Route path="/fornecedores" element={
                 <ProtectedRoute>
                   <ModuleAccessCheck routePath="/fornecedores">
@@ -210,6 +220,7 @@ const App = () => (
                   </ModuleAccessCheck>
                 </ProtectedRoute>
               } />
+              
               <Route path="/compras" element={
                 <ProtectedRoute>
                   <ModuleAccessCheck routePath="/compras">
@@ -222,6 +233,7 @@ const App = () => (
                   </ModuleAccessCheck>
                 </ProtectedRoute>
               } />
+              
               <Route path="/estoque" element={
                 <ProtectedRoute>
                   <ModuleAccessCheck routePath="/estoque">
@@ -234,6 +246,7 @@ const App = () => (
                   </ModuleAccessCheck>
                 </ProtectedRoute>
               } />
+              
               <Route path="/nota-fiscal" element={
                 <ProtectedRoute>
                   <ModuleAccessCheck routePath="/nota-fiscal">
@@ -246,6 +259,7 @@ const App = () => (
                   </ModuleAccessCheck>
                 </ProtectedRoute>
               } />
+              
               <Route path="/ordens-servico" element={
                 <ProtectedRoute>
                   <ModuleAccessCheck routePath="/ordens-servico">
@@ -258,6 +272,7 @@ const App = () => (
                   </ModuleAccessCheck>
                 </ProtectedRoute>
               } />
+              
               <Route path="/relatorios" element={
                 <ProtectedRoute>
                   <ModuleAccessCheck routePath="/relatorios">
@@ -270,6 +285,7 @@ const App = () => (
                   </ModuleAccessCheck>
                 </ProtectedRoute>
               } />
+              
               <Route path="/configuracoes" element={
                 <ProtectedRoute>
                   <div className="flex h-screen bg-gray-50">
@@ -280,6 +296,7 @@ const App = () => (
                   </div>
                 </ProtectedRoute>
               } />
+              
               <Route path="*" element={<NotFound />} />
             </Routes>
           </FinancialProvider>
