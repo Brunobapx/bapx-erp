@@ -34,7 +34,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [userPosition, setUserPosition] = useState<string | null>(null);
   const [userModules, setUserModules] = useState<string[]>([]);
 
-  const isAdmin = userRole === 'admin';
+  const isAdmin = userRole === 'admin' || userRole === 'master';
   const isMaster = userRole === 'master';
   const isSeller = userPosition === 'vendedor';
 

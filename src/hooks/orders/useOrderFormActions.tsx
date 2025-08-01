@@ -186,24 +186,27 @@ export const useOrderFormActions = ({
           
         if (itemsError) throw itemsError;
         
-        // Verificar estoque e processar para produção/embalagem
-        console.log('Iniciando verificação de estoque e processamento...');
-        const stockProcessed = await checkStockAndSendToProduction(insertedOrder.id);
-        
-        if (!stockProcessed) {
-          toast.error("Erro ao processar estoque. Verifique o pedido criado.");
+        // Processar estoque e produção APÓS criação (decoupled)
+        try {
+          console.log('[ORDER] Processando estoque e produção...');
+          await checkStockAndSendToProduction(insertedOrder.id);
+        } catch (stockError) {
+          console.warn('[ORDER] Processamento de estoque falhou:', stockError);
+          toast.warning("Pedido criado, mas houve problema no processamento de estoque");
         }
         
         // Verificar se algum produto é de venda direta
-        const hasDirectSaleProducts = await checkDirectSaleProducts(items);
-        
-        if (hasDirectSaleProducts) {
-          console.log('Produto de venda direta detectado, criando venda automaticamente...');
-          await createSaleFromOrder(insertedOrder.id);
-        } else if (stockProcessed) {
-          // Não mostra toast aqui pois checkStockAndSendToProduction já mostra as mensagens
-          console.log("Pedido criado e processado com sucesso");
-        } else {
+        try {
+          const hasDirectSaleProducts = await checkDirectSaleProducts(items);
+          
+          if (hasDirectSaleProducts) {
+            console.log('[ORDER] Criando venda automática para produtos diretos...');
+            await createSaleFromOrder(insertedOrder.id);
+          } else {
+            toast.success("Pedido criado com sucesso");
+          }
+        } catch (saleError) {
+          console.warn('[ORDER] Criação de venda automática falhou:', saleError);
           toast.success("Pedido criado com sucesso");
         }
         
