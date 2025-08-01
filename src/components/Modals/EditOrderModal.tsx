@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Order } from '@/hooks/useOrders';
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/components/Auth/AuthProvider';
 import { supabase } from "@/integrations/supabase/client";
 import { DateSelector } from "../Orders/DateSelector";
 import { ClientSelector } from "../Orders/ClientSelector";
@@ -38,6 +39,7 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({
   orderData
 }) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [saving, setSaving] = useState(false);
   const [openClientCombobox, setOpenClientCombobox] = useState(false);
   const [openCalendar, setOpenCalendar] = useState(false);
@@ -191,7 +193,8 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({
           product_name: item.product_name,
           quantity: item.quantity,
           unit_price: item.unit_price,
-          total_price: item.total_price
+          total_price: item.total_price,
+          user_id: user?.id // Usar usuário atual autenticado
         }));
 
         const { error: itemsError } = await supabase
