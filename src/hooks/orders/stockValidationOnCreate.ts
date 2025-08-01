@@ -60,16 +60,13 @@ export const validateStockForOrder = async (items: OrderItem[]): Promise<StockVa
 
       console.log(`[STOCK VALIDATION] ${product.name}: estoque=${currentStock}, necessário=${required}`);
 
-      // Para produtos de venda direta ou manufaturados, apenas avisar se não há estoque
-      if (product.is_direct_sale || product.is_manufactured) {
-        if (currentStock < required) {
+      // Verificar estoque para todos os produtos
+      if (currentStock < required) {
+        if (product.is_direct_sale || product.is_manufactured) {
           result.warnings.push(
-            `${product.name}: Estoque insuficiente (${currentStock} disponível, ${required} necessário). Produto será enviado para produção/embalagem.`
+            `${product.name}: Estoque insuficiente (${currentStock} disponível, ${required} necessário). Produto de venda direta/manufaturado - estoque será abatido mesmo assim.`
           );
-        }
-      } else {
-        // Para produtos normais, verificar estoque obrigatório
-        if (currentStock < required) {
+        } else {
           result.insufficientStock.push({
             productName: product.name,
             required: required,
@@ -125,55 +122,56 @@ export const deductStockFromOrder = async (items: OrderItem[], orderId?: string)
       const currentStock = product.stock || 0;
       const quantityToDeduct = item.quantity;
 
-      // Para produtos normais (não manufaturados e não venda direta), abater o estoque
-      if (!product.is_manufactured && !product.is_direct_sale) {
-        const newStock = Math.max(0, currentStock - quantityToDeduct);
-        
-        console.log(`[STOCK DEDUCTION] ${product.name}: ${currentStock} -> ${newStock} (abatendo ${quantityToDeduct})`);
+      // Abater estoque de TODOS os produtos
+      const newStock = Math.max(0, currentStock - quantityToDeduct);
+      
+      console.log(`[STOCK DEDUCTION] ${product.name}: ${currentStock} -> ${newStock} (abatendo ${quantityToDeduct}) - Tipo: ${product.is_direct_sale ? 'Venda Direta' : product.is_manufactured ? 'Manufaturado' : 'Normal'}`);
 
-        // Atualizar estoque no banco
-        const { error: updateError } = await supabase
-          .from('products')
-          .update({ stock: newStock })
-          .eq('id', item.product_id);
+      // Atualizar estoque no banco
+      const { error: updateError } = await supabase
+        .from('products')
+        .update({ stock: newStock })
+        .eq('id', item.product_id);
 
-        if (updateError) {
-          console.error('[STOCK DEDUCTION] Erro ao atualizar estoque:', updateError);
-          toast.error(`Erro ao atualizar estoque do produto ${product.name}`);
-          return false;
+      if (updateError) {
+        console.error('[STOCK DEDUCTION] Erro ao atualizar estoque:', updateError);
+        toast.error(`Erro ao atualizar estoque do produto ${product.name}`);
+        return false;
+      }
+
+      // Registrar movimentação de estoque
+      try {
+        const movementData = {
+          user_id: user.id,
+          product_id: item.product_id,
+          product_name: product.name,
+          movement_type: 'saida' as const,
+          quantity: quantityToDeduct,
+          previous_stock: currentStock,
+          new_stock: newStock,
+          reason: `Abatimento por pedido - ${product.is_direct_sale ? 'Venda Direta' : product.is_manufactured ? 'Manufaturado' : 'Normal'}`,
+          reference_id: orderId,
+          reference_type: 'order'
+        };
+
+        const { error: movementError } = await supabase
+          .from('stock_movements')
+          .insert([movementData]);
+
+        if (movementError) {
+          console.warn('[STOCK DEDUCTION] Erro ao registrar movimentação (não crítico):', movementError);
+        } else {
+          console.log(`[STOCK DEDUCTION] Movimentação registrada: ${product.name}`);
         }
+      } catch (movError) {
+        console.warn('[STOCK DEDUCTION] Erro ao registrar movimentação (não crítico):', movError);
+      }
 
-        // Tentar registrar movimentação de estoque (não crítico)
-        try {
-          const movementData = {
-            user_id: user.id,
-            product_id: item.product_id,
-            product_name: product.name,
-            movement_type: 'saida' as const,
-            quantity: quantityToDeduct,
-            previous_stock: currentStock,
-            new_stock: newStock,
-            reason: `Abatimento por pedido`,
-            reference_id: orderId,
-            reference_type: 'order'
-          };
-
-          const { error: movementError } = await supabase
-            .from('stock_movements')
-            .insert([movementData]);
-
-          if (movementError) {
-            console.warn('[STOCK DEDUCTION] Erro ao registrar movimentação (não crítico):', movementError);
-          } else {
-            console.log(`[STOCK DEDUCTION] Movimentação registrada: ${product.name}`);
-          }
-        } catch (movError) {
-          console.warn('[STOCK DEDUCTION] Erro ao registrar movimentação (não crítico):', movError);
-        }
-
-        console.log(`[STOCK DEDUCTION] Estoque atualizado com sucesso: ${product.name}`);
-      } else {
-        console.log(`[STOCK DEDUCTION] ${product.name}: produto manufaturado/venda direta, não abatendo estoque diretamente`);
+      console.log(`[STOCK DEDUCTION] Estoque atualizado com sucesso: ${product.name}`);
+      
+      // Para produtos manufaturados e de venda direta, ainda enviamos para processamento posterior
+      if (product.is_manufactured || product.is_direct_sale) {
+        console.log(`[STOCK DEDUCTION] ${product.name}: produto será processado para produção/embalagem conforme fluxo existente`);
       }
     }
 
