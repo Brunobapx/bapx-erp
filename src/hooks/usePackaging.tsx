@@ -54,47 +54,55 @@ export const usePackaging = () => {
         const { data, error } = await supabase
           .from('packaging')
           .select(`
-            *,
-            production(
-              order_item_id,
-              order_items(
-                order_id,
-                quantity,
-                unit_price,
-                total_price,
-                orders(
-                  id,
-                  order_number,
-                  client_id,
-                  client_name,
-                  total_amount
-                )
-              )
-            )
+            *
           `)
-          
           .order('created_at', { ascending: false });
         
         if (error) throw error;
         
-        // Mapear os dados para incluir order_number e client_name com prioridade para dados diretos
-        const packagingsWithOrderInfo = (data || []).map(pack => {
+        // Mapear os dados para incluir order_number e client_name
+        const packagingsWithOrderInfo = await Promise.all((data || []).map(async (pack) => {
           // Se tem order_id e client_name diretamente (embalagem direta do estoque)
           if (pack.order_id && pack.client_name) {
             return {
               ...pack,
-              order_number: `Pedido Direct-${pack.order_id.slice(-6)}`,
+              order_number: `Pedido-${pack.order_id.slice(-6)}`,
               client_name: pack.client_name
             };
           }
           
-          // Se tem production associada (vem da produção)
-          if (pack.production?.order_items?.orders) {
-            return {
-              ...pack,
-              order_number: pack.production.order_items.orders.order_number || 'N/A',
-              client_name: pack.production.order_items.orders.client_name || 'N/A'
-            };
+          // Se tem production_id, buscar dados da produção e pedido
+          if (pack.production_id) {
+            const { data: productionData } = await supabase
+              .from('production')
+              .select(`
+                order_item_id
+              `)
+              .eq('id', pack.production_id)
+              .single();
+            
+            if (productionData?.order_item_id) {
+              const { data: orderItemData } = await supabase
+                .from('order_items')
+                .select(`
+                  order_id,
+                  orders(
+                    order_number,
+                    client_name
+                  )
+                `)
+                .eq('id', productionData.order_item_id)
+                .single();
+              
+              if (orderItemData?.orders) {
+                const orderData = Array.isArray(orderItemData.orders) ? orderItemData.orders[0] : orderItemData.orders;
+                return {
+                  ...pack,
+                  order_number: orderData?.order_number || 'N/A',
+                  client_name: orderData?.client_name || 'N/A'
+                };
+              }
+            }
           }
           
           // Fallback
@@ -103,7 +111,7 @@ export const usePackaging = () => {
             order_number: 'N/A',
             client_name: 'N/A'
           };
-        });
+        }));
         
         setPackagings(packagingsWithOrderInfo);
       } catch (error: any) {
@@ -199,6 +207,73 @@ export const usePackaging = () => {
     }
   };
 
+  // Função para verificar se todos os itens do pedido estão aprovados na embalagem
+  const checkAllOrderItemsForApproval = async (orderId: string) => {
+    try {
+      // Buscar todos os itens do pedido
+      const { data: orderItems, error: orderItemsError } = await supabase
+        .from('order_items')
+        .select('id, product_id')
+        .eq('order_id', orderId);
+
+      if (orderItemsError) throw orderItemsError;
+
+      for (const item of orderItems) {
+        // Verificar se existe produção para este item
+        const { data: productions, error: productionError } = await supabase
+          .from('production')
+          .select('id, status')
+          .eq('order_item_id', item.id);
+
+        if (productionError) throw productionError;
+
+        // Se tem produção, verificar se está aprovada e se tem embalagem aprovada
+        if (productions && productions.length > 0) {
+          for (const production of productions) {
+            if (production.status !== 'approved') {
+              console.log(`Produção ${production.id} não aprovada`);
+              return false;
+            }
+            
+            // Verificar embalagem da produção
+            const { data: packaging, error: packagingError } = await supabase
+              .from('packaging')
+              .select('status')
+              .eq('production_id', production.id)
+              .single();
+
+            if (packagingError || packaging.status !== 'approved') {
+              console.log(`Embalagem da produção ${production.id} não aprovada`);
+              return false;
+            }
+          }
+        } else {
+          // Item direto do estoque - verificar embalagem direta
+          const { data: directPackaging, error: directPackagingError } = await supabase
+            .from('packaging')
+            .select('status')
+            .eq('order_id', orderId)
+            .eq('product_id', item.product_id)
+            .is('production_id', null)
+            .maybeSingle();
+
+          if (directPackagingError) throw directPackagingError;
+
+          if (!directPackaging || directPackaging.status !== 'approved') {
+            console.log(`Embalagem direta do item ${item.id} não aprovada`);
+            return false;
+          }
+        }
+      }
+
+      console.log(`Todos os itens do pedido ${orderId} estão aprovados na embalagem`);
+      return true;
+    } catch (error) {
+      console.error('Erro ao verificar aprovação dos itens:', error);
+      return false;
+    }
+  };
+
   const updatePackagingStatus = async (
     id: string, 
     status: PackagingStatus, 
@@ -240,11 +315,29 @@ export const usePackaging = () => {
         // Buscar os dados completos da embalagem
         const { data: packagingData, error: packagingError } = await supabase
           .from('packaging')
-          .select(`
-            *,
-            production(
-              order_item_id,
-              order_items(
+          .select('*')
+          .eq('id', id)
+          .single();
+        
+        if (packagingError) throw packagingError;
+
+        let orderId, orderNumber, clientId, clientName, orderTotal;
+        let orderItemId, orderItem, prodQuantity, unitPrice;
+
+        // --- FLUXO: Embalagem de produção associada a item de pedido
+        if (packagingData.production_id) {
+          // Buscar dados da produção
+          const { data: productionData } = await supabase
+            .from('production')
+            .select('order_item_id')
+            .eq('id', packagingData.production_id)
+            .single();
+          
+          if (productionData?.order_item_id) {
+            // Buscar dados do item do pedido
+            const { data: orderItemData } = await supabase
+              .from('order_items')
+              .select(`
                 id,
                 order_id,
                 quantity,
@@ -257,89 +350,84 @@ export const usePackaging = () => {
                   client_name,
                   total_amount
                 )
-              )
-            )
-          `)
-          .eq('id', id)
-          .single();
-        
-        if (packagingError) throw packagingError;
+              `)
+              .eq('id', productionData.order_item_id)
+              .single();
+            
+            if (orderItemData?.orders) {
+              const orderData = Array.isArray(orderItemData.orders) ? orderItemData.orders[0] : orderItemData.orders;
+              orderItem = orderItemData;
+              orderItemId = orderItemData.id;
+              orderId = orderData.id;
+              orderNumber = orderData.order_number;
+              clientId = orderData.client_id;
+              clientName = orderData.client_name;
+              orderTotal = orderData.total_amount;
+              prodQuantity = quantityPackaged || packagingData.quantity_packaged || packagingData.quantity_to_package;
+              unitPrice = orderItemData.unit_price;
 
-        let orderId, orderNumber, clientId, clientName, orderTotal;
-        let orderItemId, orderItem, prodQuantity, unitPrice;
+              // Atualizar o item do pedido para refletir a quantidade embalada aprovada:
+              const newTotalPrice = prodQuantity * unitPrice;
+              await supabase
+                .from('order_items')
+                .update({
+                  quantity: prodQuantity,
+                  total_price: newTotalPrice,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', orderItemId);
 
-        // --- FLUXO: Embalagem de produção associada a item de pedido
-        if (packagingData.production && packagingData.production.order_items && packagingData.production.order_items.orders) {
-          orderItem = packagingData.production.order_items;
-          orderItemId = orderItem.id;
-          orderId = orderItem.orders.id;
-          orderNumber = orderItem.orders.order_number;
-          clientId = orderItem.orders.client_id;
-          clientName = orderItem.orders.client_name;
-          orderTotal = orderItem.orders.total_amount;
-          prodQuantity = quantityPackaged || packagingData.quantity_packaged || packagingData.quantity_to_package;
-          unitPrice = orderItem.unit_price;
+              // Recalcular o valor total do pedido somando todos os itens
+              const { data: allOrderItems, error: itemsError } = await supabase
+                .from('order_items')
+                .select('total_price')
+                .eq('order_id', orderId);
+              let saleTotal = orderTotal || 0;
+              if (!itemsError && allOrderItems) {
+                saleTotal = allOrderItems.reduce((sum, item) => sum + item.total_price, 0);
+                // Atualizar total do pedido conforme o novo valor
+                await supabase
+                  .from('orders')
+                  .update({
+                    total_amount: saleTotal,
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('id', orderId);
+              }
 
-          // Atualizar o item do pedido para refletir a quantidade embalada aprovada:
-          const newTotalPrice = prodQuantity * unitPrice;
-          await supabase
-            .from('order_items')
-            .update({
-              quantity: prodQuantity,
-              total_price: newTotalPrice,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', orderItemId);
+              // Checar se todos os itens do pedido estão aprovados na embalagem
+              const allItemsApproved = await checkAllOrderItemsForApproval(orderId);
+              if (!allItemsApproved) {
+                toast.info('Embalagem aprovada, mas aguarde todos os itens embalados antes de liberar a venda.');
+                refreshPackagings();
+                return true;
+              }
 
-          // Recalcular o valor total do pedido somando todos os itens
-          const { data: allOrderItems, error: itemsError } = await supabase
-            .from('order_items')
-            .select('total_price')
-            .eq('order_id', orderId);
-          let saleTotal = orderTotal || 0;
-          if (!itemsError && allOrderItems) {
-            saleTotal = allOrderItems.reduce((sum, item) => sum + item.total_price, 0);
-            // Atualizar total do pedido conforme o novo valor
-            await supabase
-              .from('orders')
-              .update({
-                total_amount: saleTotal,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', orderId);
-          }
+              // Se chegou aqui, todos os itens do pedido estão aprovados em embalagem -> criar venda apenas agora:
+              // Verificar se já existe venda
+              const { data: existingSale, error: saleCheckError } = await supabase
+                .from('sales')
+                .select('id')
+                .eq('order_id', orderId)
+                .maybeSingle();
+              if (saleCheckError) console.error('Erro ao verificar venda existente:', saleCheckError);
 
-          // Checar se todos os itens do pedido estão aprovados na embalagem
-          const allItemsApproved = await checkAllOrderItemsForApproval(orderId);
-          if (!allItemsApproved) {
-            toast.info('Embalagem aprovada, mas aguarde todos os itens embalados antes de liberar a venda.');
-            refreshPackagings();
-            return true;
-          }
-
-          // Se chegou aqui, todos os itens do pedido estão aprovados em embalagem -> criar venda apenas agora:
-          // Verificar se já existe venda
-          const { data: existingSale, error: saleCheckError } = await supabase
-            .from('sales')
-            .select('id')
-            .eq('order_id', orderId)
-            .maybeSingle();
-          if (saleCheckError) console.error('Erro ao verificar venda existente:', saleCheckError);
-
-          if (!existingSale) {
-            await supabase
-              .from('sales')
-              .insert({
-                user_id: user?.id,
-                order_id: orderId,
-                client_id: clientId,
-                client_name: clientName,
-                total_amount: saleTotal,
-                status: 'pending'
-              });
-            toast.success(`Embalagem aprovada e venda liberada para ${clientName} - Valor: R$ ${saleTotal.toFixed(2)}`);
-          } else {
-            toast.success('Embalagem aprovada! Venda já existe para este pedido.');
+              if (!existingSale) {
+                await supabase
+                  .from('sales')
+                  .insert({
+                    user_id: user?.id,
+                    order_id: orderId,
+                    client_id: clientId,
+                    client_name: clientName,
+                    total_amount: saleTotal,
+                    status: 'pending'
+                  });
+                toast.success(`Embalagem aprovada e venda liberada para ${clientName} - Valor: R$ ${saleTotal.toFixed(2)}`);
+              } else {
+                toast.success('Embalagem aprovada! Venda já existe para este pedido.');
+              }
+            }
           }
         } else if (packagingData.order_id && packagingData.client_name) {
           // --- FLUXO: Embalagem direta do estoque (venda direta)
@@ -474,73 +562,6 @@ export const usePackaging = () => {
     } catch (error: any) {
       console.error('Erro ao atualizar embalagem:', error);
       toast.error('Erro ao atualizar embalagem');
-      return false;
-    }
-  };
-
-  // Função para verificar se todos os itens do pedido estão aprovados na embalagem
-  const checkAllOrderItemsForApproval = async (orderId: string) => {
-    try {
-      // Buscar todos os itens do pedido
-      const { data: orderItems, error: orderItemsError } = await supabase
-        .from('order_items')
-        .select('id, product_id')
-        .eq('order_id', orderId);
-
-      if (orderItemsError) throw orderItemsError;
-
-      for (const item of orderItems) {
-        // Verificar se existe produção para este item
-        const { data: productions, error: productionError } = await supabase
-          .from('production')
-          .select('id, status')
-          .eq('order_item_id', item.id);
-
-        if (productionError) throw productionError;
-
-        // Se tem produção, verificar se está aprovada e se tem embalagem aprovada
-        if (productions && productions.length > 0) {
-          for (const production of productions) {
-            if (production.status !== 'approved') {
-              console.log(`Produção ${production.id} não aprovada`);
-              return false;
-            }
-            
-            // Verificar embalagem da produção
-            const { data: packaging, error: packagingError } = await supabase
-              .from('packaging')
-              .select('status')
-              .eq('production_id', production.id)
-              .single();
-
-            if (packagingError || packaging.status !== 'approved') {
-              console.log(`Embalagem da produção ${production.id} não aprovada`);
-              return false;
-            }
-          }
-        } else {
-          // Item direto do estoque - verificar embalagem direta
-          const { data: directPackaging, error: directPackagingError } = await supabase
-            .from('packaging')
-            .select('status')
-            .eq('order_id', orderId)
-            .eq('product_id', item.product_id)
-            .is('production_id', null)
-            .maybeSingle();
-
-          if (directPackagingError) throw directPackagingError;
-
-          if (!directPackaging || directPackaging.status !== 'approved') {
-            console.log(`Embalagem direta do item ${item.id} não aprovada`);
-            return false;
-          }
-        }
-      }
-
-      console.log(`Todos os itens do pedido ${orderId} estão aprovados na embalagem`);
-      return true;
-    } catch (error) {
-      console.error('Erro ao verificar aprovação dos itens:', error);
       return false;
     }
   };
