@@ -45,6 +45,20 @@ export const useOrderInsert = () => {
         totalAmount
       });
 
+      // Testar se o Supabase está conectado
+      console.log('[ORDER DEBUG] Testando conexão Supabase...');
+      const { data: testData, error: testError } = await supabase
+        .from('orders')
+        .select('id')
+        .limit(1);
+      
+      if (testError) {
+        console.error('[ORDER DEBUG] Erro de conexão Supabase:', testError);
+        throw new Error(`Erro de conexão com o banco de dados: ${testError.message}`);
+      }
+      
+      console.log('[ORDER DEBUG] Conexão OK, continuando...');
+
       // Criar o pedido primeiro (operação simplificada)
       const orderInsertData = {
         user_id: user.id,
@@ -58,6 +72,8 @@ export const useOrderInsert = () => {
         total_amount: totalAmount,
         status: 'pending'
       };
+
+      console.log('[ORDER DEBUG] Dados para inserção:', orderInsertData);
 
       const { data: order, error: orderError } = await supabase
         .from('orders')
