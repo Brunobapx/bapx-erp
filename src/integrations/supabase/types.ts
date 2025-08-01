@@ -1832,6 +1832,54 @@ export type Database = {
           },
         ]
       }
+      stock_movements: {
+        Row: {
+          created_at: string
+          id: string
+          movement_type: string
+          new_stock: number
+          previous_stock: number
+          product_id: string
+          product_name: string
+          quantity: number
+          reason: string
+          reference_id: string | null
+          reference_type: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          movement_type: string
+          new_stock?: number
+          previous_stock?: number
+          product_id: string
+          product_name: string
+          quantity: number
+          reason: string
+          reference_id?: string | null
+          reference_type?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          movement_type?: string
+          new_stock?: number
+          previous_stock?: number
+          product_id?: string
+          product_name?: string
+          quantity?: number
+          reason?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       system_modules: {
         Row: {
           category: string
