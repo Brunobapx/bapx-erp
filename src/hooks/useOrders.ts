@@ -39,6 +39,8 @@ export interface Order {
   delivery_deadline?: string;
   salesperson_id?: string;
   seller?: string;
+  seller_id?: string;
+  seller_name?: string;
   payment_method?: string;
   payment_term?: string;
   notes?: string;

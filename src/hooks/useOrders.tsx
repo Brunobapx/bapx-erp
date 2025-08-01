@@ -1,4 +1,3 @@
-
 // Tipos
 export type OrderStatus = 
   | 'pending'
