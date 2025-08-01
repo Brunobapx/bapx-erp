@@ -19,19 +19,6 @@ export const useTestOrderCreate = () => {
       
       console.log('[TEST] Usuário autenticado:', authData.session.user.id);
       
-      // Testar consulta simples primeiro
-      const { data: existingOrders, error: selectError } = await supabase
-        .from('orders')
-        .select('id')
-        .limit(1);
-        
-      if (selectError) {
-        console.error('[TEST] Erro na consulta SELECT:', selectError);
-        throw new Error(`Erro SELECT: ${selectError.message}`);
-      }
-      
-      console.log('[TEST] Consulta SELECT funcionou, pedidos existentes:', existingOrders?.length || 0);
-      
       // Buscar um cliente para usar no teste
       const { data: clients, error: clientError } = await supabase
         .from('clients')
@@ -45,57 +32,64 @@ export const useTestOrderCreate = () => {
       const testClient = clients[0];
       console.log('[TEST] Cliente para teste:', testClient);
       
-      // Tentar inserir usando SQL RAW
-      const { data: rawInsert, error: rawError } = await supabase.rpc('exec_sql', {
-        sql: `
-          INSERT INTO public.orders (user_id, client_id, client_name, total_amount, status) 
-          VALUES ($1, $2, $3, $4, $5) 
-          RETURNING *
-        `,
-        params: [
-          authData.session.user.id,
-          testClient.id,
-          testClient.name,
-          29.01,
-          'pending'
-        ]
-      });
-      
-      if (rawError) {
-        console.error('[TEST] Erro na inserção RAW:', rawError);
+      // Testar consulta simples primeiro na tabela orders
+      console.log('[TEST] Testando SELECT simples...');
+      const { data: existingOrders, error: selectError } = await supabase
+        .from('orders')
+        .select('id')
+        .limit(1);
         
-        // Tentar inserção normal se SQL RAW falhar
-        console.log('[TEST] Tentando inserção normal...');
-        
-        const orderData = {
-          user_id: authData.session.user.id,
-          client_id: testClient.id,
-          client_name: testClient.name,
-          total_amount: 29.01,
-          status: 'pending'
-        };
-        
-        console.log('[TEST] Dados do pedido:', orderData);
-        
-        const { data: normalInsert, error: normalError } = await supabase
-          .from('orders')
-          .insert(orderData)
-          .select()
-          .single();
-          
-        if (normalError) {
-          console.error('[TEST] Erro na inserção normal:', normalError);
-          throw new Error(`Erro inserção normal: ${normalError.message}`);
-        }
-        
-        console.log('[TEST] Inserção normal funcionou!', normalInsert);
-        toast.success(`Teste de criação de pedido passou! ID: ${normalInsert.id}`);
-        return normalInsert;
+      if (selectError) {
+        console.error('[TEST] Erro na consulta SELECT:', selectError);
+        throw new Error(`Erro SELECT na tabela orders: ${selectError.message}`);
       }
       
-      console.log('[TEST] Inserção RAW funcionou!', rawInsert);
-      toast.success('Teste de criação de pedido (RAW) passou!');
-      return rawInsert;
+      console.log('[TEST] SELECT funcionou! Pedidos existentes:', existingOrders?.length || 0);
+      
+      // Se chegou até aqui, o problema não é na tabela, é no INSERT
+      // Vamos tentar um INSERT simples
+      console.log('[TEST] Tentando INSERT simples...');
+      
+      const orderData = {
+        user_id: authData.session.user.id,
+        client_id: testClient.id,
+        client_name: testClient.name,
+        total_amount: 29.01,
+        status: 'pending'
+      };
+      
+      console.log('[TEST] Dados do pedido:', orderData);
+      
+      const { data: insertResult, error: insertError } = await supabase
+        .from('orders')
+        .insert(orderData)
+        .select()
+        .single();
+        
+      if (insertError) {
+        console.error('[TEST] Erro no INSERT:', insertError);
+        
+        // Tentar inserção via SQL direto
+        console.log('[TEST] Tentando SQL direto via query...');
+        
+        const { data: sqlResult, error: sqlError } = await supabase
+          .from('orders')
+          .insert([orderData])
+          .select();
+          
+        if (sqlError) {
+          console.error('[TEST] SQL direto também falhou:', sqlError);
+          throw new Error(`INSERT falhou: ${sqlError.message}`);
+        }
+        
+        console.log('[TEST] SQL direto funcionou!', sqlResult);
+        toast.success(`Teste passou com SQL direto! ID: ${sqlResult[0]?.id}`);
+        return sqlResult[0];
+      }
+      
+      console.log('[TEST] INSERT funcionou!', insertResult);
+      toast.success(`Teste passou! ID: ${insertResult.id}`);
+      return insertResult;
       
     } catch (error: any) {
       console.error('[TEST] Falha no teste de criação:', error);
