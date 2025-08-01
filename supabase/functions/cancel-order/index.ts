@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
           user_id: user.id,
           product_id: item.product_id,
           product_name: item.product_name,
-          movement_type: 'devolucao_cancelamento',
+          movement_type: 'entrada',
           quantity: item.quantity,
           previous_stock: currentStock,
           new_stock: newStock,
