@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/components/Auth/AuthProvider';
+import { validateStockForOrder, deductStockFromOrder, showStockValidationDialog } from '@/hooks/orders/stockValidationOnCreate';
 
 export interface SimpleOrder {
   id: string;
@@ -84,6 +85,20 @@ export const useSimpleOrders = () => {
     try {
       setSubmitting(true);
       
+      // Validar estoque antes de criar o pedido
+      const orderItems = orderData.items.map(item => ({
+        ...item,
+        total_price: item.quantity * item.unit_price
+      }));
+      
+      const stockValidation = await validateStockForOrder(orderItems);
+      
+      // Mostrar dialog de confirmação se houver problemas
+      const userConfirmed = await showStockValidationDialog(stockValidation);
+      if (!userConfirmed) {
+        throw new Error('Pedido cancelado pelo usuário');
+      }
+      
       // Calcular total
       const totalAmount = orderData.items.reduce((sum, item) => {
         return sum + (item.quantity * item.unit_price);
@@ -125,10 +140,21 @@ export const useSimpleOrders = () => {
 
       if (itemsError) throw itemsError;
 
-      toast({
-        title: "Sucesso",
-        description: "Pedido criado com sucesso!",
-      });
+      // Abater estoque após criar o pedido
+      const stockDeducted = await deductStockFromOrder(orderItems, order.id);
+      
+      if (!stockDeducted) {
+        toast({
+          title: "Aviso",
+          description: "Pedido criado, mas houve problemas ao atualizar o estoque",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Sucesso",
+          description: "Pedido criado e estoque atualizado com sucesso!",
+        });
+      }
 
       await loadOrders();
       return order;

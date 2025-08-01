@@ -8,6 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { useSimpleOrders, SimpleOrderFormData } from '@/hooks/useSimpleOrders';
 import { useClients } from '@/hooks/useClients';
 import { useProducts } from '@/hooks/useProducts';
+import { usePaymentMethods } from '@/hooks/usePaymentMethods';
+import { usePaymentTerms } from '@/hooks/usePaymentTerms';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -16,6 +18,8 @@ export default function SimpleOrderFormPage() {
   const { createOrder, submitting } = useSimpleOrders();
   const { clients } = useClients();
   const { products } = useProducts();
+  const { items: paymentMethods } = usePaymentMethods();
+  const { items: paymentTerms } = usePaymentTerms();
 
   const [formData, setFormData] = useState<SimpleOrderFormData>({
     client_id: '',
@@ -144,7 +148,7 @@ export default function SimpleOrderFormPage() {
                       <SelectContent>
                         {products.map(product => (
                           <SelectItem key={product.id} value={product.id}>
-                            {product.name}
+                            {product.name} (Estoque: {product.stock || 0})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -222,22 +226,40 @@ export default function SimpleOrderFormPage() {
             
             <div>
               <Label htmlFor="payment_method">Método de Pagamento</Label>
-              <Input
-                id="payment_method"
+              <Select 
                 value={formData.payment_method}
-                onChange={(e) => setFormData(prev => ({ ...prev, payment_method: e.target.value }))}
-                placeholder="Ex: Cartão, Dinheiro, PIX"
-              />
+                onValueChange={(value) => setFormData(prev => ({ ...prev, payment_method: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a forma de pagamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  {paymentMethods.filter(pm => pm.is_active).map((method) => (
+                    <SelectItem key={method.id} value={method.name}>
+                      {method.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             
             <div>
               <Label htmlFor="payment_term">Prazo de Pagamento</Label>
-              <Input
-                id="payment_term"
+              <Select 
                 value={formData.payment_term}
-                onChange={(e) => setFormData(prev => ({ ...prev, payment_term: e.target.value }))}
-                placeholder="Ex: À vista, 30 dias"
-              />
+                onValueChange={(value) => setFormData(prev => ({ ...prev, payment_term: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o prazo de pagamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  {paymentTerms.filter(pt => pt.is_active).map((term) => (
+                    <SelectItem key={term.id} value={term.name}>
+                      {term.name} ({term.days} dias)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             
             <div>
