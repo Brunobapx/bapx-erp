@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Eye, Edit, Trash2, Factory } from 'lucide-react';
+import { Eye, Edit, Trash2, Factory, XCircle } from 'lucide-react';
 import { Order } from '@/hooks/useOrders';
 import { useAuth } from '@/components/Auth/AuthProvider';
 
@@ -22,6 +22,7 @@ interface OrdersTableProps {
   onDeleteOrder: (e: React.MouseEvent, order: Order) => void;
   onOrderClick: (order: Order) => void;
   onSendToProduction?: (e: React.MouseEvent, order: Order) => void;
+  onCancelOrder?: (e: React.MouseEvent, order: Order) => void;
   translateStatus: (status: string) => string;
   showCheckboxes?: boolean;
   selectedOrders?: string[];
@@ -37,6 +38,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
   onDeleteOrder,
   onOrderClick,
   onSendToProduction,
+  onCancelOrder,
   translateStatus,
   showCheckboxes = false,
   selectedOrders = [],
@@ -68,6 +70,10 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
     // Se o pedido tem produto de venda direta, não pode enviar para produção
     if (hasDirectSaleProduct && hasDirectSaleProduct(order)) return false;
     return true;
+  };
+
+  const canCancelOrder = (order: Order) => {
+    return !['cancelled', 'delivered', 'in_delivery'].includes(order.status);
   };
 
   return (
@@ -149,16 +155,27 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                     >
                       <Factory className="h-4 w-4" />
                     </Button>
-                  )}
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-100" 
-                    onClick={(e) => onDeleteOrder(e, order)}
-                    title="Excluir"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                   )}
+                   {canCancelOrder(order) && onCancelOrder && (
+                     <Button 
+                       variant="ghost" 
+                       size="icon" 
+                       className="h-8 w-8 text-orange-500 hover:text-orange-700 hover:bg-orange-100" 
+                       onClick={(e) => onCancelOrder(e, order)}
+                       title="Cancelar Pedido"
+                     >
+                       <XCircle className="h-4 w-4" />
+                     </Button>
+                   )}
+                   <Button 
+                     variant="ghost" 
+                     size="icon" 
+                     className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-100" 
+                     onClick={(e) => onDeleteOrder(e, order)}
+                     title="Excluir"
+                   >
+                     <Trash2 className="h-4 w-4" />
+                   </Button>
                 </div>
               </TableCell>
             </TableRow>
