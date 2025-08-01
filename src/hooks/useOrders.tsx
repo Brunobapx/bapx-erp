@@ -17,6 +17,8 @@ export type Order = {
   client_id: string;
   client_name: string;
   seller?: string;
+  seller_id?: string;
+  seller_name?: string;
   status: OrderStatus;
   total_amount: number;
   delivery_deadline?: string;

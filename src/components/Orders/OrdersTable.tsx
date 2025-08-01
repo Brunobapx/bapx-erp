@@ -104,7 +104,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
               <TableCell>
                 {order.delivery_deadline ? new Date(order.delivery_deadline).toLocaleDateString('pt-BR') : '-'}
               </TableCell>
-              <TableCell>{order.seller || '-'}</TableCell>
+              <TableCell>{order.seller_name || '-'}</TableCell>
               <TableCell>
                 <span className={`stage-badge badge-${getStatusType(order.status)}`}>
                   {translateStatus(order.status)}

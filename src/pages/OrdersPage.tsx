@@ -60,7 +60,7 @@ const OrdersPage = () => {
       order.client_name?.toLowerCase().includes(searchString) ||
       firstItem?.product_name?.toLowerCase().includes(searchString) ||
       translateStatus(order.status)?.toLowerCase().includes(searchString) ||
-      order.seller?.toLowerCase().includes(searchString);
+      order.seller_name?.toLowerCase().includes(searchString);
     
     // Status filter
     const isCompleted = isOrderCompleted(order.status);
