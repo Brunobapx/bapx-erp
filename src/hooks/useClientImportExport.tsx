@@ -58,9 +58,9 @@ export const useClientImportExport = () => {
         // Normalizar tipo
         let normalizedType = clientData.tipo || clientData.type;
         if (normalizedType === 'Física' || normalizedType === 'PF') {
-          normalizedType = 'PF';
+          normalizedType = 'Física';
         } else if (normalizedType === 'Jurídica' || normalizedType === 'PJ') {
-          normalizedType = 'PJ';
+          normalizedType = 'Jurídica';
         }
 
         const clientToCreate = {
@@ -107,7 +107,7 @@ export const useClientImportExport = () => {
   const getExportData = () => {
     return allClients.map(client => ({
       nome: client.name,
-      tipo: client.type === 'PF' ? 'Física' : 'Jurídica',
+      tipo: client.type === 'Física' ? 'Física' : 'Jurídica',
       cpf: client.cpf || '',
       rg: client.rg || '',
       cnpj: client.cnpj || '',
