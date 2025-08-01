@@ -60,7 +60,24 @@ export const useTestOrderCreate = () => {
       
       console.log('[TEST] Dados do pedido:', orderData);
       
+      // Tentar com conexão direta forçando o schema
+      console.log('[TEST] Testando conexão direta...');
+      
+      const { data: schemaTest, error: schemaError } = await supabase
+        .schema('public')
+        .from('orders')
+        .select('id')
+        .limit(1);
+        
+      if (schemaError) {
+        console.error('[TEST] Erro no schema test:', schemaError);
+        throw new Error(`Erro schema test: ${schemaError.message}`);
+      }
+      
+      console.log('[TEST] Schema test passou!', schemaTest);
+      
       const { data: insertResult, error: insertError } = await supabase
+        .schema('public')
         .from('orders')
         .insert(orderData)
         .select()
