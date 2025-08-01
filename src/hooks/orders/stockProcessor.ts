@@ -93,6 +93,7 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
     // Criar entradas de embalagem se necessário
     if (packagingEntries.length > 0) {
       console.log(`[FLOW DEBUG] Criando ${packagingEntries.length} entradas de embalagem`);
+      console.log(`[FLOW DEBUG] Dados das entradas de embalagem:`, packagingEntries);
 
       const { data: createdPackagings, error: packagingError } = await supabase
         .from('packaging')
@@ -101,11 +102,17 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
 
       if (packagingError) {
         console.error('[FLOW DEBUG] Erro ao criar entradas de embalagem:', packagingError);
+        console.error('[FLOW DEBUG] Dados que falharam na inserção:', packagingEntries);
         toast.error(`Erro ao criar registros de embalagem: ${packagingError.message}`);
         throw packagingError;
       }
 
-      console.log(`[FLOW DEBUG] Criadas ${createdPackagings?.length || 0} entradas de embalagem`);
+      console.log(`[FLOW DEBUG] Criadas ${createdPackagings?.length || 0} entradas de embalagem com sucesso`);
+      console.log(`[FLOW DEBUG] Entradas de embalagem criadas:`, createdPackagings);
+      
+      if (createdPackagings && createdPackagings.length > 0) {
+        toast.success(`${createdPackagings.length} item(ns) enviado(s) para embalagem`);
+      }
     }
 
     // Atualizar status do pedido baseado no que foi criado

@@ -17,17 +17,15 @@ export interface ProductionEntry {
 
 export interface PackagingEntry {
   user_id: string;
-  production_id: null;
+  production_id?: string | null;
   product_id: string;
   product_name: string;
   quantity_to_package: number;
   quantity_packaged: number;
   status: string;
-  order_id: string;
-  client_id: string;
-  client_name: string;
-  created_at: string;
-  updated_at: string;
+  order_id?: string | null;
+  client_id?: string | null;
+  client_name?: string | null;
 }
 
 export const processOrderItems = async (
@@ -78,9 +76,7 @@ export const processOrderItems = async (
         status: 'pending',
         order_id: orderId,
         client_id: clientId,
-        client_name: clientName,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        client_name: clientName
       });
 
       // Deduzir a quantidade do estoque
@@ -116,9 +112,7 @@ export const processOrderItems = async (
           status: 'pending',
           order_id: orderId,
           client_id: clientId,
-          client_name: clientName,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          client_name: clientName
         });
 
         // Deduzir o disponível
@@ -158,9 +152,7 @@ export const processOrderItems = async (
           status: 'pending',
           order_id: orderId,
           client_id: clientId,
-          client_name: clientName,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          client_name: clientName
         });
 
         // Deduzir apenas o disponível
@@ -219,9 +211,7 @@ export const processOrderItems = async (
         status: 'pending',
         order_id: orderId,
         client_id: clientId,
-        client_name: clientName,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        client_name: clientName
       });
       hasDirectPackaging = true;
       packagingInfoMsgs.push(`${item.product_name}: 0 para embalagem (venda direta sem estoque) - AGUARDANDO REPOSIÇÃO`);
