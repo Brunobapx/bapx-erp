@@ -5,6 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { OrderFormState, OrderFormItem } from './useOrderFormState';
 import { useNavigate } from 'react-router-dom';
 import { checkStockAndSendToProduction } from './stockProcessor';
+import { 
+  validateStockForOrder, 
+  deductStockFromOrder, 
+  showStockValidationDialog 
+} from './stockValidationOnCreate';
 
 interface UseOrderFormActionsProps {
   formData: OrderFormState;
@@ -146,6 +151,19 @@ export const useOrderFormActions = ({
         return null;
       }
 
+      // NOVA VALIDAÇÃO DE ESTOQUE ANTES DE CRIAR O PEDIDO
+      if (isNewOrder) {
+        console.log('[ORDER VALIDATION] Validando estoque antes de criar pedido...');
+        
+        const stockValidation = await validateStockForOrder(items);
+        const shouldContinue = await showStockValidationDialog(stockValidation);
+        
+        if (!shouldContinue) {
+          console.log('[ORDER VALIDATION] Criação de pedido cancelada pelo usuário');
+          return null;
+        }
+      }
+
       if (isNewOrder) {
         // Criar novo pedido
         const orderData = {
@@ -186,13 +204,24 @@ export const useOrderFormActions = ({
           
         if (itemsError) throw itemsError;
         
+        // NOVO: Abater estoque imediatamente após criar itens do pedido
+        console.log('[ORDER] Abatendo estoque dos produtos...');
+        const stockDeductionSuccess = await deductStockFromOrder(items, insertedOrder.id);
+        
+        if (!stockDeductionSuccess) {
+          console.warn('[ORDER] Falha no abatimento de estoque, mas pedido foi criado');
+          toast.warning("Pedido criado, mas houve problema no abatimento de estoque");
+        } else {
+          console.log('[ORDER] Estoque abatido com sucesso');
+        }
+        
         // Processar estoque e produção APÓS criação (decoupled)
         try {
-          console.log('[ORDER] Processando estoque e produção...');
+          console.log('[ORDER] Processando produção e embalagem...');
           await checkStockAndSendToProduction(insertedOrder.id);
         } catch (stockError) {
-          console.warn('[ORDER] Processamento de estoque falhou:', stockError);
-          toast.warning("Pedido criado, mas houve problema no processamento de estoque");
+          console.warn('[ORDER] Processamento de produção/embalagem falhou:', stockError);
+          toast.warning("Pedido criado, mas houve problema no processamento de produção/embalagem");
         }
         
         // Verificar se algum produto é de venda direta
