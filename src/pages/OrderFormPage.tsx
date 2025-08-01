@@ -5,12 +5,14 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { OrderForm } from "@/components/Orders/OrderForm";
 import { useOrders } from '@/hooks/useOrders';
+import { useTestOrderCreate } from '@/hooks/useTestOrderCreate';
 import { toast } from "sonner";
 
 const OrderFormPage = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { orders, getOrderById, loading } = useOrders();
+  const { testCreateOrder, isTestingCreate } = useTestOrderCreate();
   const [orderData, setOrderData] = useState(null);
   
   // Determine if we're creating a new order or editing an existing one
@@ -59,16 +61,28 @@ const OrderFormPage = () => {
   
   return (
     <div className="p-4 sm:p-6 space-y-6">
-      <div className="flex items-center gap-4 mb-6">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={() => handleClose()}
-          className="h-8 w-8"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <h1 className="text-2xl font-bold">{isNewOrder ? 'Novo Pedido' : 'Editar Pedido'}</h1>
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => handleClose()}
+            className="h-8 w-8"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-2xl font-bold">{isNewOrder ? 'Novo Pedido' : 'Editar Pedido'}</h1>
+        </div>
+        {isNewOrder && (
+          <Button 
+            variant="outline" 
+            onClick={testCreateOrder}
+            disabled={isTestingCreate}
+            className="text-sm"
+          >
+            {isTestingCreate ? 'Testando...' : 'Teste DB'}
+          </Button>
+        )}
       </div>
       
       <div className="max-w-3xl mx-auto">
