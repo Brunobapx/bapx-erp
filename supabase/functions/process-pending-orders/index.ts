@@ -1,0 +1,230 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.7'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+Deno.serve(async (req) => {
+  console.log('[PROCESS-ORDERS] Função iniciada');
+
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+    console.log('[PROCESS-ORDERS] Cliente Supabase criado');
+
+    // Buscar pedidos pendentes
+    const { data: pendingOrders, error: ordersError } = await supabase
+      .from('orders')
+      .select(`
+        id,
+        order_number,
+        status,
+        order_items (
+          id,
+          product_id,
+          product_name,
+          quantity,
+          products (
+            stock,
+            is_manufactured,
+            is_direct_sale
+          )
+        )
+      `)
+      .eq('status', 'pending');
+
+    if (ordersError) {
+      throw new Error(`Erro ao buscar pedidos: ${ordersError.message}`);
+    }
+
+    console.log(`[PROCESS-ORDERS] Encontrados ${pendingOrders?.length || 0} pedidos pendentes`);
+
+    const results = [];
+
+    for (const order of pendingOrders || []) {
+      try {
+        console.log(`[PROCESS-ORDERS] Processando pedido ${order.order_number} (${order.id})`);
+        
+        const processingResults = [];
+
+        for (const item of order.order_items || []) {
+          const product = item.products;
+          if (!product) continue;
+
+          console.log(`[PROCESS-ORDERS] Processando item ${item.product_name} - Quantidade: ${item.quantity}, Estoque: ${product.stock}`);
+
+          let quantityFromStock = 0;
+          let quantityFromProduction = 0;
+
+          // Determinar quantidades
+          if (product.is_direct_sale) {
+            // Produto de venda direta - usar estoque disponível
+            quantityFromStock = Math.min(item.quantity, product.stock);
+            quantityFromProduction = 0;
+          } else if (product.is_manufactured) {
+            // Produto fabricado - enviar tudo para produção
+            quantityFromStock = 0;
+            quantityFromProduction = item.quantity;
+          } else {
+            // Produto normal - usar estoque e o resto vai para produção
+            quantityFromStock = Math.min(item.quantity, product.stock);
+            quantityFromProduction = Math.max(0, item.quantity - product.stock);
+          }
+
+          console.log(`[PROCESS-ORDERS] Item ${item.product_name}: Stock=${quantityFromStock}, Production=${quantityFromProduction}`);
+
+          // Criar registro de tracking
+          const { data: tracking, error: trackingError } = await supabase
+            .from('order_item_tracking')
+            .insert({
+              order_item_id: item.id,
+              user_id: '00000000-0000-0000-0000-000000000000', // Sistema
+              quantity_target: item.quantity,
+              quantity_from_stock: quantityFromStock,
+              quantity_from_production: quantityFromProduction,
+              status: 'pending'
+            })
+            .select()
+            .single();
+
+          if (trackingError) {
+            console.error(`[PROCESS-ORDERS] Erro ao criar tracking: ${trackingError.message}`);
+            continue;
+          }
+
+          console.log(`[PROCESS-ORDERS] Tracking criado: ${tracking.id}`);
+
+          // Criar produção se necessário
+          if (quantityFromProduction > 0) {
+            const { data: production, error: productionError } = await supabase
+              .from('production')
+              .insert({
+                user_id: '00000000-0000-0000-0000-000000000000',
+                order_item_id: item.id,
+                product_id: item.product_id,
+                product_name: item.product_name,
+                quantity_requested: quantityFromProduction,
+                status: 'pending',
+                tracking_id: tracking.id
+              })
+              .select()
+              .single();
+
+            if (productionError) {
+              console.error(`[PROCESS-ORDERS] Erro ao criar produção: ${productionError.message}`);
+            } else {
+              console.log(`[PROCESS-ORDERS] Produção criada: ${production.production_number}`);
+            }
+          }
+
+          // Criar embalagem se há estoque
+          if (quantityFromStock > 0) {
+            const { data: packaging, error: packagingError } = await supabase
+              .from('packaging')
+              .insert({
+                user_id: '00000000-0000-0000-0000-000000000000',
+                product_id: item.product_id,
+                product_name: item.product_name,
+                quantity_to_package: quantityFromStock,
+                status: 'pending',
+                order_id: order.id,
+                tracking_id: tracking.id
+              })
+              .select()
+              .single();
+
+            if (packagingError) {
+              console.error(`[PROCESS-ORDERS] Erro ao criar embalagem: ${packagingError.message}`);
+            } else {
+              console.log(`[PROCESS-ORDERS] Embalagem criada: ${packaging.packaging_number}`);
+            }
+          }
+
+          processingResults.push({
+            item_id: item.id,
+            product_name: item.product_name,
+            quantity_from_stock: quantityFromStock,
+            quantity_from_production: quantityFromProduction,
+            tracking_id: tracking.id
+          });
+        }
+
+        // Atualizar status do pedido
+        let newStatus = 'pending';
+        if (processingResults.some(r => r.quantity_from_production > 0)) {
+          newStatus = 'in_production';
+        } else if (processingResults.some(r => r.quantity_from_stock > 0)) {
+          newStatus = 'in_packaging';
+        }
+
+        const { error: updateError } = await supabase
+          .from('orders')
+          .update({ status: newStatus })
+          .eq('id', order.id);
+
+        if (updateError) {
+          console.error(`[PROCESS-ORDERS] Erro ao atualizar pedido: ${updateError.message}`);
+        }
+
+        results.push({
+          order_id: order.id,
+          order_number: order.order_number,
+          new_status: newStatus,
+          items_processed: processingResults.length,
+          details: processingResults
+        });
+
+        console.log(`[PROCESS-ORDERS] Pedido ${order.order_number} processado - Status: ${newStatus}`);
+
+      } catch (error) {
+        console.error(`[PROCESS-ORDERS] Erro ao processar pedido ${order.order_number}:`, error);
+        results.push({
+          order_id: order.id,
+          order_number: order.order_number,
+          error: error.message
+        });
+      }
+    }
+
+    console.log('[PROCESS-ORDERS] Processamento concluído');
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        processed_orders: results.length,
+        results: results
+      }),
+      { 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        },
+        status: 200 
+      }
+    )
+
+  } catch (error) {
+    console.error('[PROCESS-ORDERS] Erro geral:', error)
+    return new Response(
+      JSON.stringify({ 
+        error: error.message,
+        success: false 
+      }),
+      { 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        },
+        status: 500 
+      }
+    )
+  }
+})
