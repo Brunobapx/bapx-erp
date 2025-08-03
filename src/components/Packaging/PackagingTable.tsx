@@ -43,8 +43,16 @@ export const PackagingTable = ({
 
   if (packagings.length === 0) {
     return (
-      <div className="p-4 text-center text-muted-foreground">
-        Nenhuma embalagem encontrada.
+      <div className="p-8 text-center">
+        <div className="text-muted-foreground mb-4">
+          Nenhuma embalagem encontrada
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          As embalagens são criadas automaticamente quando a produção é aprovada.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Verifique a página de produção para aprovar itens produzidos.
+        </p>
       </div>
     );
   }
