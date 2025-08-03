@@ -231,7 +231,7 @@ export const useProduction = () => {
         
         if (updateError) throw updateError;
         
-        // Buscar dados da produção atualizada
+        // Buscar dados da produção atualizada incluindo tracking_id
         const { data: productionData, error: fetchError } = await supabase
           .from('production')
           .select('*')
@@ -246,22 +246,20 @@ export const useProduction = () => {
         // Verificar se é produção interna (order_item_id é null)
         const isInternalProduction = !productionData.order_item_id;
         
-        // Buscar estoque atual do produto
-        const { data: productData, error: productError } = await supabase
-          .from('products')
-          .select('stock')
-          .eq('id', productionData.product_id)
-          .single();
-        
-        if (productError) {
-          console.error('Erro ao buscar produto:', productError);
-          throw productError;
-        }
-        
-        const currentStock = productData.stock || 0;
-
         if (isInternalProduction) {
           // Para produção interna, adicionar direto ao estoque
+          const { data: productData, error: productError } = await supabase
+            .from('products')
+            .select('stock')
+            .eq('id', productionData.product_id)
+            .single();
+          
+          if (productError) {
+            console.error('Erro ao buscar produto:', productError);
+            throw productError;
+          }
+          
+          const currentStock = productData.stock || 0;
           const newStock = currentStock + finalQuantityProduced;
           
           const { error: stockUpdateError } = await supabase
@@ -284,75 +282,109 @@ export const useProduction = () => {
           return true;
         }
         
-        // Para produção de pedidos, continuar com o fluxo normal de embalagem
-        // Calcular quantidade total para embalagem (estoque anterior + produzido)
-        const totalQuantityForPackaging = currentStock + finalQuantityProduced;
-        
-        // Zerar o estoque do produto (tudo vai para embalagem)
-        const { error: stockUpdateError } = await supabase
-          .from('products')
-          .update({ 
-            stock: 0, // Zerando o estoque pois tudo vai para embalagem
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', productionData.product_id);
-        
-        if (stockUpdateError) {
-          console.error('Erro ao atualizar estoque do produto:', stockUpdateError);
-          toast.error('Erro ao atualizar estoque do produto');
-        } else {
-          console.log(`Estoque do produto ${productionData.product_id} zerado. Quantidade total para embalagem: ${totalQuantityForPackaging} (${currentStock} estoque anterior + ${finalQuantityProduced} produzidos)`);
-        }
-        
-        // Verificar se já existe um registro de embalagem para esta produção
-        const { data: existingPackaging, error: checkError } = await supabase
-          .from('packaging')
-          .select('id')
-          .eq('production_id', id)
-          .maybeSingle();
-        
-        if (checkError) {
-          console.error('Erro ao verificar embalagem existente:', checkError);
-        }
-        
-        if (existingPackaging) {
-          // Atualizar o registro existente com a quantidade total para embalagem
-          const { error: packagingUpdateError } = await supabase
-            .from('packaging')
+        // Para produção de pedidos, usar sistema de tracking
+        if (productionData.tracking_id) {
+          console.log(`[TRACKING] Atualizando produção aprovada para tracking ${productionData.tracking_id}: ${finalQuantityProduced} unidades`);
+          
+          // Atualizar tracking com quantidade produzida aprovada
+          const { error: trackingError } = await supabase
+            .from('order_item_tracking')
             .update({
-              quantity_to_package: totalQuantityForPackaging,
-              status: 'pending',
-              updated_at: new Date().toISOString()
+              quantity_produced_approved: finalQuantityProduced,
+              status: 'partial_ready'
             })
-            .eq('production_id', id);
-          
-          if (packagingUpdateError) {
-            console.error('Erro ao atualizar embalagem:', packagingUpdateError);
-            toast.error('Erro ao atualizar registro de embalagem');
+            .eq('id', productionData.tracking_id);
+            
+          if (trackingError) {
+            console.error('Erro ao atualizar tracking:', trackingError);
+            toast.error('Erro ao atualizar rastreamento do item');
           } else {
-            console.log('Embalagem atualizada com quantidade total:', totalQuantityForPackaging);
-            toast.success(`Produção aprovada! Total para embalagem: ${totalQuantityForPackaging} unidades (${currentStock} do estoque + ${finalQuantityProduced} produzidas). Estoque zerado.`);
+            console.log(`[TRACKING] Tracking atualizado: produção aprovada de ${finalQuantityProduced} unidades`);
           }
-        } else {
-          // Criar novo registro de embalagem com a quantidade total
-          const { error: packagingError } = await supabase
-            .from('packaging')
-            .insert({
-              user_id: user?.id,
-              production_id: id,
-              product_id: productionData.product_id,
-              product_name: productionData.product_name,
-              quantity_to_package: totalQuantityForPackaging,
-              quantity_packaged: 0,
-              status: 'pending'
-            });
           
-          if (packagingError) {
-            console.error('Erro ao criar embalagem:', packagingError);
-            toast.error('Erro ao criar registro de embalagem');
+          // Buscar tracking para verificar se precisa criar ou atualizar embalagem
+          const { data: trackingData, error: trackingFetchError } = await supabase
+            .from('order_item_tracking')
+            .select('*')
+            .eq('id', productionData.tracking_id)
+            .single();
+            
+          if (trackingFetchError) {
+            console.error('Erro ao buscar tracking:', trackingFetchError);
           } else {
-            console.log('Embalagem criada com quantidade total:', totalQuantityForPackaging);
-            toast.success(`Produção aprovada! Total para embalagem: ${totalQuantityForPackaging} unidades (${currentStock} do estoque + ${finalQuantityProduced} produzidas). Estoque zerado.`);
+            // Calcular quantidade total para embalagem (estoque + produção)
+            const totalForPackaging = trackingData.quantity_from_stock + finalQuantityProduced;
+            
+            console.log(`[TRACKING] Total para embalagem: ${totalForPackaging} (${trackingData.quantity_from_stock} estoque + ${finalQuantityProduced} produção)`);
+            
+            // Verificar se já existe embalagem para este tracking
+            const { data: existingPackaging, error: packagingCheckError } = await supabase
+              .from('packaging')
+              .select('*')
+              .eq('tracking_id', productionData.tracking_id)
+              .maybeSingle();
+              
+            if (packagingCheckError) {
+              console.error('Erro ao verificar embalagem existente:', packagingCheckError);
+            }
+            
+            if (existingPackaging) {
+              // Atualizar embalagem existente com total
+              const { error: packagingUpdateError } = await supabase
+                .from('packaging')
+                .update({
+                  quantity_to_package: totalForPackaging,
+                  status: 'pending'
+                })
+                .eq('id', existingPackaging.id);
+                
+              if (packagingUpdateError) {
+                console.error('Erro ao atualizar embalagem:', packagingUpdateError);
+                toast.error('Erro ao atualizar embalagem');
+              } else {
+                console.log(`[TRACKING] Embalagem atualizada: ${totalForPackaging} unidades totais`);
+                toast.success(`Produção aprovada! ${finalQuantityProduced} unidades enviadas para embalagem (total: ${totalForPackaging})`);
+              }
+            } else {
+              // Criar nova embalagem apenas com a produção (estoque já foi para embalagem anteriormente)
+              if (finalQuantityProduced > 0) {
+                // Buscar dados do pedido para criar embalagem
+                const { data: orderItem, error: orderItemError } = await supabase
+                  .from('order_items')
+                  .select(`
+                    *,
+                    orders!inner(*)
+                  `)
+                  .eq('id', productionData.order_item_id)
+                  .single();
+                  
+                if (orderItemError) {
+                  console.error('Erro ao buscar item do pedido:', orderItemError);
+                } else {
+                  const { error: packagingCreateError } = await supabase
+                    .from('packaging')
+                    .insert({
+                      user_id: user?.id,
+                      order_id: orderItem.orders.id,
+                      client_id: orderItem.orders.client_id,
+                      client_name: orderItem.orders.client_name,
+                      product_id: productionData.product_id,
+                      product_name: productionData.product_name,
+                      quantity_to_package: finalQuantityProduced,
+                      status: 'pending',
+                      tracking_id: productionData.tracking_id
+                    });
+                    
+                  if (packagingCreateError) {
+                    console.error('Erro ao criar embalagem:', packagingCreateError);
+                    toast.error('Erro ao criar registro de embalagem');
+                  } else {
+                    console.log(`[TRACKING] Nova embalagem criada: ${finalQuantityProduced} unidades da produção`);
+                    toast.success(`Produção aprovada! ${finalQuantityProduced} unidades enviadas para embalagem`);
+                  }
+                }
+              }
+            }
           }
         }
         

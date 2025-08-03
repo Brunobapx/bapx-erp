@@ -806,6 +806,51 @@ export type Database = {
         }
         Relationships: []
       }
+      order_item_tracking: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          order_item_id: string
+          quantity_from_production: number
+          quantity_from_stock: number
+          quantity_packaged_approved: number
+          quantity_produced_approved: number
+          quantity_target: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_item_id: string
+          quantity_from_production?: number
+          quantity_from_stock?: number
+          quantity_packaged_approved?: number
+          quantity_produced_approved?: number
+          quantity_target?: number
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_item_id?: string
+          quantity_from_production?: number
+          quantity_from_stock?: number
+          quantity_packaged_approved?: number
+          quantity_produced_approved?: number
+          quantity_target?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           created_at: string
@@ -927,6 +972,7 @@ export type Database = {
           quantity_packaged: number | null
           quantity_to_package: number
           status: Database["public"]["Enums"]["packaging_status"] | null
+          tracking_id: string | null
           updated_at: string
           user_id: string
         }
@@ -949,6 +995,7 @@ export type Database = {
           quantity_packaged?: number | null
           quantity_to_package: number
           status?: Database["public"]["Enums"]["packaging_status"] | null
+          tracking_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -971,6 +1018,7 @@ export type Database = {
           quantity_packaged?: number | null
           quantity_to_package?: number
           status?: Database["public"]["Enums"]["packaging_status"] | null
+          tracking_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -987,6 +1035,13 @@ export type Database = {
             columns: ["production_id"]
             isOneToOne: false
             referencedRelation: "production"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "packaging_tracking_id_fkey"
+            columns: ["tracking_id"]
+            isOneToOne: false
+            referencedRelation: "order_item_tracking"
             referencedColumns: ["id"]
           },
         ]
@@ -1193,6 +1248,7 @@ export type Database = {
           quantity_requested: number
           start_date: string | null
           status: Database["public"]["Enums"]["production_status"] | null
+          tracking_id: string | null
           updated_at: string
           user_id: string
         }
@@ -1211,6 +1267,7 @@ export type Database = {
           quantity_requested: number
           start_date?: string | null
           status?: Database["public"]["Enums"]["production_status"] | null
+          tracking_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1229,6 +1286,7 @@ export type Database = {
           quantity_requested?: number
           start_date?: string | null
           status?: Database["public"]["Enums"]["production_status"] | null
+          tracking_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1238,6 +1296,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_tracking_id_fkey"
+            columns: ["tracking_id"]
+            isOneToOne: false
+            referencedRelation: "order_item_tracking"
             referencedColumns: ["id"]
           },
         ]
