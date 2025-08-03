@@ -53,15 +53,13 @@ export const usePackaging = () => {
 
         const { data, error } = await supabase
           .from('packaging')
-          .select(`
-            *
-          `)
+          .select('*')
           .order('created_at', { ascending: false });
         
         if (error) throw error;
         
         // Mapear os dados para incluir order_number e client_name
-        const packagingsWithOrderInfo = await Promise.all((data || []).map(async (pack) => {
+        const packagingsWithOrderInfo = (data || []).map((pack) => {
           // Se tem order_id e client_name diretamente (embalagem direta do estoque)
           if (pack.order_id && pack.client_name) {
             return {
@@ -71,47 +69,13 @@ export const usePackaging = () => {
             };
           }
           
-          // Se tem production_id, buscar dados da produção e pedido
-          if (pack.production_id) {
-            const { data: productionData } = await supabase
-              .from('production')
-              .select(`
-                order_item_id
-              `)
-              .eq('id', pack.production_id)
-              .single();
-            
-            if (productionData?.order_item_id) {
-              const { data: orderItemData } = await supabase
-                .from('order_items')
-                .select(`
-                  order_id,
-                  orders(
-                    order_number,
-                    client_name
-                  )
-                `)
-                .eq('id', productionData.order_item_id)
-                .single();
-              
-              if (orderItemData?.orders) {
-                const orderData = Array.isArray(orderItemData.orders) ? orderItemData.orders[0] : orderItemData.orders;
-                return {
-                  ...pack,
-                  order_number: orderData?.order_number || 'N/A',
-                  client_name: orderData?.client_name || 'N/A'
-                };
-              }
-            }
-          }
-          
-          // Fallback
+          // Sistema antigo - fallback
           return {
             ...pack,
-            order_number: 'N/A',
-            client_name: 'N/A'
+            order_number: 'EMBALAGEM',
+            client_name: 'Sistema'
           };
-        }));
+        });
         
         setPackagings(packagingsWithOrderInfo);
       } catch (error: any) {
@@ -128,150 +92,6 @@ export const usePackaging = () => {
 
   const refreshPackagings = () => {
     setRefreshTrigger(prev => prev + 1);
-  };
-
-  // Função para verificar se todos os itens do pedido foram aprovados na embalagem
-  const checkAllOrderItemsPackaged = async (orderId: string) => {
-    try {
-      // Buscar todos os itens do pedido
-      const { data: orderItems, error: orderItemsError } = await supabase
-        .from('order_items')
-        .select('id')
-        .eq('order_id', orderId);
-
-      if (orderItemsError) throw orderItemsError;
-
-      // Para cada item do pedido, verificar se existe produção aprovada e embalagem aprovada
-      for (const item of orderItems) {
-        // Verificar se existe produção aprovada para este item
-        const { data: productions, error: productionError } = await supabase
-          .from('production')
-          .select('id, status')
-          .eq('order_item_id', item.id);
-
-        if (productionError) throw productionError;
-
-        // Se não há produção para este item, verificar se é um item que não precisa de produção
-        if (!productions || productions.length === 0) {
-          // Buscar o produto para ver se é fabricado
-          const { data: orderItemData, error: itemError } = await supabase
-            .from('order_items')
-            .select(`
-              product_id,
-              products!inner(is_manufactured)
-            `)
-            .eq('id', item.id)
-            .single();
-
-          if (itemError) throw itemError;
-
-          // Se é fabricado mas não tem produção, não está pronto
-          if (orderItemData.products?.[0]?.is_manufactured) {
-            console.log(`Item ${item.id} é fabricado mas não tem produção aprovada`);
-            return false;
-          }
-          // Se não é fabricado, não precisa passar por produção/embalagem
-          continue;
-        }
-
-        // Verificar se todas as produções estão aprovadas
-        const hasUnapprovedProduction = productions.some(prod => prod.status !== 'approved');
-        if (hasUnapprovedProduction) {
-          console.log(`Item ${item.id} tem produção não aprovada`);
-          return false;
-        }
-
-        // Para cada produção aprovada, verificar se tem embalagem aprovada
-        for (const production of productions) {
-          const { data: packaging, error: packagingError } = await supabase
-            .from('packaging')
-            .select('status')
-            .eq('production_id', production.id)
-            .maybeSingle();
-
-          if (packagingError) throw packagingError;
-
-          // Se não tem embalagem ou não está aprovada
-          if (!packaging || packaging.status !== 'approved') {
-            console.log(`Produção ${production.id} não tem embalagem aprovada`);
-            return false;
-          }
-        }
-      }
-
-      console.log(`Todos os itens do pedido ${orderId} foram aprovados na embalagem`);
-      return true;
-    } catch (error) {
-      console.error('Erro ao verificar itens do pedido:', error);
-      return false;
-    }
-  };
-
-  // Função para verificar se todos os itens do pedido estão aprovados na embalagem
-  const checkAllOrderItemsForApproval = async (orderId: string) => {
-    try {
-      // Buscar todos os itens do pedido
-      const { data: orderItems, error: orderItemsError } = await supabase
-        .from('order_items')
-        .select('id, product_id')
-        .eq('order_id', orderId);
-
-      if (orderItemsError) throw orderItemsError;
-
-      for (const item of orderItems) {
-        // Verificar se existe produção para este item
-        const { data: productions, error: productionError } = await supabase
-          .from('production')
-          .select('id, status')
-          .eq('order_item_id', item.id);
-
-        if (productionError) throw productionError;
-
-        // Se tem produção, verificar se está aprovada e se tem embalagem aprovada
-        if (productions && productions.length > 0) {
-          for (const production of productions) {
-            if (production.status !== 'approved') {
-              console.log(`Produção ${production.id} não aprovada`);
-              return false;
-            }
-            
-            // Verificar embalagem da produção
-            const { data: packaging, error: packagingError } = await supabase
-              .from('packaging')
-              .select('status')
-              .eq('production_id', production.id)
-              .single();
-
-            if (packagingError || packaging.status !== 'approved') {
-              console.log(`Embalagem da produção ${production.id} não aprovada`);
-              return false;
-            }
-          }
-        } else {
-          // Item direto do estoque - verificar embalagem direta
-          const { data: directPackaging, error: directPackagingError } = await supabase
-            .from('packaging')
-            .select('status')
-            .eq('order_id', orderId)
-            .eq('product_id', item.product_id)
-            .is('production_id', null)
-            .maybeSingle();
-
-          if (directPackagingError) throw directPackagingError;
-
-          if (!directPackaging || directPackaging.status !== 'approved') {
-            console.log(`Embalagem direta do item ${item.id} não aprovada`);
-            return false;
-          }
-        }
-      }
-
-      console.log(`Todos os itens do pedido ${orderId} estão aprovados na embalagem`);
-      return true;
-    } catch (error) {
-      console.error('Erro ao verificar aprovação dos itens:', error);
-      return false;
-    }
   };
 
   const updatePackagingStatus = async (
@@ -395,97 +215,7 @@ export const usePackaging = () => {
             toast.warning(`Quantidade ajustada: ${trackingData.quantity_target} → ${finalQuantity} unidades`);
           }
 
-          // Verificar se todos os itens do pedido estão prontos para venda
-          const orderId = orderItem.order_id;
-          
-          // Buscar todos os trackings do pedido
-          const { data: allTrackings, error: allTrackingsError } = await supabase
-            .from('order_item_tracking')
-            .select('status')
-            .in('order_item_id', 
-              await supabase
-                .from('order_items')
-                .select('id')
-                .eq('order_id', orderId)
-                .then(res => res.data?.map(item => item.id) || [])
-            );
-            
-          if (allTrackingsError) {
-            console.error('Erro ao verificar trackings do pedido:', allTrackingsError);
-          }
-
-          const allItemsReady = allTrackings?.every(t => t.status === 'complete_ready') || false;
-          
-          console.log(`[TRACKING] Pedido ${orderId} - Todos os itens prontos: ${allItemsReady ? 'SIM' : 'NÃO'}`);
-          
-          if (!allItemsReady) {
-            toast.info('Embalagem aprovada! Aguardando todos os itens do pedido ficarem prontos.');
-            refreshPackagings();
-            return true;
-          }
-
-          // Recalcular valor total do pedido
-          const { data: orderItems, error: itemsError } = await supabase
-            .from('order_items')
-            .select('total_price')
-            .eq('order_id', orderId);
-            
-          if (itemsError) {
-            console.error('Erro ao buscar itens do pedido:', itemsError);
-          }
-
-          const totalAmount = orderItems?.reduce((sum, item) => sum + item.total_price, 0) || 0;
-          
-          // Atualizar total do pedido
-          const { error: orderUpdateError } = await supabase
-            .from('orders')
-            .update({
-              total_amount: totalAmount,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', orderId);
-            
-          if (orderUpdateError) {
-            console.error('Erro ao atualizar pedido:', orderUpdateError);
-          }
-
-          console.log(`[TRACKING] Pedido ${orderId} recalculado: R$ ${totalAmount.toFixed(2)}`);
-
-          // Verificar se já existe venda
-          const { data: existingSale, error: saleCheckError } = await supabase
-            .from('sales')
-            .select('id')
-            .eq('order_id', orderId)
-            .maybeSingle();
-            
-          if (saleCheckError) {
-            console.error('Erro ao verificar venda existente:', saleCheckError);
-          }
-
-          if (!existingSale) {
-            // Criar venda
-            const order = orderItem.orders;
-            const { error: saleError } = await supabase
-              .from('sales')
-              .insert({
-                user_id: user?.id,
-                order_id: orderId,
-                client_id: order.client_id,
-                client_name: order.client_name,
-                total_amount: totalAmount,
-                status: 'pending'
-              });
-              
-            if (saleError) {
-              console.error('Erro ao criar venda:', saleError);
-              toast.error('Erro ao criar venda');
-            } else {
-              console.log(`[TRACKING] Venda criada para ${order.client_name}: R$ ${totalAmount.toFixed(2)}`);
-              toast.success(`Todos os itens aprovados! Venda liberada para ${order.client_name} - R$ ${totalAmount.toFixed(2)}`);
-            }
-          } else {
-            toast.success('Embalagem aprovada! Venda já existe para este pedido.');
-          }
+          toast.success(`Embalagem aprovada! ${finalQuantity} unidades processadas.`);
           
         } else {
           // Sistema antigo - embalagem sem tracking

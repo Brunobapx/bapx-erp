@@ -37,11 +37,14 @@ export const useProduction = () => {
           .from('production')
           .select(`
             *,
-            order_items!left(
-              order_id,
-              orders!left(
-                order_number,
-                client_name
+            order_item_tracking!inner(
+              order_item_id,
+              order_items!inner(
+                order_id,
+                orders!inner(
+                  order_number,
+                  client_name
+                )
               )
             )
           `)
@@ -64,12 +67,16 @@ export const useProduction = () => {
         
         // Mapear produções de pedidos para incluir order_number e client_name
         const productionsWithOrderInfo = (ordersProductions || []).map(prod => {
-          console.log('[PRODUCTION DEBUG] Processando produção de pedido:', prod.id, 'Order items:', prod.order_items);
+          console.log('[PRODUCTION DEBUG] Processando produção de pedido:', prod.id, 'Tracking:', prod.order_item_tracking);
+          
+          const tracking = prod.order_item_tracking;
+          const orderItem = tracking?.order_items;
+          const order = orderItem?.orders;
           
           return {
             ...prod,
-            order_number: prod.order_items?.orders?.order_number || '',
-            client_name: prod.order_items?.orders?.client_name || ''
+            order_number: order?.order_number || '',
+            client_name: order?.client_name || ''
           };
         });
 
