@@ -87,7 +87,31 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
       let qtyFromStock = 0;
       let qtyFromProduction = 0;
 
-      if (requestedQty <= availableStock) {
+      // Verificar se é produto de venda direta
+      const { data: productDetails, error: productError } = await supabase
+        .from('products')
+        .select('is_direct_sale')
+        .eq('id', item.product_id)
+        .single();
+
+      const isDirectSale = productDetails?.is_direct_sale || false;
+
+      if (isDirectSale) {
+        // Produto de venda direta - usar apenas estoque disponível
+        qtyFromStock = Math.min(requestedQty, availableStock);
+        qtyFromProduction = 0;
+        
+        if (qtyFromStock > 0) {
+          hasDirectPackaging = true;
+          infoMessages.push(`${item.product_name}: ${qtyFromStock} unidades direto do estoque (venda direta)`);
+        }
+        
+        if (qtyFromStock < requestedQty) {
+          const shortage = requestedQty - qtyFromStock;
+          toast.warning(`${item.product_name}: estoque insuficiente. Disponível: ${qtyFromStock}, solicitado: ${requestedQty}`);
+          infoMessages.push(`${item.product_name}: ${shortage} unidades em falta (produto não fabricado)`);
+        }
+      } else if (requestedQty <= availableStock) {
         // Tem estoque suficiente - vai direto para embalagem
         qtyFromStock = requestedQty;
         qtyFromProduction = 0;
@@ -106,9 +130,19 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
           infoMessages.push(`${item.product_name}: ${qtyFromProduction} unidades para produção (sem estoque)`);
         }
       } else {
-        // Produto não fabricado sem estoque suficiente - erro
-        toast.error(`${item.product_name}: estoque insuficiente (${availableStock}/${requestedQty}) e produto não é fabricado`);
-        throw new Error(`Estoque insuficiente para ${item.product_name}`);
+        // Produto não fabricado sem estoque suficiente - usar o que tem
+        qtyFromStock = Math.max(0, availableStock);
+        qtyFromProduction = 0;
+        
+        if (qtyFromStock > 0) {
+          hasDirectPackaging = true;
+          const shortage = requestedQty - qtyFromStock;
+          toast.warning(`${item.product_name}: estoque parcial. Disponível: ${qtyFromStock}, faltam: ${shortage}`);
+          infoMessages.push(`${item.product_name}: ${qtyFromStock} unidades do estoque (${shortage} em falta)`);
+        } else {
+          toast.error(`${item.product_name}: sem estoque e produto não é fabricado`);
+          throw new Error(`Sem estoque para ${item.product_name}`);
+        }
       }
 
       // Criar tracking record

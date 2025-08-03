@@ -20,8 +20,17 @@ Deno.serve(async (req) => {
 
     console.log('[PROCESS-ORDERS] Cliente Supabase criado');
 
-    // Buscar pedidos pendentes
-    const { data: pendingOrders, error: ordersError } = await supabase
+    // Verificar se há order_id específico no body
+    let targetOrderId = null;
+    try {
+      const body = await req.json();
+      targetOrderId = body?.order_id;
+    } catch (e) {
+      // Ignore JSON parse errors
+    }
+
+    // Buscar pedidos pendentes (ou pedido específico)
+    let ordersQuery = supabase
       .from('orders')
       .select(`
         id,
@@ -40,6 +49,13 @@ Deno.serve(async (req) => {
         )
       `)
       .eq('status', 'pending');
+
+    if (targetOrderId) {
+      console.log(`[PROCESS-ORDERS] Processando pedido específico: ${targetOrderId}`);
+      ordersQuery = ordersQuery.eq('id', targetOrderId);
+    }
+
+    const { data: pendingOrders, error: ordersError } = await ordersQuery;
 
     if (ordersError) {
       throw new Error(`Erro ao buscar pedidos: ${ordersError.message}`);
@@ -64,43 +80,57 @@ Deno.serve(async (req) => {
           let quantityFromStock = 0;
           let quantityFromProduction = 0;
 
-          // Determinar quantidades
+          // Determinar quantidades baseado na nova lógica
           if (product.is_direct_sale) {
-            // Produto de venda direta - usar estoque disponível
+            // Produto de venda direta - usar estoque disponível, zero produção
             quantityFromStock = Math.min(item.quantity, product.stock);
             quantityFromProduction = 0;
           } else if (product.is_manufactured) {
-            // Produto fabricado - enviar tudo para produção
-            quantityFromStock = 0;
-            quantityFromProduction = item.quantity;
-          } else {
-            // Produto normal - usar estoque e o resto vai para produção
+            // Produto fabricado - distribuir entre estoque e produção
             quantityFromStock = Math.min(item.quantity, product.stock);
             quantityFromProduction = Math.max(0, item.quantity - product.stock);
+          } else {
+            // Produto normal - usar estoque disponível apenas
+            quantityFromStock = Math.min(item.quantity, product.stock);
+            quantityFromProduction = 0;
           }
 
           console.log(`[PROCESS-ORDERS] Item ${item.product_name}: Stock=${quantityFromStock}, Production=${quantityFromProduction}`);
 
-          // Criar registro de tracking
-          const { data: tracking, error: trackingError } = await supabase
+          // Verificar se já existe tracking para este item
+          const { data: existingTracking, error: trackingCheckError } = await supabase
             .from('order_item_tracking')
-            .insert({
-              order_item_id: item.id,
-              user_id: '00000000-0000-0000-0000-000000000000', // Sistema
-              quantity_target: item.quantity,
-              quantity_from_stock: quantityFromStock,
-              quantity_from_production: quantityFromProduction,
-              status: 'pending'
-            })
-            .select()
-            .single();
+            .select('*')
+            .eq('order_item_id', item.id)
+            .maybeSingle();
 
-          if (trackingError) {
-            console.error(`[PROCESS-ORDERS] Erro ao criar tracking: ${trackingError.message}`);
-            continue;
+          let tracking;
+          if (existingTracking) {
+            console.log(`[PROCESS-ORDERS] Tracking já existe para item ${item.id}, usando existente`);
+            tracking = existingTracking;
+          } else {
+            // Criar registro de tracking
+            const { data: newTracking, error: trackingError } = await supabase
+              .from('order_item_tracking')
+              .insert({
+                order_item_id: item.id,
+                user_id: '00000000-0000-0000-0000-000000000000', // Sistema
+                quantity_target: item.quantity,
+                quantity_from_stock: quantityFromStock,
+                quantity_from_production: quantityFromProduction,
+                status: 'pending'
+              })
+              .select()
+              .single();
+
+            if (trackingError) {
+              console.error(`[PROCESS-ORDERS] Erro ao criar tracking: ${trackingError.message}`);
+              continue;
+            }
+            tracking = newTracking;
           }
 
-          console.log(`[PROCESS-ORDERS] Tracking criado: ${tracking.id}`);
+          console.log(`[PROCESS-ORDERS] Tracking ID: ${tracking.id}`);
 
           // Criar produção se necessário
           if (quantityFromProduction > 0) {

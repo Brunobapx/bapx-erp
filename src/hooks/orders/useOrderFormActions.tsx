@@ -215,13 +215,32 @@ export const useOrderFormActions = ({
           console.log('[ORDER] Estoque abatido com sucesso');
         }
         
-        // Processar estoque e produção APÓS criação (decoupled)
+        // Processar estoque e produção APÓS criação (garantindo execução)
+        console.log('[ORDER] Processando produção e embalagem...');
+        
+        let processingSuccess = false;
         try {
-          console.log('[ORDER] Processando produção e embalagem...');
-          await checkStockAndSendToProduction(insertedOrder.id);
+          processingSuccess = await checkStockAndSendToProduction(insertedOrder.id);
         } catch (stockError) {
-          console.warn('[ORDER] Processamento de produção/embalagem falhou:', stockError);
-          toast.warning("Pedido criado, mas houve problema no processamento de produção/embalagem");
+          console.error('[ORDER] Erro no processamento de produção/embalagem:', stockError);
+          processingSuccess = false;
+        }
+
+        // Se falhou, tentar via edge function como fallback
+        if (!processingSuccess) {
+          console.log('[ORDER] Tentando fallback via edge function...');
+          try {
+            const { data, error } = await supabase.functions.invoke('process-pending-orders', {
+              body: { order_id: insertedOrder.id }
+            });
+            
+            if (error) throw error;
+            console.log('[ORDER] Fallback processado:', data);
+            toast.success("Pedido criado e processado com sucesso (via fallback)");
+          } catch (fallbackError) {
+            console.error('[ORDER] Fallback também falhou:', fallbackError);
+            toast.warning("Pedido criado, mas será necessário processar manualmente");
+          }
         }
         
         // Verificar se algum produto é de venda direta

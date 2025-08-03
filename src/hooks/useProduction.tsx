@@ -336,11 +336,12 @@ export const useProduction = () => {
             }
             
             if (existingPackaging) {
-              // Atualizar embalagem existente com total
+              // Atualizar embalagem existente somando a produção aprovada
+              const newQuantity = existingPackaging.quantity_to_package + finalQuantityProduced;
               const { error: packagingUpdateError } = await supabase
                 .from('packaging')
                 .update({
-                  quantity_to_package: totalForPackaging,
+                  quantity_to_package: newQuantity,
                   status: 'pending'
                 })
                 .eq('id', existingPackaging.id);
@@ -349,11 +350,11 @@ export const useProduction = () => {
                 console.error('Erro ao atualizar embalagem:', packagingUpdateError);
                 toast.error('Erro ao atualizar embalagem');
               } else {
-                console.log(`[TRACKING] Embalagem atualizada: ${totalForPackaging} unidades totais`);
-                toast.success(`Produção aprovada! ${finalQuantityProduced} unidades enviadas para embalagem (total: ${totalForPackaging})`);
+                console.log(`[TRACKING] Embalagem atualizada: ${existingPackaging.quantity_to_package} + ${finalQuantityProduced} = ${newQuantity} unidades`);
+                toast.success(`Produção aprovada! ${finalQuantityProduced} unidades adicionadas à embalagem (total: ${newQuantity})`);
               }
             } else {
-              // Criar nova embalagem apenas com a produção (estoque já foi para embalagem anteriormente)
+              // Criar nova embalagem com a produção
               if (finalQuantityProduced > 0) {
                 // Buscar dados do pedido para criar embalagem
                 const { data: orderItem, error: orderItemError } = await supabase

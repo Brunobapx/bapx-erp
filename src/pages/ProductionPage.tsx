@@ -8,6 +8,7 @@ import { ProductionFilters } from '@/components/Production/ProductionFilters';
 import { ProductionTable } from '@/components/Production/ProductionTable';
 import { ProductionSummaryTable } from '@/components/Production/ProductionSummaryTable';
 import { InternalProductionTab } from '@/components/Production/InternalProductionTab';
+import { OrderTrackingDebug } from '@/components/Debug/OrderTrackingDebug';
 import { useProduction } from '@/hooks/useProduction';
 import { useProductionSummary } from '@/hooks/useProductionSummary';
 import { useProductionFilters } from '@/hooks/useProductionFilters';
@@ -180,6 +181,8 @@ const ProductionPage = () => {
         onApprove={handleApproveProduction}
         onNextStage={handleNextStage}
       />
+      
+      <OrderTrackingDebug />
     </div>
   );
 };
