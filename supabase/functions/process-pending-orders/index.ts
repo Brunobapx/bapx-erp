@@ -37,12 +37,8 @@ Deno.serve(async (req) => {
         order_number,
         status,
         user_id,
-        order_items!inner (
-          id,
-          product_id,
-          product_name,
-          quantity
-        )
+        client_id,
+        client_name
       `)
       .eq('status', 'pending');
 
@@ -54,10 +50,29 @@ Deno.serve(async (req) => {
     const { data: pendingOrders, error: ordersError } = await ordersQuery;
 
     if (ordersError) {
+      console.error('[PROCESS-ORDERS] Erro na busca de pedidos:', ordersError);
       throw new Error(`Erro ao buscar pedidos: ${ordersError.message}`);
     }
 
     console.log(`[PROCESS-ORDERS] Encontrados ${pendingOrders?.length || 0} pedidos pendentes`);
+
+    if (!pendingOrders || pendingOrders.length === 0) {
+      console.log('[PROCESS-ORDERS] Nenhum pedido pendente encontrado');
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          processed_orders: 0,
+          message: 'Nenhum pedido pendente encontrado'
+        }),
+        { 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json' 
+          },
+          status: 200 
+        }
+      );
+    }
 
     const results = [];
 
@@ -65,9 +80,26 @@ Deno.serve(async (req) => {
       try {
         console.log(`[PROCESS-ORDERS] Processando pedido ${order.order_number} (${order.id})`);
         
+        // Buscar itens do pedido separadamente
+        const { data: orderItems, error: itemsError } = await supabase
+          .from('order_items')
+          .select('*')
+          .eq('order_id', order.id);
+
+        if (itemsError) {
+          console.error(`[PROCESS-ORDERS] Erro ao buscar itens do pedido ${order.id}:`, itemsError);
+          throw itemsError;
+        }
+
+        if (!orderItems || orderItems.length === 0) {
+          console.log(`[PROCESS-ORDERS] Pedido ${order.order_number} não tem itens`);
+          continue;
+        }
+
+        console.log(`[PROCESS-ORDERS] Pedido ${order.order_number} tem ${orderItems.length} itens`);
         const processingResults = [];
 
-        for (const item of order.order_items || []) {
+        for (const item of orderItems || []) {
           // Buscar detalhes do produto separadamente
           const { data: product, error: productError } = await supabase
             .from('products')
