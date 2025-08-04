@@ -36,16 +36,12 @@ Deno.serve(async (req) => {
         id,
         order_number,
         status,
-        order_items (
+        user_id,
+        order_items!inner (
           id,
           product_id,
           product_name,
-          quantity,
-          products (
-            stock,
-            is_manufactured,
-            is_direct_sale
-          )
+          quantity
         )
       `)
       .eq('status', 'pending');
@@ -72,10 +68,19 @@ Deno.serve(async (req) => {
         const processingResults = [];
 
         for (const item of order.order_items || []) {
-          const product = item.products;
-          if (!product) continue;
+          // Buscar detalhes do produto separadamente
+          const { data: product, error: productError } = await supabase
+            .from('products')
+            .select('stock, is_manufactured, is_direct_sale')
+            .eq('id', item.product_id)
+            .single();
 
-          console.log(`[PROCESS-ORDERS] Processando item ${item.product_name} - Quantidade: ${item.quantity}, Estoque: ${product.stock}`);
+          if (productError || !product) {
+            console.error(`[PROCESS-ORDERS] Erro ao buscar produto ${item.product_id}:`, productError);
+            continue;
+          }
+
+          console.log(`[PROCESS-ORDERS] Processando item ${item.product_name} - Quantidade: ${item.quantity}, Estoque: ${product.stock}, Fabricado: ${product.is_manufactured}, Venda Direta: ${product.is_direct_sale}`);
 
           let quantityFromStock = 0;
           let quantityFromProduction = 0;
@@ -114,7 +119,7 @@ Deno.serve(async (req) => {
               .from('order_item_tracking')
               .insert({
                 order_item_id: item.id,
-                user_id: '00000000-0000-0000-0000-000000000000', // Sistema
+                user_id: order.user_id, // Usar o user_id do pedido
                 quantity_target: item.quantity,
                 quantity_from_stock: quantityFromStock,
                 quantity_from_production: quantityFromProduction,
@@ -137,7 +142,7 @@ Deno.serve(async (req) => {
             const { data: production, error: productionError } = await supabase
               .from('production')
               .insert({
-                user_id: '00000000-0000-0000-0000-000000000000',
+                user_id: order.user_id,
                 order_item_id: item.id,
                 product_id: item.product_id,
                 product_name: item.product_name,
@@ -160,12 +165,14 @@ Deno.serve(async (req) => {
             const { data: packaging, error: packagingError } = await supabase
               .from('packaging')
               .insert({
-                user_id: '00000000-0000-0000-0000-000000000000',
+                user_id: order.user_id,
                 product_id: item.product_id,
                 product_name: item.product_name,
                 quantity_to_package: quantityFromStock,
                 status: 'pending',
                 order_id: order.id,
+                client_id: order.client_id,
+                client_name: order.client_name,
                 tracking_id: tracking.id
               })
               .select()

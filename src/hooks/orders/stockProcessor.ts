@@ -57,7 +57,7 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
         *,
         order_items (
           *,
-          products (stock, is_manufactured)
+          products (stock, is_manufactured, is_direct_sale)
         )
       `)
       .eq('id', orderId)
@@ -87,14 +87,8 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
       let qtyFromStock = 0;
       let qtyFromProduction = 0;
 
-      // Verificar se é produto de venda direta
-      const { data: productDetails, error: productError } = await supabase
-        .from('products')
-        .select('is_direct_sale')
-        .eq('id', item.product_id)
-        .single();
-
-      const isDirectSale = productDetails?.is_direct_sale || false;
+      // Usar os dados do produto já carregados no join
+      const isDirectSale = product?.is_direct_sale || false;
 
       if (isDirectSale) {
         // Produto de venda direta - usar apenas estoque disponível

@@ -1,10 +1,11 @@
 
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Package, Cog, Loader2 } from 'lucide-react';
+import { Package, Cog, Loader2, Play } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { ProcessOrdersButton } from "./ProcessOrdersButton";
 
 interface OrdersHeaderProps {
   onCreateOrder?: () => void;
@@ -56,18 +57,7 @@ export const OrdersHeader: React.FC<OrdersHeaderProps> = ({ onCreateOrder }) => 
         <p className="text-muted-foreground">Gerencie todos os pedidos do sistema.</p>
       </div>
       <div className="flex gap-2">
-        <Button 
-          onClick={handleProcessPendingOrders}
-          variant="outline"
-          disabled={isProcessing}
-        >
-          {isProcessing ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Cog className="mr-2 h-4 w-4" />
-          )}
-          Processar Pendentes
-        </Button>
+        <ProcessOrdersButton />
         <Button onClick={handleCreateOrder}>
           <Package className="mr-2 h-4 w-4" /> Novo Pedido
         </Button>
