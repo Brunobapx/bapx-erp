@@ -56,46 +56,59 @@ export const useProductionFlow = () => {
       // Buscar produções ligadas a pedidos
       const { data: orderProductions, error: orderError } = await supabase
         .from('production')
-        .select(`
-          *,
-          order_items!inner (
-            order_id,
-            orders!inner (
-              order_number,
-              client_id,
-              client_name
-            )
-          )
-        `)
+        .select('*')
         .not('order_item_id', 'is', null)
         .order('created_at', { ascending: false });
 
       if (orderError) throw orderError;
 
-      // Mapear dados das produções de pedidos
-      const mappedOrderProductions: ProductionFlowItem[] = (orderProductions || []).map(prod => ({
-        id: prod.id,
-        production_number: prod.production_number,
-        order_id: prod.order_items.orders.id,
-        order_number: prod.order_items.orders.order_number,
-        order_item_id: prod.order_item_id,
-        product_id: prod.product_id,
-        product_name: prod.product_name,
-        client_id: prod.order_items.orders.client_id,
-        client_name: prod.order_items.orders.client_name,
-        quantity_requested: prod.quantity_requested,
-        quantity_produced: prod.quantity_produced || 0,
-        status: prod.status,
-        start_date: prod.start_date,
-        completion_date: prod.completion_date,
-        approved_at: prod.approved_at,
-        approved_by: prod.approved_by,
-        notes: prod.notes,
-        created_at: prod.created_at,
-        updated_at: prod.updated_at,
-        user_id: prod.user_id,
-        tracking_id: prod.tracking_id
-      }));
+      // Buscar dados dos pedidos para cada produção
+      const mappedOrderProductions: ProductionFlowItem[] = [];
+      
+      for (const prod of orderProductions || []) {
+        // Buscar dados do order_item
+        const { data: orderItem, error: itemError } = await supabase
+          .from('order_items')
+          .select('order_id')
+          .eq('id', prod.order_item_id)
+          .maybeSingle();
+
+        if (!itemError && orderItem) {
+          // Buscar dados do pedido
+          const { data: order, error: orderError } = await supabase
+            .from('orders')
+            .select('order_number, client_id, client_name')
+            .eq('id', orderItem.order_id)
+            .maybeSingle();
+
+          
+          if (!orderError && order) {
+            mappedOrderProductions.push({
+              id: prod.id,
+              production_number: prod.production_number,
+              order_id: orderItem.order_id,
+              order_number: order.order_number,
+              order_item_id: prod.order_item_id,
+              product_id: prod.product_id,
+              product_name: prod.product_name,
+              client_id: order.client_id,
+              client_name: order.client_name,
+            quantity_requested: prod.quantity_requested,
+            quantity_produced: prod.quantity_produced || 0,
+            status: prod.status,
+            start_date: prod.start_date,
+            completion_date: prod.completion_date,
+            approved_at: prod.approved_at,
+            approved_by: prod.approved_by,
+            notes: prod.notes,
+            created_at: prod.created_at,
+            updated_at: prod.updated_at,
+            user_id: prod.user_id,
+            tracking_id: prod.tracking_id
+            });
+          }
+        }
+      }
 
       // Buscar produções internas (sem pedido)
       const { data: internalProd, error: internalError } = await supabase

@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import StageAlert from '@/components/Alerts/StageAlert';
 import { OrderTrackingDebug } from '@/components/Debug/OrderTrackingDebug';
+import TestProcessOrders from '@/components/Debug/TestProcessOrders';
 import { useProductionFlow, ProductionFlowItem, InternalProductionItem } from '@/hooks/useProductionFlow';
 import { ApprovalModal } from '@/components/Modals/ApprovalModal';
 import { Badge } from '@/components/ui/badge';
@@ -300,6 +301,7 @@ const NewProductionPage = () => {
         onNextStage={handleNextStage}
       />
       
+      <TestProcessOrders />
       <OrderTrackingDebug />
     </div>
   );
