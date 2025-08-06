@@ -1,0 +1,284 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+
+export type ProductionFlowStatus = 'pending' | 'in_progress' | 'completed' | 'approved' | 'rejected';
+
+export type ProductionFlowItem = {
+  id: string;
+  production_number: string;
+  order_id: string;
+  order_number: string;
+  order_item_id: string;
+  product_id: string;
+  product_name: string;
+  client_id: string;
+  client_name: string;
+  quantity_requested: number;
+  quantity_produced: number;
+  status: ProductionFlowStatus;
+  start_date?: string;
+  completion_date?: string;
+  approved_at?: string;
+  approved_by?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+  tracking_id?: string;
+};
+
+export type InternalProductionItem = {
+  id: string;
+  production_number: string;
+  product_id: string;
+  product_name: string;
+  quantity_requested: number;
+  quantity_produced: number;
+  status: ProductionFlowStatus;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+};
+
+export const useProductionFlow = () => {
+  const [productions, setProductions] = useState<ProductionFlowItem[]>([]);
+  const [internalProductions, setInternalProductions] = useState<InternalProductionItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchProductions = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Buscar produções ligadas a pedidos
+      const { data: orderProductions, error: orderError } = await supabase
+        .from('production')
+        .select(`
+          *,
+          order_items!inner (
+            order_id,
+            orders!inner (
+              order_number,
+              client_id,
+              client_name
+            )
+          )
+        `)
+        .not('order_item_id', 'is', null)
+        .order('created_at', { ascending: false });
+
+      if (orderError) throw orderError;
+
+      // Mapear dados das produções de pedidos
+      const mappedOrderProductions: ProductionFlowItem[] = (orderProductions || []).map(prod => ({
+        id: prod.id,
+        production_number: prod.production_number,
+        order_id: prod.order_items.orders.id,
+        order_number: prod.order_items.orders.order_number,
+        order_item_id: prod.order_item_id,
+        product_id: prod.product_id,
+        product_name: prod.product_name,
+        client_id: prod.order_items.orders.client_id,
+        client_name: prod.order_items.orders.client_name,
+        quantity_requested: prod.quantity_requested,
+        quantity_produced: prod.quantity_produced || 0,
+        status: prod.status,
+        start_date: prod.start_date,
+        completion_date: prod.completion_date,
+        approved_at: prod.approved_at,
+        approved_by: prod.approved_by,
+        notes: prod.notes,
+        created_at: prod.created_at,
+        updated_at: prod.updated_at,
+        user_id: prod.user_id,
+        tracking_id: prod.tracking_id
+      }));
+
+      // Buscar produções internas (sem pedido)
+      const { data: internalProd, error: internalError } = await supabase
+        .from('production')
+        .select('*')
+        .is('order_item_id', null)
+        .order('created_at', { ascending: false });
+
+      if (internalError) throw internalError;
+
+      const mappedInternalProductions: InternalProductionItem[] = (internalProd || []).map(prod => ({
+        id: prod.id,
+        production_number: prod.production_number,
+        product_id: prod.product_id,
+        product_name: prod.product_name,
+        quantity_requested: prod.quantity_requested,
+        quantity_produced: prod.quantity_produced || 0,
+        status: prod.status,
+        notes: prod.notes,
+        created_at: prod.created_at,
+        updated_at: prod.updated_at,
+        user_id: prod.user_id
+      }));
+
+      setProductions(mappedOrderProductions);
+      setInternalProductions(mappedInternalProductions);
+
+    } catch (err: any) {
+      setError(err.message);
+      console.error('Erro ao buscar produções:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateProductionStatus = async (
+    productionId: string, 
+    status: ProductionFlowStatus, 
+    quantityProduced?: number
+  ): Promise<boolean> => {
+    try {
+      const updateData: any = { status };
+
+      // Adicionar campos específicos baseados no status
+      if (status === 'in_progress') {
+        updateData.start_date = new Date().toISOString().split('T')[0];
+      } else if (status === 'completed') {
+        updateData.completion_date = new Date().toISOString().split('T')[0];
+        if (quantityProduced !== undefined) {
+          updateData.quantity_produced = quantityProduced;
+        }
+      } else if (status === 'approved') {
+        updateData.approved_at = new Date().toISOString();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          updateData.approved_by = user.email;
+        }
+        if (quantityProduced !== undefined) {
+          updateData.quantity_produced = quantityProduced;
+        }
+      }
+
+      const { error } = await supabase
+        .from('production')
+        .update(updateData)
+        .eq('id', productionId);
+
+      if (error) throw error;
+
+      // Se aprovado, criar/atualizar embalagem
+      if (status === 'approved') {
+        await handleApprovedProduction(productionId, quantityProduced || 0);
+      }
+
+      toast.success('Status da produção atualizado com sucesso!');
+      await fetchProductions();
+      return true;
+
+    } catch (err: any) {
+      console.error('Erro ao atualizar status da produção:', err);
+      toast.error('Erro ao atualizar status da produção: ' + err.message);
+      return false;
+    }
+  };
+
+  const handleApprovedProduction = async (productionId: string, quantityProduced: number) => {
+    try {
+      // Buscar dados da produção
+      const { data: production, error: prodError } = await supabase
+        .from('production')
+        .select('*')
+        .eq('id', productionId)
+        .single();
+
+      if (prodError) throw prodError;
+
+      if (production.order_item_id) {
+        // Produção de pedido - criar/atualizar embalagem
+        const { data: existingPackaging, error: packError } = await supabase
+          .from('packaging')
+          .select('*')
+          .eq('production_id', productionId)
+          .maybeSingle();
+
+        if (packError && packError.code !== 'PGRST116') throw packError;
+
+        if (existingPackaging) {
+          // Atualizar embalagem existente
+          const { error: updateError } = await supabase
+            .from('packaging')
+            .update({
+              quantity_to_package: existingPackaging.quantity_to_package + quantityProduced,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingPackaging.id);
+
+          if (updateError) throw updateError;
+        } else {
+          // Criar nova embalagem
+          const { error: insertError } = await supabase
+            .from('packaging')
+            .insert({
+              user_id: production.user_id,
+              production_id: productionId,
+              product_id: production.product_id,
+              product_name: production.product_name,
+              quantity_to_package: quantityProduced,
+              status: 'pending'
+            });
+
+          if (insertError) throw insertError;
+        }
+
+        // Atualizar tracking do item do pedido
+        const { error: trackingError } = await supabase
+          .from('order_item_tracking')
+          .update({
+            quantity_produced_approved: quantityProduced,
+            status: 'ready_for_packaging',
+            updated_at: new Date().toISOString()
+          })
+          .eq('order_item_id', production.order_item_id);
+
+        if (trackingError) throw trackingError;
+
+      } else {
+        // Produção interna - adicionar ao estoque
+        const { data: product, error: productError } = await supabase
+          .from('products')
+          .select('stock')
+          .eq('id', production.product_id)
+          .single();
+
+        if (productError) throw productError;
+
+        const { error: stockError } = await supabase
+          .from('products')
+          .update({
+            stock: (product.stock || 0) + quantityProduced,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', production.product_id);
+
+        if (stockError) throw stockError;
+      }
+
+    } catch (err: any) {
+      console.error('Erro ao processar produção aprovada:', err);
+      throw err;
+    }
+  };
+
+  useEffect(() => {
+    fetchProductions();
+  }, []);
+
+  return {
+    productions,
+    internalProductions,
+    loading,
+    error,
+    fetchProductions,
+    updateProductionStatus,
+    refreshProductions: fetchProductions
+  };
+};

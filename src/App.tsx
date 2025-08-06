@@ -13,8 +13,8 @@ import OrdersPage from "./pages/OrdersPage";
 import TrocasPage from "./pages/TrocasPage";
 import ProductsPage from "./pages/ProductsPage";
 import ClientsPage from "./pages/ClientsPage";
-import ProductionPage from "./pages/ProductionPage";
-import PackagingPage from "./pages/PackagingPage";
+import NewProductionPage from "./pages/NewProductionPage";
+import NewPackagingPage from "./pages/NewPackagingPage";
 import SalesPage from "./pages/SalesPage";
 import FinancePage from "./pages/FinancePage";
 import RoutesPage from "./pages/RoutesPage";
@@ -136,7 +136,7 @@ const App = () => (
                     <div className="flex h-screen bg-gray-50">
                       <Sidebar />
                       <main className="flex-1 overflow-auto lg:ml-64">
-                        <ProductionPage />
+                        <NewProductionPage />
                       </main>
                     </div>
                   </ModuleAccessCheck>
@@ -149,7 +149,7 @@ const App = () => (
                     <div className="flex h-screen bg-gray-50">
                       <Sidebar />
                       <main className="flex-1 overflow-auto lg:ml-64">
-                        <PackagingPage />
+                        <NewPackagingPage />
                       </main>
                     </div>
                   </ModuleAccessCheck>
