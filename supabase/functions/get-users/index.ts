@@ -41,30 +41,42 @@ serve(async (req) => {
       .eq('user_id', requestingUser.id)
       .maybeSingle()
 
-    if (adminError || !adminCheck || !['admin', 'master'].includes(adminCheck.role)) {
-      throw new Error('Permissão negada: Apenas administradores podem visualizar usuários');
-    }
+    // Buscar company do solicitante
+    const { data: reqProfile } = await supabaseClient
+      .from('profiles')
+      .select('company_id')
+      .eq('id', requestingUser.id)
+      .maybeSingle();
+
+    const isMaster = adminCheck?.role === 'master';
 
     // Buscar todos os usuários do auth
     const { data: authUsers, error: authError } = await supabaseClient.auth.admin.listUsers()
-
     if (authError) {
       console.error('Error fetching auth users:', authError)
       throw new Error('Erro ao buscar usuários');
     }
 
-    // Buscar roles dos usuários
-    const { data: userRoles, error: rolesError } = await supabaseClient
+    // Buscar perfis (para filtrar por empresa quando admin)
+    const { data: profiles, error: profilesError } = await supabaseClient
+      .from('profiles')
+      .select('id, company_id');
+    if (profilesError) {
+      console.error('Error fetching profiles:', profilesError)
+    }
+
+    const allowedUserIds = new Set<string>(
+      isMaster
+        ? authUsers.users.map(u => u.id)
+        : profiles?.filter(p => p.company_id && p.company_id === reqProfile?.company_id).map(p => p.id) || []
+    );
+
+    // Buscar roles e permissões apenas uma vez
+    const { data: userRoles } = await supabaseClient
       .from('user_roles')
       .select('user_id, role');
 
-    if (rolesError) {
-      console.error('Error fetching user roles:', rolesError)
-      throw new Error('Erro ao buscar roles dos usuários');
-    }
-
-    // Buscar permissões de módulos
-    const { data: userPermissions, error: permissionsError } = await supabaseClient
+    const { data: userPermissions } = await supabaseClient
       .from('user_module_permissions')
       .select(`
         user_id,
@@ -75,37 +87,26 @@ serve(async (req) => {
         )
       `);
 
-    if (permissionsError) {
-      console.error('Error fetching user permissions:', permissionsError)
-    }
-
     // Combinar dados
-    const enrichedUsers = authUsers.users.map(authUser => {
-      const userRole = userRoles?.find(role => role.user_id === authUser.id);
-      const userModulePermissions = userPermissions?.filter(
-        (up: any) => up.user_id === authUser.id
-      ) || [];
-
-      return {
-        id: authUser.id,
-        email: authUser.email,
-        user_metadata: authUser.user_metadata || {},
-        created_at: authUser.created_at,
-        role: userRole?.role || 'user',
-        modules: userModulePermissions.map((ump: any) => ump.system_modules?.name).filter(Boolean),
-        moduleIds: userModulePermissions.map((ump: any) => ump.system_modules?.id).filter(Boolean)
-      };
-    });
+    const enrichedUsers = authUsers.users
+      .filter(u => allowedUserIds.has(u.id))
+      .map(authUser => {
+        const userRole = userRoles?.find(role => role.user_id === authUser.id);
+        const userModulePermissions = userPermissions?.filter((up: any) => up.user_id === authUser.id) || [];
+        return {
+          id: authUser.id,
+          email: authUser.email,
+          user_metadata: authUser.user_metadata || {},
+          created_at: authUser.created_at,
+          role: userRole?.role || 'user',
+          modules: userModulePermissions.map((ump: any) => ump.system_modules?.name).filter(Boolean),
+          moduleIds: userModulePermissions.map((ump: any) => ump.system_modules?.id).filter(Boolean)
+        };
+      });
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        users: enrichedUsers
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
+      JSON.stringify({ success: true, users: enrichedUsers }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
 
   } catch (error: any) {

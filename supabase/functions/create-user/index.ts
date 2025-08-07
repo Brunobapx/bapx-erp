@@ -114,6 +114,28 @@ serve(async (req) => {
 
     console.log('User created in auth:', newUser.user.id)
 
+    // Descobrir a empresa do solicitante
+    const { data: reqProfile } = await supabaseClient
+      .from('profiles')
+      .select('company_id')
+      .eq('id', requestingUser.id)
+      .maybeSingle()
+
+    // Criar/atualizar perfil do novo usuário, vinculando à mesma empresa do solicitante
+    const { error: profileError } = await supabaseClient
+      .from('profiles')
+      .upsert({
+        id: newUser.user.id,
+        first_name: firstName,
+        last_name: lastName,
+        company_id: reqProfile?.company_id ?? null
+      })
+
+    if (profileError) {
+      console.error('Error upserting profile for new user:', profileError)
+      throw profileError
+    }
+
     // Criar role do usuário
     const { error: roleError } = await supabaseClient
       .from('user_roles')

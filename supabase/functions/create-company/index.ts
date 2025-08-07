@@ -8,7 +8,8 @@ async function createCompanyInDB(supabaseAdmin: SupabaseClient, formData: any) {
   const { 
     name, subdomain, billing_email, plan_id,
     logo_url, primary_color, secondary_color,
-    admin_email, admin_password, admin_first_name, admin_last_name
+    admin_email, admin_password, admin_first_name, admin_last_name,
+    whatsapp, trial_expires_at
   } = formData;
 
   // Calcular próximo código sequencial da empresa (01, 02, 03...)
@@ -26,14 +27,16 @@ async function createCompanyInDB(supabaseAdmin: SupabaseClient, formData: any) {
     .from('companies')
     .insert({
         name,
-        subdomain,
+        subdomain: subdomain || null,
         code: nextCode,
         billing_email: billing_email || null,
         logo_url,
         primary_color,
         secondary_color,
         onboarded_at: new Date().toISOString(),
-        trial_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        trial_expires_at: trial_expires_at ? new Date(trial_expires_at).toISOString() : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        whatsapp: whatsapp || null,
+        plan: plan_id || null,
     })
     .select()
     .single();
@@ -132,7 +135,7 @@ serve(async (req) => {
     const { formData } = await req.json();
     const { subdomain, billing_email, admin_email, admin_password, plan_id, name, admin_first_name, admin_last_name } = formData;
 
-    if (!name || !subdomain || !admin_email || !admin_password || !plan_id || !admin_first_name || !admin_last_name) {
+    if (!name || !admin_email || !admin_password || !plan_id || !admin_first_name) {
       throw new Error("Preencha todos os campos obrigatórios");
     }
     if (admin_password.length < 6) {
@@ -158,22 +161,30 @@ serve(async (req) => {
     
     console.log("Supabase admin client initialized.");
     
-    const orConditions = [`subdomain.eq.${subdomain}`];
-    if (billing_email && billing_email.trim() !== '') {
-        orConditions.push(`billing_email.eq.${billing_email}`);
+    const orConditions: string[] = [];
+    if (subdomain && String(subdomain).trim() !== '') {
+      orConditions.push(`subdomain.eq.${subdomain}`);
     }
-    const { data: existing, error: existingError } = await supabaseAdmin
+    if (billing_email && String(billing_email).trim() !== '') {
+      orConditions.push(`billing_email.eq.${billing_email}`);
+    }
+
+    let existing = null;
+    if (orConditions.length > 0) {
+      const { data: existingData, error: existingError } = await supabaseAdmin
         .from('companies')
         .select('id')
         .or(orConditions.join(','))
         .maybeSingle();
+      if (existingError) throw existingError;
+      existing = existingData;
+    }
 
-    if (existingError) throw existingError;
     if (existing) {
-        return new Response(JSON.stringify({ error: 'Já existe uma empresa com esse subdomínio ou email de cobrança.' }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 409,
-        });
+      return new Response(JSON.stringify({ error: 'Já existe uma empresa com esses dados (subdomínio/email de cobrança).' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 409,
+      });
     }
 
     console.log("No existing company found. Proceeding to create...");
