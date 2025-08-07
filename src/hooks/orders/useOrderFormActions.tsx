@@ -7,7 +7,6 @@ import { useNavigate } from 'react-router-dom';
 import { checkStockAndSendToProduction } from './stockProcessor';
 import { 
   validateStockForOrder, 
-  deductStockFromOrder, 
   showStockValidationDialog 
 } from './stockValidationOnCreate';
 
@@ -204,16 +203,9 @@ export const useOrderFormActions = ({
           
         if (itemsError) throw itemsError;
         
-        // NOVO: Abater estoque imediatamente após criar itens do pedido
-        console.log('[ORDER] Abatendo estoque dos produtos...');
-        const stockDeductionSuccess = await deductStockFromOrder(items, insertedOrder.id);
-        
-        if (!stockDeductionSuccess) {
-          console.warn('[ORDER] Falha no abatimento de estoque, mas pedido foi criado');
-          toast.warning("Pedido criado, mas houve problema no abatimento de estoque");
-        } else {
-          console.log('[ORDER] Estoque abatido com sucesso');
-        }
+        // Estoque será abatido no processamento (checkStockAndSendToProduction)
+        // para evitar abatimento duplo
+        console.log('[ORDER] Abatimento de estoque será feito no processamento para evitar duplicidade');
         
         // Processar estoque e produção APÓS criação (garantindo execução)
         console.log('[ORDER] Processando produção e embalagem...');

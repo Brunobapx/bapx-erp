@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/components/Auth/AuthProvider';
 import { checkStockAndSendToProduction } from './orders/stockProcessor';
-import { validateStockForOrder, deductStockFromOrder, showStockValidationDialog } from './orders/stockValidationOnCreate';
+import { validateStockForOrder, showStockValidationDialog } from './orders/stockValidationOnCreate';
 import type { Order, OrderItem, OrderStatus, OrderFormData, OrderFilters, OrderSortOptions } from '@/types/orders';
 import { isOrderCompleted as isCompletedUtil, OrderStatusLabels } from '@/types/orders';
 
@@ -177,20 +177,8 @@ export const useOrdersUnified = (options: UseOrdersOptions = {}) => {
 
       if (itemsError) throw itemsError;
 
-      // Abater estoque (adaptar tipos)
-      const itemsForDeduction = orderData.items.map(item => ({
-        ...item,
-        id: '',
-        order_id: '',
-        total_price: item.quantity * item.unit_price,
-        created_at: '',
-        updated_at: '',
-        user_id: '',
-        company_id: ''
-      }));
-      
-      // Passa o order.id para vincular a movimentação ao pedido
-      await deductStockFromOrder(itemsForDeduction, order.id);
+      // Abatimento de estoque é feito durante checkStockAndSendToProduction
+      // para evitar abatimento duplo.
 
       // Processar pedido (estoque/produção)
       await checkStockAndSendToProduction(order.id);
