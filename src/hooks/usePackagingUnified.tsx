@@ -268,6 +268,18 @@ export const usePackagingUnified = (options: UsePackagingOptions = {}) => {
     try {
       setSubmitting(true);
 
+      // Regra: após aprovado, não permitir alterações
+      const { data: current, error: currentErr } = await supabase
+        .from('packaging')
+        .select('id,status')
+        .eq('id', packagingId)
+        .single();
+      if (currentErr) throw currentErr;
+      if (current?.status === 'approved') {
+        toast.error('Embalagem já aprovada não pode ser alterada.');
+        return false;
+      }
+
       const updateData: any = { status };
 
       if (status === 'in_progress') {

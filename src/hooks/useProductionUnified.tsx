@@ -204,6 +204,18 @@ export const useProductionUnified = (options: UseProductionOptions = {}) => {
     try {
       setSubmitting(true);
 
+      // Regra: após aprovado, não permitir alterações
+      const { data: current, error: currentErr } = await supabase
+        .from('production')
+        .select('id,status')
+        .eq('id', productionId)
+        .single();
+      if (currentErr) throw currentErr;
+      if (current?.status === 'approved') {
+        toast.error('Produção já aprovada não pode ser alterada.');
+        return false;
+      }
+
       const updateData: any = { status };
 
       // Adicionar campos específicos baseados no status
