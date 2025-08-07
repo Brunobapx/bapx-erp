@@ -1,52 +1,39 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+// REFATORADO: Agora usa useProductionUnified para reduzir duplicação
+import { useProductionUnified } from './useProductionUnified';
+import type { 
+  ProductionFlowStatus, 
+  ProductionFlowItem, 
+  InternalProductionItem,
+  OrderProductionItem
+} from '@/types/production';
 
-export type ProductionFlowStatus = 'pending' | 'in_progress' | 'completed' | 'approved' | 'rejected';
-
-export type ProductionFlowItem = {
-  id: string;
-  production_number: string;
-  order_id: string;
-  order_number: string;
-  order_item_id: string;
-  product_id: string;
-  product_name: string;
-  client_id: string;
-  client_name: string;
-  quantity_requested: number;
-  quantity_produced: number;
-  status: ProductionFlowStatus;
-  start_date?: string;
-  completion_date?: string;
-  approved_at?: string;
-  approved_by?: string;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-  user_id: string;
-  tracking_id?: string;
-};
-
-export type InternalProductionItem = {
-  id: string;
-  production_number: string;
-  product_id: string;
-  product_name: string;
-  quantity_requested: number;
-  quantity_produced: number;
-  status: ProductionFlowStatus;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-  user_id: string;
-};
+export type { ProductionFlowStatus, ProductionFlowItem, InternalProductionItem };
 
 export const useProductionFlow = () => {
-  const [productions, setProductions] = useState<ProductionFlowItem[]>([]);
-  const [internalProductions, setInternalProductions] = useState<InternalProductionItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Usar o hook unificado
+  const productionHook = useProductionUnified({
+    autoRefresh: false, // ProductionFlow tinha refresh manual
+    sorting: { field: 'created_at', direction: 'desc' }
+  });
+
+  // Mapear para interface legacy
+  const productions = productionHook.getOrderProductions();
+  const internalProductions = productionHook.getInternalProductions();
+
+  return {
+    // Interface legacy mantida
+    productions,
+    internalProductions,
+    loading: productionHook.loading,
+    error: productionHook.error,
+    fetchProductions: productionHook.loadProductions,
+    updateProductionStatus: productionHook.updateProductionStatus,
+    refreshProductions: productionHook.refreshProductions,
+    
+    // Novos métodos também disponíveis
+    ...productionHook
+  };
+};
 
   const fetchProductions = async () => {
     try {

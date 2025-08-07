@@ -1,53 +1,28 @@
-import { useState, useEffect } from 'react';
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+// REFATORADO: Agora usa usePackagingUnified para reduzir duplicação
+import { usePackagingUnified } from './usePackagingUnified';
+import type { Packaging, PackagingStatus } from '@/types/packaging';
 
-export type PackagingStatus = 
-  | 'pending'
-  | 'in_progress'
-  | 'completed'
-  | 'approved'
-  | 'rejected';
-
-export type Packaging = {
-  id: string;
-  packaging_number: string;
-  production_id: string | null;
-  product_id: string;
-  product_name: string;
-  quantity_to_package: number;
-  quantity_packaged: number;
-  status: PackagingStatus;
-  packaged_by?: string;
-  packaged_at?: string;
-  approved_by?: string;
-  approved_at?: string;
-  quality_check: boolean;
-  notes?: string;
-  created_at?: string;
-  updated_at?: string;
-  user_id?: string;
-  order_id?: string;
-  client_id?: string;
-  client_name?: string;
-  order_number?: string;
-};
+export type { PackagingStatus, Packaging };
 
 export const usePackaging = () => {
-  const [packagings, setPackagings] = useState<Packaging[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  // Usar o hook unificado com configurações específicas para compatibilidade
+  const packagingHook = usePackagingUnified({
+    autoRefresh: true,
+    sorting: { field: 'created_at', direction: 'desc' }
+  });
 
-  useEffect(() => {
-    const fetchPackagings = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
-        if (userError || !user) {
+  // Manter interface original para compatibilidade
+  return {
+    packagings: packagingHook.packagings,
+    loading: packagingHook.loading,
+    error: packagingHook.error,
+    updatePackagingStatus: packagingHook.updatePackagingStatus,
+    refreshPackagings: packagingHook.refreshPackagings,
+    
+    // Novos métodos também disponíveis
+    ...packagingHook
+  };
+};
           throw new Error('Usuário não autenticado');
         }
 

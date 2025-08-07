@@ -1,52 +1,38 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+// REFATORADO: Agora usa usePackagingUnified para reduzir duplicação
+import { usePackagingUnified } from './usePackagingUnified';
+import type { 
+  PackagingFlowStatus, 
+  PackagingFlowItem 
+} from '@/types/packaging';
 
-export type PackagingFlowStatus = 'pending' | 'in_progress' | 'completed' | 'approved' | 'rejected';
-
-export type PackagingFlowItem = {
-  id: string;
-  packaging_number: string;
-  order_id?: string;
-  order_number?: string;
-  client_id?: string;
-  client_name?: string;
-  product_id: string;
-  product_name: string;
-  quantity_to_package: number;
-  quantity_packaged: number;
-  quantity_from_stock: number;
-  quantity_from_production: number;
-  status: PackagingFlowStatus;
-  origin: 'stock' | 'production' | 'mixed';
-  packaged_at?: string;
-  approved_at?: string;
-  packaged_by?: string;
-  approved_by?: string;
-  quality_check: boolean;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-  user_id: string;
-  production_id?: string;
-  tracking_id?: string;
-};
+export type { PackagingFlowStatus, PackagingFlowItem };
 
 export const usePackagingFlow = () => {
-  const [packagings, setPackagings] = useState<PackagingFlowItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Usar o hook unificado
+  const packagingHook = usePackagingUnified({
+    autoRefresh: false, // PackagingFlow tinha refresh manual
+    sorting: { field: 'created_at', direction: 'desc' }
+  });
 
-  const fetchPackagings = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Buscar todas as embalagens
-      const { data: packagingData, error: packagingError } = await supabase
-        .from('packaging')
-        .select('*')
-        .order('created_at', { ascending: false });
+  return {
+    // Interface legacy mantida
+    packagings: packagingHook.packagings,
+    loading: packagingHook.loading,
+    error: packagingHook.error,
+    fetchPackagings: packagingHook.loadPackagings,
+    updatePackagingStatus: packagingHook.updatePackagingStatus,
+    refreshPackagings: packagingHook.refreshPackagings,
+    
+    // Filtros para as abas (compatibilidade)
+    fromStock: packagingHook.fromStock,
+    fromProduction: packagingHook.fromProduction,
+    inPackaging: packagingHook.inPackaging,
+    ready: packagingHook.ready,
+    
+    // Novos métodos também disponíveis
+    ...packagingHook
+  };
+};
 
       if (packagingError) throw packagingError;
 
