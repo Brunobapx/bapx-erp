@@ -93,20 +93,37 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
 
   console.log('Buscando pedido:', { pedidoId, userId });
 
-  // Buscar dados do pedido com produtos para obter códigos
-  const { data: pedido } = await supabase
+  // Buscar dados do pedido, itens e cliente de forma resiliente (evita nested select vazio)
+  const { data: pedidoBase, error: pedidoErr } = await supabase
     .from('orders')
-    .select(`
-      *,
-      order_items(*),
-      clients!orders_client_id_fkey(*)
-    `)
+    .select('*')
     .eq('id', pedidoId)
-    .single();
+    .maybeSingle();
 
-  if (!pedido || !pedido.order_items || pedido.order_items.length === 0) {
+  if (pedidoErr || !pedidoBase) {
+    throw new Error('Pedido não encontrado');
+  }
+
+  const { data: itensPedido, error: itemsErr } = await supabase
+    .from('order_items')
+    .select('*')
+    .eq('order_id', pedidoId);
+
+  if (itemsErr) {
+    throw new Error('Erro ao buscar itens do pedido');
+  }
+
+  if (!itensPedido || itensPedido.length === 0) {
     throw new Error('Pedido não encontrado ou sem itens');
   }
+
+  const { data: clienteRow } = await supabase
+    .from('clients')
+    .select('*')
+    .eq('id', pedidoBase.client_id)
+    .maybeSingle();
+
+  const pedido = { ...pedidoBase, order_items: itensPedido, clients: clienteRow } as any;
 
   // Buscar dados dos produtos para obter os códigos e pesos
   const productIds = pedido.order_items.map((item: any) => item.product_id);
