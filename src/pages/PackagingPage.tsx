@@ -20,12 +20,14 @@ import { Input } from "@/components/ui/input";
 import { Search } from 'lucide-react';
 import { PackagingSummaryTable } from '@/components/Packaging/PackagingSummaryTable';
 import { usePackagingSummary } from '@/hooks/usePackagingSummary';
+import { useNavigate } from 'react-router-dom';
 
 const PackagingPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<PackagingFlowItem | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [alerts] = useState([]);
+  const navigate = useNavigate();
 
   const { 
     packagings,
@@ -47,17 +49,18 @@ const PackagingPage = () => {
     setShowModal(true);
   };
 
-  const handleApprove = async (data: any) => {
-    if (selectedItem) {
-      await updatePackagingStatus(
-        selectedItem.id, 
-        'approved', 
-        data.quantityPackaged,
-        data.qualityCheck
-      );
-      setShowModal(false);
-    }
-  };
+const handleApprove = async (data: any) => {
+  if (selectedItem) {
+    await updatePackagingStatus(
+      selectedItem.id, 
+      'approved', 
+      data.quantityPackaged,
+      data.qualityCheck
+    );
+    setShowModal(false);
+    navigate('/vendas');
+  }
+};
 
   const handleNextStage = async (data: any) => {
     if (selectedItem) {
