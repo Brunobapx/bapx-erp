@@ -105,7 +105,8 @@ export const ProductionTable = ({
                         size="icon" 
                         className="h-8 w-8" 
                         onClick={(e) => onEditItem(e, item)}
-                        title="Editar"
+                        title={item.status === 'approved' ? 'Já aprovado — edição bloqueada' : 'Editar'}
+                        disabled={item.status === 'approved'}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -115,7 +116,8 @@ export const ProductionTable = ({
                           size="icon" 
                           className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-100" 
                           onClick={(e) => onSendToPackaging(e, item)}
-                          title="Enviar para Embalagem"
+                          title={item.status === 'approved' ? 'Já aprovado — envio bloqueado' : 'Enviar para Embalagem'}
+                          disabled={item.status === 'approved'}
                         >
                           <Package className="h-4 w-4" />
                         </Button>
@@ -125,7 +127,8 @@ export const ProductionTable = ({
                         size="icon" 
                         className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-100" 
                         onClick={(e) => onDeleteItem(e, item)}
-                        title="Excluir"
+                        title={item.status === 'approved' ? 'Já aprovado — exclusão bloqueada' : 'Excluir'}
+                        disabled={item.status === 'approved'}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
