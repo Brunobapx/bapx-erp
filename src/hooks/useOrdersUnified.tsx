@@ -39,9 +39,9 @@ export const useOrdersUnified = (options: UseOrdersOptions = {}) => {
         .from('orders')
         .select(`
           *,
-          order_items!order_items_order_id_fkey (
+          order_items (
             *,
-            products!order_items_product_id_fkey (
+            products (
               name,
               stock,
               is_manufactured,
