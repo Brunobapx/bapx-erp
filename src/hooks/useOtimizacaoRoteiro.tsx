@@ -71,7 +71,7 @@ export const useOtimizacaoRoteiro = () => {
           client_name,
           client_id,
           clients!inner(address, number, complement, bairro, city, state, zip),
-          order_items!order_items_order_id_fkey!inner(product_name, quantity, products!order_items_product_id_fkey!inner(weight))
+          order_items!inner(product_name, quantity, products!inner(weight))
         `)
         .eq('status', 'released_for_sale')
         .eq('user_id', user.id)
