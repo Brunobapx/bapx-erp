@@ -18,6 +18,8 @@ interface Company {
   billing_email?: string | null;
   logo_url?: string | null;
   trial_expires_at?: string | null;
+  whatsapp?: string | null;
+  plan?: string | null;
 }
 
 interface AppUser {
@@ -39,9 +41,11 @@ const [createOpen, setCreateOpen] = useState(false);
   // Create form state
   const [form, setForm] = useState({
     name: '',
+    whatsapp: '',
+    trial_expires_at: '',
+    plan_id: 'bronze',
     subdomain: '',
     billing_email: '',
-    plan_id: 'standard',
     admin_first_name: '',
     admin_last_name: '',
     admin_email: '',
@@ -67,7 +71,7 @@ const selectedCompany = useMemo(() => companies.find(c => c.id === selectedCompa
     setLoading(true);
     const { data, error } = await supabase
       .from('companies')
-      .select('id, name, code, subdomain, billing_email, logo_url, trial_expires_at')
+      .select('id, name, code, subdomain, billing_email, logo_url, trial_expires_at, whatsapp, plan')
       .order('code');
     setLoading(false);
     if (error) {
@@ -104,8 +108,8 @@ const selectedCompany = useMemo(() => companies.find(c => c.id === selectedCompa
   }, []);
 
   const handleCreateCompany = async () => {
-    if (!form.name || !form.subdomain || !form.admin_email || !form.admin_password || !form.admin_first_name || !form.admin_last_name) {
-      toast({ title: 'Campos obrigatórios', description: 'Preencha todos os campos obrigatórios', variant: 'destructive' });
+    if (!form.name || !form.admin_email || !form.admin_password || !form.admin_first_name) {
+      toast({ title: 'Campos obrigatórios', description: 'Informe Nome da empresa, Nome do responsável, E-mail e Senha.', variant: 'destructive' });
       return;
     }
     try {
@@ -117,7 +121,7 @@ const selectedCompany = useMemo(() => companies.find(c => c.id === selectedCompa
       if (error) throw error;
       toast({ title: 'Empresa criada', description: 'A empresa foi criada com sucesso.' });
       setCreateOpen(false);
-      setForm({ name: '', subdomain: '', billing_email: '', plan_id: 'standard', admin_first_name: '', admin_last_name: '', admin_email: '', admin_password: '' });
+      setForm({ name: '', whatsapp: '', trial_expires_at: '', plan_id: 'bronze', subdomain: '', billing_email: '', admin_first_name: '', admin_last_name: '', admin_email: '', admin_password: '' });
       await loadCompanies();
     } catch (err: any) {
       console.error('Erro ao criar empresa:', err);
@@ -178,44 +182,56 @@ const selectedCompany = useMemo(() => companies.find(c => c.id === selectedCompa
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Criar nova empresa</DialogTitle>
+                  <DialogTitle>Cadastrar Empresa</DialogTitle>
                 </DialogHeader>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
-                  <div>
-                    <Label>Nome</Label>
-                    <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                <div className="space-y-6 py-2">
+                  <div className="rounded-lg border p-4">
+                    <p className="font-semibold mb-3">Informações</p>
+                    <div className="grid grid-cols-1 gap-4">
+                      <div>
+                        <Label>Nome</Label>
+                        <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                      </div>
+                      <div>
+                        <Label>Whatsapp</Label>
+                        <Input value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} placeholder="(00) 00000-0000" />
+                      </div>
+                      <div>
+                        <Label>Data/Hora Vencimento</Label>
+                        <Input type="datetime-local" value={form.trial_expires_at} onChange={(e) => setForm({ ...form, trial_expires_at: e.target.value })} />
+                      </div>
+                      <div>
+                        <Label>Plano</Label>
+                        <select className="border rounded-md h-10 px-3" value={form.plan_id} onChange={(e) => setForm({ ...form, plan_id: e.target.value })}>
+                          <option value="bronze">Bronze</option>
+                          <option value="prata">Prata</option>
+                          <option value="ouro">Ouro</option>
+                          <option value="diamante">Diamante</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <Label>Subdomínio</Label>
-                    <Input value={form.subdomain} onChange={(e) => setForm({ ...form, subdomain: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label>Email de cobrança</Label>
-                    <Input type="email" value={form.billing_email} onChange={(e) => setForm({ ...form, billing_email: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label>Plano</Label>
-                    <Input value={form.plan_id} onChange={(e) => setForm({ ...form, plan_id: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label>Admin - Nome</Label>
-                    <Input value={form.admin_first_name} onChange={(e) => setForm({ ...form, admin_first_name: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label>Admin - Sobrenome</Label>
-                    <Input value={form.admin_last_name} onChange={(e) => setForm({ ...form, admin_last_name: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label>Admin - Email</Label>
-                    <Input type="email" value={form.admin_email} onChange={(e) => setForm({ ...form, admin_email: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label>Admin - Senha</Label>
-                    <Input type="password" value={form.admin_password} onChange={(e) => setForm({ ...form, admin_password: e.target.value })} />
+
+                  <div className="rounded-lg border p-4">
+                    <p className="font-semibold mb-3">Cadastrar Usuário Responsável</p>
+                    <div className="grid grid-cols-1 gap-4">
+                      <div>
+                        <Label>Nome</Label>
+                        <Input value={form.admin_first_name} onChange={(e) => setForm({ ...form, admin_first_name: e.target.value })} />
+                      </div>
+                      <div>
+                        <Label>E-mail</Label>
+                        <Input type="email" value={form.admin_email} onChange={(e) => setForm({ ...form, admin_email: e.target.value })} />
+                      </div>
+                      <div>
+                        <Label>Senha</Label>
+                        <Input type="password" value={form.admin_password} onChange={(e) => setForm({ ...form, admin_password: e.target.value })} />
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button onClick={handleCreateCompany} disabled={loading}>Criar</Button>
+                  <Button onClick={handleCreateCompany} disabled={loading}>Salvar</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -263,12 +279,12 @@ const selectedCompany = useMemo(() => companies.find(c => c.id === selectedCompa
                             <div className="flex items-center gap-2 text-destructive"><XCircle className="h-4 w-4" /> Inativa</div>
                           )}
                         </TableCell>
-                        <TableCell>—</TableCell>
+                        <TableCell>{c.whatsapp || '—'}</TableCell>
                         <TableCell>{c.billing_email || '—'}</TableCell>
                         <TableCell>
                           <span className={`px-2 py-1 rounded text-sm ${isExpired ? 'bg-destructive/15 text-destructive' : 'text-muted-foreground'}`}>{vencStr}</span>
                         </TableCell>
-                        <TableCell>—</TableCell>
+                        <TableCell>{c.plan || '—'}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
                             {editingId === c.id ? (

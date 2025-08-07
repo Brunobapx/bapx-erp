@@ -243,10 +243,12 @@ export type Database = {
           logo_url: string | null
           name: string
           onboarded_at: string | null
+          plan: string | null
           primary_color: string | null
           secondary_color: string | null
           subdomain: string | null
           trial_expires_at: string | null
+          whatsapp: string | null
         }
         Insert: {
           billing_email?: string | null
@@ -255,10 +257,12 @@ export type Database = {
           logo_url?: string | null
           name: string
           onboarded_at?: string | null
+          plan?: string | null
           primary_color?: string | null
           secondary_color?: string | null
           subdomain?: string | null
           trial_expires_at?: string | null
+          whatsapp?: string | null
         }
         Update: {
           billing_email?: string | null
@@ -267,10 +271,12 @@ export type Database = {
           logo_url?: string | null
           name?: string
           onboarded_at?: string | null
+          plan?: string | null
           primary_color?: string | null
           secondary_color?: string | null
           subdomain?: string | null
           trial_expires_at?: string | null
+          whatsapp?: string | null
         }
         Relationships: []
       }
