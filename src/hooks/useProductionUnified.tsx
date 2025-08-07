@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/components/Auth/AuthProvider';
@@ -24,10 +24,24 @@ export const useProductionUnified = (options: UseProductionOptions = {}) => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
+  const lastErrorRef = useRef<{ message: string; time: number } | null>(null);
+  const inFlightRef = useRef(false);
+
+  const showErrorOnce = (msg: string) => {
+    const now = Date.now();
+    const prev = lastErrorRef.current;
+    if (!prev || prev.message !== msg || now - prev.time > 15000) {
+      toast.error(msg, { id: 'production-load-error' });
+      lastErrorRef.current = { message: msg, time: now };
+    }
+  };
+
   const { user } = useAuth();
 
   // Função principal para carregar produções
   const loadProductions = useCallback(async (customFilters?: ProductionFilters) => {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
     try {
       setLoading(true);
       setError(null);
@@ -130,8 +144,9 @@ export const useProductionUnified = (options: UseProductionOptions = {}) => {
     } catch (err: any) {
       console.error('[useProductionUnified] Erro ao carregar produções:', err);
       setError(err.message);
-      toast.error('Erro ao carregar produções: ' + err.message);
+      showErrorOnce('Erro ao carregar produções: ' + err.message);
     } finally {
+      inFlightRef.current = false;
       setLoading(false);
     }
   }, [user, options.filters, options.sorting]);
