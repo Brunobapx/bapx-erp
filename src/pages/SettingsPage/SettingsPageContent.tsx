@@ -62,6 +62,14 @@ export const SettingsPageContent: React.FC<SettingsPageContentProps> = ({ isAdmi
       </TabsContent>
 
       {isAdmin && (
+        <TabsContent value="companies">
+          <TabContent tabName="Empresas">
+            <CompaniesAdmin />
+          </TabContent>
+        </TabsContent>
+      )}
+
+      {isAdmin && (
         <TabsContent value="fiscal">
           <TabContent tabName="Fiscal">
             <CompanyFiscalInfo />
