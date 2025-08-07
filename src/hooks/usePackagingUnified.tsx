@@ -359,7 +359,7 @@ export const usePackagingUnified = (options: UsePackagingOptions = {}) => {
             .select(`
               quantity_target,
               quantity_packaged_approved,
-              order_items!inner(order_id)
+              order_items!inner(id, order_id, unit_price, quantity)
             `)
             .eq('order_items.order_id', packaging.order_id);
 
@@ -369,17 +369,47 @@ export const usePackagingUnified = (options: UsePackagingOptions = {}) => {
             );
             
             if (allReady) {
-              // Liberar pedido para venda
+              // Recalcular totais com base na quantidade APROVADA na embalagem
+              let newTotal = 0;
+              for (const t of allTrackings as any[]) {
+                const unitPrice = t.order_items?.unit_price || 0;
+                const qtyApproved = Math.max(0, t.quantity_packaged_approved || 0);
+                newTotal += unitPrice * qtyApproved;
+              }
+
+              // Atualizar itens do pedido para refletir a quantidade aprovada
+              try {
+                const updates = (allTrackings as any[]).map(async (t) => {
+                  const itemId = t.order_items?.id;
+                  if (!itemId) return;
+                  const unitPrice = t.order_items?.unit_price || 0;
+                  const qtyApproved = Math.max(0, t.quantity_packaged_approved || 0);
+                  await supabase
+                    .from('order_items')
+                    .update({
+                      quantity: qtyApproved,
+                      total_price: unitPrice * qtyApproved,
+                      updated_at: new Date().toISOString()
+                    })
+                    .eq('id', itemId);
+                });
+                await Promise.all(updates);
+              } catch (updateItemsErr) {
+                console.warn('[PACKAGING] Falha ao atualizar itens do pedido após aprovação de embalagem:', updateItemsErr);
+              }
+
+              // Liberar pedido para venda e salvar total recalculado
               const { error: orderError } = await supabase
                 .from('orders')
                 .update({
                   status: 'released_for_sale',
+                  total_amount: newTotal,
                   updated_at: new Date().toISOString()
                 })
                 .eq('id', packaging.order_id);
 
               if (orderError) throw orderError;
-              console.log(`[PACKAGING] Pedido ${packaging.order_id} liberado para venda`);
+              console.log(`[PACKAGING] Pedido ${packaging.order_id} liberado para venda com total recalculado:`, newTotal);
             }
           }
         }
