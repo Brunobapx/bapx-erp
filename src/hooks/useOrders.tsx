@@ -1,50 +1,26 @@
-// Tipos
-export type OrderStatus = 
-  | 'pending'
-  | 'in_production'
-  | 'in_packaging'
-  | 'packaged'
-  | 'released_for_sale'
-  | 'sale_confirmed'
-  | 'in_delivery'
-  | 'delivered'
-  | 'cancelled';
+// Re-exports centralizados para o sistema de pedidos
+// DEPRECATED: Use useOrdersUnified instead for new code
 
-export type Order = {
-  id: string;
-  order_number: string;
-  client_id: string;
-  client_name: string;
-  seller?: string;
-  seller_id?: string;
-  seller_name?: string;
-  status: OrderStatus;
-  total_amount: number;
-  delivery_deadline?: string;
-  payment_method?: string;
-  payment_term?: string;
-  notes?: string;
-  created_at?: string;
-  updated_at?: string;
-  user_id?: string;
-  company_id?: string;
-  order_items?: OrderItem[];
-};
+// Tipos (migrados para /types/orders.ts)
+export type {
+  OrderStatus,
+  Order,
+  OrderItem,
+  OrderFormData,
+  OrderFilters,
+  OrderSortOptions
+} from '@/types/orders';
 
-export type OrderItem = {
-  id: string;
-  order_id: string;
-  product_id: string;
-  product_name: string;
-  quantity: number;
-  unit_price: number;
-  total_price: number;
-  created_at?: string;
-  updated_at?: string;
-  user_id?: string;
-  company_id?: string;
-};
+export {
+  OrderStatusLabels,
+  isOrderCompleted,
+  isOrderInProgress,
+  getOrderStatusColor
+} from '@/types/orders';
 
-// Sub-hooks importados
-export { useOrdersCore as useOrders } from "./orders/useOrdersCore";
+// Hook principal (migrado para useOrdersUnified)
+export { useOrdersUnified as useOrders } from './useOrdersUnified';
+
+// Hooks específicos mantidos para compatibilidade
+export { useOrdersCore } from "./orders/useOrdersCore";
 export * from "./orders/useOrdersHelpers";
