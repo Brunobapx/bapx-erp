@@ -1,8 +1,11 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Package } from 'lucide-react';
+import { Package, Cog, Loader2, Play } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { ProcessOrdersButton } from "./ProcessOrdersButton";
 
 interface OrdersHeaderProps {
   onCreateOrder?: () => void;
@@ -10,12 +13,40 @@ interface OrdersHeaderProps {
 
 export const OrdersHeader: React.FC<OrdersHeaderProps> = ({ onCreateOrder }) => {
   const navigate = useNavigate();
+  const [isProcessing, setIsProcessing] = useState(false);
   
   const handleCreateOrder = () => {
     if (onCreateOrder) {
       onCreateOrder();
     } else {
       navigate('/pedidos/new');
+    }
+  };
+
+  const handleProcessPendingOrders = async () => {
+    setIsProcessing(true);
+    try {
+      console.log('[ORDERS-HEADER] Processando pedidos pendentes...');
+      
+      const { data, error } = await supabase.functions.invoke('process-pending-orders');
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      console.log('[ORDERS-HEADER] Resultado:', data);
+      
+      if (data.success) {
+        toast.success(`${data.processed_orders} pedidos processados com sucesso!`);
+        window.location.reload(); // Recarregar página para ver as mudanças
+      } else {
+        toast.error('Erro ao processar pedidos: ' + data.error);
+      }
+    } catch (error) {
+      console.error('[ORDERS-HEADER] Erro:', error);
+      toast.error('Erro ao processar pedidos: ' + error.message);
+    } finally {
+      setIsProcessing(false);
     }
   };
   
@@ -25,9 +56,12 @@ export const OrdersHeader: React.FC<OrdersHeaderProps> = ({ onCreateOrder }) => 
         <h1 className="text-2xl font-bold">Pedidos</h1>
         <p className="text-muted-foreground">Gerencie todos os pedidos do sistema.</p>
       </div>
-      <Button onClick={handleCreateOrder}>
-        <Package className="mr-2 h-4 w-4" /> Novo Pedido
-      </Button>
+      <div className="flex gap-2">
+        <ProcessOrdersButton />
+        <Button onClick={handleCreateOrder}>
+          <Package className="mr-2 h-4 w-4" /> Novo Pedido
+        </Button>
+      </div>
     </div>
   );
 };

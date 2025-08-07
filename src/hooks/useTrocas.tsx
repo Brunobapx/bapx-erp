@@ -199,7 +199,8 @@ export const useTrocas = () => {
             produto_novo_id: item.produto_novo_id,
             quantidade: item.quantidade,
             motivo: item.motivo,
-            observacoes_item: item.observacoes_item
+            observacoes_item: item.observacoes_item,
+            user_id: user.id
           });
 
         if (itemError) throw itemError;

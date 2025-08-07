@@ -1,4 +1,3 @@
-
 project_id = "gtqmwlxzszttzriswoxj"
 
 [functions.api-auth]
@@ -15,6 +14,9 @@ verify_jwt = false
 
 [functions.api-dashboard]
 verify_jwt = false
+
+[functions.cancel-order]
+verify_jwt = true
 
 [api]
 enabled = true

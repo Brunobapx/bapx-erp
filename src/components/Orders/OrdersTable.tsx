@@ -10,8 +10,9 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Eye, Edit, Trash2, Factory } from 'lucide-react';
+import { Eye, Edit, Trash2, Factory, XCircle } from 'lucide-react';
 import { Order } from '@/hooks/useOrders';
+import { useAuth } from '@/components/Auth/AuthProvider';
 
 interface OrdersTableProps {
   orders: Order[];
@@ -21,10 +22,12 @@ interface OrdersTableProps {
   onDeleteOrder: (e: React.MouseEvent, order: Order) => void;
   onOrderClick: (order: Order) => void;
   onSendToProduction?: (e: React.MouseEvent, order: Order) => void;
+  onCancelOrder?: (e: React.MouseEvent, order: Order) => void;
   translateStatus: (status: string) => string;
   showCheckboxes?: boolean;
   selectedOrders?: string[];
   onOrderSelect?: (orderId: string, selected: boolean) => void;
+  hasDirectSaleProduct?: (order: Order) => boolean;
 }
 
 export const OrdersTable: React.FC<OrdersTableProps> = ({
@@ -35,11 +38,14 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
   onDeleteOrder,
   onOrderClick,
   onSendToProduction,
+  onCancelOrder,
   translateStatus,
   showCheckboxes = false,
   selectedOrders = [],
-  onOrderSelect
+  onOrderSelect,
+  hasDirectSaleProduct
 }) => {
+  const { isAdmin } = useAuth();
   const getFirstOrderItem = (order: Order) => {
     return order.order_items?.[0] || null;
   };
@@ -60,7 +66,14 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
   };
 
   const canSendToProduction = (order: Order) => {
-    return order.status === 'pending';
+    if (order.status !== 'pending') return false;
+    // Se o pedido tem produto de venda direta, não pode enviar para produção
+    if (hasDirectSaleProduct && hasDirectSaleProduct(order)) return false;
+    return true;
+  };
+
+  const canCancelOrder = (order: Order) => {
+    return !['cancelled', 'delivered', 'in_delivery'].includes(order.status);
   };
 
   return (
@@ -104,7 +117,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
               <TableCell>
                 {order.delivery_deadline ? new Date(order.delivery_deadline).toLocaleDateString('pt-BR') : '-'}
               </TableCell>
-              <TableCell>{order.seller || '-'}</TableCell>
+              <TableCell>{order.seller_name || '-'}</TableCell>
               <TableCell>
                 <span className={`stage-badge badge-${getStatusType(order.status)}`}>
                   {translateStatus(order.status)}
@@ -121,15 +134,17 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-8 w-8" 
-                    onClick={(e) => onEditOrder(e, order)}
-                    title="Editar"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
+                  {isAdmin && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8" 
+                      onClick={(e) => onEditOrder(e, order)}
+                      title="Editar"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  )}
                   {canSendToProduction(order) && onSendToProduction && (
                     <Button 
                       variant="ghost" 
@@ -140,16 +155,27 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                     >
                       <Factory className="h-4 w-4" />
                     </Button>
-                  )}
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-100" 
-                    onClick={(e) => onDeleteOrder(e, order)}
-                    title="Excluir"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                   )}
+                   {canCancelOrder(order) && onCancelOrder && (
+                     <Button 
+                       variant="ghost" 
+                       size="icon" 
+                       className="h-8 w-8 text-orange-500 hover:text-orange-700 hover:bg-orange-100" 
+                       onClick={(e) => onCancelOrder(e, order)}
+                       title="Cancelar Pedido"
+                     >
+                       <XCircle className="h-4 w-4" />
+                     </Button>
+                   )}
+                   <Button 
+                     variant="ghost" 
+                     size="icon" 
+                     className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-100" 
+                     onClick={(e) => onDeleteOrder(e, order)}
+                     title="Excluir"
+                   >
+                     <Trash2 className="h-4 w-4" />
+                   </Button>
                 </div>
               </TableCell>
             </TableRow>

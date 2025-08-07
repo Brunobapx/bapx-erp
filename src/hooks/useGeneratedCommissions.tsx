@@ -22,7 +22,7 @@ export interface CommissionPayment {
 export const useGeneratedCommissions = () => {
   const [commissionPayments, setCommissionPayments] = useState<CommissionPayment[]>([]);
   const [loading, setLoading] = useState(false);
-  const { user } = useAuth();
+  const { user, isSeller, userPosition } = useAuth();
 
   const loadCommissionPayments = async () => {
     if (!user) return;
@@ -31,10 +31,17 @@ export const useGeneratedCommissions = () => {
       setLoading(true);
       console.log('[GENERATED_COMMISSIONS] Carregando comissões geradas...');
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('commission_payments')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*');
+
+      // Se for vendedor, só mostrar suas próprias comissões
+      if (isSeller) {
+        query = query.eq('seller_id', user?.id);
+        console.log('[GENERATED_COMMISSIONS] Filtrando para vendedor:', user?.id);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
 

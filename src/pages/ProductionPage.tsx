@@ -1,115 +1,218 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { ApprovalModal } from '@/components/Modals/ApprovalModal';
-import { Box } from 'lucide-react';
+import { Box, Package2, PlayCircle, CheckCircle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import StageAlert from '@/components/Alerts/StageAlert';
-import { ProductionFilters } from '@/components/Production/ProductionFilters';
-import { ProductionTable } from '@/components/Production/ProductionTable';
-import { ProductionSummaryTable } from '@/components/Production/ProductionSummaryTable';
-import { InternalProductionTab } from '@/components/Production/InternalProductionTab';
-import { useProduction } from '@/hooks/useProduction';
-import { useProductionSummary } from '@/hooks/useProductionSummary';
-import { useProductionFilters } from '@/hooks/useProductionFilters';
-import { Production, AlertType } from '@/types/production';
+import { OrderTrackingDebug } from '@/components/Debug/OrderTrackingDebug';
+import TestProcessOrders from '@/components/Debug/TestProcessOrders';
+import { useProductionFlow, ProductionFlowItem, InternalProductionItem } from '@/hooks/useProductionFlow';
+import { ApprovalModal } from '@/components/Modals/ApprovalModal';
+import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Search } from 'lucide-react';
 
 const ProductionPage = () => {
-  const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<Production | null>(null);
-  const [statusFilter, setStatusFilter] = useState('active');
-  const [orderSort, setOrderSort] = useState('recent'); // novo controle
-  const [alerts, setAlerts] = useState<AlertType[]>([]);
+  const [selectedItem, setSelectedItem] = useState<ProductionFlowItem | InternalProductionItem | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [alerts] = useState([]);
 
-  const { productions, loading, updateProductionStatus, refreshProductions } = useProduction();
-  const productionSummary = useProductionSummary(productions);
-  const filteredItems = useProductionFilters(productions, searchQuery, statusFilter, orderSort);
+  const { 
+    productions, 
+    internalProductions, 
+    loading, 
+    updateProductionStatus, 
+    refreshProductions 
+  } = useProductionFlow();
 
-  const handleSendToPackaging = async (e: React.MouseEvent, item: Production) => {
-    e.stopPropagation();
-    if (window.confirm(`Tem certeza que deseja enviar a produção ${item.production_number} para embalagem?`)) {
-      await updateProductionStatus(item.id, 'approved', item.quantity_produced);
-    }
-  };
+  // Filtros para as diferentes abas
+  const pendingProductions = productions.filter(p => p.status === 'pending');
+  const inProgressProductions = productions.filter(p => p.status === 'in_progress');
+  const completedProductions = productions.filter(p => p.status === 'completed' || p.status === 'approved');
 
-  const canSendToPackaging = (item: Production) => {
-    return item.status === 'completed' && item.quantity_produced > 0;
-  };
-
-  const handleItemClick = (item: Production) => {
+  const handleItemClick = (item: ProductionFlowItem | InternalProductionItem) => {
     setSelectedItem(item);
     setShowModal(true);
   };
 
-  const handleViewItem = (e: React.MouseEvent, item: Production) => {
-    e.stopPropagation();
-    setSelectedItem(item);
-    setShowModal(true);
-  };
-
-  const handleEditItem = (e: React.MouseEvent, item: Production) => {
-    e.stopPropagation();
-    setSelectedItem(item);
-    setShowModal(true);
-  };
-
-  const handleDeleteItem = async (e: React.MouseEvent, item: Production) => {
-    e.stopPropagation();
-    if (confirm(`Tem certeza que deseja excluir a produção ${item.production_number}?`)) {
-      refreshProductions();
-    }
-  };
-
-  const handleDismissAlert = (id: string) => {
-    setAlerts(alerts.filter(alert => alert.id !== id));
-  };
-
-  const handleApproveProduction = async (data: any) => {
+  const handleApprove = async (data: any) => {
     if (selectedItem) {
-      console.log('Aprovando produção com quantidade:', data.quantity);
-      const success = await updateProductionStatus(selectedItem.id, 'approved', data.quantity);
-      if (success) {
-        setShowModal(false);
-      }
-      return Promise.resolve();
+      await updateProductionStatus(selectedItem.id, 'approved', data.quantityProduced);
+      setShowModal(false);
     }
-    return Promise.resolve();
   };
 
   const handleNextStage = async (data: any) => {
     if (selectedItem) {
-      const success = await updateProductionStatus(selectedItem.id, 'in_progress', data.quantity);
-      if (success) {
-        setShowModal(false);
+      if (selectedItem.status === 'pending') {
+        await updateProductionStatus(selectedItem.id, 'in_progress');
+      } else if (selectedItem.status === 'in_progress') {
+        await updateProductionStatus(selectedItem.id, 'completed', data.quantityProduced);
       }
-      return Promise.resolve();
+      setShowModal(false);
     }
-    return Promise.resolve();
   };
 
-  const handleCreateProduction = () => {
-    const newProduction: Production = {
-      id: 'new',
-      production_number: 'NOVO',
-      order_item_id: '',
-      product_id: '',
-      product_name: '',
-      quantity_requested: 1,
-      quantity_produced: 0,
-      status: 'pending' as const,
-      start_date: new Date().toISOString().split('T')[0],
+  const getStatusBadge = (status: string) => {
+    const statusMap = {
+      'pending': { color: 'bg-yellow-100 text-yellow-800', icon: PlayCircle, label: 'Pendente' },
+      'in_progress': { color: 'bg-blue-100 text-blue-800', icon: Package2, label: 'Em Produção' },
+      'completed': { color: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Concluída' },
+      'approved': { color: 'bg-emerald-100 text-emerald-800', icon: CheckCircle, label: 'Aprovada' }
     };
-    
-    setSelectedItem(newProduction);
-    setShowModal(true);
+
+    const statusInfo = statusMap[status as keyof typeof statusMap] || statusMap.pending;
+    const IconComponent = statusInfo.icon;
+
+    return (
+      <Badge className={statusInfo.color}>
+        <IconComponent className="w-3 h-3 mr-1" />
+        {statusInfo.label}
+      </Badge>
+    );
   };
 
-  const handleModalClose = (refresh = false) => {
-    setShowModal(false);
-    
-    if (refresh) {
-      refreshProductions();
+  const ProductionTable = ({ 
+    items, 
+    title, 
+    emptyMessage 
+  }: { 
+    items: ProductionFlowItem[], 
+    title: string,
+    emptyMessage: string 
+  }) => {
+    const filteredItems = items.filter(item => 
+      !searchQuery || 
+      item.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.production_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.order_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.client_name?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    if (filteredItems.length === 0) {
+      return (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <div className="text-muted-foreground mb-4">{emptyMessage}</div>
+          </CardContent>
+        </Card>
+      );
     }
+
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Box className="w-5 h-5" />
+            {title} ({filteredItems.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Produção</TableHead>
+                <TableHead>Pedido</TableHead>
+                <TableHead>Cliente</TableHead>
+                <TableHead>Produto</TableHead>
+                <TableHead className="text-center">Qtd Solicitada</TableHead>
+                <TableHead className="text-center">Qtd Produzida</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Criado em</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredItems.map((item) => (
+                <TableRow 
+                  key={item.id}
+                  className="cursor-pointer hover:bg-accent/5"
+                  onClick={() => handleItemClick(item)}
+                >
+                  <TableCell className="font-medium">{item.production_number}</TableCell>
+                  <TableCell>{item.order_number}</TableCell>
+                  <TableCell>{item.client_name}</TableCell>
+                  <TableCell>{item.product_name}</TableCell>
+                  <TableCell className="text-center">{item.quantity_requested}</TableCell>
+                  <TableCell className="text-center">{item.quantity_produced}</TableCell>
+                  <TableCell>{getStatusBadge(item.status)}</TableCell>
+                  <TableCell>{new Date(item.created_at).toLocaleDateString('pt-BR')}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const InternalProductionTable = ({ items }: { items: InternalProductionItem[] }) => {
+    const filteredItems = items.filter(item => 
+      !searchQuery || 
+      item.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.production_number.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    if (filteredItems.length === 0) {
+      return (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <div className="text-muted-foreground mb-4">
+              Nenhuma produção interna encontrada
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Box className="w-5 h-5" />
+            Produção Interna ({filteredItems.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Produção</TableHead>
+                <TableHead>Produto</TableHead>
+                <TableHead className="text-center">Qtd Solicitada</TableHead>
+                <TableHead className="text-center">Qtd Produzida</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Criado em</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredItems.map((item) => (
+                <TableRow 
+                  key={item.id}
+                  className="cursor-pointer hover:bg-accent/5"
+                  onClick={() => handleItemClick(item)}
+                >
+                  <TableCell className="font-medium">{item.production_number}</TableCell>
+                  <TableCell>{item.product_name}</TableCell>
+                  <TableCell className="text-center">{item.quantity_requested}</TableCell>
+                  <TableCell className="text-center">{item.quantity_produced}</TableCell>
+                  <TableCell>{getStatusBadge(item.status)}</TableCell>
+                  <TableCell>{new Date(item.created_at).toLocaleDateString('pt-BR')}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    );
   };
 
   return (
@@ -117,59 +220,76 @@ const ProductionPage = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Produção</h1>
-          <p className="text-muted-foreground">Gerencie todos os itens em produção.</p>
+          <p className="text-muted-foreground">Gerencie o fluxo completo de produção</p>
         </div>
-        <Button onClick={handleCreateProduction}>
-          <Box className="mr-2 h-4 w-4" /> Nova Produção
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => refreshProductions()}>
+            Atualizar
+          </Button>
+        </div>
       </div>
       
-      <StageAlert alerts={alerts} onDismiss={handleDismissAlert} />
+      <StageAlert alerts={alerts} onDismiss={() => {}} />
 
-      <Tabs defaultValue="individual" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="individual">Produções Individuais</TabsTrigger>
-          <TabsTrigger value="internal">Produção Interna</TabsTrigger>
-          <TabsTrigger value="summary">Resumo por Produto</TabsTrigger>
+      {/* Barra de pesquisa */}
+      <div className="relative w-full max-w-md">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar produções..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-8"
+        />
+      </div>
+
+      <Tabs defaultValue="pending" className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="pending">
+            Pendentes ({pendingProductions.length})
+          </TabsTrigger>
+          <TabsTrigger value="in_progress">
+            Em Produção ({inProgressProductions.length})
+          </TabsTrigger>
+          <TabsTrigger value="completed">
+            Concluídas ({completedProductions.length})
+          </TabsTrigger>
+          <TabsTrigger value="internal">
+            Produção Interna ({internalProductions.length})
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="individual" className="space-y-6">
-          <ProductionFilters
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            statusFilter={statusFilter}
-            setStatusFilter={setStatusFilter}
-            orderSort={orderSort}
-            setOrderSort={setOrderSort}
-          />
-          
-          <ProductionTable
-            filteredItems={filteredItems}
-            loading={loading}
-            onItemClick={handleItemClick}
-            onViewItem={handleViewItem}
-            onEditItem={handleEditItem}
-            onDeleteItem={handleDeleteItem}
-            onSendToPackaging={handleSendToPackaging}
-            canSendToPackaging={canSendToPackaging}
+        <TabsContent value="pending" className="space-y-4">
+          <ProductionTable 
+            items={pendingProductions as any}
+            title="Produções Pendentes"
+            emptyMessage="Nenhuma produção pendente. Use o botão 'Processar Pendentes' na página de pedidos para enviar itens para produção."
           />
         </TabsContent>
 
-        <TabsContent value="internal" className="space-y-6">
-          <InternalProductionTab />
+        <TabsContent value="in_progress" className="space-y-4">
+          <ProductionTable 
+            items={inProgressProductions as any}
+            title="Produções em Andamento"
+            emptyMessage="Nenhuma produção em andamento. Clique em uma produção pendente para iniciá-la."
+          />
         </TabsContent>
 
-        <TabsContent value="summary" className="space-y-6">
-          <ProductionSummaryTable
-            productionSummary={productionSummary}
-            loading={loading}
+        <TabsContent value="completed" className="space-y-4">
+          <ProductionTable 
+            items={completedProductions as any}
+            title="Produções Concluídas"
+            emptyMessage="Nenhuma produção concluída ainda."
           />
+        </TabsContent>
+
+        <TabsContent value="internal" className="space-y-4">
+          <InternalProductionTable items={internalProductions} />
         </TabsContent>
       </Tabs>
       
       <ApprovalModal
         isOpen={showModal}
-        onClose={handleModalClose}
+        onClose={() => setShowModal(false)}
         stage="production"
         orderData={selectedItem || {
           id: 'NOVO', 
@@ -177,9 +297,12 @@ const ProductionPage = () => {
           quantity_requested: 1, 
           customer: ''
         }}
-        onApprove={handleApproveProduction}
+        onApprove={handleApprove}
         onNextStage={handleNextStage}
       />
+      
+      <TestProcessOrders />
+      <OrderTrackingDebug />
     </div>
   );
 };

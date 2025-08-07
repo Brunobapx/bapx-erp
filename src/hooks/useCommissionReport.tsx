@@ -71,9 +71,22 @@ export const useCommissionReport = () => {
 
       // Se for vendedor, filtrar por seus pedidos
       if (isSeller) {
-        query = query.eq('salesperson_id', user?.id);
-        console.log('[COMMISSION_REPORT] Filtrando para vendedor:', user?.id);
-      } 
+        // Buscar nome do vendedor para filtrar por ambos os campos
+        const knownSellers = {
+          '50813b14-8b0c-40cf-a55c-76bf2a4a19b1': 'Thor Albuquerque',
+          '6c0bf94a-f544-4452-9aaf-9a702c028967': 'Nathalia Albuquerque'
+        };
+        const sellerName = knownSellers[user?.id || ''];
+        
+        if (sellerName) {
+          // Filtrar por salesperson_id OU por nome do vendedor
+          query = query.or(`salesperson_id.eq.${user?.id},seller.eq.${sellerName}`);
+          console.log('[COMMISSION_REPORT] Filtrando para vendedor:', user?.id, 'ou nome:', sellerName);
+        } else {
+          query = query.eq('salesperson_id', user?.id);
+          console.log('[COMMISSION_REPORT] Filtrando apenas por salesperson_id:', user?.id);
+        }
+      }
       // Se filtro de vendedor especificado (para admins)
       else if (filters.sellerId) {
         query = query.eq('salesperson_id', filters.sellerId);

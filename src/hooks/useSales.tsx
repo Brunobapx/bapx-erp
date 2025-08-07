@@ -28,11 +28,10 @@ export type Sale = {
   updated_at?: string;
   user_id?: string;
   order_number?: string;
+  salesperson_id?: string;
   orders?: {
     order_number: string;
     client_name: string;
-    salesperson_id?: string;
-    seller?: string;
   };
   seller?: string;
 };
@@ -56,33 +55,24 @@ export const useSales = () => {
           throw new Error('Usuário não autenticado');
         }
 
-        let query = supabase
+        const { data, error } = await supabase
           .from('sales')
           .select(`
             *,
             orders!inner(
               order_number,
-              client_name,
-              salesperson_id,
-              seller
+              client_name
             )
-          `);
-
-        // Se for vendedor, filtrar apenas vendas onde ele é o vendedor
-        if (userRole === 'seller') {
-          query = query.eq('orders.salesperson_id', user.id);
-          console.log('[useSales] Filtrando vendas do vendedor:', user.id);
-        }
-
-        const { data, error } = await query.order('created_at', { ascending: false });
+          `)
+          .order('created_at', { ascending: false });
         
         if (error) throw error;
         
-        // Mapear os dados para incluir order_number e seller
+        // Mapear os dados para incluir order_number
         const salesWithOrderInfo = (data || []).map(sale => ({
           ...sale,
           order_number: sale.orders?.order_number || '',
-          seller: sale.orders?.seller || 'N/A'
+          seller: 'N/A' // Removido referência ao seller inexistente
         }));
         
         setSales(salesWithOrderInfo);
@@ -104,13 +94,6 @@ export const useSales = () => {
 
   const updateSaleStatus = async (id: string, status: SaleStatus, invoiceNumber?: string) => {
     try {
-      // Se for vendedor, verificar se pode editar esta venda
-      if (userRole === 'seller' && authUser) {
-        const sale = sales.find(s => s.id === id);
-        if (sale && sale.orders?.salesperson_id !== authUser.id) {
-          throw new Error('Você só pode editar suas próprias vendas');
-        }
-      }
       const updateData: any = { 
         status,
         updated_at: new Date().toISOString()

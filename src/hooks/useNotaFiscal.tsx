@@ -15,7 +15,6 @@ interface NotaEmitida {
   pdf_url: string;
   emitida_em: string;
   json_resposta: any;
-  cliente_nome?: string;
 }
 
 export const useNotaFiscal = () => {
@@ -132,77 +131,148 @@ export const useNotaFiscal = () => {
     }
   };
 
-  const baixarPDF = async (notaId: string) => {
+  const baixarPDF = async (nota: NotaEmitida) => {
     try {
+      // Verificar se a nota está autorizada e tem caminho_danfe
+      if (nota.status !== 'autorizado') {
+        toast.error('Apenas notas autorizadas podem ter o DANFE baixado');
+        return;
+      }
+
+      if (!nota.json_resposta?.caminho_danfe) {
+        toast.error('DANFE não disponível para esta nota');
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Usuário não autenticado');
 
-      const response = await fetch(`https://gtqmwlxzszttzriswoxj.supabase.co/functions/v1/focus-nfe-api`, {
+      console.log('Baixando PDF para nota:', nota.id);
+
+      // Para PDF, precisamos usar fetch direto para binary data
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://gtqmwlxzszttzriswoxj.supabase.co';
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0cW13bHh6c3p0dHpyaXN3b3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc3NzUwMjUsImV4cCI6MjA2MzM1MTAyNX0.03XyZCOF5UnUUaNpn44-MlQW0J6Vfo3_rb7mhE7D-Bk';
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/focus-nfe-api`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
+          'apikey': supabaseKey
         },
         body: JSON.stringify({
           action: 'obter_pdf',
-          notaId
-        }),
+          notaId: nota.id
+        })
       });
 
-      if (response.ok) {
+      console.log('Resposta do fetch direto para PDF:', { 
+        status: response.status, 
+        statusText: response.statusText,
+        contentType: response.headers.get('content-type')
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Erro na resposta:', errorText);
+        throw new Error(`Erro HTTP ${response.status}: ${errorText}`);
+      }
+
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType?.includes('application/pdf')) {
+        // É um PDF válido
         const blob = await response.blob();
+        console.log('PDF blob recebido, tamanho:', blob.size);
+        
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `nfe-${notaId}.pdf`;
+        a.download = `danfe-${nota.numero_nota || nota.focus_id}.pdf`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
-        toast.success('PDF baixado com sucesso!');
+        toast.success('DANFE baixado com sucesso!');
+      } else if (contentType?.includes('application/json')) {
+        // É uma resposta JSON (provavelmente erro)
+        const errorData = await response.json();
+        console.error('Erro JSON retornado:', errorData);
+        throw new Error(errorData.error || 'Erro desconhecido');
       } else {
-        toast.error('Erro ao baixar PDF');
+        // Tentar como blob mesmo assim
+        const blob = await response.blob();
+        if (blob.size > 0) {
+          console.log('Tentando download como blob genérico, tamanho:', blob.size);
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `danfe-${nota.numero_nota || nota.focus_id}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+          toast.success('DANFE baixado com sucesso!');
+        } else {
+          throw new Error(`Tipo de conteúdo inesperado: ${contentType}`);
+        }
       }
     } catch (error) {
-      console.error('Erro ao baixar PDF:', error);
-      toast.error('Erro ao baixar PDF');
+      console.error('Erro ao baixar DANFE:', error);
+      toast.error(`Erro ao baixar DANFE: ${error.message}`);
     }
   };
 
-  const baixarXML = async (notaId: string) => {
+  const baixarXML = async (nota: NotaEmitida) => {
     try {
+      // Verificar se a nota está autorizada e tem caminho_xml_nota_fiscal
+      if (nota.status !== 'autorizado') {
+        toast.error('Apenas notas autorizadas podem ter o XML baixado');
+        return;
+      }
+
+      if (!nota.json_resposta?.caminho_xml_nota_fiscal) {
+        toast.error('XML não disponível para esta nota');
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Usuário não autenticado');
 
-      const response = await fetch(`https://gtqmwlxzszttzriswoxj.supabase.co/functions/v1/focus-nfe-api`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      console.log('Baixando XML para nota:', nota.id);
+
+      const { data, error } = await supabase.functions.invoke('focus-nfe-api', {
+        body: {
           action: 'obter_xml',
-          notaId
-        }),
+          notaId: nota.id
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
 
-      if (response.ok) {
-        const blob = await response.blob();
+      if (error) throw error;
+
+      // Se recebemos uma resposta de texto XML, baixar o arquivo
+      if (typeof data === 'string' && data.includes('<?xml')) {
+        const blob = new Blob([data], { type: 'application/xml' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `nfe-${notaId}.xml`;
+        a.download = `nfe-${nota.numero_nota || nota.focus_id}.xml`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
         toast.success('XML baixado com sucesso!');
+      } else if (data.error) {
+        throw new Error(data.error);
       } else {
-        toast.error('Erro ao baixar XML');
+        throw new Error('Resposta inválida do servidor');
       }
     } catch (error) {
       console.error('Erro ao baixar XML:', error);
-      toast.error('Erro ao baixar XML');
+      toast.error(`Erro ao baixar XML: ${error.message}`);
     }
   };
 

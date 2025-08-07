@@ -34,7 +34,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [userPosition, setUserPosition] = useState<string | null>(null);
   const [userModules, setUserModules] = useState<string[]>([]);
 
-  const isAdmin = userRole === 'admin';
+  const isAdmin = userRole === 'admin' || userRole === 'master';
   const isMaster = userRole === 'master';
   const isSeller = userPosition === 'vendedor';
 
@@ -106,18 +106,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
+    let isComponentMounted = true;
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        if (!isComponentMounted) return;
+        
         console.log('[AuthProvider] Auth state changed:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         
         // Buscar dados do usuário quando autenticado
         if (session?.user) {
+          // Use setTimeout para evitar problemas de recursão no Supabase
           setTimeout(() => {
-            fetchUserData(session.user.id);
-          }, 0);
+            if (isComponentMounted) {
+              fetchUserData(session.user.id);
+            }
+          }, 100);
         } else {
           setUserRole(null);
           setUserPosition(null);
@@ -131,26 +138,47 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Check for existing session
     const initializeAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        console.log('[AuthProvider] Initial session check:', session?.user?.email);
-        setSession(session);
-        setUser(session?.user ?? null);
+        console.log('[AuthProvider] Iniciando verificação de autenticação...');
         
-        // Buscar dados do usuário se já estiver logado
-        if (session?.user) {
-          await fetchUserData(session.user.id);
+        // Primeiro tenta pegar a sessão atual
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('[AuthProvider] Erro ao verificar sessão:', sessionError);
+          setLoading(false);
+          return;
+        }
+
+        console.log('[AuthProvider] Sessão encontrada:', {
+          hasSession: !!session,
+          userEmail: session?.user?.email,
+          userId: session?.user?.id
+        });
+
+        if (isComponentMounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          
+          // Buscar dados do usuário se já estiver logado
+          if (session?.user) {
+            console.log('[AuthProvider] Buscando dados do usuário logado...');
+            await fetchUserData(session.user.id);
+          }
         }
         
         setLoading(false);
       } catch (error) {
         console.error('[AuthProvider] Error initializing auth:', error);
-        setLoading(false);
+        if (isComponentMounted) {
+          setLoading(false);
+        }
       }
     };
 
     initializeAuth();
 
     return () => {
+      isComponentMounted = false;
       subscription.unsubscribe();
     };
   }, []);

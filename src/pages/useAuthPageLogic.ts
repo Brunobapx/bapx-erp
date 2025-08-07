@@ -11,7 +11,6 @@ const emailSchema = z.string().email('Email inválido');
 const passwordSchema = z.string().min(6, 'Senha deve ter pelo menos 6 caracteres');
 
 export const useAuthPageLogic = () => {
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -66,52 +65,22 @@ export const useAuthPageLogic = () => {
     setIsLoading(true);
 
     try {
-      if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        });
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
 
-        if (error) throw error;
+      if (error) throw error;
 
-        toast.success("Login realizado com sucesso!");
-      } else {
-        const { data, error } = await supabase.auth.signUp({
-          email: email.trim(),
-          password,
-          options: {
-            emailRedirectTo: undefined // Remove email confirmation
-          }
-        });
-
-        if (error) throw error;
-
-        // Se o usuário foi criado com sucesso e é um email de admin/teste, adicionar role
-        if (data.user && (email.includes('admin') || email.includes('teste'))) {
-          const { error: roleError } = await supabase
-            .from('user_roles')
-            .insert({
-              user_id: data.user.id,
-              role: 'admin'
-            });
-          
-          if (roleError) {
-            console.error('Erro ao definir role de admin:', roleError);
-          }
-        }
-
-        toast.success("Cadastro realizado com sucesso!");
-      }
+      toast.success("Login realizado com sucesso!");
     } catch (error: any) {
       if (process.env.NODE_ENV === 'development') {
         console.error('Auth error:', error);
       }
       if (error.message.includes('Invalid login credentials')) {
         toast.error("Email ou senha incorretos");
-      } else if (error.message.includes('User already registered')) {
-        toast.error("Este email já está cadastrado");
       } else {
-        toast.error(`Erro ao ${isLogin ? 'fazer login' : 'cadastrar'}`);
+        toast.error("Erro ao fazer login");
       }
     } finally {
       setIsLoading(false);
@@ -119,7 +88,6 @@ export const useAuthPageLogic = () => {
   };
 
   return {
-    isLogin, setIsLogin,
     email, setEmail,
     password, setPassword,
     isLoading,

@@ -137,8 +137,16 @@ export const ProductionTable = ({
           </Table>
         )}
         {!loading && filteredItems.length === 0 && (
-          <div className="p-4 text-center text-muted-foreground">
-            Nenhuma produção encontrada.
+          <div className="p-8 text-center">
+            <div className="text-muted-foreground mb-4">
+              Nenhuma produção encontrada
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Para criar registros de produção, processe pedidos com produtos fabricados.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Verifique se os produtos estão configurados como "Produto Fabricado" na página de produtos.
+            </p>
           </div>
         )}
       </CardContent>
