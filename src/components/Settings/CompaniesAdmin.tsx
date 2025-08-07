@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
+import { CheckCircle2, XCircle, Pencil, Trash2, CreditCard, CalendarDays, Users as UsersIcon, Plus } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface Company {
   id: string;
@@ -15,6 +17,7 @@ interface Company {
   subdomain?: string | null;
   billing_email?: string | null;
   logo_url?: string | null;
+  trial_expires_at?: string | null;
 }
 
 interface AppUser {
@@ -29,7 +32,9 @@ export const CompaniesAdmin: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [users, setUsers] = useState<AppUser[]>([]);
-  const [createOpen, setCreateOpen] = useState(false);
+const [createOpen, setCreateOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Create form state
   const [form, setForm] = useState({
@@ -47,13 +52,22 @@ export const CompaniesAdmin: React.FC = () => {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
   const [selectedUserId, setSelectedUserId] = useState<string>('');
 
-  const selectedCompany = useMemo(() => companies.find(c => c.id === selectedCompanyId) || null, [companies, selectedCompanyId]);
+const selectedCompany = useMemo(() => companies.find(c => c.id === selectedCompanyId) || null, [companies, selectedCompanyId]);
+  const filteredCompanies = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return companies;
+    return companies.filter(c =>
+      c.name.toLowerCase().includes(q) ||
+      (c.billing_email || '').toLowerCase().includes(q) ||
+      (c.code || '').toLowerCase().includes(q)
+    );
+  }, [companies, search]);
 
   const loadCompanies = async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('companies')
-      .select('id, name, code, subdomain, billing_email, logo_url')
+      .select('id, name, code, subdomain, billing_email, logo_url, trial_expires_at')
       .order('code');
     setLoading(false);
     if (error) {
@@ -147,94 +161,176 @@ export const CompaniesAdmin: React.FC = () => {
   return (
     <div className="space-y-8">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Gerenciar Empresas</CardTitle>
-          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-            <DialogTrigger asChild>
-              <Button>NOVA EMPRESA</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Criar nova empresa</DialogTitle>
-              </DialogHeader>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
-                <div>
-                  <Label>Nome</Label>
-                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+        <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <CardTitle>Empresas</CardTitle>
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <Input
+              placeholder="Localize"
+              className="md:w-72"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" /> ADICIONAR
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Criar nova empresa</DialogTitle>
+                </DialogHeader>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
+                  <div>
+                    <Label>Nome</Label>
+                    <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Subdomínio</Label>
+                    <Input value={form.subdomain} onChange={(e) => setForm({ ...form, subdomain: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Email de cobrança</Label>
+                    <Input type="email" value={form.billing_email} onChange={(e) => setForm({ ...form, billing_email: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Plano</Label>
+                    <Input value={form.plan_id} onChange={(e) => setForm({ ...form, plan_id: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Admin - Nome</Label>
+                    <Input value={form.admin_first_name} onChange={(e) => setForm({ ...form, admin_first_name: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Admin - Sobrenome</Label>
+                    <Input value={form.admin_last_name} onChange={(e) => setForm({ ...form, admin_last_name: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Admin - Email</Label>
+                    <Input type="email" value={form.admin_email} onChange={(e) => setForm({ ...form, admin_email: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Admin - Senha</Label>
+                    <Input type="password" value={form.admin_password} onChange={(e) => setForm({ ...form, admin_password: e.target.value })} />
+                  </div>
                 </div>
-                <div>
-                  <Label>Subdomínio</Label>
-                  <Input value={form.subdomain} onChange={(e) => setForm({ ...form, subdomain: e.target.value })} />
-                </div>
-                <div>
-                  <Label>Email de cobrança</Label>
-                  <Input type="email" value={form.billing_email} onChange={(e) => setForm({ ...form, billing_email: e.target.value })} />
-                </div>
-                <div>
-                  <Label>Plano</Label>
-                  <Input value={form.plan_id} onChange={(e) => setForm({ ...form, plan_id: e.target.value })} />
-                </div>
-                <div>
-                  <Label>Admin - Nome</Label>
-                  <Input value={form.admin_first_name} onChange={(e) => setForm({ ...form, admin_first_name: e.target.value })} />
-                </div>
-                <div>
-                  <Label>Admin - Sobrenome</Label>
-                  <Input value={form.admin_last_name} onChange={(e) => setForm({ ...form, admin_last_name: e.target.value })} />
-                </div>
-                <div>
-                  <Label>Admin - Email</Label>
-                  <Input type="email" value={form.admin_email} onChange={(e) => setForm({ ...form, admin_email: e.target.value })} />
-                </div>
-                <div>
-                  <Label>Admin - Senha</Label>
-                  <Input type="password" value={form.admin_password} onChange={(e) => setForm({ ...form, admin_password: e.target.value })} />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button onClick={handleCreateCompany} disabled={loading}>Criar</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                <DialogFooter>
+                  <Button onClick={handleCreateCompany} disabled={loading}>Criar</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Código</TableHead>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Subdomínio</TableHead>
-                  <TableHead>Cobrança</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {companies.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.code}</TableCell>
-                    <TableCell>
-                      <Input value={c.name} onChange={(e) => setCompanies(prev => prev.map(p => p.id === c.id ? { ...p, name: e.target.value } : p))} />
-                    </TableCell>
-                    <TableCell>
-                      <Input value={c.subdomain || ''} onChange={(e) => setCompanies(prev => prev.map(p => p.id === c.id ? { ...p, subdomain: e.target.value } : p))} />
-                    </TableCell>
-                    <TableCell>
-                      <Input type="email" value={c.billing_email || ''} onChange={(e) => setCompanies(prev => prev.map(p => p.id === c.id ? { ...p, billing_email: e.target.value } : p))} />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button size="sm" onClick={() => handleUpdateCompany(c)}>Salvar</Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {companies.length === 0 && (
+          <TooltipProvider>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={5}>Nenhuma empresa encontrada.</TableCell>
+                    <TableHead>Razão Social</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>WhatsApp</TableHead>
+                    <TableHead>E-mail</TableHead>
+                    <TableHead>Vencimento</TableHead>
+                    <TableHead>Plano</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {filteredCompanies.map((c) => {
+                    const today = new Date();
+                    const venc = c.trial_expires_at ? new Date(c.trial_expires_at) : null;
+                    const isExpired = !!(venc && venc < today);
+                    const isActive = !venc || !isExpired;
+                    const vencStr = venc ? venc.toLocaleDateString('pt-BR') : '—';
+
+                    return (
+                      <TableRow key={c.id}>
+                        <TableCell className="font-medium">
+                          {editingId === c.id ? (
+                            <Input
+                              value={c.name}
+                              onChange={(e) => setCompanies(prev => prev.map(p => p.id === c.id ? { ...p, name: e.target.value } : p))}
+                            />
+                          ) : (
+                            c.name
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isActive ? (
+                            <div className="flex items-center gap-2 text-emerald-600"><CheckCircle2 className="h-4 w-4" /> Ativa</div>
+                          ) : (
+                            <div className="flex items-center gap-2 text-destructive"><XCircle className="h-4 w-4" /> Inativa</div>
+                          )}
+                        </TableCell>
+                        <TableCell>—</TableCell>
+                        <TableCell>{c.billing_email || '—'}</TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded text-sm ${isExpired ? 'bg-destructive/15 text-destructive' : 'text-muted-foreground'}`}>{vencStr}</span>
+                        </TableCell>
+                        <TableCell>—</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            {editingId === c.id ? (
+                              <Button size="sm" onClick={() => { setEditingId(null); handleUpdateCompany(c); }}>Salvar</Button>
+                            ) : (
+                              <>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button size="icon" variant="ghost" disabled>
+                                      <CreditCard className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Financeiro (em breve)</TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button size="icon" variant="ghost" disabled>
+                                      <CalendarDays className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Assinatura/Plano (em breve)</TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button size="icon" variant="ghost" disabled>
+                                      <UsersIcon className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Usuários da empresa (em breve)</TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button size="icon" variant="ghost" onClick={() => setEditingId(c.id)}>
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Editar</TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button size="icon" variant="ghost" disabled>
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Excluir (em breve)</TooltipContent>
+                                </Tooltip>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {filteredCompanies.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7}>Nenhuma empresa encontrada.</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </TooltipProvider>
         </CardContent>
       </Card>
 
