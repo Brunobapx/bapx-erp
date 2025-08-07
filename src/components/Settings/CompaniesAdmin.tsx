@@ -89,7 +89,11 @@ const selectedCompany = useMemo(() => companies.find(c => c.id === selectedCompa
     try {
       const { data, error } = await supabase.functions.invoke('get-users');
       if (error) throw error;
-      const mapped: AppUser[] = (data || []).map((u: any) => ({
+
+      // The edge function returns { success, users: [...] }
+      const list = Array.isArray((data as any)?.users) ? (data as any).users : Array.isArray(data) ? (data as any) : [];
+
+      const mapped: AppUser[] = list.map((u: any) => ({
         id: u.id,
         email: u.email,
         first_name: u.user_metadata?.first_name,
