@@ -21,11 +21,14 @@ import { Input } from "@/components/ui/input";
 import { Search } from 'lucide-react';
 import { ProductionSummaryTable } from '@/components/Production/ProductionSummaryTable';
 import { useProductionSummary } from '@/hooks/useProductionSummary';
+import { ProductionFilters } from '@/components/Production/ProductionFilters';
 
 const ProductionPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ProductionFlowItem | InternalProductionItem | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [orderSort, setOrderSort] = useState('recent');
   const [alerts] = useState([]);
 
   const { 
@@ -95,13 +98,30 @@ const ProductionPage = () => {
     title: string,
     emptyMessage: string 
   }) => {
-    const filteredItems = items.filter(item => 
-      !searchQuery || 
-      item.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.production_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.order_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.client_name?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+const filteredItems = items
+  .filter(item => {
+    const q = searchQuery.toLowerCase();
+    const matchesSearch =
+      !searchQuery ||
+      item.product_name.toLowerCase().includes(q) ||
+      item.production_number.toLowerCase().includes(q) ||
+      item.order_number?.toLowerCase().includes(q) ||
+      item.client_name?.toLowerCase().includes(q);
+
+    const isCompleted = ['completed', 'approved'].includes(item.status);
+    if (statusFilter === 'active' && isCompleted) return false;
+    if (statusFilter === 'completed' && !isCompleted) return false;
+
+    return matchesSearch;
+  })
+  .sort((a, b) => {
+    if (orderSort === 'product_az') {
+      return (a.product_name || '').localeCompare(b.product_name || '');
+    }
+    const aDate = new Date(a.created_at || a.start_date || '').getTime();
+    const bDate = new Date(b.created_at || b.start_date || '').getTime();
+    return orderSort === 'oldest' ? aDate - bDate : bDate - aDate;
+  });
 
     if (filteredItems.length === 0) {
       return (
@@ -160,11 +180,28 @@ const ProductionPage = () => {
   };
 
   const InternalProductionTable = ({ items }: { items: InternalProductionItem[] }) => {
-    const filteredItems = items.filter(item => 
-      !searchQuery || 
-      item.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.production_number.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+const filteredItems = items
+  .filter(item => {
+    const q = searchQuery.toLowerCase();
+    const matchesSearch =
+      !searchQuery ||
+      item.product_name.toLowerCase().includes(q) ||
+      item.production_number.toLowerCase().includes(q);
+
+    const isCompleted = ['completed', 'approved'].includes(item.status);
+    if (statusFilter === 'active' && isCompleted) return false;
+    if (statusFilter === 'completed' && !isCompleted) return false;
+
+    return matchesSearch;
+  })
+  .sort((a, b) => {
+    if (orderSort === 'product_az') {
+      return (a.product_name || '').localeCompare(b.product_name || '');
+    }
+    const aDate = new Date(a.created_at || '').getTime();
+    const bDate = new Date(b.created_at || '').getTime();
+    return orderSort === 'oldest' ? aDate - bDate : bDate - aDate;
+  });
 
     if (filteredItems.length === 0) {
       return (
@@ -236,16 +273,16 @@ const ProductionPage = () => {
       
       <StageAlert alerts={alerts} onDismiss={() => {}} />
 
-      {/* Barra de pesquisa */}
-      <div className="relative w-full max-w-md">
-        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar produções..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-8"
-        />
-      </div>
+{/* Filtros */}
+<ProductionFilters
+  searchQuery={searchQuery}
+  setSearchQuery={setSearchQuery}
+  statusFilter={statusFilter}
+  setStatusFilter={setStatusFilter}
+  orderSort={orderSort}
+  setOrderSort={setOrderSort}
+/>
+
 
       <Tabs defaultValue="producao" className="w-full">
         <TabsList className="grid w-full grid-cols-2">

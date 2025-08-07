@@ -21,11 +21,14 @@ import { Search } from 'lucide-react';
 import { PackagingSummaryTable } from '@/components/Packaging/PackagingSummaryTable';
 import { usePackagingSummary } from '@/hooks/usePackagingSummary';
 import { useNavigate } from 'react-router-dom';
+import { PackagingFilters } from '@/components/Packaging/PackagingFilters';
 
 const PackagingPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<PackagingFlowItem | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [orderSort, setOrderSort] = useState('recent');
   const [alerts] = useState([]);
   const navigate = useNavigate();
 
@@ -117,13 +120,30 @@ const handleApprove = async (data: any) => {
     title: string,
     emptyMessage: string 
   }) => {
-    const filteredItems = items.filter(item => 
-      !searchQuery || 
-      item.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.packaging_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.order_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.client_name?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+const filteredItems = items
+  .filter(item => {
+    const q = searchQuery.toLowerCase();
+    const matchesSearch =
+      !searchQuery ||
+      item.product_name.toLowerCase().includes(q) ||
+      item.packaging_number.toLowerCase().includes(q) ||
+      item.order_number?.toLowerCase().includes(q) ||
+      item.client_name?.toLowerCase().includes(q);
+
+    const isCompleted = ['completed', 'approved'].includes(item.status);
+    if (statusFilter === 'active' && isCompleted) return false;
+    if (statusFilter === 'completed' && !isCompleted) return false;
+
+    return matchesSearch;
+  })
+  .sort((a, b) => {
+    if (orderSort === 'product_az') {
+      return (a.product_name || '').localeCompare(b.product_name || '');
+    }
+    const aDate = new Date(a.created_at || '').getTime();
+    const bDate = new Date(b.created_at || '').getTime();
+    return orderSort === 'oldest' ? aDate - bDate : bDate - aDate;
+  });
 
     if (filteredItems.length === 0) {
       return (
@@ -212,16 +232,16 @@ const handleApprove = async (data: any) => {
       
       <StageAlert alerts={alerts} onDismiss={() => {}} />
 
-      {/* Barra de pesquisa */}
-      <div className="relative w-full max-w-md">
-        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar embalagens..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-8"
-        />
-      </div>
+{/* Filtros */}
+<PackagingFilters
+  searchQuery={searchQuery}
+  setSearchQuery={setSearchQuery}
+  statusFilter={statusFilter}
+  setStatusFilter={setStatusFilter}
+  orderSort={orderSort}
+  setOrderSort={setOrderSort}
+/>
+
 
       <Tabs defaultValue="embalagem" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
