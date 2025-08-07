@@ -184,7 +184,7 @@ export const usePackagingUnified = (options: UsePackagingOptions = {}) => {
     } finally {
       setLoading(false);
     }
-  }, [user, options.filters, options.sorting]);
+  }, [user]);
 
   // Criar nova embalagem
   const createPackaging = useCallback(async (packagingData: PackagingFormData): Promise<boolean> => {
