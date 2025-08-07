@@ -329,17 +329,67 @@ export const usePackagingUnified = (options: UsePackagingOptions = {}) => {
 
       if (packError) throw packError;
 
-      // Buscar dados do tracking pelo tracking_id da embalagem
-      const { data: tracking, error: trackError } = await supabase
-        .from('order_item_tracking')
-        .select('*')
-        .eq('id', packaging.tracking_id)
-        .maybeSingle();
+      // Resolver registro de tracking associado à embalagem
+      let tracking: any = null;
+
+      // 1) Tente pelo tracking_id da própria embalagem
+      if (packaging.tracking_id) {
+        const { data: byId } = await supabase
+          .from('order_item_tracking')
+          .select('*')
+          .eq('id', packaging.tracking_id)
+          .maybeSingle();
+        if (byId) tracking = byId;
+      }
+
+      // 2) Se não encontrou, tente via produção -> order_item_id
+      if (!tracking && packaging.production_id) {
+        const { data: production } = await supabase
+          .from('production')
+          .select('order_item_id, tracking_id')
+          .eq('id', packaging.production_id)
+          .maybeSingle();
+        if (production?.tracking_id) {
+          const { data: byProdTrack } = await supabase
+            .from('order_item_tracking')
+            .select('*')
+            .eq('id', production.tracking_id)
+            .maybeSingle();
+          if (byProdTrack) tracking = byProdTrack;
+        }
+        if (!tracking && production?.order_item_id) {
+          const { data: byOrderItem } = await supabase
+            .from('order_item_tracking')
+            .select('*')
+            .eq('order_item_id', production.order_item_id)
+            .maybeSingle();
+          if (byOrderItem) tracking = byOrderItem;
+        }
+      }
+
+      // 3) Fallback: tente localizar pelo pedido + produto
+      if (!tracking && packaging.order_id) {
+        const { data: item } = await supabase
+          .from('order_items')
+          .select('id')
+          .eq('order_id', packaging.order_id)
+          .eq('product_id', packaging.product_id)
+          .maybeSingle();
+        if (item) {
+          const { data: byItem } = await supabase
+            .from('order_item_tracking')
+            .select('*')
+            .eq('order_item_id', item.id)
+            .maybeSingle();
+          if (byItem) tracking = byItem;
+        }
+      }
 
       if (tracking) {
         // Atualizar tracking - somar quantidade embalada aprovada
         const currentApproved = tracking.quantity_packaged_approved || 0;
-        const newApproved = currentApproved + packaging.quantity_packaged;
+        const approvedFromPackaging = Math.max(0, Number(packaging.quantity_packaged) || 0);
+        const newApproved = currentApproved + approvedFromPackaging;
         
         const { error: trackingError } = await supabase
           .from('order_item_tracking')
@@ -409,6 +459,37 @@ export const usePackagingUnified = (options: UsePackagingOptions = {}) => {
                 .eq('id', packaging.order_id);
 
               if (orderError) throw orderError;
+
+              // Garantir que a venda exista para este pedido
+              try {
+                const { data: existingSale } = await supabase
+                  .from('sales')
+                  .select('id')
+                  .eq('order_id', packaging.order_id)
+                  .maybeSingle();
+
+                if (!existingSale) {
+                  const { data: orderRow } = await supabase
+                    .from('orders')
+                    .select('client_id, client_name')
+                    .eq('id', packaging.order_id)
+                    .maybeSingle();
+
+                  await supabase
+                    .from('sales')
+                    .insert({
+                      user_id: user?.id,
+                      order_id: packaging.order_id,
+                      client_id: orderRow?.client_id,
+                      client_name: orderRow?.client_name || '',
+                      total_amount: newTotal,
+                      status: 'pending'
+                    });
+                }
+              } catch (saleCreateErr) {
+                console.warn('[PACKAGING] Não foi possível criar a venda automaticamente:', saleCreateErr);
+              }
+
               console.log(`[PACKAGING] Pedido ${packaging.order_id} liberado para venda com total recalculado:`, newTotal);
             }
           }
