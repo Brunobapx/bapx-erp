@@ -104,6 +104,17 @@ export const useOrdersUnified = (options: UseOrdersOptions = {}) => {
       }
 
       console.log('[useOrdersUnified] Criando pedido:', orderData);
+      console.log('[useOrdersUnified] User ID:', user.id);
+      console.log('[useOrdersUnified] User object:', user);
+
+      // Verificar sessão atual
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('[useOrdersUnified] Sessão atual:', session);
+      console.log('[useOrdersUnified] Erro de sessão:', sessionError);
+
+      if (!session) {
+        throw new Error('Sessão expirada. Faça login novamente.');
+      }
 
       // Validar estoque antes de criar (adaptar tipos)
       const itemsForValidation = orderData.items.map(item => ({
