@@ -91,8 +91,8 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
       const isDirectSale = product?.is_direct_sale || false;
 
       if (isDirectSale) {
-        // Produto de venda direta - usar apenas estoque disponível
-        qtyFromStock = Math.min(requestedQty, availableStock);
+        // Produto de venda direta - APENAS estoque disponível
+        qtyFromStock = Math.min(requestedQty, Math.max(0, availableStock));
         qtyFromProduction = 0;
         
         if (qtyFromStock > 0) {
@@ -102,40 +102,42 @@ export const checkStockAndSendToProduction = async (orderId: string) => {
         
         if (qtyFromStock < requestedQty) {
           const shortage = requestedQty - qtyFromStock;
-          toast.warning(`${item.product_name}: estoque insuficiente. Disponível: ${qtyFromStock}, solicitado: ${requestedQty}`);
-          infoMessages.push(`${item.product_name}: ${shortage} unidades em falta (produto não fabricado)`);
+          infoMessages.push(`${item.product_name}: ${shortage} unidades em falta - produto venda direta sem estoque`);
         }
-      } else if (requestedQty <= availableStock) {
-        // Tem estoque suficiente - vai direto para embalagem
-        qtyFromStock = requestedQty;
-        qtyFromProduction = 0;
-        hasDirectPackaging = true;
-        infoMessages.push(`${item.product_name}: ${requestedQty} unidades direto do estoque`);
       } else if (isManufactured) {
-        // Produto fabricado - parte do estoque + produção
-        qtyFromStock = Math.max(0, availableStock);
-        qtyFromProduction = requestedQty - qtyFromStock;
-        needsProduction = true;
+        // Produto fabricado - estoque disponível + diferença para produção
+        qtyFromStock = Math.min(requestedQty, Math.max(0, availableStock));
+        qtyFromProduction = Math.max(0, requestedQty - qtyFromStock);
+        
+        if (qtyFromProduction > 0) {
+          needsProduction = true;
+        }
         
         if (qtyFromStock > 0) {
           hasDirectPackaging = true;
-          infoMessages.push(`${item.product_name}: ${qtyFromStock} do estoque + ${qtyFromProduction} para produção`);
+          if (qtyFromProduction > 0) {
+            infoMessages.push(`${item.product_name}: ${qtyFromStock} do estoque + ${qtyFromProduction} para produção`);
+          } else {
+            infoMessages.push(`${item.product_name}: ${qtyFromStock} unidades direto do estoque`);
+          }
         } else {
           infoMessages.push(`${item.product_name}: ${qtyFromProduction} unidades para produção (sem estoque)`);
         }
       } else {
-        // Produto não fabricado sem estoque suficiente - usar o que tem
-        qtyFromStock = Math.max(0, availableStock);
+        // Produto normal (não fabricado) - apenas estoque disponível
+        qtyFromStock = Math.min(requestedQty, Math.max(0, availableStock));
         qtyFromProduction = 0;
         
         if (qtyFromStock > 0) {
           hasDirectPackaging = true;
-          const shortage = requestedQty - qtyFromStock;
-          toast.warning(`${item.product_name}: estoque parcial. Disponível: ${qtyFromStock}, faltam: ${shortage}`);
-          infoMessages.push(`${item.product_name}: ${qtyFromStock} unidades do estoque (${shortage} em falta)`);
+          if (qtyFromStock < requestedQty) {
+            const shortage = requestedQty - qtyFromStock;
+            infoMessages.push(`${item.product_name}: ${qtyFromStock} do estoque (${shortage} em falta - produto não fabricado)`);
+          } else {
+            infoMessages.push(`${item.product_name}: ${qtyFromStock} unidades direto do estoque`);
+          }
         } else {
-          toast.error(`${item.product_name}: sem estoque e produto não é fabricado`);
-          throw new Error(`Sem estoque para ${item.product_name}`);
+          infoMessages.push(`${item.product_name}: sem estoque disponível (produto não fabricado)`);
         }
       }
 

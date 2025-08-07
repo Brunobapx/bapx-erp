@@ -216,7 +216,7 @@ export const useProductionFlow = () => {
         if (packError && packError.code !== 'PGRST116') throw packError;
 
         if (existingPackaging) {
-          // Atualizar embalagem existente
+          // Atualizar embalagem existente - somar quantidade da produção
           const { error: updateError } = await supabase
             .from('packaging')
             .update({
@@ -226,8 +226,26 @@ export const useProductionFlow = () => {
             .eq('id', existingPackaging.id);
 
           if (updateError) throw updateError;
+          console.log(`[PRODUCTION] Somado ${quantityProduced} à embalagem existente (total: ${existingPackaging.quantity_to_package + quantityProduced})`);
         } else {
-          // Criar nova embalagem
+          // Buscar dados do pedido para criar embalagem completa
+          const { data: orderItem, error: itemError } = await supabase
+            .from('order_items')
+            .select('order_id')
+            .eq('id', production.order_item_id)
+            .single();
+
+          if (itemError) throw itemError;
+
+          const { data: order, error: orderError } = await supabase
+            .from('orders')
+            .select('client_id, client_name')
+            .eq('id', orderItem.order_id)
+            .single();
+
+          if (orderError) throw orderError;
+
+          // Criar nova embalagem com dados completos
           const { error: insertError } = await supabase
             .from('packaging')
             .insert({
@@ -236,10 +254,15 @@ export const useProductionFlow = () => {
               product_id: production.product_id,
               product_name: production.product_name,
               quantity_to_package: quantityProduced,
-              status: 'pending'
+              status: 'pending',
+              order_id: orderItem.order_id,
+              client_id: order.client_id,
+              client_name: order.client_name,
+              tracking_id: production.tracking_id
             });
 
           if (insertError) throw insertError;
+          console.log(`[PRODUCTION] Criada nova embalagem para ${quantityProduced} unidades`);
         }
 
         // Atualizar tracking do item do pedido

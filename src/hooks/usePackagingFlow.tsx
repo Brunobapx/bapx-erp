@@ -218,53 +218,61 @@ export const usePackagingFlow = () => {
 
       if (packError) throw packError;
 
-      if (packaging.production_id) {
-        // Buscar dados da produção para atualizar tracking
-        const { data: production, error: prodError } = await supabase
-          .from('production')
-          .select('order_item_id')
-          .eq('id', packaging.production_id)
-          .single();
+        // Buscar dados do tracking pelo tracking_id da embalagem
+        const { data: tracking, error: trackError } = await supabase
+          .from('order_item_tracking')
+          .select('*')
+          .eq('id', packaging.tracking_id)
+          .maybeSingle();
 
-        if (prodError) throw prodError;
-
-        if (production.order_item_id) {
-          // Atualizar tracking do item do pedido
+        if (tracking) {
+          // Atualizar tracking - somar quantidade embalada aprovada
+          const currentApproved = tracking.quantity_packaged_approved || 0;
+          const newApproved = currentApproved + packaging.quantity_packaged;
+          
           const { error: trackingError } = await supabase
             .from('order_item_tracking')
             .update({
-              quantity_packaged_approved: packaging.quantity_packaged,
-              status: 'ready_for_sale',
+              quantity_packaged_approved: newApproved,
+              status: newApproved >= tracking.quantity_target ? 'ready_for_sale' : 'partial_packaging',
               updated_at: new Date().toISOString()
             })
-            .eq('order_item_id', production.order_item_id);
+            .eq('id', tracking.id);
 
           if (trackingError) throw trackingError;
 
-          // Verificar se todos os itens do pedido estão prontos para liberar o pedido
-          const { data: orderItems, error: itemsError } = await supabase
-            .from('order_item_tracking')
-            .select('status, order_items!inner(order_id)')
-            .eq('order_items.order_id', packaging.order_id);
+          // Verificar se todos os itens do pedido estão prontos para liberar
+          if (packaging.order_id) {
+            const { data: allTrackings, error: allError } = await supabase
+              .from('order_item_tracking')
+              .select(`
+                quantity_target,
+                quantity_packaged_approved,
+                order_items!inner(order_id)
+              `)
+              .eq('order_items.order_id', packaging.order_id);
 
-          if (!itemsError && orderItems) {
-            const allReady = orderItems.every(item => item.status === 'ready_for_sale');
-            
-            if (allReady) {
-              // Atualizar status do pedido para liberado para venda
-              const { error: orderError } = await supabase
-                .from('orders')
-                .update({
-                  status: 'released_for_sale',
-                  updated_at: new Date().toISOString()
-                })
-                .eq('id', packaging.order_id);
+            if (!allError && allTrackings) {
+              const allReady = allTrackings.every(t => 
+                (t.quantity_packaged_approved || 0) >= t.quantity_target
+              );
+              
+              if (allReady) {
+                // Liberar pedido para venda
+                const { error: orderError } = await supabase
+                  .from('orders')
+                  .update({
+                    status: 'released_for_sale',
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('id', packaging.order_id);
 
-              if (orderError) throw orderError;
+                if (orderError) throw orderError;
+                console.log(`[PACKAGING] Pedido ${packaging.order_id} liberado para venda - todos itens aprovados`);
+              }
             }
           }
         }
-      }
 
     } catch (err: any) {
       console.error('Erro ao processar embalagem aprovada:', err);

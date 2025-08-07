@@ -117,19 +117,27 @@ Deno.serve(async (req) => {
           let quantityFromStock = 0;
           let quantityFromProduction = 0;
 
-          // Determinar quantidades baseado na nova lógica
+          // Lógica corrigida conforme especificação
           if (product.is_direct_sale) {
-            // Produto de venda direta - usar estoque disponível, zero produção
-            quantityFromStock = Math.min(item.quantity, product.stock);
+            // Produto de venda direta - APENAS estoque disponível
+            quantityFromStock = Math.min(item.quantity, Math.max(0, product.stock));
             quantityFromProduction = 0;
+            
+            if (quantityFromStock < item.quantity) {
+              console.log(`[PROCESS-ORDERS] Produto venda direta ${item.product_name}: estoque insuficiente (${quantityFromStock}/${item.quantity})`);
+            }
           } else if (product.is_manufactured) {
-            // Produto fabricado - distribuir entre estoque e produção
-            quantityFromStock = Math.min(item.quantity, product.stock);
-            quantityFromProduction = Math.max(0, item.quantity - product.stock);
+            // Produto fabricado - estoque disponível + diferença para produção
+            quantityFromStock = Math.min(item.quantity, Math.max(0, product.stock));
+            quantityFromProduction = Math.max(0, item.quantity - quantityFromStock);
           } else {
-            // Produto normal - usar estoque disponível apenas
-            quantityFromStock = Math.min(item.quantity, product.stock);
+            // Produto normal (não fabricado) - apenas estoque disponível
+            quantityFromStock = Math.min(item.quantity, Math.max(0, product.stock));
             quantityFromProduction = 0;
+            
+            if (quantityFromStock < item.quantity) {
+              console.log(`[PROCESS-ORDERS] Produto normal ${item.product_name}: estoque insuficiente (${quantityFromStock}/${item.quantity})`);
+            }
           }
 
           console.log(`[PROCESS-ORDERS] Item ${item.product_name}: Stock=${quantityFromStock}, Production=${quantityFromProduction}`);
