@@ -18,6 +18,8 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Search } from 'lucide-react';
+import { PackagingSummaryTable } from '@/components/Packaging/PackagingSummaryTable';
+import { usePackagingSummary } from '@/hooks/usePackagingSummary';
 
 const PackagingPage = () => {
   const [showModal, setShowModal] = useState(false);
@@ -35,6 +37,10 @@ const PackagingPage = () => {
     inPackaging,
     ready
   } = usePackagingFlow();
+
+  // Resumo agregado por produto para embalagem
+  const packagingSummary = usePackagingSummary(packagings as any);
+
 
   const handleItemClick = (item: PackagingFlowItem) => {
     setSelectedItem(item);
@@ -214,52 +220,22 @@ const PackagingPage = () => {
         />
       </div>
 
-      <Tabs defaultValue="from_stock" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="from_stock">
-            Do Estoque ({fromStock.length})
-          </TabsTrigger>
-          <TabsTrigger value="from_production">
-            Da Produção ({fromProduction.length})
-          </TabsTrigger>
-          <TabsTrigger value="in_packaging">
-            Em Embalagem ({inPackaging.length})
-          </TabsTrigger>
-          <TabsTrigger value="ready">
-            Prontos ({ready.length})
-          </TabsTrigger>
+      <Tabs defaultValue="embalagem" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="embalagem">Embalagem</TabsTrigger>
+          <TabsTrigger value="resumo">Resumo da Embalagem</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="from_stock" className="space-y-4">
+        <TabsContent value="embalagem" className="space-y-4">
           <PackagingTable 
-            items={fromStock}
-            title="Itens do Estoque"
-            emptyMessage="Nenhum item do estoque para embalar. Itens com estoque disponível são enviados diretamente para embalagem."
+            items={packagings}
+            title="Todas as Embalagens"
+            emptyMessage="Nenhum item para embalar no momento."
           />
         </TabsContent>
 
-        <TabsContent value="from_production" className="space-y-4">
-          <PackagingTable 
-            items={fromProduction}
-            title="Itens da Produção"
-            emptyMessage="Nenhum item da produção para embalar. Aprove produções concluídas para que apareçam aqui."
-          />
-        </TabsContent>
-
-        <TabsContent value="in_packaging" className="space-y-4">
-          <PackagingTable 
-            items={inPackaging}
-            title="Itens em Embalagem"
-            emptyMessage="Nenhum item sendo embalado no momento."
-          />
-        </TabsContent>
-
-        <TabsContent value="ready" className="space-y-4">
-          <PackagingTable 
-            items={ready}
-            title="Itens Prontos"
-            emptyMessage="Nenhum item pronto ainda. Complete o processo de embalagem para que apareçam aqui."
-          />
+        <TabsContent value="resumo" className="space-y-4">
+          <PackagingSummaryTable summary={packagingSummary} />
         </TabsContent>
       </Tabs>
       

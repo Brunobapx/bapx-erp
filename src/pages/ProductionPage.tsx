@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Search } from 'lucide-react';
+import { ProductionSummaryTable } from '@/components/Production/ProductionSummaryTable';
+import { useProductionSummary } from '@/hooks/useProductionSummary';
 
 const ProductionPage = () => {
   const [showModal, setShowModal] = useState(false);
@@ -34,7 +36,10 @@ const ProductionPage = () => {
     refreshProductions 
   } = useProductionFlow();
 
-  // Filtros para as diferentes abas
+  // Resumo agregado por produto
+  const productionSummary = useProductionSummary(productions);
+
+  // Filtros para as diferentes abas (mantidos para possíveis usos futuros)
   const pendingProductions = productions.filter(p => p.status === 'pending');
   const inProgressProductions = productions.filter(p => p.status === 'in_progress');
   const completedProductions = productions.filter(p => p.status === 'completed' || p.status === 'approved');
@@ -242,48 +247,23 @@ const ProductionPage = () => {
         />
       </div>
 
-      <Tabs defaultValue="pending" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="pending">
-            Pendentes ({pendingProductions.length})
-          </TabsTrigger>
-          <TabsTrigger value="in_progress">
-            Em Produção ({inProgressProductions.length})
-          </TabsTrigger>
-          <TabsTrigger value="completed">
-            Concluídas ({completedProductions.length})
-          </TabsTrigger>
-          <TabsTrigger value="internal">
-            Produção Interna ({internalProductions.length})
-          </TabsTrigger>
+      <Tabs defaultValue="producao" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="producao">Produção</TabsTrigger>
+          <TabsTrigger value="resumo">Resumo da Produção</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="pending" className="space-y-4">
+        <TabsContent value="producao" className="space-y-4">
           <ProductionTable 
-            items={pendingProductions as any}
-            title="Produções Pendentes"
-            emptyMessage="Nenhuma produção pendente. Use o botão 'Processar Pendentes' na página de pedidos para enviar itens para produção."
+            items={productions as any}
+            title="Produções"
+            emptyMessage="Nenhuma produção encontrada. Use o botão 'Processar Pendentes' na página de pedidos para enviar itens para produção."
           />
-        </TabsContent>
-
-        <TabsContent value="in_progress" className="space-y-4">
-          <ProductionTable 
-            items={inProgressProductions as any}
-            title="Produções em Andamento"
-            emptyMessage="Nenhuma produção em andamento. Clique em uma produção pendente para iniciá-la."
-          />
-        </TabsContent>
-
-        <TabsContent value="completed" className="space-y-4">
-          <ProductionTable 
-            items={completedProductions as any}
-            title="Produções Concluídas"
-            emptyMessage="Nenhuma produção concluída ainda."
-          />
-        </TabsContent>
-
-        <TabsContent value="internal" className="space-y-4">
           <InternalProductionTable items={internalProductions} />
+        </TabsContent>
+
+        <TabsContent value="resumo" className="space-y-4">
+          <ProductionSummaryTable productionSummary={productionSummary} loading={loading} />
         </TabsContent>
       </Tabs>
       
