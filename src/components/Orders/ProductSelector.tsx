@@ -18,12 +18,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Product } from '@/hooks/useProducts';
 
-interface ExtendedProduct extends Product {
-  displayName?: string;
-}
-
 interface ProductSelectorProps {
-  products: ExtendedProduct[];
+  products: Product[];
   selectedProductId: string;
   selectedProductName: string;
   onProductSelect: (productId: string, productName: string, productPrice?: number) => void;
@@ -42,7 +38,7 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
 
   // Ensure products is always a valid array
-  const safeProducts: ExtendedProduct[] = Array.isArray(products) ? products : [];
+  const safeProducts = Array.isArray(products) ? products : [];
 
   // Debug logging
   useEffect(() => {
@@ -147,17 +143,10 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
                       )}
                     />
                     <div className="flex flex-col flex-1">
-                      <span className="font-medium">
-                        {product.displayName || product.name || 'Nome não informado'}
-                      </span>
+                      <span className="font-medium">{product.name || 'Nome não informado'}</span>
                       <div className="flex text-xs gap-3 text-muted-foreground">
                         {product.code && <span>Código: {product.code}</span>}
                         {product.price && <span>{formatCurrency(product.price)}</span>}
-                        {product.stock !== undefined && (
-                          <span className={product.stock > 0 ? 'text-green-600' : 'text-red-600'}>
-                            Estoque: {product.stock}
-                          </span>
-                        )}
                       </div>
                     </div>
                   </CommandItem>

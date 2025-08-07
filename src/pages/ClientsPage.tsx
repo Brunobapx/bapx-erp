@@ -19,7 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ClientModal } from '@/components/Modals/ClientModal';
-import { useClients, type Client } from '@/hooks/useClients';
+import { useClients } from '@/hooks/useClients';
 import { ImportExportButtons } from '@/components/ImportExport/ImportExportButtons';
 import { ImportModal } from '@/components/ImportExport/ImportModal';
 import { ExportModal } from '@/components/ImportExport/ExportModal';
@@ -59,7 +59,7 @@ const ClientsPage = () => {
     searchQuery
   });
 
-  const handleClientClick = (client: Client) => {
+  const handleClientClick = (client: any) => {
     console.log('ClientsPage - Cliente clicado:', client);
     setSelectedClient(client);
     setShowModal(true);
@@ -71,14 +71,14 @@ const ClientsPage = () => {
     setShowModal(true);
   };
 
-  const getDocumentId = (client: Client) => {
+  const getDocumentId = (client: any) => {
     if (!client) return '';
-    return client.type === 'Jurídica' ? (client.cnpj || '') : (client.cpf || '');
+    return client.type === 'PJ' ? (client.cnpj || '') : (client.cpf || '');
   };
 
-  const getRegisterNumber = (client: Client) => {
+  const getRegisterNumber = (client: any) => {
     if (!client) return '';
-    return client.type === 'Jurídica' ? (client.ie || '') : (client.rg || '');
+    return client.type === 'PJ' ? (client.ie || '') : (client.rg || '');
   };
 
   const handleModalClose = (refresh = false) => {
@@ -209,8 +209,8 @@ const ClientsPage = () => {
                       <TableCell>{client.email || 'Não informado'}</TableCell>
                       <TableCell>{client.phone || 'Não informado'}</TableCell>
                       <TableCell>
-                        <span className={`stage-badge ${client.type === 'Jurídica' ? 'badge-order' : 'badge-production'}`}>
-                          {client.type === 'Jurídica' ? 'PJ' : 'PF'}
+                        <span className={`stage-badge ${client.type === 'PJ' ? 'badge-order' : 'badge-production'}`}>
+                          {client.type === 'PJ' ? 'PJ' : 'PF'}
                         </span>
                       </TableCell>
                     </TableRow>

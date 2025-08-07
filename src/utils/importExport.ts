@@ -90,9 +90,9 @@ export const validateClientData = (client: any): string[] => {
   }
   
   // Validação específica por tipo
-  const normalizedType = client.type === 'Física' || client.type === 'PF' ? 'Física' : 'Jurídica';
+  const normalizedType = client.type === 'Física' || client.type === 'PF' ? 'PF' : 'PJ';
   
-  if (normalizedType === 'Física') {
+  if (normalizedType === 'PF') {
     if (client.cpf && !validateCPF(client.cpf)) {
       errors.push('CPF inválido');
     }

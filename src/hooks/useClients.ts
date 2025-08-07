@@ -7,7 +7,7 @@ import { useAuth } from '@/components/Auth/AuthProvider';
 export interface Client {
   id: string;
   name: string;
-  type: 'Física' | 'Jurídica';
+  type: 'PF' | 'PJ';
   cpf?: string;
   rg?: string;
   cnpj?: string;

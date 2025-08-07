@@ -101,9 +101,9 @@ const ReceivableClientSelector: React.FC<ReceivableClientSelectorProps> = ({
                   <div className="flex flex-col flex-1">
                     <span className="font-medium">{client.name || "Nome não informado"}</span>
                     <span className="text-xs text-muted-foreground">
-                       {client.type === "Jurídica"
-                         ? client.cnpj || "CNPJ não informado"
-                         : client.cpf || "CPF não informado"}
+                      {client.type === "PJ"
+                        ? client.cnpj || "CNPJ não informado"
+                        : client.cpf || "CPF não informado"}
                     </span>
                     {client.email && (
                       <span className="text-xs text-muted-foreground">{client.email}</span>

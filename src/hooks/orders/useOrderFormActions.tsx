@@ -5,11 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { OrderFormState, OrderFormItem } from './useOrderFormState';
 import { useNavigate } from 'react-router-dom';
 import { checkStockAndSendToProduction } from './stockProcessor';
-import { 
-  validateStockForOrder, 
-  deductStockFromOrder, 
-  showStockValidationDialog 
-} from './stockValidationOnCreate';
 
 interface UseOrderFormActionsProps {
   formData: OrderFormState;
@@ -151,19 +146,6 @@ export const useOrderFormActions = ({
         return null;
       }
 
-      // NOVA VALIDAÇÃO DE ESTOQUE ANTES DE CRIAR O PEDIDO
-      if (isNewOrder) {
-        console.log('[ORDER VALIDATION] Validando estoque antes de criar pedido...');
-        
-        const stockValidation = await validateStockForOrder(items);
-        const shouldContinue = await showStockValidationDialog(stockValidation);
-        
-        if (!shouldContinue) {
-          console.log('[ORDER VALIDATION] Criação de pedido cancelada pelo usuário');
-          return null;
-        }
-      }
-
       if (isNewOrder) {
         // Criar novo pedido
         const orderData = {
@@ -204,57 +186,24 @@ export const useOrderFormActions = ({
           
         if (itemsError) throw itemsError;
         
-        // NOVO: Abater estoque imediatamente após criar itens do pedido
-        console.log('[ORDER] Abatendo estoque dos produtos...');
-        const stockDeductionSuccess = await deductStockFromOrder(items, insertedOrder.id);
+        // Verificar estoque e processar para produção/embalagem
+        console.log('Iniciando verificação de estoque e processamento...');
+        const stockProcessed = await checkStockAndSendToProduction(insertedOrder.id);
         
-        if (!stockDeductionSuccess) {
-          console.warn('[ORDER] Falha no abatimento de estoque, mas pedido foi criado');
-          toast.warning("Pedido criado, mas houve problema no abatimento de estoque");
-        } else {
-          console.log('[ORDER] Estoque abatido com sucesso');
-        }
-        
-        // Processar estoque e produção APÓS criação (garantindo execução)
-        console.log('[ORDER] Processando produção e embalagem...');
-        
-        let processingSuccess = false;
-        try {
-          processingSuccess = await checkStockAndSendToProduction(insertedOrder.id);
-        } catch (stockError) {
-          console.error('[ORDER] Erro no processamento de produção/embalagem:', stockError);
-          processingSuccess = false;
-        }
-
-        // Se falhou, tentar via edge function como fallback
-        if (!processingSuccess) {
-          console.log('[ORDER] Tentando fallback via edge function...');
-          try {
-            const { data, error } = await supabase.functions.invoke('process-pending-orders', {
-              body: { order_id: insertedOrder.id }
-            });
-            
-            if (error) throw error;
-            console.log('[ORDER] Fallback processado:', data);
-            toast.success("Pedido criado e processado com sucesso (via fallback)");
-          } catch (fallbackError) {
-            console.error('[ORDER] Fallback também falhou:', fallbackError);
-            toast.warning("Pedido criado, mas será necessário processar manualmente");
-          }
+        if (!stockProcessed) {
+          toast.error("Erro ao processar estoque. Verifique o pedido criado.");
         }
         
         // Verificar se algum produto é de venda direta
-        try {
-          const hasDirectSaleProducts = await checkDirectSaleProducts(items);
-          
-          if (hasDirectSaleProducts) {
-            console.log('[ORDER] Criando venda automática para produtos diretos...');
-            await createSaleFromOrder(insertedOrder.id);
-          } else {
-            toast.success("Pedido criado com sucesso");
-          }
-        } catch (saleError) {
-          console.warn('[ORDER] Criação de venda automática falhou:', saleError);
+        const hasDirectSaleProducts = await checkDirectSaleProducts(items);
+        
+        if (hasDirectSaleProducts) {
+          console.log('Produto de venda direta detectado, criando venda automaticamente...');
+          await createSaleFromOrder(insertedOrder.id);
+        } else if (stockProcessed) {
+          // Não mostra toast aqui pois checkStockAndSendToProduction já mostra as mensagens
+          console.log("Pedido criado e processado com sucesso");
+        } else {
           toast.success("Pedido criado com sucesso");
         }
         

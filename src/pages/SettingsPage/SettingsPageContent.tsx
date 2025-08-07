@@ -6,6 +6,7 @@ import { CompanySettings } from '@/components/Settings/CompanySettings';
 import { UserManagement } from '@/components/Settings/UserManagement';
 import { CurrentUserProfile } from '@/components/Settings/CurrentUserProfile';
 import { DatabaseReset } from '@/components/Settings/DatabaseReset';
+import { FiscalSettings } from '@/components/Settings/FiscalSettings';
 import { CompanyFiscalInfo } from '@/components/Settings/CompanyFiscalInfo';
 import { SellerCommissionsSection } from '@/components/Settings/SellerCommissionsSection';
 
@@ -63,7 +64,10 @@ export const SettingsPageContent: React.FC<SettingsPageContentProps> = ({ isAdmi
       {isAdmin && (
         <TabsContent value="fiscal">
           <TabContent tabName="Fiscal">
-            <CompanyFiscalInfo />
+            <div className="space-y-6">
+              <CompanyFiscalInfo />
+              <FiscalSettings />
+            </div>
           </TabContent>
         </TabsContent>
       )}

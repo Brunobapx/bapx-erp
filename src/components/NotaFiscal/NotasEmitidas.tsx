@@ -17,12 +17,9 @@ import {
   Calendar,
   CheckCircle,
   XCircle,
-  Clock,
-  Printer
+  Clock
 } from 'lucide-react';
 import { useNotaFiscal } from '@/hooks/useNotaFiscal';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 
 const NotasEmitidas = () => {
   const { 
@@ -46,7 +43,8 @@ const NotasEmitidas = () => {
   const filteredNotas = notas.filter(nota =>
     nota.numero_nota?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     nota.chave_acesso?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    nota.status?.toLowerCase().includes(searchTerm.toLowerCase())
+    nota.status?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    nota.cliente_nome?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getStatusBadge = (status: string) => {
@@ -86,51 +84,6 @@ const NotasEmitidas = () => {
     }
   };
 
-  const handleImprimirDANFE = async (nota: any) => {
-    try {
-      if (nota.status !== 'autorizado' || !nota.json_resposta?.caminho_danfe) {
-        toast.error('DANFE não disponível para impressão');
-        return;
-      }
-
-      // Usar a mesma lógica do baixarPDF mas abrir em nova janela para impressão
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Usuário não autenticado');
-
-      const { data, error } = await supabase.functions.invoke('focus-nfe-api', {
-        body: {
-          action: 'obter_danfe',
-          notaId: nota.id
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (error) throw error;
-
-      // Criar URL temporária do blob e abrir para impressão
-      if (data instanceof Blob || (data && typeof data === 'object')) {
-        const blob = data instanceof Blob ? data : new Blob([JSON.stringify(data)]);
-        const url = window.URL.createObjectURL(blob);
-        const printWindow = window.open(url, '_blank');
-        if (printWindow) {
-          printWindow.onload = () => {
-            setTimeout(() => {
-              printWindow.print();
-              window.URL.revokeObjectURL(url);
-            }, 500);
-          };
-        }
-      } else {
-        throw new Error('Resposta inválida do servidor');
-      }
-    } catch (error) {
-      console.error('Erro ao imprimir DANFE:', error);
-      toast.error(`Erro ao imprimir DANFE: ${error.message}`);
-    }
-  };
-
   if (loading) {
     return (
       <Card>
@@ -161,7 +114,7 @@ const NotasEmitidas = () => {
           <div className="flex items-center gap-2">
             <Search className="h-4 w-4" />
             <Input
-              placeholder="Pesquisar por número, chave ou status..."
+              placeholder="Pesquisar por número, chave, status ou cliente..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="max-w-sm"
@@ -180,6 +133,7 @@ const NotasEmitidas = () => {
                   <TableRow>
                     <TableHead>Número</TableHead>
                     <TableHead>Tipo</TableHead>
+                    <TableHead>Cliente</TableHead>
                     <TableHead>Chave de Acesso</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Data Emissão</TableHead>
@@ -196,6 +150,11 @@ const NotasEmitidas = () => {
                         <Badge variant="outline">
                           {nota.tipo_nota.toUpperCase()}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="max-w-[150px] truncate">
+                          {nota.cliente_nome || 'Cliente não informado'}
+                        </div>
                       </TableCell>
                       <TableCell className="font-mono text-xs">
                         {nota.chave_acesso ? 
@@ -227,39 +186,25 @@ const NotasEmitidas = () => {
                             )}
                           </Button>
 
-                          {nota.status === 'autorizado' && nota.json_resposta?.caminho_danfe && (
+                          {nota.status === 'autorizado' && (
                             <>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => baixarPDF(nota)}
-                                title="Baixar DANFE (PDF)"
+                                onClick={() => baixarPDF(nota.id)}
                               >
                                 <Download className="h-3 w-3" />
-                                DANFE
+                                PDF
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleImprimirDANFE(nota)}
-                                title="Imprimir DANFE"
+                                onClick={() => baixarXML(nota.id)}
                               >
-                                <Printer className="h-3 w-3" />
-                                Imprimir
+                                <Download className="h-3 w-3" />
+                                XML
                               </Button>
                             </>
-                          )}
-
-                          {nota.status === 'autorizado' && nota.json_resposta?.caminho_xml_nota_fiscal && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => baixarXML(nota)}
-                              title="Baixar XML da NFe"
-                            >
-                              <Download className="h-3 w-3" />
-                              XML
-                            </Button>
                           )}
 
                           {nota.status === 'autorizado' && (

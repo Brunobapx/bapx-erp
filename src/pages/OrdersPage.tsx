@@ -12,10 +12,6 @@ import { ExportModal } from '@/components/ImportExport/ExportModal';
 import { useOrders, Order } from '@/hooks/useOrders';
 import { useOrderImportExport } from '@/hooks/useOrderImportExport';
 import { OrderDetailsModal } from '@/components/Orders/OrderDetailsModal';
-import { CancelOrderModal } from '@/components/Orders/CancelOrderModal';
-import { EditOrderModal } from '@/components/Modals/EditOrderModal';
-import { useOrderProductCheck } from '@/hooks/useOrderProductCheck';
-import { useCancelOrder } from '@/hooks/useCancelOrder';
 
 const OrdersPage = () => {
   // State management
@@ -30,19 +26,9 @@ const OrdersPage = () => {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showExportMode, setShowExportMode] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [orderToEdit, setOrderToEdit] = useState<Order | null>(null);
 
   // Custom hook for orders data
   const { orders, loading, deleteOrder, sendToProduction, refreshOrders, isOrderCompleted, getFirstOrderItem, translateStatus } = useOrders();
-  
-  // Hook para verificar produtos de venda direta
-  const { hasDirectSaleProduct } = useOrderProductCheck(orders);
-  
-  // Hook para cancelamento de pedidos
-  const { cancelOrder, loading: cancelLoading } = useCancelOrder();
   
   // Import/Export hook
   const { 
@@ -74,7 +60,7 @@ const OrdersPage = () => {
       order.client_name?.toLowerCase().includes(searchString) ||
       firstItem?.product_name?.toLowerCase().includes(searchString) ||
       translateStatus(order.status)?.toLowerCase().includes(searchString) ||
-      order.seller_name?.toLowerCase().includes(searchString);
+      order.seller?.toLowerCase().includes(searchString);
     
     // Status filter
     const isCompleted = isOrderCompleted(order.status);
@@ -117,10 +103,8 @@ const OrdersPage = () => {
     setShowOrderModal(true);
   };
 
-  const handleEditOrder = (e: React.MouseEvent, order: Order) => {
-    e.stopPropagation();
-    setOrderToEdit(order);
-    setShowEditModal(true);
+  const handleEditOrder = (order) => {
+    navigate(`/pedidos/${order.id}`);
   };
 
   const handleDeleteOrder = async (e, order) => {
@@ -135,28 +119,6 @@ const OrdersPage = () => {
     if (window.confirm(`Tem certeza que deseja enviar o pedido ${order.order_number} para produção?`)) {
       await sendToProduction(order.id);
     }
-  };
-
-  const handleCancelOrder = async (e: React.MouseEvent, order: Order) => {
-    e.stopPropagation();
-    setOrderToCancel(order);
-    setShowCancelModal(true);
-  };
-
-  const handleConfirmCancel = async (reason?: string) => {
-    if (!orderToCancel) return;
-
-    const success = await cancelOrder(orderToCancel.id, reason);
-    if (success) {
-      await refreshOrders();
-      setShowCancelModal(false);
-      setOrderToCancel(null);
-    }
-  };
-
-  const handleCloseCancelModal = () => {
-    setShowCancelModal(false);
-    setOrderToCancel(null);
   };
 
   const handleCreateOrder = () => {
@@ -249,16 +211,17 @@ const OrdersPage = () => {
                 orders={sortedOrders}
                 loading={loading}
                 onViewOrder={handleViewOrder}
-                onEditOrder={handleEditOrder}
+                onEditOrder={(e, order) => {
+                  e.stopPropagation();
+                  handleEditOrder(order);
+                }}
                 onDeleteOrder={handleDeleteOrder}
                 onSendToProduction={handleSendToProduction}
-                onCancelOrder={handleCancelOrder}
                 onOrderClick={handleOrderClick}
                 translateStatus={translateStatus}
                 showCheckboxes={showExportMode}
                 selectedOrders={selectedOrders}
                 onOrderSelect={handleOrderSelect}
-                hasDirectSaleProduct={hasDirectSaleProduct}
               />
             </CardContent>
           </Card>
@@ -281,10 +244,7 @@ const OrdersPage = () => {
         isOpen={showOrderModal}
         onClose={handleCloseModal}
         order={selectedOrder}
-        onEdit={(order) => {
-          setOrderToEdit(order);
-          setShowEditModal(true);
-        }}
+        onEdit={handleEditOrder}
         translateStatus={translateStatus}
       />
 
@@ -304,26 +264,6 @@ const OrdersPage = () => {
         data={sortedOrders}
         defaultHeaders={orderHeaders}
         defaultFilename="pedidos"
-      />
-
-      <CancelOrderModal
-        isOpen={showCancelModal}
-        onClose={handleCloseCancelModal}
-        onConfirm={handleConfirmCancel}
-        order={orderToCancel}
-        loading={cancelLoading}
-      />
-
-      <EditOrderModal
-        isOpen={showEditModal}
-        onClose={(refresh?: boolean) => {
-          setShowEditModal(false);
-          setOrderToEdit(null);
-          if (refresh) {
-            refreshOrders();
-          }
-        }}
-        orderData={orderToEdit}
       />
     </div>
   );

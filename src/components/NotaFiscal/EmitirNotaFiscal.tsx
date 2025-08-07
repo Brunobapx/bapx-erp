@@ -29,27 +29,14 @@ const EmitirNotaFiscal = () => {
 
   const loadPedidos = async () => {
     try {
-      // Buscar pedidos confirmados
-      const { data: orders, error: ordersError } = await supabase
+      const { data, error } = await supabase
         .from('orders')
         .select('id, order_number, client_name, total_amount, status, created_at')
         .eq('status', 'sale_confirmed')
         .order('created_at', { ascending: false });
 
-      if (ordersError) throw ordersError;
-
-      // Buscar pedidos que já possuem nota fiscal emitida
-      const { data: notasEmitidas, error: notasError } = await supabase
-        .from('notas_emitidas')
-        .select('pedido_id');
-
-      if (notasError) throw notasError;
-
-      // Filtrar pedidos que não possuem nota fiscal
-      const pedidosComNota = new Set(notasEmitidas?.map(nota => nota.pedido_id) || []);
-      const pedidosDisponiveis = orders?.filter(pedido => !pedidosComNota.has(pedido.id)) || [];
-
-      setPedidos(pedidosDisponiveis);
+      if (error) throw error;
+      setPedidos(data || []);
     } catch (error) {
       console.error('Erro ao carregar pedidos:', error);
       toast.error('Erro ao carregar pedidos');
@@ -67,8 +54,6 @@ const EmitirNotaFiscal = () => {
     try {
       await emitirNota(selectedPedido);
       setSelectedPedido('');
-      // Recarregar a lista de pedidos para remover o que foi emitido
-      await loadPedidos();
     } catch (error) {
       console.error('Erro ao emitir nota:', error);
     }
@@ -147,7 +132,6 @@ const EmitirNotaFiscal = () => {
 
         <div className="text-sm text-muted-foreground">
           <p>• Apenas pedidos com status "Venda Confirmada" podem gerar notas fiscais</p>
-          <p>• Pedidos que já possuem nota fiscal emitida não aparecem na lista</p>
           <p>• A nota será enviada para a SEFAZ através da API Focus NFe</p>
           <p>• Verifique se as configurações de nota fiscal estão corretas antes de emitir</p>
         </div>

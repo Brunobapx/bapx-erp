@@ -8,6 +8,7 @@ import { useAuthPageLogic } from './useAuthPageLogic';
 
 const AuthPage = () => {
   const {
+    isLogin, setIsLogin,
     email, setEmail,
     password, setPassword,
     isLoading,
@@ -31,11 +32,11 @@ const AuthPage = () => {
             <p className="text-gray-600 mt-2">Solução em Segurança e TI</p>
           </div>
         </div>
-        {/* Login Form */}
+        {/* Login/Signup Form */}
         <Card className="shadow-xl">
           <CardHeader>
             <CardTitle className="text-center">
-              Fazer Login
+              {isLogin ? 'Fazer Login' : 'Criar Conta'}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -75,9 +76,19 @@ const AuthPage = () => {
                 className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                 disabled={isLoading}
               >
-                {isLoading ? 'Aguarde...' : 'Entrar'}
+                {isLoading ? 'Aguarde...' : (isLogin ? 'Entrar' : 'Criar Conta')}
               </Button>
             </form>
+
+            <div className="mt-4 text-center">
+              <Button
+                variant="link"
+                onClick={() => setIsLogin(!isLogin)}
+                className="text-sm"
+              >
+                {isLogin ? 'Não tem conta? Criar nova conta' : 'Já tem conta? Fazer login'}
+              </Button>
+            </div>
 
             {process.env.NODE_ENV === 'development' && (
               <div className="mt-6 pt-4 border-t">
@@ -86,7 +97,7 @@ const AuthPage = () => {
                     ⚠️ Ambiente de desenvolvimento
                   </p>
                   <p className="text-xs text-gray-500">
-                    Para criar novos usuários, administradores devem usar o sistema interno
+                    Para criar um usuário administrador, use o painel do Supabase
                   </p>
                 </div>
               </div>

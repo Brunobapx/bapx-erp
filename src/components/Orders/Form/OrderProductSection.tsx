@@ -20,16 +20,12 @@ export const OrderProductSection: React.FC<OrderProductSectionProps> = ({
 }) => {
   const { products: allProducts } = useProducts();
 
-  // Filtrar apenas produtos ativos para pedidos e adicionar info de estoque
+  // Filtrar apenas produtos ativos para pedidos
   const products = React.useMemo(() => {
     return allProducts.filter((product: any) => {
       // Só incluir produtos ativos (is_active === true)
       return product.is_active === true;
-    }).map((product: any) => ({
-      ...product,
-      // Adicionar informação de estoque no nome para visualização
-      displayName: `${product.name}${product.stock !== undefined ? ` (Estoque: ${product.stock})` : ''}`
-    }));
+    });
   }, [allProducts]);
 
   // Garantir que products é sempre um array válido e nunca undefined
