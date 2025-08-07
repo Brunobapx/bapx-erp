@@ -235,6 +235,45 @@ export type Database = {
         }
         Relationships: []
       }
+      companies: {
+        Row: {
+          billing_email: string | null
+          code: string
+          id: string
+          logo_url: string | null
+          name: string
+          onboarded_at: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          subdomain: string | null
+          trial_expires_at: string | null
+        }
+        Insert: {
+          billing_email?: string | null
+          code: string
+          id?: string
+          logo_url?: string | null
+          name: string
+          onboarded_at?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          subdomain?: string | null
+          trial_expires_at?: string | null
+        }
+        Update: {
+          billing_email?: string | null
+          code?: string
+          id?: string
+          logo_url?: string | null
+          name?: string
+          onboarded_at?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          subdomain?: string | null
+          trial_expires_at?: string | null
+        }
+        Relationships: []
+      }
       conciliacoes: {
         Row: {
           created_at: string
@@ -387,6 +426,7 @@ export type Database = {
           account_type: string
           agency: string | null
           bank: string | null
+          company_id: string | null
           created_at: string | null
           id: string
           initial_balance: number | null
@@ -399,6 +439,7 @@ export type Database = {
           account_type: string
           agency?: string | null
           bank?: string | null
+          company_id?: string | null
           created_at?: string | null
           id?: string
           initial_balance?: number | null
@@ -411,6 +452,7 @@ export type Database = {
           account_type?: string
           agency?: string | null
           bank?: string | null
+          company_id?: string | null
           created_at?: string | null
           id?: string
           initial_balance?: number | null
@@ -418,10 +460,19 @@ export type Database = {
           name?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "financial_accounts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       financial_categories: {
         Row: {
+          company_id: string | null
           created_at: string | null
           description: string | null
           id: string
@@ -431,6 +482,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          company_id?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
@@ -440,6 +492,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          company_id?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
@@ -448,7 +501,15 @@ export type Database = {
           type?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "financial_categories_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       financial_entries: {
         Row: {
@@ -629,6 +690,7 @@ export type Database = {
       }
       markup_settings: {
         Row: {
+          company_id: string | null
           created_at: string | null
           default_profit_margin: number
           fixed_expenses_percentage: number
@@ -637,6 +699,7 @@ export type Database = {
           variable_expenses_percentage: number
         }
         Insert: {
+          company_id?: string | null
           created_at?: string | null
           default_profit_margin?: number
           fixed_expenses_percentage?: number
@@ -645,6 +708,7 @@ export type Database = {
           variable_expenses_percentage?: number
         }
         Update: {
+          company_id?: string | null
           created_at?: string | null
           default_profit_margin?: number
           fixed_expenses_percentage?: number
@@ -652,7 +716,15 @@ export type Database = {
           updated_at?: string | null
           variable_expenses_percentage?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "markup_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       nota_configuracoes: {
         Row: {
@@ -1071,6 +1143,7 @@ export type Database = {
       }
       payment_methods: {
         Row: {
+          company_id: string | null
           created_at: string | null
           description: string | null
           id: string
@@ -1079,6 +1152,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          company_id?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
@@ -1087,6 +1161,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          company_id?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
@@ -1094,10 +1169,19 @@ export type Database = {
           name?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "payment_methods_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payment_terms: {
         Row: {
+          company_id: string | null
           created_at: string | null
           days: number
           description: string | null
@@ -1107,6 +1191,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          company_id?: string | null
           created_at?: string | null
           days: number
           description?: string | null
@@ -1116,6 +1201,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          company_id?: string | null
           created_at?: string | null
           days?: number
           description?: string | null
@@ -1124,7 +1210,15 @@ export type Database = {
           name?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "payment_terms_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       perdas: {
         Row: {
@@ -1416,6 +1510,41 @@ export type Database = {
           weight?: number | null
         }
         Relationships: []
+      }
+      profiles: {
+        Row: {
+          company_id: string | null
+          created_at: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string | null
+          first_name?: string | null
+          id: string
+          last_name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       purchase_items: {
         Row: {
@@ -2429,6 +2558,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      current_user_company_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       generate_sequence_number: {
         Args: { prefix: string; table_name: string; user_id: string }
         Returns: string
