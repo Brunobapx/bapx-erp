@@ -245,7 +245,7 @@ export const useProductionUnified = (options: UseProductionOptions = {}) => {
 
       // Se aprovado, processar aprovação
       if (status === 'approved') {
-        await handleApprovedProduction(productionId, quantityProduced || 0);
+        await handleApprovedProduction(productionId, quantityProduced);
       }
 
       toast.success('Status da produção atualizado com sucesso!');
@@ -273,73 +273,14 @@ export const useProductionUnified = (options: UseProductionOptions = {}) => {
 
       if (prodError) throw prodError;
 
-      // Determinar quantidade aprovada: prioridade para parâmetro recebido; senão usa a produção salva
-      const approvedQty = Math.max(
-        0,
-        Number(quantityProduced ?? production.quantity_produced ?? production.quantity_requested ?? 0)
-      );
+      // Determinar quantidade aprovada: usar parâmetro (>0) ou valor salvo na produção
+      const approvedQty = (quantityProduced !== undefined && quantityProduced > 0)
+        ? quantityProduced
+        : Number(production.quantity_produced ?? production.quantity_requested ?? 0);
 
       if (production.order_item_id) {
-        // Produção de pedido - criar/atualizar embalagem
-        const { data: existingPackaging, error: packError } = await supabase
-          .from('packaging')
-          .select('*')
-          .eq('production_id', productionId)
-          .maybeSingle();
-
-        if (packError && packError.code !== 'PGRST116') throw packError;
-
-        if (existingPackaging) {
-          // Atualizar embalagem existente - somar quantidade
-          const { error: updateError } = await supabase
-            .from('packaging')
-            .update({
-              quantity_to_package: existingPackaging.quantity_to_package + approvedQty,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', existingPackaging.id);
-
-          if (updateError) throw updateError;
-          console.log(`[PRODUCTION] Somado ${approvedQty} à embalagem existente`);
-        } else {
-          // Buscar dados do pedido para criar embalagem
-          const { data: orderItem, error: itemError } = await supabase
-            .from('order_items')
-            .select('order_id')
-            .eq('id', production.order_item_id)
-            .single();
-
-          if (itemError) throw itemError;
-
-          const { data: order, error: orderError } = await supabase
-            .from('orders')
-            .select('client_id, client_name')
-            .eq('id', orderItem.order_id)
-            .single();
-
-          if (orderError) throw orderError;
-
-          // Criar nova embalagem
-          const { error: insertError } = await supabase
-            .from('packaging')
-            .insert({
-              user_id: production.user_id,
-              production_id: productionId,
-              product_id: production.product_id,
-              product_name: production.product_name,
-              quantity_to_package: approvedQty,
-              status: 'pending',
-              order_id: orderItem.order_id,
-              client_id: order.client_id,
-              client_name: order.client_name,
-              tracking_id: production.tracking_id
-            });
-
-          if (insertError) throw insertError;
-          console.log(`[PRODUCTION] Criada nova embalagem para ${approvedQty} unidades`);
-        }
-
-        // Atualizar tracking do item do pedido (somando quantidade aprovada)
+        // Embalagem é criada pelo gatilho no banco (handle_production_flow). Evitar duplicar aqui.
+        // Atualizar apenas o tracking do item do pedido somando a quantidade aprovada
         const { data: existingTrack, error: tSelErr } = await supabase
           .from('order_item_tracking')
           .select('id, quantity_produced_approved')
