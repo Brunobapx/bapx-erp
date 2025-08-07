@@ -273,6 +273,12 @@ export const useProductionUnified = (options: UseProductionOptions = {}) => {
 
       if (prodError) throw prodError;
 
+      // Determinar quantidade aprovada: prioridade para parâmetro recebido; senão usa a produção salva
+      const approvedQty = Math.max(
+        0,
+        Number(quantityProduced ?? production.quantity_produced ?? production.quantity_requested ?? 0)
+      );
+
       if (production.order_item_id) {
         // Produção de pedido - criar/atualizar embalagem
         const { data: existingPackaging, error: packError } = await supabase
@@ -288,13 +294,13 @@ export const useProductionUnified = (options: UseProductionOptions = {}) => {
           const { error: updateError } = await supabase
             .from('packaging')
             .update({
-              quantity_to_package: existingPackaging.quantity_to_package + quantityProduced,
+              quantity_to_package: existingPackaging.quantity_to_package + approvedQty,
               updated_at: new Date().toISOString()
             })
             .eq('id', existingPackaging.id);
 
           if (updateError) throw updateError;
-          console.log(`[PRODUCTION] Somado ${quantityProduced} à embalagem existente`);
+          console.log(`[PRODUCTION] Somado ${approvedQty} à embalagem existente`);
         } else {
           // Buscar dados do pedido para criar embalagem
           const { data: orderItem, error: itemError } = await supabase
@@ -321,7 +327,7 @@ export const useProductionUnified = (options: UseProductionOptions = {}) => {
               production_id: productionId,
               product_id: production.product_id,
               product_name: production.product_name,
-              quantity_to_package: quantityProduced,
+              quantity_to_package: approvedQty,
               status: 'pending',
               order_id: orderItem.order_id,
               client_id: order.client_id,
@@ -330,19 +336,25 @@ export const useProductionUnified = (options: UseProductionOptions = {}) => {
             });
 
           if (insertError) throw insertError;
-          console.log(`[PRODUCTION] Criada nova embalagem para ${quantityProduced} unidades`);
+          console.log(`[PRODUCTION] Criada nova embalagem para ${approvedQty} unidades`);
         }
 
-        // Atualizar tracking do item do pedido
+        // Atualizar tracking do item do pedido (somando quantidade aprovada)
+        const { data: existingTrack, error: tSelErr } = await supabase
+          .from('order_item_tracking')
+          .select('id, quantity_produced_approved')
+          .eq('order_item_id', production.order_item_id)
+          .maybeSingle();
+        if (tSelErr) throw tSelErr;
+        const newProducedApproved = (existingTrack?.quantity_produced_approved || 0) + approvedQty;
         const { error: trackingError } = await supabase
           .from('order_item_tracking')
           .update({
-            quantity_produced_approved: quantityProduced,
+            quantity_produced_approved: newProducedApproved,
             status: 'ready_for_packaging',
             updated_at: new Date().toISOString()
           })
           .eq('order_item_id', production.order_item_id);
-
         if (trackingError) throw trackingError;
 
       } else {
@@ -358,13 +370,13 @@ export const useProductionUnified = (options: UseProductionOptions = {}) => {
         const { error: stockError } = await supabase
           .from('products')
           .update({
-            stock: (product.stock || 0) + quantityProduced,
+            stock: (product.stock || 0) + approvedQty,
             updated_at: new Date().toISOString()
           })
           .eq('id', production.product_id);
 
         if (stockError) throw stockError;
-        console.log(`[PRODUCTION] Adicionado ${quantityProduced} ao estoque`);
+        console.log(`[PRODUCTION] Adicionado ${approvedQty} ao estoque`);
       }
 
     } catch (err: any) {
