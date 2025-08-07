@@ -26,11 +26,13 @@ export const useProductionUnified = (options: UseProductionOptions = {}) => {
   
   const lastErrorRef = useRef<{ message: string; time: number } | null>(null);
   const inFlightRef = useRef(false);
+  const lastLoadRef = useRef(0);
 
   const showErrorOnce = (msg: string) => {
     const now = Date.now();
     const prev = lastErrorRef.current;
-    if (!prev || prev.message !== msg || now - prev.time > 15000) {
+    // Dedup por mensagem e janela de 60s
+    if (!prev || prev.message !== msg || now - prev.time > 60000) {
       toast.error(msg, { id: 'production-load-error' });
       lastErrorRef.current = { message: msg, time: now };
     }
@@ -40,6 +42,10 @@ export const useProductionUnified = (options: UseProductionOptions = {}) => {
 
   // Função principal para carregar produções
   const loadProductions = useCallback(async (customFilters?: ProductionFilters) => {
+    // Throttle: evita múltiplas chamadas em sequência (5s)
+    const nowTs = Date.now();
+    if (nowTs - lastLoadRef.current < 5000) return;
+    lastLoadRef.current = nowTs;
     if (inFlightRef.current) return;
     inFlightRef.current = true;
     try {
