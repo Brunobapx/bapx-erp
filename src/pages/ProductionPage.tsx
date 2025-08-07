@@ -51,7 +51,7 @@ const ProductionPage = () => {
 
   const handleApprove = async (data: any) => {
     if (selectedItem) {
-      await updateProductionStatus(selectedItem.id, 'approved', data.quantityProduced);
+      await updateProductionStatus(selectedItem.id, 'approved', data.quantity);
       setShowModal(false);
     }
   };
@@ -61,7 +61,7 @@ const ProductionPage = () => {
       if (selectedItem.status === 'pending') {
         await updateProductionStatus(selectedItem.id, 'in_progress');
       } else if (selectedItem.status === 'in_progress') {
-        await updateProductionStatus(selectedItem.id, 'completed', data.quantityProduced);
+        await updateProductionStatus(selectedItem.id, 'completed', data.quantity);
       }
       setShowModal(false);
     }
