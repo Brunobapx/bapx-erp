@@ -108,7 +108,7 @@ export const usePackagingUnified = (options: UsePackagingOptions = {}) => {
                 };
               }
               
-              // Buscar dados de tracking
+              // Buscar dados de tracking por order_item_id
               const { data: tracking, error: trackError } = await supabase
                 .from('order_item_tracking')
                 .select('*')
@@ -121,6 +121,37 @@ export const usePackagingUnified = (options: UsePackagingOptions = {}) => {
             }
           } catch (err) {
             console.warn('Erro ao buscar dados relacionados:', err);
+          }
+        } else if (pack.order_id) {
+          // Embalagem criada diretamente do estoque: buscar dados do pedido e tracking
+          try {
+            const { data: orderRow, error: orderErr } = await supabase
+              .from('orders')
+              .select('order_number, client_id, client_name')
+              .eq('id', pack.order_id)
+              .maybeSingle();
+
+            if (!orderErr && orderRow) {
+              orderData = {
+                id: pack.order_id,
+                ...orderRow
+              };
+            }
+
+            // Se tiver tracking_id, buscar para identificar origem e quantidades
+            if (pack.tracking_id) {
+              const { data: tracking, error: trackError } = await supabase
+                .from('order_item_tracking')
+                .select('*')
+                .eq('id', pack.tracking_id)
+                .maybeSingle();
+
+              if (!trackError && tracking) {
+                trackingData = tracking;
+              }
+            }
+          } catch (err) {
+            console.warn('Erro ao buscar dados do pedido/track da embalagem:', err);
           }
         }
 
