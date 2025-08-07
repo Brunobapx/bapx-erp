@@ -430,16 +430,61 @@ export const usePackagingUnified = (options: UsePackagingOptions = {}) => {
               (t.quantity_packaged_approved || 0) >= t.quantity_target
             );
             
-            if (allReady) {
-              // Recalcular totais com base na quantidade APROVADA na embalagem
-              let newTotal = 0;
-              for (const t of allTrackings as any[]) {
-                const unitPrice = t.order_items?.unit_price || 0;
-                const qtyApproved = Math.max(0, t.quantity_packaged_approved || 0);
-                newTotal += unitPrice * qtyApproved;
-              }
+            // Recalcular total com base na quantidade APROVADA até o momento (mesmo que parcial)
+            let newTotal = 0;
+            for (const t of allTrackings as any[]) {
+              const unitPrice = t.order_items?.unit_price || 0;
+              const qtyApproved = Math.max(0, t.quantity_packaged_approved || 0);
+              newTotal += unitPrice * qtyApproved;
+            }
 
-              // Atualizar itens do pedido para refletir a quantidade aprovada
+            // Garantir que a venda exista/atualize com o total parcial
+            try {
+              const { data: existingSale } = await supabase
+                .from('sales')
+                .select('id, user_id')
+                .eq('order_id', packaging.order_id)
+                .maybeSingle();
+
+              const { data: orderRow } = await supabase
+                .from('orders')
+                .select('client_id, client_name, user_id, seller_id')
+                .eq('id', packaging.order_id)
+                .maybeSingle();
+
+              const ownerUserId = orderRow?.user_id || user?.id || null;
+
+              if (!existingSale) {
+                await supabase
+                  .from('sales')
+                  .insert({
+                    user_id: ownerUserId!,
+                    salesperson_id: orderRow?.seller_id || null,
+                    order_id: packaging.order_id,
+                    client_id: orderRow?.client_id,
+                    client_name: orderRow?.client_name || '',
+                    total_amount: newTotal,
+                    status: 'pending'
+                  });
+              } else {
+                await supabase
+                  .from('sales')
+                  .update({
+                    user_id: ownerUserId!,
+                    salesperson_id: orderRow?.seller_id || null,
+                    client_id: orderRow?.client_id,
+                    client_name: orderRow?.client_name || '',
+                    total_amount: newTotal,
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('id', existingSale.id);
+              }
+            } catch (saleCreateErr) {
+              console.warn('[PACKAGING] Não foi possível criar/atualizar a venda automaticamente:', saleCreateErr);
+            }
+            
+            if (allReady) {
+              // Atualizar itens do pedido para refletir a quantidade aprovada (quando todos prontos)
               try {
                 const updates = (allTrackings as any[]).map(async (t) => {
                   const itemId = t.order_items?.id;
@@ -471,52 +516,6 @@ export const usePackagingUnified = (options: UsePackagingOptions = {}) => {
                 .eq('id', packaging.order_id);
 
               if (orderError) throw orderError;
-
-              // Garantir que a venda exista para este pedido e seja visível para o vendedor correto
-              try {
-                const { data: existingSale } = await supabase
-                  .from('sales')
-                  .select('id, user_id')
-                  .eq('order_id', packaging.order_id)
-                  .maybeSingle();
-
-                const { data: orderRow } = await supabase
-                  .from('orders')
-                  .select('client_id, client_name, user_id, seller_id')
-                  .eq('id', packaging.order_id)
-                  .maybeSingle();
-
-                const ownerUserId = orderRow?.user_id || user?.id || null;
-
-                if (!existingSale) {
-                  await supabase
-                    .from('sales')
-                    .insert({
-                      user_id: ownerUserId!,
-                      salesperson_id: orderRow?.seller_id || null,
-                      order_id: packaging.order_id,
-                      client_id: orderRow?.client_id,
-                      client_name: orderRow?.client_name || '',
-                      total_amount: newTotal,
-                      status: 'pending'
-                    });
-                } else {
-                  // Atualizar total e garantir que o dono seja o do pedido (corrige vendas criadas pelo aprovador)
-                  await supabase
-                    .from('sales')
-                    .update({
-                      user_id: ownerUserId!,
-                      salesperson_id: orderRow?.seller_id || null,
-                      client_id: orderRow?.client_id,
-                      client_name: orderRow?.client_name || '',
-                      total_amount: newTotal,
-                      updated_at: new Date().toISOString()
-                    })
-                    .eq('id', existingSale.id);
-                }
-              } catch (saleCreateErr) {
-                console.warn('[PACKAGING] Não foi possível criar/atualizar a venda automaticamente:', saleCreateErr);
-              }
 
               console.log(`[PACKAGING] Pedido ${packaging.order_id} liberado para venda com total recalculado:`, newTotal);
             }
