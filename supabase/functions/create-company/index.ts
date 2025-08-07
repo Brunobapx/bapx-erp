@@ -11,12 +11,23 @@ async function createCompanyInDB(supabaseAdmin: SupabaseClient, formData: any) {
     admin_email, admin_password, admin_first_name, admin_last_name
   } = formData;
 
+  // Calcular próximo código sequencial da empresa (01, 02, 03...)
+  const { data: lastCompany } = await supabaseAdmin
+    .from('companies')
+    .select('code')
+    .order('code', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const lastNum = lastCompany?.code ? parseInt(lastCompany.code, 10) : 0;
+  const nextCode = String((isNaN(lastNum) ? 0 : lastNum) + 1).padStart(2, '0');
+
   // 1. Criar empresa
   const { data: company, error: companyError } = await supabaseAdmin
     .from('companies')
     .insert({
         name,
         subdomain,
+        code: nextCode,
         billing_email: billing_email || null,
         logo_url,
         primary_color,

@@ -8,6 +8,7 @@ import { CurrentUserProfile } from '@/components/Settings/CurrentUserProfile';
 import { DatabaseReset } from '@/components/Settings/DatabaseReset';
 import { CompanyFiscalInfo } from '@/components/Settings/CompanyFiscalInfo';
 import { SellerCommissionsSection } from '@/components/Settings/SellerCommissionsSection';
+import { CompaniesAdmin } from '@/components/Settings/CompaniesAdmin';
 
 interface TabContentProps {
   tabName: string;
