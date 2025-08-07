@@ -89,8 +89,7 @@ async function createCompanyInDB(supabaseAdmin: SupabaseClient, formData: any) {
     console.log(`Assigning role 'admin' to user ${createdAuthUserId}`);
     const { error: roleError } = await supabaseAdmin.from('user_roles').insert({
         user_id: createdAuthUserId,
-        role: 'admin',
-        company_id: company.id,
+        role: 'admin'
     });
     if (roleError) {
         console.error('DB Error: Failed to assign role.', roleError);
@@ -98,19 +97,25 @@ async function createCompanyInDB(supabaseAdmin: SupabaseClient, formData: any) {
     }
     console.log(`Role 'admin' assigned to user ${createdAuthUserId}`);
 
-    // 5. Ativar assinatura
-    console.log(`Creating subscription for company ${company.id}`);
-    const { error: subscriptionError } = await supabaseAdmin.from('company_subscriptions').insert({
-        company_id: company.id,
-        plan_id: plan_id,
-        status: 'active',
-        starts_at: new Date().toISOString(),
-    });
-    if (subscriptionError) {
-        console.error('DB Error: Failed to create subscription.', subscriptionError);
-        throw subscriptionError;
+    // 5. Ativar assinatura (opcional - ignora erro se tabela não existir)
+    try {
+      console.log(`Creating subscription for company ${company.id}`);
+      const { error: subscriptionError } = await supabaseAdmin
+        .from('company_subscriptions')
+        .insert({
+          company_id: company.id,
+          plan_id: plan_id || null,
+          status: 'active',
+          starts_at: new Date().toISOString(),
+        });
+      if (subscriptionError) {
+        console.warn('Optional: skipping subscription creation.', subscriptionError);
+      } else {
+        console.log(`Subscription created for company ${company.id}`);
+      }
+    } catch (e) {
+      console.warn('Optional: failed to create subscription (non-fatal).', e);
     }
-    console.log(`Subscription created for company ${company.id}`);
     
     return company;
 
