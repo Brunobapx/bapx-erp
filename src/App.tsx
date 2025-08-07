@@ -29,6 +29,7 @@ import ReportsPage from "./pages/ReportsPage";
 import NotFound from "./pages/NotFound";
 import SimpleOrderFormPage from "./pages/SimpleOrderFormPage";
 import { FinancialProvider } from "./contexts/FinancialContext";
+import SaaSPage from "./pages/SaaSPage";
 
 const queryClient = new QueryClient();
 
@@ -292,6 +293,17 @@ const App = () => (
                     <Sidebar />
                     <main className="flex-1 overflow-auto lg:ml-64">
                       <SettingsPage />
+                    </main>
+                  </div>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/saas" element={
+                <ProtectedRoute>
+                  <div className="flex h-screen bg-gray-50">
+                    <Sidebar />
+                    <main className="flex-1 overflow-auto lg:ml-64">
+                      <SaaSPage />
                     </main>
                   </div>
                 </ProtectedRoute>
