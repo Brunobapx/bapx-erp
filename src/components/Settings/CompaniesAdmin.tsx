@@ -57,6 +57,12 @@ const [createOpen, setCreateOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
 
 const selectedCompany = useMemo(() => companies.find(c => c.id === selectedCompanyId) || null, [companies, selectedCompanyId]);
+  // Users dialog & actions state
+  const [usersDialogOpen, setUsersDialogOpen] = useState(false);
+  const [usersDialogCompany, setUsersDialogCompany] = useState<Company | null>(null);
+  const [companyUsers, setCompanyUsers] = useState<AppUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+
   const filteredCompanies = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return companies;
@@ -111,6 +117,61 @@ const selectedCompany = useMemo(() => companies.find(c => c.id === selectedCompa
     loadUsers();
   }, []);
 
+  // List users for a company using profiles mapping
+  const openCompanyUsers = async (company: Company) => {
+    try {
+      setUsersDialogCompany(company);
+      setUsersDialogOpen(true);
+      setUsersLoading(true);
+      const { data: profilesRows, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('company_id', company.id);
+      if (error) throw error;
+      const ids = (profilesRows || []).map((p: any) => p.id);
+      const filtered = users.filter((u) => ids.includes(u.id));
+      setCompanyUsers(filtered);
+    } catch (err: any) {
+      console.error('Erro ao carregar usuários da empresa:', err);
+      toast({ title: 'Erro', description: 'Falha ao listar usuários da empresa', variant: 'destructive' });
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
+  // Toggle active/inactive by updating trial_expires_at
+  const handleToggleActive = async (company: Company) => {
+    const venc = company.trial_expires_at ? new Date(company.trial_expires_at) : null;
+    const isExpired = !!(venc && venc < new Date());
+    const isActive = !venc || !isExpired;
+    try {
+      const updates = { trial_expires_at: isActive ? new Date(Date.now() - 60 * 1000).toISOString() : null };
+      const { error } = await supabase.from('companies').update(updates).eq('id', company.id);
+      if (error) throw error;
+      toast({ title: isActive ? 'Empresa inativada' : 'Empresa ativada' });
+      await loadCompanies();
+    } catch (err: any) {
+      console.error('Erro ao alterar status da empresa:', err);
+      toast({ title: 'Erro', description: err?.message || 'Falha ao alterar status', variant: 'destructive' });
+    }
+  };
+
+  // Delete a company (with confirmation)
+  const handleDeleteCompany = async (company: Company) => {
+    const confirmed = window.confirm(`Tem certeza que deseja excluir "${company.name}"? Esta ação não pode ser desfeita.`);
+    if (!confirmed) return;
+    try {
+      setLoading(true);
+      const { error } = await supabase.from('companies').delete().eq('id', company.id);
+      setLoading(false);
+      if (error) throw error;
+      toast({ title: 'Empresa excluída', description: `${company.name} foi removida.` });
+      await loadCompanies();
+    } catch (err: any) {
+      console.error('Erro ao excluir empresa:', err);
+      toast({ title: 'Erro', description: err?.message || 'Falha ao excluir', variant: 'destructive' });
+    }
+  };
   const handleCreateCompany = async () => {
     if (!form.name || !form.admin_email || !form.admin_password || !form.admin_first_name) {
       toast({ title: 'Campos obrigatórios', description: 'Informe Nome da empresa, Nome do responsável, E-mail e Senha.', variant: 'destructive' });
@@ -305,19 +366,19 @@ const selectedCompany = useMemo(() => companies.find(c => c.id === selectedCompa
                                 </Tooltip>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <Button size="icon" variant="ghost" disabled>
+                                    <Button size="icon" variant="ghost" onClick={() => handleToggleActive(c)}>
                                       <CalendarDays className="h-4 w-4" />
                                     </Button>
                                   </TooltipTrigger>
-                                  <TooltipContent>Assinatura/Plano (em breve)</TooltipContent>
+                                  <TooltipContent>{isActive ? 'Inativar empresa' : 'Ativar empresa'}</TooltipContent>
                                 </Tooltip>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <Button size="icon" variant="ghost" disabled>
+                                    <Button size="icon" variant="ghost" onClick={() => openCompanyUsers(c)}>
                                       <UsersIcon className="h-4 w-4" />
                                     </Button>
                                   </TooltipTrigger>
-                                  <TooltipContent>Usuários da empresa (em breve)</TooltipContent>
+                                  <TooltipContent>Usuários da empresa</TooltipContent>
                                 </Tooltip>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
@@ -329,11 +390,11 @@ const selectedCompany = useMemo(() => companies.find(c => c.id === selectedCompa
                                 </Tooltip>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <Button size="icon" variant="ghost" disabled>
+                                    <Button size="icon" variant="ghost" onClick={() => handleDeleteCompany(c)}>
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
                                   </TooltipTrigger>
-                                  <TooltipContent>Excluir (em breve)</TooltipContent>
+                                  <TooltipContent>Excluir</TooltipContent>
                                 </Tooltip>
                               </>
                             )}
@@ -391,6 +452,44 @@ const selectedCompany = useMemo(() => companies.find(c => c.id === selectedCompa
           </div>
         </CardContent>
       </Card>
+
+      {/* Users dialog */}
+      <Dialog open={usersDialogOpen} onOpenChange={setUsersDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Usuários de {usersDialogCompany?.name || ''}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            {usersLoading ? (
+              <p>Carregando...</p>
+            ) : companyUsers.length > 0 ? (
+              <div className="max-h-64 overflow-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>E-mail</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {companyUsers.map((u) => (
+                      <TableRow key={u.id}>
+                        <TableCell>{`${u.first_name || ''} ${u.last_name || ''}`.trim() || '—'}</TableCell>
+                        <TableCell>{u.email}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <p className="text-muted-foreground">Nenhum usuário vinculado a esta empresa.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setUsersDialogOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
