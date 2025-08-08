@@ -2,13 +2,12 @@
 import React from 'react';
 import { TabsContent } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-
+import { CompanySettings } from '@/components/Settings/CompanySettings';
 import { UserManagement } from '@/components/Settings/UserManagement';
 import { CurrentUserProfile } from '@/components/Settings/CurrentUserProfile';
 import { DatabaseReset } from '@/components/Settings/DatabaseReset';
 import { CompanyFiscalInfo } from '@/components/Settings/CompanyFiscalInfo';
 import { SellerCommissionsSection } from '@/components/Settings/SellerCommissionsSection';
-import { CompaniesAdmin } from '@/components/Settings/CompaniesAdmin';
 
 interface TabContentProps {
   tabName: string;
@@ -48,13 +47,19 @@ export const SettingsPageContent: React.FC<SettingsPageContentProps> = ({ isAdmi
       </TabsContent>
 
 
-      {isAdmin && (
-        <TabsContent value="companies">
-          <TabContent tabName="Empresas">
-            <CompaniesAdmin />
-          </TabContent>
-        </TabsContent>
-      )}
+<TabsContent value="company">
+  {!isAdmin ? (
+    <Alert>
+      <AlertDescription>
+        Você não tem permissão para acessar esta seção. Acesso restrito a administradores.
+      </AlertDescription>
+    </Alert>
+  ) : (
+    <TabContent tabName="Empresa">
+      <CompanySettings />
+    </TabContent>
+  )}
+</TabsContent>
 
       {isAdmin && (
         <TabsContent value="fiscal">

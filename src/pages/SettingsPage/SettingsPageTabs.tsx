@@ -8,17 +8,15 @@ interface SettingsPageTabsProps {
 
 export const SettingsPageTabs: React.FC<SettingsPageTabsProps> = ({ isAdmin }) => {
   return (
-    <TabsList className={isAdmin ? "grid w-full grid-cols-4" : "grid w-full grid-cols-1"}>
+    <TabsList className={isAdmin ? "grid w-full grid-cols-4" : "grid w-full grid-cols-2"}>
       <TabsTrigger value="profile" className="flex items-center gap-2">
         <User className="h-4 w-4" />
         Meu Perfil
       </TabsTrigger>
-      {isAdmin && (
-        <TabsTrigger value="companies" className="flex items-center gap-2">
-          <Building className="h-4 w-4" />
-          Empresas
-        </TabsTrigger>
-      )}
+      <TabsTrigger value="company" className="flex items-center gap-2">
+        <Building className="h-4 w-4" />
+        Empresa
+      </TabsTrigger>
       {isAdmin && (
         <TabsTrigger value="fiscal" className="flex items-center gap-2">
           <FileText className="h-4 w-4" />
