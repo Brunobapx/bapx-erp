@@ -280,6 +280,24 @@ export type Database = {
         }
         Relationships: []
       }
+      company_sequences: {
+        Row: {
+          company_id: string
+          last_number: number
+          sequence_key: string
+        }
+        Insert: {
+          company_id: string
+          last_number?: number
+          sequence_key: string
+        }
+        Update: {
+          company_id?: string
+          last_number?: number
+          sequence_key?: string
+        }
+        Relationships: []
+      }
       conciliacoes: {
         Row: {
           created_at: string
