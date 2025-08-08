@@ -28,11 +28,10 @@ export const useNotaFiscalConfig = () => {
       const { data, error } = await supabase
         .from('nota_configuracoes')
         .select('*')
-        .single();
+        .eq('tipo_nota', 'nfe')
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
+      if (error) throw error;
 
       setConfig(data || {
         tipo_nota: 'nfe',

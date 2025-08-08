@@ -88,47 +88,28 @@ export const CompanySettings = () => {
   const saveCompanySettings = async () => {
     setLoading(true);
     try {
-      // Primeiro, buscar todas as configurações existentes
-      const { data: existingSettings } = await supabase
+      const payload = Object.entries(companyData).map(([key, value]) => ({
+        key,
+        value: JSON.stringify(value),
+        description: getFieldDescription(key),
+        category: 'company',
+      }));
+
+      const { error } = await supabase
         .from('system_settings')
-        .select('key')
-        .eq('category', 'company');
+        .upsert(payload, { onConflict: 'company_id,key' });
 
-      const existingKeys = existingSettings?.map(s => s.key) || [];
-
-      for (const [key, value] of Object.entries(companyData)) {
-        if (existingKeys.includes(key)) {
-          // Atualizar configuração existente
-          const { error } = await supabase
-            .from('system_settings')
-            .update({ value: JSON.stringify(value) })
-            .eq('key', key);
-
-          if (error) throw error;
-        } else {
-          // Criar nova configuração
-          const { error } = await supabase
-            .from('system_settings')
-            .insert({
-              key,
-              value: JSON.stringify(value),
-              description: getFieldDescription(key),
-              category: 'company'
-            });
-
-          if (error) throw error;
-        }
-      }
+      if (error) throw error;
 
       toast({
-        title: "Sucesso",
-        description: "Configurações da empresa salvas com sucesso!",
+        title: 'Sucesso',
+        description: 'Configurações da empresa salvas com sucesso!',
       });
     } catch (error: any) {
       toast({
-        title: "Erro",
-        description: error.message || "Erro ao salvar configurações",
-        variant: "destructive",
+        title: 'Erro',
+        description: error.message || 'Erro ao salvar configurações',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
