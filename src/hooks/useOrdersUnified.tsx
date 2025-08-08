@@ -297,21 +297,53 @@ export const useOrdersUnified = (options: UseOrdersOptions = {}) => {
     }
   }, [updateOrder]);
 
-  // Deletar pedido
+  // Deletar pedido (com limpeza de dependências para evitar erro de chave estrangeira)
   const deleteOrder = useCallback(async (orderId: string): Promise<boolean> => {
     try {
       setSubmitting(true);
 
+      // 1) Apagar itens do pedido primeiro (boa prática para FKs)
+      const { error: itemsDelErr } = await supabase
+        .from('order_items')
+        .delete()
+        .eq('order_id', orderId);
+      if (itemsDelErr) throw itemsDelErr;
+
+      // 2) Verificar vendas vinculadas ao pedido
+      const { data: sales, error: salesFetchErr } = await supabase
+        .from('sales')
+        .select('id')
+        .eq('order_id', orderId);
+      if (salesFetchErr) throw salesFetchErr;
+
+      const saleIds = (sales || []).map((s: { id: string }) => s.id);
+
+      if (saleIds.length > 0) {
+        // 2a) Apagar lançamentos financeiros dessas vendas (evita erro financial_entries_sale_id_fkey)
+        const { error: finDelErr } = await supabase
+          .from('financial_entries')
+          .delete()
+          .in('sale_id', saleIds);
+        if (finDelErr) throw finDelErr;
+
+        // 2b) Apagar as vendas
+        const { error: salesDelErr } = await supabase
+          .from('sales')
+          .delete()
+          .in('id', saleIds);
+        if (salesDelErr) throw salesDelErr;
+      }
+
+      // 3) Finalmente, apagar o pedido
       const { error } = await supabase
         .from('orders')
         .delete()
         .eq('id', orderId);
-
       if (error) throw error;
 
       toast({
-        title: "Sucesso",
-        description: "Pedido excluído com sucesso!",
+        title: 'Sucesso',
+        description: 'Pedido excluído com sucesso!',
       });
 
       await loadOrders();
@@ -320,9 +352,9 @@ export const useOrdersUnified = (options: UseOrdersOptions = {}) => {
     } catch (err: any) {
       console.error('[useOrdersUnified] Erro ao excluir pedido:', err);
       toast({
-        title: "Erro",
-        description: "Erro ao excluir pedido: " + err.message,
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Erro ao excluir pedido: ' + (err?.message || 'Erro desconhecido'),
+        variant: 'destructive',
       });
       return false;
     } finally {
