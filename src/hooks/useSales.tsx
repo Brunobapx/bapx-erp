@@ -68,14 +68,52 @@ export const useSales = () => {
         
         if (error) throw error;
         
-        // Mapear os dados para incluir order_number
-        const salesWithOrderInfo = (data || []).map(sale => ({
+        const salesWithOrderInfo = (data || []).map((sale: any) => ({
           ...sale,
           order_number: sale.orders?.order_number || '',
-          seller: 'N/A' // Removido referência ao seller inexistente
+          seller: 'N/A'
         }));
+
+        // Também buscar pedidos liberados para venda que ainda NÃO possuem venda
+        const { data: ordersReleased, error: ordersErr } = await supabase
+          .from('orders')
+          .select(`
+            id,
+            order_number,
+            client_id,
+            client_name,
+            total_amount,
+            created_at,
+            user_id,
+            seller_id,
+            seller_name,
+            sales(id)
+          `)
+          .eq('status', 'released_for_sale');
+
+        if (ordersErr) throw ordersErr;
+
+        const ordersWithoutSale = (ordersReleased || []).filter((o: any) => !o.sales || o.sales.length === 0);
+        const syntheticSales = ordersWithoutSale.map((o: any) => ({
+          id: `order-${o.id}`,
+          sale_number: '(A criar)',
+          order_id: o.id,
+          client_id: o.client_id,
+          client_name: o.client_name,
+          total_amount: Number(o.total_amount) || 0,
+          status: 'pending' as SaleStatus,
+          created_at: o.created_at,
+          updated_at: o.created_at,
+          user_id: o.user_id,
+          order_number: o.order_number,
+          salesperson_id: o.seller_id,
+          seller: o.seller_name || 'N/A'
+        }));
+
+        const combined = [...syntheticSales, ...salesWithOrderInfo]
+          .sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
         
-        setSales(salesWithOrderInfo);
+        setSales(combined);
       } catch (error: any) {
         console.error('Erro ao carregar vendas:', error);
         setError(error.message || 'Erro ao carregar vendas');

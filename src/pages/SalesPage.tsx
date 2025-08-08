@@ -157,7 +157,9 @@ const SalesPage = () => {
         return status;
     }
   };
-
+  
+  const isSynthetic = (id: string) => String(id).startsWith('order-');
+  
   if (loading) {
     return (
       <div className="p-4 sm:p-6 space-y-6">
@@ -277,7 +279,7 @@ const SalesPage = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      {item.status === 'pending' && (
+                      {item.status === 'pending' && !isSynthetic(item.id) && (
                         <Button 
                           size="sm" 
                           variant="outline"
@@ -288,7 +290,7 @@ const SalesPage = () => {
                           Aprovar
                         </Button>
                       )}
-                      {(item.status === 'pending') && (
+                      {(item.status === 'pending') && !isSynthetic(item.id) && (
                         <Button 
                           size="sm" 
                           variant="outline"
@@ -299,15 +301,17 @@ const SalesPage = () => {
                           Editar
                         </Button>
                       )}
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => handleViewDeliverySlip(item)}
-                        title="Visualizar Romaneio"
-                      >
-                        <Eye className="mr-1 h-3 w-3" />
-                        Ver
-                      </Button>
+                      {!isSynthetic(item.id) && (
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleViewDeliverySlip(item)}
+                          title="Visualizar Romaneio"
+                        >
+                          <Eye className="mr-1 h-3 w-3" />
+                          Ver
+                        </Button>
+                      )}
                       {item.status === 'confirmed' && (
                         <Button 
                           size="sm" 
