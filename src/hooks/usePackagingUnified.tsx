@@ -484,13 +484,13 @@ export const usePackagingUnified = (options: UsePackagingOptions = {}) => {
                 .eq('id', targetOrderId)
                 .maybeSingle();
 
-              const ownerUserId = orderRow?.user_id || user?.id || null;
+              const currentUserId = user?.id || orderRow?.user_id || null;
 
               if (!existingSale) {
                 await supabase
                   .from('sales')
                   .insert({
-                    user_id: ownerUserId!,
+                    user_id: currentUserId!,
                     salesperson_id: orderRow?.seller_id || null,
                     order_id: targetOrderId,
                     client_id: orderRow?.client_id,
@@ -499,17 +499,21 @@ export const usePackagingUnified = (options: UsePackagingOptions = {}) => {
                     status: 'pending'
                   });
               } else {
-                await supabase
-                  .from('sales')
-                  .update({
-                    user_id: ownerUserId!,
-                    salesperson_id: orderRow?.seller_id || null,
-                    client_id: orderRow?.client_id,
-                    client_name: orderRow?.client_name || '',
-                    total_amount: newTotal,
-                    updated_at: new Date().toISOString()
-                  })
-                  .eq('id', existingSale.id);
+                if (existingSale.user_id === currentUserId) {
+                  await supabase
+                    .from('sales')
+                    .update({
+                      user_id: currentUserId!,
+                      salesperson_id: orderRow?.seller_id || null,
+                      client_id: orderRow?.client_id,
+                      client_name: orderRow?.client_name || '',
+                      total_amount: newTotal,
+                      updated_at: new Date().toISOString()
+                    })
+                    .eq('id', existingSale.id);
+                } else {
+                  console.warn('[PACKAGING] Venda existente pertence a outro usuário; ignorando atualização para cumprir RLS.');
+                }
               }
             } catch (saleCreateErr) {
               console.warn('[PACKAGING] Não foi possível criar/atualizar a venda automaticamente:', saleCreateErr);
