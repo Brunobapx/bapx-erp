@@ -134,8 +134,6 @@ export const useSales = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
-      console.log(`[APPROVE_SALE] Usuário autenticado: ${user.id}`);
-
       // Buscar dados completos da venda com informações do cliente
       const { data: sale, error: saleError } = await supabase
         .from('sales')
@@ -152,62 +150,7 @@ export const useSales = () => {
       if (saleError) throw saleError;
       if (!sale) throw new Error('Venda não encontrada');
 
-      console.log(`[APPROVE_SALE] Dados da venda:`, {
-        id: sale.id,
-        sale_number: sale.sale_number,
-        client_name: sale.client_name,
-        total_amount: sale.total_amount,
-        status: sale.status
-      });
-
-      // Verificação robusta para lançamentos existentes usando a constraint única
-      const { data: existingEntries, error: checkError } = await supabase
-        .from('financial_entries')
-        .select('id, description, created_at')
-        .eq('sale_id', saleId)
-        .eq('user_id', user.id)
-        .eq('type', 'receivable');
-
-      if (checkError) {
-        console.error(`[APPROVE_SALE] Erro ao verificar lançamentos existentes:`, checkError);
-        throw checkError;
-      }
-
-      console.log(`[APPROVE_SALE] Lançamentos existentes encontrados: ${existingEntries?.length || 0}`);
-
-      // Se já existe um lançamento financeiro, apenas atualizar status da venda
-      if (existingEntries && existingEntries.length > 0) {
-        console.log(`[APPROVE_SALE] Lançamento já existe, apenas atualizando status da venda`);
-        
-        const { error: updateError } = await supabase
-          .from('sales')
-          .update({
-            status: 'confirmed',
-            confirmed_at: new Date().toISOString(),
-            confirmed_by: user.email || 'Sistema',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', saleId);
-
-        if (updateError) throw updateError;
-        
-        toast.success('Venda aprovada com sucesso');
-        refreshSales();
-        return true;
-      }
-
-      // Calcular data de vencimento baseada no prazo
-      let dueDate = new Date();
-      if (sale.payment_term) {
-        const days = parseInt(sale.payment_term.match(/\d+/)?.[0] || '30');
-        dueDate.setDate(dueDate.getDate() + days);
-      } else {
-        dueDate.setDate(dueDate.getDate() + 30); // Padrão 30 dias
-      }
-
-      console.log(`[APPROVE_SALE] Data de vencimento calculada: ${dueDate.toISOString().split('T')[0]}`);
-
-      // Primeiro, atualizar o status da venda
+      // 1) Atualizar o status da venda primeiro (se existir trigger no BD, ele cria o lançamento aqui)
       const { error: updateError } = await supabase
         .from('sales')
         .update({
@@ -218,69 +161,72 @@ export const useSales = () => {
         })
         .eq('id', saleId);
 
-      if (updateError) {
-        console.error(`[APPROVE_SALE] Erro ao atualizar venda:`, updateError);
-        throw updateError;
-      }
+      if (updateError) throw updateError;
 
-      // Criar descrição completa incluindo o nome do cliente
-      const clientName = sale.orders?.client_name || sale.client_name || 'Cliente não identificado';
-      const description = `Venda confirmada - ${sale.sale_number} - ${clientName}`;
-      
-      console.log(`[APPROVE_SALE] Criando lançamento financeiro com descrição: ${description}`);
-
-      // Tentar criar o lançamento financeiro
-      const { data: financialEntry, error: financialError } = await supabase
+      // 2) Checar se já existe lançamento criado (por trigger ou execução anterior)
+      const { data: existingEntries, error: checkAfterUpdateError } = await supabase
         .from('financial_entries')
-        .insert({
-          user_id: user.id,
-          sale_id: saleId,
-          order_id: sale.order_id,
-          client_id: sale.client_id,
-          type: 'receivable',
-          description: description,
-          amount: sale.total_amount,
-          due_date: dueDate.toISOString().split('T')[0],
-          payment_status: 'pending',
-          account: sale.payment_method || '',
-          notes: `Venda aprovada em ${new Date().toLocaleDateString('pt-BR')} por ${user.email || 'Sistema'}`
-        })
-        .select()
-        .single();
+        .select('id')
+        .eq('sale_id', saleId)
+        .eq('user_id', user.id)
+        .eq('type', 'receivable');
 
-      if (financialError) {
-        console.error(`[APPROVE_SALE] Erro ao criar lançamento financeiro:`, financialError);
-        
-        // Se o erro for de constraint única (23505), significa que já existe um lançamento
-        if (financialError.code === '23505') {
-          console.log(`[APPROVE_SALE] Lançamento já existe devido à constraint única, operação bem-sucedida`);
-          toast.success('Venda aprovada com sucesso');
-          refreshSales();
-          return true;
+      if (checkAfterUpdateError) throw checkAfterUpdateError;
+
+      // Se não existir, cria manualmente
+      if (!existingEntries || existingEntries.length === 0) {
+        // Calcular data de vencimento baseada no prazo
+        let dueDate = new Date();
+        if (sale.payment_term) {
+          const days = parseInt(sale.payment_term.match(/\d+/)?.[0] || '30');
+          dueDate.setDate(dueDate.getDate() + days);
+        } else {
+          dueDate.setDate(dueDate.getDate() + 30); // Padrão 30 dias
         }
-        
-        // Para outros erros, tentar reverter o status da venda
-        await supabase
-          .from('sales')
-          .update({
-            status: 'pending',
-            confirmed_at: null,
-            confirmed_by: null,
-            updated_at: new Date().toISOString()
+
+        const clientName = sale.orders?.client_name || sale.client_name || 'Cliente não identificado';
+        const description = `Venda confirmada - ${sale.sale_number} - ${clientName}`;
+
+        const { error: financialError } = await supabase
+          .from('financial_entries')
+          .insert({
+            user_id: user.id,
+            sale_id: saleId,
+            order_id: sale.order_id,
+            client_id: sale.client_id,
+            type: 'receivable',
+            description,
+            amount: sale.total_amount,
+            due_date: dueDate.toISOString().split('T')[0],
+            payment_status: 'pending',
+            account: sale.payment_method || '',
+            notes: `Venda aprovada em ${new Date().toLocaleDateString('pt-BR')} por ${user.email || 'Sistema'}`
           })
-          .eq('id', saleId);
-        
-        throw financialError;
+          .select()
+          .single();
+
+        // Se houve erro mas for de UNIQUE (23505), significa corrida com outra criação: tratar como sucesso
+        if (financialError && financialError.code !== '23505') {
+          await supabase
+            .from('sales')
+            .update({
+              status: 'pending',
+              confirmed_at: null,
+              confirmed_by: null,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', saleId);
+          throw financialError;
+        }
       }
 
-      console.log(`[APPROVE_SALE] Venda aprovada com sucesso - ID: ${saleId}`, financialEntry);
-      toast.success('Venda aprovada e lançamento criado em contas a receber');
+      toast.success('Venda aprovada com sucesso');
       refreshSales();
       return true;
 
     } catch (error: any) {
       console.error(`[APPROVE_SALE] Erro ao aprovar venda ${saleId}:`, error);
-      toast.error('Erro ao aprovar venda: ' + error.message);
+      toast.error('Erro ao aprovar venda: ' + (error?.message || 'Desconhecido'));
       return false;
     }
   };
