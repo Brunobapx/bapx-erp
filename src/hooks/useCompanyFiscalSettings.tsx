@@ -266,7 +266,7 @@ export const useCompanyFiscalSettings = () => {
       for (const update of updates) {
         const { error } = await supabase
           .from('system_settings')
-          .upsert(update, { onConflict: 'key' });
+          .upsert(update, { onConflict: 'company_id, key' });
 
         if (error) throw error;
       }
