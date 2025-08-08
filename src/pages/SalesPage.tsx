@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { EditSaleModal } from '@/components/Modals/EditSaleModal';
 
 import { DeliverySlipModal } from '@/components/Modals/DeliverySlipModal';
-import { DollarSign, ChevronDown, Search, TrendingUp, FileText, Truck, Eye, Edit, Check, Plus } from 'lucide-react';
+import { DollarSign, ChevronDown, Search, TrendingUp, FileText, Truck, Eye, Edit, Check } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -36,7 +36,7 @@ const SalesPage = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [alerts, setAlerts] = useState([]);
 
-  const { sales, loading, error, updateSaleStatus, approveSale, refreshSales, createSaleFromOrder } = useSales();
+  const { sales, loading, error, updateSaleStatus, approveSale } = useSales();
   const { adicionarPedidoParaRoterizacao } = useRotasOtimizadas();
 
   // Filter items based on search query
@@ -105,7 +105,7 @@ const SalesPage = () => {
   };
 
   const handleCreateSale = () => {
-    toast.info("Para criar uma venda, gere a partir do pedido liberado usando o botão 'Gerar'.");
+    toast.info("Para criar uma venda, primeiro complete o processo de embalagem");
   };
 
   const handleEditModalClose = (refresh = false) => {
@@ -143,15 +143,6 @@ const SalesPage = () => {
     }
   };
 
-  const handleGenerateSale = async (item: any) => {
-    const orderId = String(item.id).replace('order-', '');
-    const ok = await createSaleFromOrder(orderId);
-    if (ok) {
-      toast.success('Venda gerada com sucesso');
-      refreshSales?.();
-    }
-  };
-
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'pending':
@@ -166,9 +157,7 @@ const SalesPage = () => {
         return status;
     }
   };
-  
-  const isSynthetic = (id: string) => String(id).startsWith('order-');
-  
+
   if (loading) {
     return (
       <div className="p-4 sm:p-6 space-y-6">
@@ -288,7 +277,7 @@ const SalesPage = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      {item.status === 'pending' && !isSynthetic(item.id) && (
+                      {item.status === 'pending' && (
                         <Button 
                           size="sm" 
                           variant="outline"
@@ -299,7 +288,7 @@ const SalesPage = () => {
                           Aprovar
                         </Button>
                       )}
-                      {(item.status === 'pending') && !isSynthetic(item.id) && (
+                      {(item.status === 'pending') && (
                         <Button 
                           size="sm" 
                           variant="outline"
@@ -310,70 +299,34 @@ const SalesPage = () => {
                           Editar
                         </Button>
                       )}
-                      {isSynthetic(item.id) ? (
-                        <Button
-                          size="sm"
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleViewDeliverySlip(item)}
+                        title="Visualizar Romaneio"
+                      >
+                        <Eye className="mr-1 h-3 w-3" />
+                        Ver
+                      </Button>
+                      {item.status === 'confirmed' && (
+                        <Button 
+                          size="sm" 
                           variant="outline"
-                          onClick={() => handleGenerateSale(item)}
-                          title="Gerar venda"
+                          onClick={() => handleInvoiceClick(item)}
                         >
-                          <Plus className="mr-1 h-3 w-3" />
-                          Gerar
+                          <FileText className="mr-1 h-3 w-3" />
+                          NF
                         </Button>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          {item.status === 'pending' && (
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => handleApproveClick(item)}
-                              title="Aprovar Venda"
-                            >
-                              <Check className="mr-1 h-3 w-3" />
-                              Aprovar
-                            </Button>
-                          )}
-                          {(item.status === 'pending') && (
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => handleEditClick(item)}
-                              title="Editar Venda"
-                            >
-                              <Edit className="mr-1 h-3 w-3" />
-                              Editar
-                            </Button>
-                          )}
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => handleViewDeliverySlip(item)}
-                            title="Visualizar Romaneio"
-                          >
-                            <Eye className="mr-1 h-3 w-3" />
-                            Ver
-                          </Button>
-                          {item.status === 'confirmed' && (
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => handleInvoiceClick(item)}
-                            >
-                              <FileText className="mr-1 h-3 w-3" />
-                              NF
-                            </Button>
-                          )}
-                          {(item.status === 'confirmed' || item.status === 'invoiced') && (
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => handleDeliveryClick(item)}
-                            >
-                              <Truck className="mr-1 h-3 w-3" />
-                              Entrega
-                            </Button>
-                          )}
-                        </div>
+                      )}
+                      {(item.status === 'confirmed' || item.status === 'invoiced') && (
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleDeliveryClick(item)}
+                        >
+                          <Truck className="mr-1 h-3 w-3" />
+                          Entrega
+                        </Button>
                       )}
                     </div>
                   </TableCell>

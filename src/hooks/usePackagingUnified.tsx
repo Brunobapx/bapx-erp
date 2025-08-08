@@ -341,9 +341,8 @@ export const usePackagingUnified = (options: UsePackagingOptions = {}) => {
 
       if (packError) throw packError;
 
-      // Resolver registro de tracking associado à embalagem e o order_id
+      // Resolver registro de tracking associado à embalagem
       let tracking: any = null;
-      let targetOrderId: string | null = packaging.order_id || null;
 
       // 1) Tente pelo tracking_id da própria embalagem
       if (packaging.tracking_id) {
@@ -355,15 +354,13 @@ export const usePackagingUnified = (options: UsePackagingOptions = {}) => {
         if (byId) tracking = byId;
       }
 
-      // 2) Se não encontrou, tente via produção -> order_item_id (e derive o order_id)
+      // 2) Se não encontrou, tente via produção -> order_item_id
       if (!tracking && packaging.production_id) {
         const { data: production } = await supabase
           .from('production')
           .select('order_item_id, tracking_id')
           .eq('id', packaging.production_id)
           .maybeSingle();
-
-        // Resolver tracking via produção
         if (production?.tracking_id) {
           const { data: byProdTrack } = await supabase
             .from('order_item_tracking')
@@ -380,25 +377,14 @@ export const usePackagingUnified = (options: UsePackagingOptions = {}) => {
             .maybeSingle();
           if (byOrderItem) tracking = byOrderItem;
         }
-
-        // Derivar order_id a partir do order_item_id
-        if (!targetOrderId && production?.order_item_id) {
-          const { data: orderItemRow } = await supabase
-            .from('order_items')
-            .select('order_id')
-            .eq('id', production.order_item_id)
-            .maybeSingle();
-          if (orderItemRow?.order_id) targetOrderId = orderItemRow.order_id;
-        }
       }
 
-      // 3) Fallback: tente localizar pelo pedido + produto (usando targetOrderId se existir)
-      if (!tracking && (targetOrderId || packaging.order_id)) {
-        const orderIdToUse = targetOrderId || packaging.order_id;
+      // 3) Fallback: tente localizar pelo pedido + produto
+      if (!tracking && packaging.order_id) {
         const { data: item } = await supabase
           .from('order_items')
           .select('id')
-          .eq('order_id', orderIdToUse!)
+          .eq('order_id', packaging.order_id)
           .eq('product_id', packaging.product_id)
           .maybeSingle();
         if (item) {
@@ -409,16 +395,6 @@ export const usePackagingUnified = (options: UsePackagingOptions = {}) => {
             .maybeSingle();
           if (byItem) tracking = byItem;
         }
-      }
-
-      // Última tentativa de derivar o order_id pelo tracking
-      if (!targetOrderId && tracking?.order_item_id) {
-        const { data: orderItemRow } = await supabase
-          .from('order_items')
-          .select('order_id')
-          .eq('id', tracking.order_item_id)
-          .maybeSingle();
-        if (orderItemRow?.order_id) targetOrderId = orderItemRow.order_id;
       }
 
       if (tracking) {
@@ -438,16 +414,8 @@ export const usePackagingUnified = (options: UsePackagingOptions = {}) => {
 
         if (trackingError) throw trackingError;
 
-        // Se descobrimos o order_id e ele não está salvo na embalagem, persistir para consistência
-        if (!packaging.order_id && targetOrderId) {
-          await supabase
-            .from('packaging')
-            .update({ order_id: targetOrderId })
-            .eq('id', packaging.id);
-        }
-
         // Verificar se todos os itens do pedido estão prontos para liberar
-        if (targetOrderId) {
+        if (packaging.order_id) {
           const { data: allTrackings, error: allError } = await supabase
             .from('order_item_tracking')
             .select(`
@@ -455,7 +423,7 @@ export const usePackagingUnified = (options: UsePackagingOptions = {}) => {
               quantity_packaged_approved,
               order_items!inner(id, order_id, unit_price, quantity)
             `)
-            .eq('order_items.order_id', targetOrderId);
+            .eq('order_items.order_id', packaging.order_id);
 
           if (!allError && allTrackings) {
             const allReady = allTrackings.every(t => 
@@ -475,51 +443,41 @@ export const usePackagingUnified = (options: UsePackagingOptions = {}) => {
               const { data: existingSale } = await supabase
                 .from('sales')
                 .select('id, user_id')
-                .eq('order_id', targetOrderId)
+                .eq('order_id', packaging.order_id)
                 .maybeSingle();
 
               const { data: orderRow } = await supabase
                 .from('orders')
                 .select('client_id, client_name, user_id, seller_id')
-                .eq('id', targetOrderId)
+                .eq('id', packaging.order_id)
                 .maybeSingle();
 
-              const currentUserId = user?.id || orderRow?.user_id || null;
+              const ownerUserId = orderRow?.user_id || user?.id || null;
 
               if (!existingSale) {
-                // Gerar número de venda (sequência por empresa)
-                const { data: seq } = await supabase
-                  .rpc('generate_sequence_number', { prefix: 'V', table_name: 'sales', user_id: currentUserId });
-                const saleNumber = seq ?? `V-${Date.now()}`;
-
                 await supabase
                   .from('sales')
                   .insert({
-                    user_id: currentUserId!,
+                    user_id: ownerUserId!,
                     salesperson_id: orderRow?.seller_id || null,
-                    order_id: targetOrderId,
+                    order_id: packaging.order_id,
                     client_id: orderRow?.client_id,
                     client_name: orderRow?.client_name || '',
                     total_amount: newTotal,
-                    sale_number: saleNumber,
                     status: 'pending'
                   });
               } else {
-                if (existingSale.user_id === currentUserId) {
-                  await supabase
-                    .from('sales')
-                    .update({
-                      user_id: currentUserId!,
-                      salesperson_id: orderRow?.seller_id || null,
-                      client_id: orderRow?.client_id,
-                      client_name: orderRow?.client_name || '',
-                      total_amount: newTotal,
-                      updated_at: new Date().toISOString()
-                    })
-                    .eq('id', existingSale.id);
-                } else {
-                  console.warn('[PACKAGING] Venda existente pertence a outro usuário; ignorando atualização para cumprir RLS.');
-                }
+                await supabase
+                  .from('sales')
+                  .update({
+                    user_id: ownerUserId!,
+                    salesperson_id: orderRow?.seller_id || null,
+                    client_id: orderRow?.client_id,
+                    client_name: orderRow?.client_name || '',
+                    total_amount: newTotal,
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('id', existingSale.id);
               }
             } catch (saleCreateErr) {
               console.warn('[PACKAGING] Não foi possível criar/atualizar a venda automaticamente:', saleCreateErr);
@@ -555,11 +513,11 @@ export const usePackagingUnified = (options: UsePackagingOptions = {}) => {
                   total_amount: newTotal,
                   updated_at: new Date().toISOString()
                 })
-                .eq('id', targetOrderId);
+                .eq('id', packaging.order_id);
 
               if (orderError) throw orderError;
 
-              console.log(`[PACKAGING] Pedido ${targetOrderId} liberado para venda com total recalculado:`, newTotal);
+              console.log(`[PACKAGING] Pedido ${packaging.order_id} liberado para venda com total recalculado:`, newTotal);
             }
           }
         }

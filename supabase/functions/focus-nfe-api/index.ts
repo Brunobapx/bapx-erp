@@ -58,19 +58,10 @@ serve(async (req) => {
 async function emitirNFe(supabase: any, userId: string, payload: any) {
   const { pedidoId } = payload;
 
-  // Buscar company_id do usuário e configurações da empresa
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('company_id')
-    .eq('id', userId)
-    .maybeSingle();
-  const companyId = profile?.company_id || null;
-
-  // Buscar configurações Focus NFe, fiscais e dados da empresa do sistema (por empresa)
+  // Buscar configurações Focus NFe, fiscais e dados da empresa do sistema
   const { data: allSettings } = await supabase
     .from('system_settings')
     .select('key, value')
-    .eq('company_id', companyId)
     .in('key', [
       'focus_nfe_token', 'focus_nfe_environment', 'focus_nfe_enabled',
       'tax_regime', 'default_cfop', 'default_ncm', 'icms_cst', 'icms_origem',
@@ -497,18 +488,10 @@ async function consultarStatus(supabase: any, userId: string, payload: any) {
     throw new Error('Nota não encontrada');
   }
 
-  // Buscar configurações Focus NFe (da empresa do usuário)
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('company_id')
-    .eq('id', userId)
-    .maybeSingle();
-  const companyId = profile?.company_id || null;
-
+  // Buscar configurações Focus NFe
   const { data: focusSettings } = await supabase
     .from('system_settings')
     .select('key, value')
-    .eq('company_id', companyId)
     .in('key', ['focus_nfe_token', 'focus_nfe_environment', 'nota_fiscal_ambiente']);
 
   const configMap = focusSettings?.reduce((acc, setting) => {
@@ -591,18 +574,10 @@ async function cancelarNFe(supabase: any, userId: string, payload: any) {
     throw new Error('Nota não encontrada');
   }
 
-  // Buscar configurações Focus NFe (da empresa do usuário)
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('company_id')
-    .eq('id', userId)
-    .maybeSingle();
-  const companyId = profile?.company_id || null;
-
+  // Buscar configurações Focus NFe
   const { data: focusSettings } = await supabase
     .from('system_settings')
     .select('key, value')
-    .eq('company_id', companyId)
     .in('key', ['focus_nfe_token', 'focus_nfe_environment', 'nota_fiscal_ambiente']);
 
   const configMap = focusSettings?.reduce((acc, setting) => {
@@ -695,18 +670,10 @@ async function obterPDF(supabase: any, userId: string, payload: any) {
     throw new Error('DANFE não disponível para esta nota');
   }
 
-  // Buscar configurações Focus NFe (da empresa do usuário)
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('company_id')
-    .eq('id', userId)
-    .maybeSingle();
-  const companyId = profile?.company_id || null;
-
+  // Buscar configurações Focus NFe
   const { data: focusSettings } = await supabase
     .from('system_settings')
     .select('key, value')
-    .eq('company_id', companyId)
     .in('key', ['focus_nfe_token', 'focus_nfe_environment', 'nota_fiscal_ambiente']);
 
   const configMap = focusSettings?.reduce((acc, setting) => {
@@ -786,18 +753,10 @@ async function obterXML(supabase: any, userId: string, payload: any) {
     throw new Error('XML não disponível para esta nota');
   }
 
-  // Buscar configurações Focus NFe (da empresa do usuário)
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('company_id')
-    .eq('id', userId)
-    .maybeSingle();
-  const companyId = profile?.company_id || null;
-
+  // Buscar configurações Focus NFe
   const { data: focusSettings } = await supabase
     .from('system_settings')
     .select('key, value')
-    .eq('company_id', companyId)
     .in('key', ['focus_nfe_token', 'focus_nfe_environment', 'nota_fiscal_ambiente']);
 
   const configMap = focusSettings?.reduce((acc, setting) => {

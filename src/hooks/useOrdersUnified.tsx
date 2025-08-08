@@ -198,11 +198,7 @@ export const useOrdersUnified = (options: UseOrdersOptions = {}) => {
 
         const hasDirectSale = (products || []).some(p => p.is_direct_sale);
         if (hasDirectSale) {
-          // Gerar número de venda (sequência por empresa)
-          const { data: seq } = await supabase
-            .rpc('generate_sequence_number', { prefix: 'V', table_name: 'sales', user_id: user.id });
-          const saleNumber = seq ?? `V-${Date.now()}`;
-
+          // Criar venda baseada no pedido
           const { data: sale, error: saleError } = await supabase
             .from('sales')
             .insert({
@@ -211,7 +207,6 @@ export const useOrdersUnified = (options: UseOrdersOptions = {}) => {
               client_id: orderData.client_id,
               client_name: orderData.client_name,
               total_amount: totalAmount,
-              sale_number: saleNumber,
               status: 'pending'
             })
             .select()

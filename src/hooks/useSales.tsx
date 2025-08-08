@@ -59,7 +59,7 @@ export const useSales = () => {
           .from('sales')
           .select(`
             *,
-            orders(
+            orders!inner(
               order_number,
               client_name
             )
@@ -68,52 +68,14 @@ export const useSales = () => {
         
         if (error) throw error;
         
-        const salesWithOrderInfo = (data || []).map((sale: any) => ({
+        // Mapear os dados para incluir order_number
+        const salesWithOrderInfo = (data || []).map(sale => ({
           ...sale,
           order_number: sale.orders?.order_number || '',
-          seller: 'N/A'
+          seller: 'N/A' // Removido referência ao seller inexistente
         }));
-
-        // Também buscar pedidos liberados para venda que ainda NÃO possuem venda
-        const { data: ordersReleased, error: ordersErr } = await supabase
-          .from('orders')
-          .select(`
-            id,
-            order_number,
-            client_id,
-            client_name,
-            total_amount,
-            created_at,
-            user_id,
-            seller_id,
-            seller_name,
-            sales(id)
-          `)
-          .eq('status', 'released_for_sale');
-
-        if (ordersErr) throw ordersErr;
-
-        const ordersWithoutSale = (ordersReleased || []).filter((o: any) => !o.sales || o.sales.length === 0);
-        const syntheticSales = ordersWithoutSale.map((o: any) => ({
-          id: `order-${o.id}`,
-          sale_number: '(A criar)',
-          order_id: o.id,
-          client_id: o.client_id,
-          client_name: o.client_name,
-          total_amount: Number(o.total_amount) || 0,
-          status: 'pending' as SaleStatus,
-          created_at: o.created_at,
-          updated_at: o.created_at,
-          user_id: o.user_id,
-          order_number: o.order_number,
-          salesperson_id: o.seller_id,
-          seller: o.seller_name || 'N/A'
-        }));
-
-        const combined = [...syntheticSales, ...salesWithOrderInfo]
-          .sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
         
-        setSales(combined);
+        setSales(salesWithOrderInfo);
       } catch (error: any) {
         console.error('Erro ao carregar vendas:', error);
         setError(error.message || 'Erro ao carregar vendas');
@@ -179,7 +141,7 @@ export const useSales = () => {
         .from('sales')
         .select(`
           *,
-          orders(
+          orders!inner(
             order_number,
             client_name
           )
@@ -342,7 +304,6 @@ export const useSales = () => {
             unit_price,
             total_price,
             orders!inner(
-              id,
               order_number,
               client_id,
               client_name,
@@ -357,18 +318,12 @@ export const useSales = () => {
 
       const orderData = productionData.order_items.orders;
 
-      // Gerar número de venda (sequência por empresa)
-      const { data: seq } = await supabase
-        .rpc('generate_sequence_number', { prefix: 'V', table_name: 'sales', user_id: user.id });
-      const saleNumber = seq ?? `V-${Date.now()}`;
-
       const saleData = {
         user_id: user.id,
         order_id: orderData.id,
         client_id: orderData.client_id,
         client_name: orderData.client_name,
         total_amount: orderData.total_amount,
-        sale_number: saleNumber,
         status: 'pending' as SaleStatus
       };
 
@@ -390,57 +345,6 @@ export const useSales = () => {
     }
   };
 
-  const createSaleFromOrder = async (orderId: string) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado');
-
-      // Verificar se já existe venda
-      const { data: existing } = await supabase
-        .from('sales')
-        .select('id')
-        .eq('order_id', orderId)
-        .maybeSingle();
-      if (existing) {
-        toast.info('Venda já existe para este pedido');
-        return true;
-      }
-
-      const { data: order, error: orderErr } = await supabase
-        .from('orders')
-        .select('id, client_id, client_name, total_amount, seller_id')
-        .eq('id', orderId)
-        .maybeSingle();
-      if (orderErr || !order) throw orderErr || new Error('Pedido não encontrado');
-
-      const { data: seq } = await supabase
-        .rpc('generate_sequence_number', { prefix: 'V', table_name: 'sales', user_id: user.id });
-      const saleNumber = seq ?? `V-${Date.now()}`;
-
-      const { error } = await supabase
-        .from('sales')
-        .insert({
-          user_id: user.id,
-          salesperson_id: order.seller_id || null,
-          order_id: order.id,
-          client_id: order.client_id,
-          client_name: order.client_name,
-          total_amount: order.total_amount,
-          sale_number: saleNumber,
-          status: 'pending'
-        });
-      if (error) throw error;
-
-      toast.success('Venda gerada');
-      refreshSales();
-      return true;
-    } catch (e: any) {
-      console.error('Erro ao gerar venda pelo pedido:', e);
-      toast.error('Erro ao gerar venda');
-      return false;
-    }
-  };
-
   return {
     sales,
     loading,
@@ -448,7 +352,6 @@ export const useSales = () => {
     refreshSales,
     updateSaleStatus,
     approveSale,
-    createSaleFromPackaging,
-    createSaleFromOrder
+    createSaleFromPackaging
   };
 };
