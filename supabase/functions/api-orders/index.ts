@@ -112,16 +112,6 @@ Deno.serve(async (req) => {
           return createErrorResponse('Cliente não encontrado');
         }
 
-        // Buscar empresa do usuário
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('company_id')
-          .eq('id', user!.id)
-          .single();
-
-        if (!profile?.company_id) {
-          return createErrorResponse('Empresa do usuário não localizada');
-        }
 
         // Calcular total
         const total = orderData.items.reduce((sum: number, item: any) => 
@@ -140,8 +130,7 @@ Deno.serve(async (req) => {
             payment_term: orderData.payment_term,
             delivery_deadline: orderData.delivery_deadline,
             notes: orderData.notes,
-            status: 'pending',
-            company_id: profile.company_id
+            status: 'pending'
           }])
           .select()
           .single();
@@ -158,8 +147,7 @@ Deno.serve(async (req) => {
           product_name: item.product_name,
           quantity: item.quantity,
           unit_price: item.unit_price,
-          total_price: item.quantity * item.unit_price,
-          company_id: profile.company_id
+          total_price: item.quantity * item.unit_price
         }));
 
         const { error: itemsError } = await supabase
