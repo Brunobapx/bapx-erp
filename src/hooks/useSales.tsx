@@ -59,7 +59,7 @@ export const useSales = () => {
           .from('sales')
           .select(`
             *,
-            orders!inner(
+            orders(
               order_number,
               client_name
             )
@@ -141,7 +141,7 @@ export const useSales = () => {
         .from('sales')
         .select(`
           *,
-          orders!inner(
+          orders(
             order_number,
             client_name
           )
