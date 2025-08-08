@@ -116,6 +116,17 @@ export const useOrdersUnified = (options: UseOrdersOptions = {}) => {
         throw new Error('Sessão expirada. Faça login novamente.');
       }
 
+      // Buscar company_id do perfil do usuário
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (!profile?.company_id) {
+        throw new Error('Empresa do usuário não localizada. Associe o usuário a uma empresa.');
+      }
+
       // Validar estoque antes de criar (adaptar tipos)
       const itemsForValidation = orderData.items.map(item => ({
         ...item,
@@ -145,7 +156,7 @@ export const useOrdersUnified = (options: UseOrdersOptions = {}) => {
         .insert({
           client_id: orderData.client_id,
           client_name: orderData.client_name,
-          seller_id: orderData.seller_id,
+          seller_id: orderData.seller_id || null,
           seller_name: orderData.seller_name,
           delivery_deadline: orderData.delivery_deadline?.toISOString().split('T')[0],
           payment_method: orderData.payment_method,
@@ -153,6 +164,7 @@ export const useOrdersUnified = (options: UseOrdersOptions = {}) => {
           notes: orderData.notes,
           total_amount: totalAmount,
           status: 'pending',
+          company_id: profile.company_id,
           user_id: user.id
         })
         .select()
@@ -168,6 +180,7 @@ export const useOrdersUnified = (options: UseOrdersOptions = {}) => {
         quantity: item.quantity,
         unit_price: item.unit_price,
         total_price: item.quantity * item.unit_price,
+        company_id: profile.company_id,
         user_id: user.id
       }));
 
@@ -206,7 +219,8 @@ export const useOrdersUnified = (options: UseOrdersOptions = {}) => {
               client_id: orderData.client_id,
               client_name: orderData.client_name,
               total_amount: totalAmount,
-              status: 'pending'
+              status: 'pending',
+              company_id: profile.company_id
             })
             .select()
             .single();
