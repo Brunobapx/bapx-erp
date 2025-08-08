@@ -35,11 +35,25 @@ Deno.serve(async (req) => {
   console.log('Focus NFe - Request body:', requestBody)
   console.log('Focus NFe - Action:', action, 'Data:', data)
 
-  // Buscar configurações do Focus NFe
+  // Empresa do usuário (emissão por empresa)
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('company_id')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  if (profileError) {
+    console.error('Erro ao carregar perfil:', profileError)
+    throw new Error('Não foi possível identificar a empresa do usuário')
+  }
+  const companyId = profile?.company_id || null;
+
+  // Buscar configurações do Focus NFe (por empresa)
   const { data: settings, error: settingsError } = await supabase
     .from('system_settings')
     .select('key, value')
-    .in('key', ['focus_nfe_token', 'focus_nfe_environment', 'focus_nfe_enabled'])
+    .eq('company_id', companyId)
+    .in('key', ['focus_nfe_token', 'focus_nfe_environment', 'focus_nfe_enabled', 'nota_fiscal_ambiente'])
 
   if (settingsError) {
     console.error('Erro ao buscar configurações:', settingsError)
@@ -58,8 +72,9 @@ Deno.serve(async (req) => {
     }
   }
 
+  const normalize = (v: any) => (v === 'true' ? true : v === 'false' ? false : v)
   const configMap = settings.reduce((acc, setting) => {
-    acc[setting.key] = safeJsonParse(setting.value as string)
+    acc[setting.key] = normalize(safeJsonParse(setting.value as string))
     return acc
   }, {} as Record<string, any>)
 
@@ -76,7 +91,8 @@ Deno.serve(async (req) => {
     }
   }
 
-    const focusApiUrl = configMap.focus_nfe_environment === 'producao' 
+    const environment = (configMap.focus_nfe_environment || configMap.nota_fiscal_ambiente || 'homologacao')
+    const focusApiUrl = environment === 'producao' 
       ? 'https://api.focusnfe.com.br'
       : 'https://homologacao.focusnfe.com.br'
 
@@ -85,7 +101,7 @@ Deno.serve(async (req) => {
       
       // Teste simples de conexão
       const testToken = (data && data.token) || configMap.focus_nfe_token
-      const testEnvironment = (data && data.environment) || configMap.focus_nfe_environment
+      const testEnvironment = (data && data.environment) || configMap.focus_nfe_environment || configMap.nota_fiscal_ambiente || 'homologacao'
       
       console.log('Token recebido (primeiros 10 caracteres):', testToken?.substring(0, 10))
       console.log('Ambiente:', testEnvironment)
@@ -215,14 +231,18 @@ Deno.serve(async (req) => {
       console.log('- Itens:', orderItems)
       console.log('- Cliente:', client)
 
-      // Buscar configurações da empresa
       const { data: companySettings, error: companyError } = await supabase
         .from('system_settings')
         .select('key, value')
+        .eq('company_id', companyId)
         .in('key', [
-          'company_name', 'company_cnpj', 'company_ie', 'company_cep', 
-          'company_street', 'company_number', 'company_neighborhood', 
-          'company_city', 'company_state', 'company_phone'
+          'company_name','company_fantasy_name','company_cnpj','company_ie','company_cep',
+          'company_address','company_number','company_complement','company_neighborhood',
+          'company_city','company_state','company_phone',
+          'tax_regime','default_cfop','default_ncm','icms_cst','icms_origem',
+          'pis_cst','pis_aliquota','cofins_cst','cofins_aliquota',
+          'csosn_padrao','cst_padrao','icms_percentual',
+          'informar_valor_total_tributos','percentual_carga_tributaria'
         ])
 
       if (companyError) {
@@ -234,106 +254,113 @@ Deno.serve(async (req) => {
         return acc
       }, {} as Record<string, any>)
 
-      // Montar dados da NFe para Focus NFe usando dados reais da empresa
+      // Montar dados da NFe para Focus NFe usando dados reais da empresa (por empresa)
+      const sanitizeDigits = (v: any) => (typeof v === 'string' ? v.replace(/[^\d]/g, '') : v)
+      const isSN = ['1','2',1,2].includes((companyData.tax_regime ?? '').toString())
+      const defaultCFOP = companyData.default_cfop || '5101'
+      const defaultNCM = companyData.default_ncm || '19059090'
+      const pisCst = companyData.pis_cst || (isSN ? '49' : '01')
+      const cofinsCst = companyData.cofins_cst || (isSN ? '49' : '01')
+      const pisAliq = parseFloat(companyData.pis_aliquota || (isSN ? '0' : '1.65'))
+      const cofinsAliq = parseFloat(companyData.cofins_aliquota || (isSN ? '0' : '7.6'))
+      const icmsOrigem = parseInt(companyData.icms_origem || '0')
+      const icmsPercentual = parseFloat(companyData.icms_percentual || '0')
+      const icmsCst = companyData.icms_cst || companyData.cst_padrao || '00'
+      const icmsCsosn = companyData.csosn_padrao || '102'
+      const informarVTotTrib = !!companyData.informar_valor_total_tributos
+      const cargaTribPercent = parseFloat(companyData.percentual_carga_tributaria || '0')
+
       const nfeData = {
-        natureza_operacao: "VENDA",
+        natureza_operacao: 'VENDA',
         data_emissao: new Date().toISOString().split('T')[0],
         data_entrada_saida: new Date().toISOString().split('T')[0],
-        tipo_documento: 1, // Saída
-        finalidade_emissao: 1, // Normal
-        local_destino: 1, // Operação interna (mesmo estado)
-        consumidor_final: client.type === 'pf' || !client.ie ? 1 : 0, // 1=PF ou PJ sem IE (consumidor final), 0=PJ com IE (não consumidor final)
-        presenca_comprador: 1, // Operação presencial
-        
-        // Dados do emitente (ARTISAN BREAD)
-        cnpj_emitente: "39524018000128",
-        nome_emitente: "ARTISAN BREAD PAES ARTESANAIS LTDA",
-        nome_fantasia_emitente: "ARTISAN",
-        logradouro_emitente: "V PASTOR MARTIN LUTHER KING JR.",
-        numero_emitente: "11026",
-        complemento_emitente: "LOJA A",
-        bairro_emitente: "ACARI",
-        municipio_emitente: "Rio de Janeiro",
-        uf_emitente: "RJ",
-        cep_emitente: "21530014",
-        telefone_emitente: "21643352067",
-        inscricao_estadual_emitente: "11867847",
-        regime_tributario_emitente: 3, // Regime Normal (baseado no porte da empresa)
-        
-        // Dados do destinatário
-        cpf_destinatario: client.cpf?.replace(/[^\d]/g, ''),
-        cnpj_destinatario: client.cnpj?.replace(/[^\d]/g, ''),
+        tipo_documento: 1,
+        finalidade_emissao: 1,
+        local_destino: 1,
+        consumidor_final: client.type === 'pf' || !client.ie ? 1 : 0,
+        presenca_comprador: 1,
+
+        // Emitente (da empresa atual)
+        cnpj_emitente: sanitizeDigits(companyData.company_cnpj || companyData.cnpj_emissor || ''),
+        nome_emitente: companyData.company_name,
+        nome_fantasia_emitente: companyData.company_fantasy_name || companyData.company_name,
+        logradouro_emitente: companyData.company_address,
+        numero_emitente: companyData.company_number || 'S/N',
+        complemento_emitente: companyData.company_complement || undefined,
+        bairro_emitente: companyData.company_neighborhood,
+        municipio_emitente: companyData.company_city,
+        uf_emitente: companyData.company_state,
+        cep_emitente: sanitizeDigits(companyData.company_cep),
+        telefone_emitente: sanitizeDigits(companyData.company_phone || ''),
+        inscricao_estadual_emitente: companyData.company_ie,
+        regime_tributario_emitente: parseInt(companyData.tax_regime || '3'),
+
+        // Destinatário
+        cpf_destinatario: client.cpf ? sanitizeDigits(client.cpf) : undefined,
+        cnpj_destinatario: client.cnpj ? sanitizeDigits(client.cnpj) : undefined,
         nome_destinatario: client.name,
         logradouro_destinatario: client.address,
-        numero_destinatario: client.number || "S/N",
+        numero_destinatario: client.number || 'S/N',
         bairro_destinatario: client.bairro,
         municipio_destinatario: client.city,
         uf_destinatario: client.state,
-        cep_destinatario: client.zip?.replace(/[^\d]/g, ''),
-        indicador_ie_destinatario: client.ie ? 1 : (client.type === 'pf' ? 2 : 9), // 1=Contribuinte, 2=Isento, 9=Não contribuinte
-        
-        // Modalidade de frete
-        modalidade_frete: 3, // Por conta do destinatário
+        cep_destinatario: client.zip ? sanitizeDigits(client.zip) : undefined,
+        indicador_ie_destinatario: client.ie ? 1 : (client.type === 'pf' ? 2 : 9),
+
+        // Frete
+        modalidade_frete: 3,
 
         // Itens da nota
-        itens: orderItems.map((item: any, index: number) => ({
-          numero_item: index + 1,
-          codigo_produto: item.products?.code || item.product_id,
-          codigo_ean: "SEM GTIN", // Código de barras padrão
-          descricao: item.product_name,
-          cfop: "5405", // Venda de mercadoria com substituição tributária
-          unidade_comercial: item.products?.unit || "CX",
-          quantidade_comercial: item.quantity,
-          valor_unitario_comercial: item.unit_price,
-          valor_total_bruto: item.total_price,
-          codigo_ean_tributavel: "SEM GTIN",
-          unidade_tributavel: item.products?.unit || "CX",
-          quantidade_tributavel: item.quantity,
-          valor_unitario_tributavel: item.unit_price,
-          
-          // NCM e CEST - usar do produto ou padrão para pães
-          codigo_ncm: item.products?.ncm || "19059090", // Outros produtos de padaria
-          codigo_cest: "1706200", // CEST para produtos de padaria
-          
-          // ICMS - Substituição Tributária (conforme NFe anterior)
-          icms_origem: 0, // Nacional
-          icms_situacao_tributaria: "60", // ICMS cobrado por substituição tributária
-          
-          // PIS - Regime cumulativo
-          pis_situacao_tributaria: "01", // Operação tributável com alíquota básica
-          pis_aliquota_porcentual: 1.65, // 1,65% - corrigido conforme XML
-          
-          // COFINS - Regime cumulativo  
-          cofins_situacao_tributaria: "01", // Operação tributável com alíquota básica
-          cofins_aliquota_porcentual: 7.60, // 7,60% - corrigido conforme XML
-          
-          valor_total_tributos: item.total_price * 0.0925, // 9,25% (PIS + COFINS corrigido)
-          
-          // Indicador se compõe valor total
-          indicador_total: 1 // Sim, compõe o valor total
-        })),
+        itens: orderItems.map((item: any, index: number) => {
+          const valorTotal = Number(item.total_price) || 0
+          const valorTributos = informarVTotTrib && cargaTribPercent > 0 ? (valorTotal * cargaTribPercent / 100) : 0
+          const base = {
+            numero_item: index + 1,
+            codigo_produto: item.products?.code || item.product_id,
+            codigo_ean: 'SEM GTIN',
+            descricao: item.product_name,
+            cfop: defaultCFOP,
+            unidade_comercial: item.products?.unit || 'UN',
+            quantidade_comercial: item.quantity,
+            valor_unitario_comercial: item.unit_price,
+            valor_total_bruto: valorTotal,
+            codigo_ean_tributavel: 'SEM GTIN',
+            unidade_tributavel: item.products?.unit || 'UN',
+            quantidade_tributavel: item.quantity,
+            valor_unitario_tributavel: item.unit_price,
+            codigo_ncm: item.products?.ncm || defaultNCM,
+            valor_total_tributos: valorTributos,
+            inclui_no_total: 1
+          } as any
 
-        // Totais calculados
+          const icms = isSN
+            ? { icms_origem: icmsOrigem, icms_csosn: icmsCsosn }
+            : { icms_origem: icmsOrigem, icms_situacao_tributaria: icmsCst, ...(icmsPercentual > 0 ? { icms_aliquota_porcentual: icmsPercentual } : {}) }
+
+          const pisCofins = {
+            pis_situacao_tributaria: pisCst,
+            ...(pisAliq > 0 ? { pis_aliquota_porcentual: pisAliq } : {}),
+            cofins_situacao_tributaria: cofinsCst,
+            ...(cofinsAliq > 0 ? { cofins_aliquota_porcentual: cofinsAliq } : {})
+          }
+
+          return { ...base, ...icms, ...pisCofins }
+        }),
+
+        // Totais e peso
         valor_produtos: sale.total_amount,
         valor_total: sale.total_amount,
-        
-        // Peso total da nota (somar peso dos produtos)
         peso_liquido: orderItems.reduce((total: number, item: any) => {
-          const weight = item.products?.weight || 1; // Peso padrão se não informado
-          return total + (weight * item.quantity);
+          const weight = item.products?.weight || 1
+          return total + (weight * item.quantity)
         }, 0),
 
-        // Informações complementares conforme modelo obrigatório (Regime Normal)
+        // Informações complementares
         informacoes_adicionais_contribuinte: [
           `VENDA ${sale.sale_number} - PEDIDO ${order.order_number}`,
-          `VALOR APROXIMADO DOS TRIBUTOS DESTA NOTA: R$ ${(sale.total_amount * 0.0925).toFixed(2)} (9,25%)`,
-          `FONTE: IBPT/EMPRESOMETRO.COM.BR`,
-          `CHAVE DE ACESSO PARA CONSULTA DE AUTENTICIDADE:`,
-          `LEI DA TRANSPARENCIA (LEI N 12.741/2012)`,
-          `INFORMACOES DOS TRIBUTOS INCIDENTES SOBRE PRODUTOS/SERVICOS`,
-          `TRIBUTOS FEDERAIS APROXIMADOS: R$ ${(sale.total_amount * 0.0925).toFixed(2)}`,
+          informarVTotTrib && cargaTribPercent > 0 ? `VALOR APROXIMADO DOS TRIBUTOS: ${(Number(sale.total_amount) * cargaTribPercent / 100).toFixed(2)} (${cargaTribPercent}%)` : '',
           data.observations || ''
-        ].filter(info => info.trim() !== '').join(' - ')
+        ].filter((info) => (info || '').toString().trim() !== '').join(' - ')
       }
 
       console.log('NFe Data montada:', JSON.stringify(nfeData, null, 2))
