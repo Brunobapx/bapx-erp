@@ -96,13 +96,18 @@ export const useOrderFormActions = ({
         throw new Error('Usuário não autenticado');
       }
 
-      // Criar a venda baseada no pedido
+      // Gerar número de venda (sequência por empresa)
+      const { data: seq } = await supabase
+        .rpc('generate_sequence_number', { prefix: 'V', table_name: 'sales', user_id: user.id });
+      const saleNumber = seq ?? `V-${Date.now()}`;
+
       const saleData = {
         user_id: user.id,
         order_id: orderId,
         client_id: formData.client_id,
         client_name: formData.client_name,
         total_amount: formData.total_amount,
+        sale_number: saleNumber,
         status: 'pending'
       };
 

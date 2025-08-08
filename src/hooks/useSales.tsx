@@ -304,6 +304,7 @@ export const useSales = () => {
             unit_price,
             total_price,
             orders!inner(
+              id,
               order_number,
               client_id,
               client_name,
@@ -318,12 +319,18 @@ export const useSales = () => {
 
       const orderData = productionData.order_items.orders;
 
+      // Gerar número de venda (sequência por empresa)
+      const { data: seq } = await supabase
+        .rpc('generate_sequence_number', { prefix: 'V', table_name: 'sales', user_id: user.id });
+      const saleNumber = seq ?? `V-${Date.now()}`;
+
       const saleData = {
         user_id: user.id,
         order_id: orderData.id,
         client_id: orderData.client_id,
         client_name: orderData.client_name,
         total_amount: orderData.total_amount,
+        sale_number: saleNumber,
         status: 'pending' as SaleStatus
       };
 

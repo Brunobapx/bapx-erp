@@ -487,6 +487,11 @@ export const usePackagingUnified = (options: UsePackagingOptions = {}) => {
               const currentUserId = user?.id || orderRow?.user_id || null;
 
               if (!existingSale) {
+                // Gerar número de venda (sequência por empresa)
+                const { data: seq } = await supabase
+                  .rpc('generate_sequence_number', { prefix: 'V', table_name: 'sales', user_id: currentUserId });
+                const saleNumber = seq ?? `V-${Date.now()}`;
+
                 await supabase
                   .from('sales')
                   .insert({
@@ -496,6 +501,7 @@ export const usePackagingUnified = (options: UsePackagingOptions = {}) => {
                     client_id: orderRow?.client_id,
                     client_name: orderRow?.client_name || '',
                     total_amount: newTotal,
+                    sale_number: saleNumber,
                     status: 'pending'
                   });
               } else {
@@ -515,6 +521,7 @@ export const usePackagingUnified = (options: UsePackagingOptions = {}) => {
                   console.warn('[PACKAGING] Venda existente pertence a outro usuário; ignorando atualização para cumprir RLS.');
                 }
               }
+            }
             } catch (saleCreateErr) {
               console.warn('[PACKAGING] Não foi possível criar/atualizar a venda automaticamente:', saleCreateErr);
             }
