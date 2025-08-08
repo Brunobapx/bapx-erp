@@ -756,6 +756,7 @@ export type Database = {
           cfop_padrao: string | null
           cnpj_emissor: string
           cofins_percentual: number | null
+          company_id: string | null
           created_at: string
           csosn_padrao: string | null
           cst_padrao: string | null
@@ -774,6 +775,7 @@ export type Database = {
           cfop_padrao?: string | null
           cnpj_emissor: string
           cofins_percentual?: number | null
+          company_id?: string | null
           created_at?: string
           csosn_padrao?: string | null
           cst_padrao?: string | null
@@ -792,6 +794,7 @@ export type Database = {
           cfop_padrao?: string | null
           cnpj_emissor?: string
           cofins_percentual?: number | null
+          company_id?: string | null
           created_at?: string
           csosn_padrao?: string | null
           cst_padrao?: string | null
@@ -2172,6 +2175,7 @@ export type Database = {
       system_settings: {
         Row: {
           category: string
+          company_id: string | null
           created_at: string
           description: string | null
           id: string
@@ -2181,6 +2185,7 @@ export type Database = {
         }
         Insert: {
           category?: string
+          company_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -2190,6 +2195,7 @@ export type Database = {
         }
         Update: {
           category?: string
+          company_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
