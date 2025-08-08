@@ -2,7 +2,7 @@
 import React from 'react';
 import { TabsContent } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CompanySettings } from '@/components/Settings/CompanySettings';
+
 import { UserManagement } from '@/components/Settings/UserManagement';
 import { CurrentUserProfile } from '@/components/Settings/CurrentUserProfile';
 import { DatabaseReset } from '@/components/Settings/DatabaseReset';
@@ -47,19 +47,6 @@ export const SettingsPageContent: React.FC<SettingsPageContentProps> = ({ isAdmi
         </TabContent>
       </TabsContent>
 
-      <TabsContent value="company">
-        {!isAdmin ? (
-          <Alert>
-            <AlertDescription>
-              Você não tem permissão para acessar esta seção. Acesso restrito a administradores.
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <TabContent tabName="Empresa">
-            <CompanySettings />
-          </TabContent>
-        )}
-      </TabsContent>
 
       {isAdmin && (
         <TabsContent value="companies">
