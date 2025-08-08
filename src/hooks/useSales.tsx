@@ -390,6 +390,57 @@ export const useSales = () => {
     }
   };
 
+  const createSaleFromOrder = async (orderId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
+
+      // Verificar se já existe venda
+      const { data: existing } = await supabase
+        .from('sales')
+        .select('id')
+        .eq('order_id', orderId)
+        .maybeSingle();
+      if (existing) {
+        toast.info('Venda já existe para este pedido');
+        return true;
+      }
+
+      const { data: order, error: orderErr } = await supabase
+        .from('orders')
+        .select('id, client_id, client_name, total_amount, seller_id')
+        .eq('id', orderId)
+        .maybeSingle();
+      if (orderErr || !order) throw orderErr || new Error('Pedido não encontrado');
+
+      const { data: seq } = await supabase
+        .rpc('generate_sequence_number', { prefix: 'V', table_name: 'sales', user_id: user.id });
+      const saleNumber = seq ?? `V-${Date.now()}`;
+
+      const { error } = await supabase
+        .from('sales')
+        .insert({
+          user_id: user.id,
+          salesperson_id: order.seller_id || null,
+          order_id: order.id,
+          client_id: order.client_id,
+          client_name: order.client_name,
+          total_amount: order.total_amount,
+          sale_number: saleNumber,
+          status: 'pending'
+        });
+      if (error) throw error;
+
+      toast.success('Venda gerada');
+      refreshSales();
+      return true;
+    } catch (e: any) {
+      console.error('Erro ao gerar venda pelo pedido:', e);
+      toast.error('Erro ao gerar venda');
+      return false;
+    }
+  };
+
   return {
     sales,
     loading,
@@ -397,6 +448,7 @@ export const useSales = () => {
     refreshSales,
     updateSaleStatus,
     approveSale,
-    createSaleFromPackaging
+    createSaleFromPackaging,
+    createSaleFromOrder
   };
 };

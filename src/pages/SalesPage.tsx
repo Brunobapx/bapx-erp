@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { EditSaleModal } from '@/components/Modals/EditSaleModal';
 
 import { DeliverySlipModal } from '@/components/Modals/DeliverySlipModal';
-import { DollarSign, ChevronDown, Search, TrendingUp, FileText, Truck, Eye, Edit, Check } from 'lucide-react';
+import { DollarSign, ChevronDown, Search, TrendingUp, FileText, Truck, Eye, Edit, Check, Plus } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -36,7 +36,7 @@ const SalesPage = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [alerts, setAlerts] = useState([]);
 
-  const { sales, loading, error, updateSaleStatus, approveSale } = useSales();
+  const { sales, loading, error, updateSaleStatus, approveSale, refreshSales, createSaleFromOrder } = useSales();
   const { adicionarPedidoParaRoterizacao } = useRotasOtimizadas();
 
   // Filter items based on search query
@@ -105,7 +105,7 @@ const SalesPage = () => {
   };
 
   const handleCreateSale = () => {
-    toast.info("Para criar uma venda, primeiro complete o processo de embalagem");
+    toast.info("Para criar uma venda, gere a partir do pedido liberado usando o botão 'Gerar'.");
   };
 
   const handleEditModalClose = (refresh = false) => {
@@ -140,6 +140,15 @@ const SalesPage = () => {
         return 'badge-route';
       default:
         return 'badge-production';
+    }
+  };
+
+  const handleGenerateSale = async (item: any) => {
+    const orderId = String(item.id).replace('order-', '');
+    const ok = await createSaleFromOrder(orderId);
+    if (ok) {
+      toast.success('Venda gerada com sucesso');
+      refreshSales?.();
     }
   };
 
@@ -301,36 +310,70 @@ const SalesPage = () => {
                           Editar
                         </Button>
                       )}
-                      {!isSynthetic(item.id) && (
-                        <Button 
-                          size="sm" 
+                      {isSynthetic(item.id) ? (
+                        <Button
+                          size="sm"
                           variant="outline"
-                          onClick={() => handleViewDeliverySlip(item)}
-                          title="Visualizar Romaneio"
+                          onClick={() => handleGenerateSale(item)}
+                          title="Gerar venda"
                         >
-                          <Eye className="mr-1 h-3 w-3" />
-                          Ver
+                          <Plus className="mr-1 h-3 w-3" />
+                          Gerar
                         </Button>
-                      )}
-                      {item.status === 'confirmed' && (
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleInvoiceClick(item)}
-                        >
-                          <FileText className="mr-1 h-3 w-3" />
-                          NF
-                        </Button>
-                      )}
-                      {(item.status === 'confirmed' || item.status === 'invoiced') && (
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleDeliveryClick(item)}
-                        >
-                          <Truck className="mr-1 h-3 w-3" />
-                          Entrega
-                        </Button>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          {item.status === 'pending' && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleApproveClick(item)}
+                              title="Aprovar Venda"
+                            >
+                              <Check className="mr-1 h-3 w-3" />
+                              Aprovar
+                            </Button>
+                          )}
+                          {(item.status === 'pending') && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleEditClick(item)}
+                              title="Editar Venda"
+                            >
+                              <Edit className="mr-1 h-3 w-3" />
+                              Editar
+                            </Button>
+                          )}
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleViewDeliverySlip(item)}
+                            title="Visualizar Romaneio"
+                          >
+                            <Eye className="mr-1 h-3 w-3" />
+                            Ver
+                          </Button>
+                          {item.status === 'confirmed' && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleInvoiceClick(item)}
+                            >
+                              <FileText className="mr-1 h-3 w-3" />
+                              NF
+                            </Button>
+                          )}
+                          {(item.status === 'confirmed' || item.status === 'invoiced') && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleDeliveryClick(item)}
+                            >
+                              <Truck className="mr-1 h-3 w-3" />
+                              Entrega
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </div>
                   </TableCell>
