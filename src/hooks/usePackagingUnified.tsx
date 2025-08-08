@@ -521,7 +521,6 @@ export const usePackagingUnified = (options: UsePackagingOptions = {}) => {
                   console.warn('[PACKAGING] Venda existente pertence a outro usuário; ignorando atualização para cumprir RLS.');
                 }
               }
-            }
             } catch (saleCreateErr) {
               console.warn('[PACKAGING] Não foi possível criar/atualizar a venda automaticamente:', saleCreateErr);
             }
