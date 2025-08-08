@@ -60,10 +60,18 @@ export const CompanySettings = () => {
 
   const loadCompanySettings = async () => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user?.id || '')
+        .maybeSingle();
+
       const { data, error } = await supabase
         .from('system_settings')
         .select('*')
-        .eq('category', 'company');
+        .eq('category', 'company')
+        .eq('company_id', profile?.company_id);
 
       if (error) throw error;
 

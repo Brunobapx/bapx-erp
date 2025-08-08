@@ -129,9 +129,17 @@ export const useCompanyFiscalSettings = () => {
   const loadSettings = async () => {
     setLoading(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user?.id || '')
+        .maybeSingle();
+
       const { data, error } = await supabase
         .from('system_settings')
         .select('key, value')
+        .eq('company_id', profile?.company_id)
         .in('key', [
           'company_name', 'company_cnpj', 'company_ie', 'company_city', 'company_state',
           'company_address', 'company_number', 'company_complement', 'company_neighborhood', 'company_cep', 'company_fantasy_name',
@@ -266,7 +274,7 @@ export const useCompanyFiscalSettings = () => {
       for (const update of updates) {
         const { error } = await supabase
           .from('system_settings')
-          .upsert(update, { onConflict: 'company_id, key' });
+          .upsert(update, { onConflict: 'company_id,key' });
 
         if (error) throw error;
       }
