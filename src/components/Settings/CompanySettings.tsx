@@ -60,18 +60,10 @@ export const CompanySettings = () => {
 
   const loadCompanySettings = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('company_id')
-        .eq('id', user?.id || '')
-        .maybeSingle();
-
       const { data, error } = await supabase
         .from('system_settings')
         .select('*')
-        .eq('category', 'company')
-        .eq('company_id', profile?.company_id);
+        .eq('category', 'company');
 
       if (error) throw error;
 
@@ -96,28 +88,47 @@ export const CompanySettings = () => {
   const saveCompanySettings = async () => {
     setLoading(true);
     try {
-      const payload = Object.entries(companyData).map(([key, value]) => ({
-        key,
-        value: JSON.stringify(value),
-        description: getFieldDescription(key),
-        category: 'company',
-      }));
-
-      const { error } = await supabase
+      // Primeiro, buscar todas as configurações existentes
+      const { data: existingSettings } = await supabase
         .from('system_settings')
-        .upsert(payload, { onConflict: 'company_id,key' });
+        .select('key')
+        .eq('category', 'company');
 
-      if (error) throw error;
+      const existingKeys = existingSettings?.map(s => s.key) || [];
+
+      for (const [key, value] of Object.entries(companyData)) {
+        if (existingKeys.includes(key)) {
+          // Atualizar configuração existente
+          const { error } = await supabase
+            .from('system_settings')
+            .update({ value: JSON.stringify(value) })
+            .eq('key', key);
+
+          if (error) throw error;
+        } else {
+          // Criar nova configuração
+          const { error } = await supabase
+            .from('system_settings')
+            .insert({
+              key,
+              value: JSON.stringify(value),
+              description: getFieldDescription(key),
+              category: 'company'
+            });
+
+          if (error) throw error;
+        }
+      }
 
       toast({
-        title: 'Sucesso',
-        description: 'Configurações da empresa salvas com sucesso!',
+        title: "Sucesso",
+        description: "Configurações da empresa salvas com sucesso!",
       });
     } catch (error: any) {
       toast({
-        title: 'Erro',
-        description: error.message || 'Erro ao salvar configurações',
-        variant: 'destructive',
+        title: "Erro",
+        description: error.message || "Erro ao salvar configurações",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
