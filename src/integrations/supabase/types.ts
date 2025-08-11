@@ -1794,6 +1794,7 @@ export type Database = {
         Row: {
           client_id: string
           client_name: string
+          company_id: string | null
           confirmed_at: string | null
           confirmed_by: string | null
           created_at: string
@@ -1816,6 +1817,7 @@ export type Database = {
         Insert: {
           client_id: string
           client_name: string
+          company_id?: string | null
           confirmed_at?: string | null
           confirmed_by?: string | null
           created_at?: string
@@ -1838,6 +1840,7 @@ export type Database = {
         Update: {
           client_id?: string
           client_name?: string
+          company_id?: string | null
           confirmed_at?: string | null
           confirmed_by?: string | null
           created_at?: string
