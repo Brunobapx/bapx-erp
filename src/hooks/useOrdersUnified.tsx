@@ -184,54 +184,8 @@ export const useOrdersUnified = (options: UseOrdersOptions = {}) => {
       // Processar pedido (estoque/produção)
       await checkStockAndSendToProduction(order.id);
 
-      // Verificar se há produtos de venda direta e criar venda automaticamente
-      try {
-        const productIds = orderData.items.map(i => i.product_id);
-        const { data: products, error: prodError } = await supabase
-          .from('products')
-          .select('id, is_direct_sale')
-          .in('id', productIds);
-
-        if (prodError) {
-          console.warn('[useOrdersUnified] Erro ao buscar produtos para venda direta:', prodError);
-        }
-
-        const hasDirectSale = (products || []).some(p => p.is_direct_sale);
-        if (hasDirectSale) {
-          // Criar venda baseada no pedido
-          const { data: sale, error: saleError } = await supabase
-            .from('sales')
-            .insert({
-              user_id: user.id,
-              order_id: order.id,
-              client_id: orderData.client_id,
-              client_name: orderData.client_name,
-              total_amount: totalAmount,
-              status: 'pending'
-            })
-            .select()
-            .single();
-
-          if (saleError) {
-            console.warn('[useOrdersUnified] Falha ao criar venda automática:', saleError);
-          } else {
-            // Atualizar status do pedido para liberado para venda
-            const { error: orderUpdateError } = await supabase
-              .from('orders')
-              .update({ status: 'released_for_sale' })
-              .eq('id', order.id);
-            if (orderUpdateError) {
-              console.warn('[useOrdersUnified] Falha ao atualizar status do pedido:', orderUpdateError);
-            }
-            toast({ title: 'Sucesso', description: 'Pedido criado e enviado para vendas automaticamente' });
-          }
-        } else {
-          toast({ title: 'Sucesso', description: 'Pedido criado com sucesso!' });
-        }
-      } catch (autoSaleErr) {
-        console.warn('[useOrdersUnified] Erro ao processar venda automática:', autoSaleErr);
-        toast({ title: 'Sucesso', description: 'Pedido criado com sucesso!' });
-      }
+      // Fluxo de vendas: a venda só será criada quando a embalagem for aprovada (trigger no banco)
+      toast({ title: 'Sucesso', description: 'Pedido criado com sucesso!' });
 
       await loadOrders();
       return true;

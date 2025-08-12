@@ -235,20 +235,7 @@ export const useOrderFormActions = ({
           }
         }
         
-        // Verificar se algum produto é de venda direta
-        try {
-          const hasDirectSaleProducts = await checkDirectSaleProducts(items);
-          
-          if (hasDirectSaleProducts) {
-            console.log('[ORDER] Criando venda automática para produtos diretos...');
-            await createSaleFromOrder(insertedOrder.id);
-          } else {
-            toast.success("Pedido criado com sucesso");
-          }
-        } catch (saleError) {
-          console.warn('[ORDER] Criação de venda automática falhou:', saleError);
-          toast.success("Pedido criado com sucesso");
-        }
+        toast.success("Pedido criado com sucesso");
         
         // Fechar modal e atualizar lista
         onClose(true);
