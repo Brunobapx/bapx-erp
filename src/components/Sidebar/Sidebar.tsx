@@ -39,7 +39,12 @@ const Sidebar = () => {
 
   // Filtrar itens baseado nas permissões do usuário
   const filteredMenuItems = menuItems.filter(item => {
-    // Admin e Master veem todos os itens
+    // A página SaaS é exclusiva para MASTER
+    if (item.route === '/saas') {
+      return userRole === 'master';
+    }
+
+    // Admin e Master veem todos os demais itens
     if (userRole === 'admin' || userRole === 'master') {
       return true;
     }

@@ -29,7 +29,7 @@ export default function SaaSPage() {
   const [loading, setLoading] = React.useState<boolean>(true);
   const [apiLatency, setApiLatency] = React.useState<number | null>(null);
 
-  const isPrivileged = isAdmin || isMaster;
+  const isPrivileged = isMaster;
 
   const fetchCounts = React.useCallback(async () => {
     try {
@@ -81,7 +81,7 @@ export default function SaaSPage() {
         </header>
         <Alert>
           <AlertDescription>
-            Acesso restrito a administradores. Entre com uma conta admin/master.
+            Acesso restrito a usuários master. Entre com uma conta master.
           </AlertDescription>
         </Alert>
       </div>
