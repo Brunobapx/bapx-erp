@@ -102,7 +102,6 @@ const PurchasesPage = () => {
       const { data, error } = await supabase
         .from('vendors')
         .select('*')
-        .eq('user_id', user.id)
         .order('name');
 
       if (error) throw error;
@@ -193,7 +192,6 @@ const PurchasesPage = () => {
       const { data: existingVendor, error: vendorError } = await supabase
         .from('vendors')
         .select('*')
-        .eq('user_id', userId)
         .or(`name.eq.${vendorName},cnpj.eq.${vendorCnpj}`)
         .limit(1);
 

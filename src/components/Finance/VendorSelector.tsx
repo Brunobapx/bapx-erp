@@ -43,7 +43,6 @@ export const VendorSelector: React.FC<VendorSelectorProps> = ({
       const { data, error } = await supabase
         .from("vendors")
         .select("id, name, cnpj, email")
-        .eq("user_id", user.id)
         .order("name", { ascending: true });
       if (!error && Array.isArray(data)) setVendors(data);
       setLoading(false);
