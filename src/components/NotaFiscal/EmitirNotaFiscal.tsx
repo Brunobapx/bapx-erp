@@ -29,7 +29,7 @@ const EmitirNotaFiscal = () => {
 
   const loadPedidos = async () => {
     try {
-      // Buscar pedidos confirmados
+      // Buscar pedidos confirmados (RLS irá filtrar por empresa automaticamente)
       const { data: orders, error: ordersError } = await supabase
         .from('orders')
         .select('id, order_number, client_name, total_amount, status, created_at')
@@ -38,7 +38,7 @@ const EmitirNotaFiscal = () => {
 
       if (ordersError) throw ordersError;
 
-      // Buscar pedidos que já possuem nota fiscal emitida
+      // Buscar pedidos que já possuem nota fiscal emitida (RLS irá filtrar por empresa automaticamente)
       const { data: notasEmitidas, error: notasError } = await supabase
         .from('notas_emitidas')
         .select('pedido_id');

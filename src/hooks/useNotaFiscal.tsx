@@ -24,6 +24,7 @@ export const useNotaFiscal = () => {
 
   const loadNotas = async () => {
     try {
+      // RLS irá filtrar automaticamente por empresa
       const { data, error } = await supabase
         .from('notas_emitidas')
         .select('*')
