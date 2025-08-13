@@ -263,12 +263,27 @@ export const useCompanyFiscalSettings = () => {
         { key: 'percentual_carga_tributaria', value: JSON.stringify(settings.percentual_carga_tributaria), category: 'fiscal' }
       ];
 
+      // Obter o user_id do usuário autenticado
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        throw new Error('Usuário não autenticado');
+      }
+
       for (const update of updates) {
         const { error } = await supabase
           .from('system_settings')
-          .upsert(update, { onConflict: 'company_id, key' });
+          .upsert({
+            ...update,
+            user_id: user.id  // Adicionar user_id para que o trigger set_company_id funcione
+          }, { 
+            onConflict: 'key',
+            ignoreDuplicates: false
+          });
 
-        if (error) throw error;
+        if (error) {
+          console.error('Erro ao salvar configuração:', update.key, error);
+          throw error;
+        }
       }
 
       toast.success('Configurações salvas com sucesso!');
