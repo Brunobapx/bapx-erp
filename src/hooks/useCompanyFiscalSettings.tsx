@@ -129,9 +129,17 @@ export const useCompanyFiscalSettings = () => {
   const loadSettings = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // Garantir que temos um usuário autenticado
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      console.log('Loading fiscal settings for user:', user.id);
+
+      const { data, error, count } = await supabase
         .from('system_settings')
-        .select('key, value')
+        .select('key, value, company_id, user_id', { count: 'exact' })
         .in('key', [
           'company_name', 'company_cnpj', 'company_ie', 'company_city', 'company_state',
           'company_address', 'company_number', 'company_complement', 'company_neighborhood', 'company_cep', 'company_fantasy_name',
@@ -144,6 +152,8 @@ export const useCompanyFiscalSettings = () => {
           'fcp_st_habilitado', 'fcp_st_base_calculo_retido', 'fcp_st_valor_retido', 'fcp_st_aliquota',
           'informar_valor_total_tributos', 'percentual_carga_tributaria'
         ]);
+
+      console.log('Fiscal settings loaded:', { count, dataLength: data?.length, data });
 
       if (error) throw error;
 
@@ -276,7 +286,7 @@ export const useCompanyFiscalSettings = () => {
             ...update,
             user_id: user.id  // Adicionar user_id para que o trigger set_company_id funcione
           }, { 
-            onConflict: 'key',
+            onConflict: 'company_id,key',
             ignoreDuplicates: false
           });
 
