@@ -2177,34 +2177,34 @@ export type Database = {
       }
       system_settings: {
         Row: {
-          category: string
+          category: string | null
           company_id: string | null
-          created_at: string
-          description: string | null
+          created_at: string | null
           id: string
           key: string
-          updated_at: string
-          value: Json
+          updated_at: string | null
+          user_id: string
+          value: string | null
         }
         Insert: {
-          category?: string
+          category?: string | null
           company_id?: string | null
-          created_at?: string
-          description?: string | null
+          created_at?: string | null
           id?: string
           key: string
-          updated_at?: string
-          value: Json
+          updated_at?: string | null
+          user_id: string
+          value?: string | null
         }
         Update: {
-          category?: string
+          category?: string | null
           company_id?: string | null
-          created_at?: string
-          description?: string | null
+          created_at?: string | null
           id?: string
           key?: string
-          updated_at?: string
-          value?: Json
+          updated_at?: string | null
+          user_id?: string
+          value?: string | null
         }
         Relationships: []
       }
