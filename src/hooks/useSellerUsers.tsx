@@ -58,14 +58,46 @@ export const useSellerUsers = () => {
       setLoading(true);
       console.log('🔍 Iniciando busca por vendedores...');
       
+      // Verificar autenticação
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        console.log('❌ Usuário não autenticado');
+        setSellers([]);
+        return;
+      }
+
+      console.log('👤 Usuário autenticado:', user.id);
+
+      // Buscar company_id do usuário atual como fallback
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+
+      console.log('🏢 Company ID do usuário:', profileData?.company_id);
+      
       // Buscar usuários com cargo de vendedor na tabela user_positions
-      const { data: positionsData, error: positionsError } = await supabase
+      // A política RLS garante que apenas vendedores da mesma empresa sejam retornados
+      let query = supabase
         .from('user_positions')
-        .select('user_id, position, created_at')
-        .eq('position', 'vendedor')
+        .select('user_id, position, created_at, company_id')
+        .eq('position', 'vendedor');
+
+      // Fallback: aplicar filtro manual se RLS não estiver funcionando
+      if (profileData?.company_id) {
+        query = query.eq('company_id', profileData.company_id);
+      }
+
+      const { data: positionsData, error: positionsError } = await query
         .order('created_at', { ascending: false });
 
-      console.log('📊 Resultado da busca por posições:', { positionsData, positionsError });
+      console.log('📊 Resultado da busca por posições:', { 
+        positionsData, 
+        positionsError,
+        count: positionsData?.length || 0,
+        userCompanies: positionsData?.map(p => p.company_id) || []
+      });
 
       if (positionsError) {
         console.log('❌ Erro ao buscar por posições, tentando buscar por roles:', positionsError);
@@ -112,7 +144,7 @@ export const useSellerUsers = () => {
 
   useEffect(() => {
     loadSellers();
-  }, []);
+  }, []); // Hook será executado na montagem do componente
 
   return {
     sellers,
