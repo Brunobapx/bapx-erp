@@ -12,5 +12,6 @@ export function buildVendorData(formData: any, userId: string) {
     contact_person: formData.contact_person || null,
     notes: formData.notes || null,
     user_id: userId,
+    // company_id será preenchido automaticamente pelo trigger set_company_id()
   };
 }
