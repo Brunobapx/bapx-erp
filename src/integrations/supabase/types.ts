@@ -2508,6 +2508,7 @@ export type Database = {
       }
       user_positions: {
         Row: {
+          company_id: string | null
           created_at: string | null
           id: string
           position: Database["public"]["Enums"]["user_position_type"]
@@ -2515,6 +2516,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          company_id?: string | null
           created_at?: string | null
           id?: string
           position: Database["public"]["Enums"]["user_position_type"]
@@ -2522,6 +2524,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          company_id?: string | null
           created_at?: string | null
           id?: string
           position?: Database["public"]["Enums"]["user_position_type"]
