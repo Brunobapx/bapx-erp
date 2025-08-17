@@ -72,7 +72,7 @@ const AuthPage = () => {
               </div>
               <Button 
                 type="submit" 
-                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                className="w-full bg-[#93d3e7] hover:bg-[#7bc5dd] text-white font-bold transition-colors duration-200"
                 disabled={isLoading}
               >
                 {isLoading ? 'Aguarde...' : 'Entrar'}
