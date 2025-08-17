@@ -150,21 +150,18 @@ export const useOrderFormActions = ({
         return null;
       }
 
-      // NOVA VALIDAÇÃO DE ESTOQUE ANTES DE CRIAR O PEDIDO
       if (isNewOrder) {
-        console.log('[ORDER VALIDATION] Validando estoque antes de criar pedido...');
-        
+        // Validação de estoque apenas uma vez
+        console.log('[ORDER] Validando estoque...');
         const stockValidation = await validateStockForOrder(items);
         const shouldContinue = await showStockValidationDialog(stockValidation);
         
         if (!shouldContinue) {
-          console.log('[ORDER VALIDATION] Criação de pedido cancelada pelo usuário');
+          console.log('[ORDER] Criação cancelada pelo usuário');
           return null;
         }
-      }
 
-      if (isNewOrder) {
-        // Criar novo pedido
+        // Criar pedido e itens em paralelo após validação
         const orderData = {
           user_id: user.id,
           client_id: formData.client_id,
@@ -202,43 +199,22 @@ export const useOrderFormActions = ({
           .insert(itemsData);
           
         if (itemsError) throw itemsError;
-        
-        // Estoque será abatido no processamento (checkStockAndSendToProduction)
-        // para evitar abatimento duplo
-        console.log('[ORDER] Abatimento de estoque será feito no processamento para evitar duplicidade');
-        
-        // Processar estoque e produção APÓS criação (garantindo execução)
-        console.log('[ORDER] Processando produção e embalagem...');
-        
-        let processingSuccess = false;
-        try {
-          processingSuccess = await checkStockAndSendToProduction(insertedOrder.id);
-        } catch (stockError) {
-          console.error('[ORDER] Erro no processamento de produção/embalagem:', stockError);
-          processingSuccess = false;
-        }
 
-        // Se falhou, tentar via edge function como fallback
-        if (!processingSuccess) {
-          console.log('[ORDER] Tentando fallback via edge function...');
-          try {
-            const { data, error } = await supabase.functions.invoke('process-pending-orders', {
-              body: { order_id: insertedOrder.id }
-            });
-            
-            if (error) throw error;
-            console.log('[ORDER] Fallback processado:', data);
-            toast.success("Pedido criado e processado com sucesso (via fallback)");
-          } catch (fallbackError) {
-            console.error('[ORDER] Fallback também falhou:', fallbackError);
-            toast.warning("Pedido criado, mas será necessário processar manualmente");
-          }
-        }
-        
+        // Mostrar sucesso e fechar imediatamente
         toast.success("Pedido criado com sucesso");
-        
-        // Fechar modal e atualizar lista
         onClose(true);
+        
+        // Processar estoque em background (não bloquear a UI)
+        checkStockAndSendToProduction(insertedOrder.id).catch(error => {
+          console.error('[ORDER] Erro no processamento background:', error);
+          // Tentar fallback se falhar
+          supabase.functions.invoke('process-pending-orders', {
+            body: { order_id: insertedOrder.id }
+          }).catch(fallbackError => {
+            console.error('[ORDER] Fallback também falhou:', fallbackError);
+            toast.warning("Pedido criado, processamento em andamento");
+          });
+        });
         
         return insertedOrder.id;
       } else {

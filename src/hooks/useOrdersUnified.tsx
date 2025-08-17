@@ -117,25 +117,7 @@ export const useOrdersUnified = (options: UseOrdersOptions = {}) => {
       }
 
 
-      // Validar estoque antes de criar (adaptar tipos)
-      const itemsForValidation = orderData.items.map(item => ({
-        ...item,
-        id: '',
-        order_id: '',
-        total_price: item.quantity * item.unit_price,
-        created_at: '',
-        updated_at: '',
-        user_id: '',
-        company_id: ''
-      }));
-      
-      const stockValidation = await validateStockForOrder(itemsForValidation);
-      if (!stockValidation.isValid) {
-        const shouldContinue = await showStockValidationDialog(stockValidation);
-        if (!shouldContinue) {
-          return false;
-        }
-      }
+      // Remover validação duplicada - já é feita no useOrderFormActions
 
       // Calcular total
       const totalAmount = orderData.items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
@@ -181,13 +163,21 @@ export const useOrdersUnified = (options: UseOrdersOptions = {}) => {
       // Abatimento de estoque é feito durante checkStockAndSendToProduction
       // para evitar abatimento duplo.
 
-      // Processar pedido (estoque/produção)
-      await checkStockAndSendToProduction(order.id);
+      // Adicionar o novo pedido ao estado local imediatamente
+      const newOrder = { ...order, order_items: orderItems.map(item => ({ ...item, products: null })) };
+      setOrders(prev => [newOrder, ...prev]);
 
-      // Fluxo de vendas: a venda só será criada quando a embalagem for aprovada (trigger no banco)
+      // Processar estoque em background (não aguardar)
+      checkStockAndSendToProduction(order.id).catch(error => {
+        console.error('[ORDER] Erro no processamento background:', error);
+        toast({ 
+          title: 'Aviso', 
+          description: 'Pedido criado, processamento em andamento.',
+          variant: 'destructive'
+        });
+      });
+
       toast({ title: 'Sucesso', description: 'Pedido criado com sucesso!' });
-
-      await loadOrders();
       return true;
 
     } catch (err: any) {
@@ -215,12 +205,16 @@ export const useOrdersUnified = (options: UseOrdersOptions = {}) => {
 
       if (error) throw error;
 
+      // Atualizar estado local imediatamente
+      setOrders(prev => prev.map(order => 
+        order.id === orderId ? { ...order, ...updates } : order
+      ));
+
       toast({
         title: "Sucesso",
         description: "Pedido atualizado com sucesso!",
       });
 
-      await loadOrders();
       return true;
 
     } catch (err: any) {
@@ -295,12 +289,14 @@ export const useOrdersUnified = (options: UseOrdersOptions = {}) => {
         .eq('id', orderId);
       if (error) throw error;
 
+      // Remover do estado local imediatamente
+      setOrders(prev => prev.filter(order => order.id !== orderId));
+
       toast({
         title: 'Sucesso',
         description: 'Pedido excluído com sucesso!',
       });
 
-      await loadOrders();
       return true;
 
     } catch (err: any) {
