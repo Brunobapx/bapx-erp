@@ -24,6 +24,8 @@ export interface Quote {
   valid_until: string;
   payment_method?: string;
   payment_term?: string;
+  seller_id?: string;
+  seller_name?: string;
   notes?: string;
   discount_percentage?: number;
   discount_amount?: number;
@@ -150,6 +152,8 @@ export const useQuotes = () => {
         valid_until: quoteWithoutItems.valid_until,
         payment_method: quoteWithoutItems.payment_method || null,
         payment_term: quoteWithoutItems.payment_term || null,
+        seller_id: quoteWithoutItems.seller_id || null,
+        seller_name: quoteWithoutItems.seller_name || null,
         notes: quoteWithoutItems.notes || null,
         discount_percentage: quoteWithoutItems.discount_percentage || 0,
         discount_amount: quoteWithoutItems.discount_amount || 0,

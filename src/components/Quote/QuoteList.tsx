@@ -28,20 +28,6 @@ export const QuoteList = ({ onEditQuote, onPreviewQuote, onApproveQuote }: Quote
   const { quotes, isLoading, searchQuery, setSearchQuery, deleteQuote } = useQuotes();
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Debug: Log dos orçamentos e condições
-  React.useEffect(() => {
-    console.log('QuoteList Debug:', {
-      onApproveQuote: !!onApproveQuote,
-      quotesCount: quotes.length,
-      quotes: quotes.map(q => ({
-        number: q.quote_number,
-        status: q.status,
-        validUntil: q.valid_until,
-        isExpired: new Date(q.valid_until) < new Date()
-      }))
-    });
-  }, [onApproveQuote, quotes]);
-
   const handleDelete = async (id: string) => {
     setDeletingId(id);
     try {
@@ -158,15 +144,6 @@ export const QuoteList = ({ onEditQuote, onPreviewQuote, onApproveQuote }: Quote
                             <Edit className="mr-2 h-4 w-4" />
                             Editar
                           </DropdownMenuItem>
-                          {onApproveQuote && (
-                            <DropdownMenuItem onClick={() => {
-                              console.log('Clicou em aprovar para:', quote.quote_number, quote.status);
-                              onApproveQuote(quote);
-                            }}>
-                              <CheckCircle className="mr-2 h-4 w-4" />
-                              Aprovar (Debug)
-                            </DropdownMenuItem>
-                          )}
                           {onApproveQuote && quote.status === 'draft' && !isExpired(quote.valid_until) && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>

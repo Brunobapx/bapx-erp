@@ -18,6 +18,8 @@ import { useProducts } from "@/hooks/useProducts";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import { usePaymentTerms } from "@/hooks/usePaymentTerms";
 import { useQuotes, Quote, QuoteItem } from "@/hooks/useQuotes";
+import { useAuth } from "@/components/Auth/AuthProvider";
+import { useUserPositions } from "@/hooks/useUserPositions";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -35,6 +37,7 @@ interface FormData {
   valid_until: Date;
   payment_method: string;
   payment_term: string;
+  seller_name: string;
   notes: string;
   discount_percentage: number;
   items: QuoteItem[];
@@ -46,6 +49,8 @@ export const QuoteForm = ({ quote, onSave, onCancel }: QuoteFormProps) => {
   const { items: paymentMethods } = usePaymentMethods();
   const { items: paymentTerms } = usePaymentTerms();
   const { createQuote, updateQuote } = useQuotes();
+  const { user } = useAuth();
+  const { isVendedor, loading } = useUserPositions();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [items, setItems] = useState<QuoteItem[]>([]);
@@ -62,6 +67,7 @@ export const QuoteForm = ({ quote, onSave, onCancel }: QuoteFormProps) => {
       valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
       payment_method: '',
       payment_term: '',
+      seller_name: '',
       notes: '',
       discount_percentage: 0,
       items: []
@@ -78,6 +84,7 @@ export const QuoteForm = ({ quote, onSave, onCancel }: QuoteFormProps) => {
         valid_until: new Date(quote.valid_until),
         payment_method: quote.payment_method || '',
         payment_term: quote.payment_term || '',
+        seller_name: quote.seller_name || '',
         notes: quote.notes || '',
         discount_percentage: quote.discount_percentage || 0,
         items: quote.items
@@ -85,6 +92,20 @@ export const QuoteForm = ({ quote, onSave, onCancel }: QuoteFormProps) => {
       setItems(quote.items);
     }
   }, [quote, form]);
+
+  // Auto-preencher vendedor se o usuário tiver cargo de vendedor
+  useEffect(() => {
+    if (!loading && user && !form.watch('seller_name') && isVendedor) {
+      // Extrair nome e sobrenome do user metadata
+      const firstName = user.user_metadata?.first_name || '';
+      const lastName = user.user_metadata?.last_name || '';
+      const fullName = `${firstName} ${lastName}`.trim();
+      
+      if (fullName) {
+        form.setValue('seller_name', fullName);
+      }
+    }
+  }, [user, loading, isVendedor, form.watch('seller_name'), form]);
 
   useEffect(() => {
     const newSubtotal = items.reduce((sum, item) => sum + item.total_price, 0);
@@ -171,6 +192,7 @@ export const QuoteForm = ({ quote, onSave, onCancel }: QuoteFormProps) => {
         valid_until: format(data.valid_until, 'yyyy-MM-dd'),
         payment_method: data.payment_method || '',
         payment_term: data.payment_term || '',
+        seller_name: data.seller_name || '',
         notes: data.notes || '',
         discount_percentage: data.discount_percentage || 0,
         discount_amount: discountAmount,
@@ -305,6 +327,14 @@ export const QuoteForm = ({ quote, onSave, onCancel }: QuoteFormProps) => {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div>
+                <Label htmlFor="seller_name">Vendedor</Label>
+                <Input
+                  id="seller_name"
+                  {...form.register('seller_name')}
+                  placeholder="Nome do vendedor"
+                />
               </div>
             </div>
           </CardContent>

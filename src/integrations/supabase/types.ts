@@ -1818,6 +1818,8 @@ export type Database = {
           payment_method: string | null
           payment_term: string | null
           quote_number: string
+          seller_id: string | null
+          seller_name: string | null
           status: string
           subtotal: number
           total_amount: number
@@ -1839,6 +1841,8 @@ export type Database = {
           payment_method?: string | null
           payment_term?: string | null
           quote_number?: string
+          seller_id?: string | null
+          seller_name?: string | null
           status?: string
           subtotal?: number
           total_amount?: number
@@ -1860,6 +1864,8 @@ export type Database = {
           payment_method?: string | null
           payment_term?: string | null
           quote_number?: string
+          seller_id?: string | null
+          seller_name?: string | null
           status?: string
           subtotal?: number
           total_amount?: number
