@@ -113,9 +113,26 @@ export const useQuotes = () => {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error('Usuário não autenticado');
 
+      // Get user profile to ensure we have company_id
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Erro ao buscar perfil do usuário:', profileError);
+        throw new Error('Erro ao carregar dados do usuário. Contate o administrador.');
+      }
+
+      // Validate required fields
+      if (!quoteData.client_id || !quoteData.client_name || !quoteData.valid_until) {
+        throw new Error('Campos obrigatórios não preenchidos: cliente e data de validade');
+      }
+
       const { items, ...quoteWithoutItems } = quoteData;
 
-      // Remove undefined/null values and ensure required fields
+      // Prepare clean quote data
       const cleanQuoteData = {
         client_id: quoteWithoutItems.client_id,
         client_name: quoteWithoutItems.client_name,
@@ -130,7 +147,8 @@ export const useQuotes = () => {
         discount_amount: quoteWithoutItems.discount_amount || 0,
         subtotal: quoteWithoutItems.subtotal || 0,
         total_amount: quoteWithoutItems.total_amount || 0,
-        user_id: user.id
+        user_id: user.id,
+        company_id: profile?.company_id || user.id // Fallback to user.id if no company_id
       };
 
       const { data: quote, error: quoteError } = await supabase

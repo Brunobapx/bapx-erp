@@ -150,10 +150,18 @@ export const QuoteForm = ({ quote, onSave, onCancel }: QuoteFormProps) => {
       return;
     }
 
+    if (!data.client_id || !data.client_name) {
+      toast.error('Selecione um cliente válido');
+      return;
+    }
+
+    if (!data.valid_until) {
+      toast.error('Defina uma data de validade para o orçamento');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
       const quoteData = {
         client_id: data.client_id,
         client_name: data.client_name,
@@ -169,8 +177,8 @@ export const QuoteForm = ({ quote, onSave, onCancel }: QuoteFormProps) => {
         subtotal,
         total_amount: total,
         items,
-        user_id: user!.id,
-        company_id: '' // Will be set by RLS/trigger
+        user_id: '', // Will be set by useQuotes
+        company_id: '' // Will be set by useQuotes
       };
 
       if (quote) {
