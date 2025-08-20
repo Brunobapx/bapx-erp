@@ -1830,7 +1830,7 @@ export type Database = {
           client_id: string
           client_name: string
           client_phone?: string | null
-          company_id?: string
+          company_id: string
           created_at?: string
           discount_amount?: number | null
           discount_percentage?: number | null

@@ -124,7 +124,23 @@ export const useQuotes = () => {
 
       const { items, ...quoteWithoutItems } = quoteData;
 
-      // Prepare clean quote data - triggers will handle company_id and quote_number automatically
+      // Get user's company_id or use user_id as fallback
+      let companyId = user.id; // Default fallback
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('company_id')
+          .eq('id', user.id)
+          .single();
+        
+        if (profile?.company_id) {
+          companyId = profile.company_id;
+        }
+      } catch (profileError) {
+        console.log('Using user_id as company_id fallback');
+      }
+
+      // Prepare quote data with guaranteed non-null company_id
       const cleanQuoteData = {
         client_id: quoteWithoutItems.client_id,
         client_name: quoteWithoutItems.client_name,
@@ -139,8 +155,8 @@ export const useQuotes = () => {
         discount_amount: quoteWithoutItems.discount_amount || 0,
         subtotal: quoteWithoutItems.subtotal || 0,
         total_amount: quoteWithoutItems.total_amount || 0,
-        user_id: user.id
-        // company_id and quote_number will be set by database triggers
+        user_id: user.id,
+        company_id: companyId // Guaranteed to be non-null
       };
 
       const { data: quote, error: quoteError } = await supabase
@@ -154,7 +170,7 @@ export const useQuotes = () => {
         throw new Error(quoteError.message || 'Erro ao criar orçamento');
       }
 
-      // Insert quote items - company_id will be set by trigger
+      // Insert quote items with guaranteed company_id
       if (items && items.length > 0) {
         const { error: itemsError } = await supabase
           .from('quote_items')
@@ -167,8 +183,8 @@ export const useQuotes = () => {
               quantity: item.quantity,
               unit_price: item.unit_price,
               total_price: item.total_price,
-              user_id: user.id
-              // company_id will be set by trigger
+              user_id: user.id,
+              company_id: companyId // Use the same company_id as the quote
             }))
           );
 
