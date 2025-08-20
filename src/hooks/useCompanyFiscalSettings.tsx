@@ -215,9 +215,84 @@ export const useCompanyFiscalSettings = () => {
         percentual_carga_tributaria: settingsMap.percentual_carga_tributaria || prev.percentual_carga_tributaria
       }));
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao carregar configurações:', error);
-      toast.error('Erro ao carregar configurações da empresa');
+      
+      // Check for RLS policy violation (insufficient permissions)
+      if (error.code === 'PGRST301' || error.message?.includes('RLS') || error.message?.includes('policy')) {
+        console.warn('Acesso restrito - usuário não tem permissão para configurações sensíveis');
+        toast.error('Algumas configurações requerem permissões de administrador');
+        
+        // Load only non-sensitive settings for non-admin users
+        try {
+          const { data: nonSensitiveData } = await supabase
+            .from('system_settings')
+            .select('key, value')
+            .in('key', [
+              'company_name', 'company_cnpj', 'company_ie', 'company_city', 'company_state',
+              'company_address', 'company_number', 'company_complement', 'company_neighborhood', 'company_cep', 'company_fantasy_name',
+              'tax_regime', 'default_cfop', 'default_ncm', 'icms_cst', 'icms_origem',
+              'pis_cst', 'pis_aliquota', 'cofins_cst', 'cofins_aliquota',
+              'nota_fiscal_tipo', 'nota_fiscal_ambiente', 'empresa_tipo', 'csosn_padrao', 'cst_padrao',
+              'icms_percentual', 'pis_percentual', 'cofins_percentual', 'cnpj_emissor',
+              'nfe_initial_number', 'icms_st_destacado_por_item', 'icms_st_base_calculo_retido', 
+              'icms_st_valor_retido', 'icms_st_aliquota', 'fcp_st_habilitado', 'fcp_st_base_calculo_retido', 
+              'fcp_st_valor_retido', 'fcp_st_aliquota', 'informar_valor_total_tributos', 'percentual_carga_tributaria'
+            ]);
+          
+          const settingsMap = nonSensitiveData?.reduce((acc, setting) => {
+            try {
+              acc[setting.key] = JSON.parse(setting.value as string);
+            } catch {
+              acc[setting.key] = setting.value;
+            }
+            return acc;
+          }, {} as Record<string, any>) || {};
+          
+          // Update settings with non-sensitive data only
+          setSettings(prev => ({
+            ...prev,
+            company_name: settingsMap.company_name || prev.company_name,
+            company_cnpj: settingsMap.company_cnpj || prev.company_cnpj,
+            company_ie: settingsMap.company_ie || prev.company_ie,
+            company_city: settingsMap.company_city || prev.company_city,
+            company_state: settingsMap.company_state || prev.company_state,
+            company_address: settingsMap.company_address || prev.company_address,
+            company_number: settingsMap.company_number || prev.company_number,
+            company_complement: settingsMap.company_complement || prev.company_complement,
+            company_neighborhood: settingsMap.company_neighborhood || prev.company_neighborhood,
+            company_cep: settingsMap.company_cep || prev.company_cep,
+            company_fantasy_name: settingsMap.company_fantasy_name || prev.company_fantasy_name,
+            tax_regime: settingsMap.tax_regime || prev.tax_regime,
+            default_cfop: settingsMap.default_cfop || prev.default_cfop,
+            default_ncm: settingsMap.default_ncm || prev.default_ncm,
+            icms_cst: settingsMap.icms_cst || prev.icms_cst,
+            icms_origem: settingsMap.icms_origem || prev.icms_origem,
+            pis_cst: settingsMap.pis_cst || prev.pis_cst,
+            pis_aliquota: settingsMap.pis_aliquota || prev.pis_aliquota,
+            cofins_cst: settingsMap.cofins_cst || prev.cofins_cst,
+            cofins_aliquota: settingsMap.cofins_aliquota || prev.cofins_aliquota,
+            nota_fiscal_tipo: settingsMap.nota_fiscal_tipo || prev.nota_fiscal_tipo,
+            nota_fiscal_ambiente: settingsMap.nota_fiscal_ambiente || prev.nota_fiscal_ambiente,
+            empresa_tipo: settingsMap.empresa_tipo || prev.empresa_tipo,
+            csosn_padrao: settingsMap.csosn_padrao || prev.csosn_padrao,
+            cst_padrao: settingsMap.cst_padrao || prev.cst_padrao,
+            icms_percentual: settingsMap.icms_percentual || prev.icms_percentual,
+            pis_percentual: settingsMap.pis_percentual || prev.pis_percentual,
+            cofins_percentual: settingsMap.cofins_percentual || prev.cofins_percentual,
+            cnpj_emissor: settingsMap.cnpj_emissor || prev.cnpj_emissor,
+            nfe_initial_number: settingsMap.nfe_initial_number || prev.nfe_initial_number,
+            // Keep sensitive fields empty for non-admin users
+            focus_nfe_token: '',
+            focus_nfe_enabled: false
+          }));
+        } catch (fallbackError) {
+          console.error('Erro ao carregar configurações não-sensíveis:', fallbackError);
+          toast.error('Erro ao carregar configurações básicas');
+        }
+      } else {
+        toast.error('Erro ao carregar configurações da empresa');
+      }
     } finally {
       setLoading(false);
     }
@@ -297,9 +372,15 @@ export const useCompanyFiscalSettings = () => {
       }
 
       toast.success('Configurações salvas com sucesso!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao salvar configurações:', error);
-      toast.error('Erro ao salvar configurações');
+      
+      // Check for RLS policy violation (insufficient permissions)
+      if (error.code === 'PGRST301' || error.message?.includes('RLS') || error.message?.includes('policy')) {
+        toast.error('Acesso negado: apenas administradores podem gerenciar configurações sensíveis');
+      } else {
+        toast.error('Erro ao salvar configurações');
+      }
     } finally {
       setSaving(false);
     }
