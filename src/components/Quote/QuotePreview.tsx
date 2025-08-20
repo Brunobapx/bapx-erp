@@ -232,7 +232,7 @@ Para mais detalhes, entre em contato conosco.
           <div ref={printRef} className="bg-white min-h-[297mm]" style={{ pageBreakInside: 'avoid' }}>
             {/* Header */}
             <div className="bg-gradient-to-r from-primary to-primary/80 text-white p-8">
-              <div className="flex justify-between items-start">
+              <div className="flex justify-between items-center">
                 <div>
                   <h1 className="text-3xl font-bold mb-2">ORÇAMENTO</h1>
                   <div className="text-primary-foreground/90">
@@ -242,9 +242,11 @@ Para mais detalhes, entre em contato conosco.
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                    <p className="text-2xl font-bold">R$ {quote.total_amount.toFixed(2)}</p>
-                    <p className="text-sm opacity-90">Valor Total</p>
+                  <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 flex items-center justify-center w-24 h-24">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold mb-1">BAPX</div>
+                      <div className="text-xs opacity-90">ERP</div>
+                    </div>
                   </div>
                 </div>
               </div>
