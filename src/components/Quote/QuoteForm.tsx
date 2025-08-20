@@ -155,15 +155,22 @@ export const QuoteForm = ({ quote, onSave, onCancel }: QuoteFormProps) => {
       const { data: { user } } = await supabase.auth.getUser();
       
       const quoteData = {
-        ...data,
-        items, // Items will be handled separately in useQuotes
-        subtotal,
-        discount_amount: discountAmount,
-        total_amount: total,
+        client_id: data.client_id,
+        client_name: data.client_name,
+        client_email: data.client_email || '',
+        client_phone: data.client_phone || '',
         status: 'draft' as const,
         valid_until: format(data.valid_until, 'yyyy-MM-dd'),
+        payment_method: data.payment_method || '',
+        payment_term: data.payment_term || '',
+        notes: data.notes || '',
+        discount_percentage: data.discount_percentage || 0,
+        discount_amount: discountAmount,
+        subtotal,
+        total_amount: total,
+        items,
         user_id: user!.id,
-        company_id: user!.id // Will be set by RLS/trigger
+        company_id: '' // Will be set by RLS/trigger
       };
 
       if (quote) {

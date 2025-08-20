@@ -115,12 +115,27 @@ export const useQuotes = () => {
 
       const { items, ...quoteWithoutItems } = quoteData;
 
+      // Remove undefined/null values and ensure required fields
+      const cleanQuoteData = {
+        client_id: quoteWithoutItems.client_id,
+        client_name: quoteWithoutItems.client_name,
+        client_email: quoteWithoutItems.client_email || null,
+        client_phone: quoteWithoutItems.client_phone || null,
+        status: quoteWithoutItems.status || 'draft',
+        valid_until: quoteWithoutItems.valid_until,
+        payment_method: quoteWithoutItems.payment_method || null,
+        payment_term: quoteWithoutItems.payment_term || null,
+        notes: quoteWithoutItems.notes || null,
+        discount_percentage: quoteWithoutItems.discount_percentage || 0,
+        discount_amount: quoteWithoutItems.discount_amount || 0,
+        subtotal: quoteWithoutItems.subtotal || 0,
+        total_amount: quoteWithoutItems.total_amount || 0,
+        user_id: user.id
+      };
+
       const { data: quote, error: quoteError } = await supabase
         .from('quotes')
-        .insert([{
-          ...quoteWithoutItems,
-          user_id: user.id
-        }])
+        .insert([cleanQuoteData])
         .select()
         .single();
 
@@ -135,7 +150,7 @@ export const useQuotes = () => {
               quote_id: quote.id,
               product_id: item.product_id,
               product_name: item.product_name,
-              description: item.description,
+              description: item.description || null,
               quantity: item.quantity,
               unit_price: item.unit_price,
               total_price: item.total_price,
