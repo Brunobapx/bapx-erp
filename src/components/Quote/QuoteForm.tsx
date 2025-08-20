@@ -177,8 +177,8 @@ export const QuoteForm = ({ quote, onSave, onCancel }: QuoteFormProps) => {
         subtotal,
         total_amount: total,
         items,
-        user_id: '', // Will be set by useQuotes
-        company_id: '' // Will be set by useQuotes
+        user_id: '', // Will be set by database triggers
+        company_id: '' // Will be set by database triggers
       };
 
       if (quote) {

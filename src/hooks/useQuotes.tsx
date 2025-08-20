@@ -113,26 +113,18 @@ export const useQuotes = () => {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error('Usuário não autenticado');
 
-      // Get user profile to ensure we have company_id
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('company_id')
-        .eq('id', user.id)
-        .single();
-
-      if (profileError) {
-        console.error('Erro ao buscar perfil do usuário:', profileError);
-        throw new Error('Erro ao carregar dados do usuário. Contate o administrador.');
-      }
-
       // Validate required fields
       if (!quoteData.client_id || !quoteData.client_name || !quoteData.valid_until) {
         throw new Error('Campos obrigatórios não preenchidos: cliente e data de validade');
       }
 
+      if (!quoteData.items || quoteData.items.length === 0) {
+        throw new Error('O orçamento deve ter pelo menos um item');
+      }
+
       const { items, ...quoteWithoutItems } = quoteData;
 
-      // Prepare clean quote data
+      // Prepare clean quote data - triggers will handle company_id and quote_number automatically
       const cleanQuoteData = {
         client_id: quoteWithoutItems.client_id,
         client_name: quoteWithoutItems.client_name,
@@ -147,8 +139,8 @@ export const useQuotes = () => {
         discount_amount: quoteWithoutItems.discount_amount || 0,
         subtotal: quoteWithoutItems.subtotal || 0,
         total_amount: quoteWithoutItems.total_amount || 0,
-        user_id: user.id,
-        company_id: profile?.company_id || user.id // Fallback to user.id if no company_id
+        user_id: user.id
+        // company_id and quote_number will be set by database triggers
       };
 
       const { data: quote, error: quoteError } = await supabase
@@ -157,9 +149,12 @@ export const useQuotes = () => {
         .select()
         .single();
 
-      if (quoteError) throw quoteError;
+      if (quoteError) {
+        console.error('Erro ao criar orçamento:', quoteError);
+        throw new Error(quoteError.message || 'Erro ao criar orçamento');
+      }
 
-      // Insert quote items
+      // Insert quote items - company_id will be set by trigger
       if (items && items.length > 0) {
         const { error: itemsError } = await supabase
           .from('quote_items')
@@ -173,16 +168,21 @@ export const useQuotes = () => {
               unit_price: item.unit_price,
               total_price: item.total_price,
               user_id: user.id
+              // company_id will be set by trigger
             }))
           );
 
-        if (itemsError) throw itemsError;
+        if (itemsError) {
+          console.error('Erro ao criar itens do orçamento:', itemsError);
+          throw new Error(itemsError.message || 'Erro ao criar itens do orçamento');
+        }
       }
 
       await refreshQuotes();
       toast.success('Orçamento criado com sucesso!');
       return quote;
     } catch (err: any) {
+      console.error('Erro completo:', err);
       toast.error('Erro ao criar orçamento: ' + (err.message || 'Erro desconhecido'));
       throw err;
     }
