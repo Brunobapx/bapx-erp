@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { 
   ChartBar, Users, Package, ShoppingCart, DollarSign, 
   Truck, Calendar, Settings, FileText, Box, Warehouse,
-  FilePen, LogOut, Menu, X, BarChart3, Building2
+  FilePen, LogOut, Menu, X, BarChart3, Building2, Calculator
 } from 'lucide-react';
 import { useAuth } from '@/components/Auth/AuthProvider';
 import { useModuleAccess } from '@/hooks/useModuleAccess';
@@ -22,6 +22,7 @@ const Sidebar = () => {
     { icon: Users, label: 'Fornecedores', href: '/fornecedores', route: '/fornecedores' },
     { icon: ShoppingCart, label: 'Compras', href: '/compras', route: '/compras' },
     { icon: Warehouse, label: 'Estoque', href: '/estoque', route: '/estoque' },
+    { icon: Calculator, label: 'Orçamentos', href: '/orcamentos', route: '/orcamentos' },
     { icon: Package, label: 'Pedidos', href: '/pedidos', route: '/pedidos' },
     { icon: Box, label: 'Produção', href: '/producao', route: '/producao' },
     { icon: Box, label: 'Embalagem', href: '/embalagem', route: '/embalagem' },

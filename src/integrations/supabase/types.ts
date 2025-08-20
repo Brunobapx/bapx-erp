@@ -1750,6 +1750,125 @@ export type Database = {
         }
         Relationships: []
       }
+      quote_items: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string | null
+          id: string
+          product_id: string
+          product_name: string
+          quantity: number
+          quote_id: string
+          total_price: number
+          unit_price: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          product_id: string
+          product_name: string
+          quantity?: number
+          quote_id: string
+          total_price?: number
+          unit_price?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          product_id?: string
+          product_name?: string
+          quantity?: number
+          quote_id?: string
+          total_price?: number
+          unit_price?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotes: {
+        Row: {
+          client_email: string | null
+          client_id: string
+          client_name: string
+          client_phone: string | null
+          company_id: string
+          created_at: string
+          discount_amount: number | null
+          discount_percentage: number | null
+          id: string
+          notes: string | null
+          payment_method: string | null
+          payment_term: string | null
+          quote_number: string
+          status: string
+          subtotal: number
+          total_amount: number
+          updated_at: string
+          user_id: string
+          valid_until: string
+        }
+        Insert: {
+          client_email?: string | null
+          client_id: string
+          client_name: string
+          client_phone?: string | null
+          company_id?: string
+          created_at?: string
+          discount_amount?: number | null
+          discount_percentage?: number | null
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_term?: string | null
+          quote_number?: string
+          status?: string
+          subtotal?: number
+          total_amount?: number
+          updated_at?: string
+          user_id: string
+          valid_until: string
+        }
+        Update: {
+          client_email?: string | null
+          client_id?: string
+          client_name?: string
+          client_phone?: string | null
+          company_id?: string
+          created_at?: string
+          discount_amount?: number | null
+          discount_percentage?: number | null
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_term?: string | null
+          quote_number?: string
+          status?: string
+          subtotal?: number
+          total_amount?: number
+          updated_at?: string
+          user_id?: string
+          valid_until?: string
+        }
+        Relationships: []
+      }
       route_assignments: {
         Row: {
           company_id: string

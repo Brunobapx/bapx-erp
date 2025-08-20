@@ -28,6 +28,7 @@ import ServiceOrdersPage from "./pages/ServiceOrdersPage";
 import ReportsPage from "./pages/ReportsPage";
 import NotFound from "./pages/NotFound";
 import SimpleOrderFormPage from "./pages/SimpleOrderFormPage";
+import QuotePage from "./pages/QuotePage";
 import { FinancialProvider } from "./contexts/FinancialContext";
 import SaaSPage from "./pages/SaaSPage";
 
@@ -63,6 +64,19 @@ const App = () => (
                       <TrocasPage />
                     </main>
                   </div>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/orcamentos" element={
+                <ProtectedRoute>
+                  <ModuleAccessCheck routePath="/orcamentos">
+                    <div className="flex h-screen bg-gray-50">
+                      <Sidebar />
+                      <main className="flex-1 overflow-auto lg:ml-64">
+                        <QuotePage />
+                      </main>
+                    </div>
+                  </ModuleAccessCheck>
                 </ProtectedRoute>
               } />
               
