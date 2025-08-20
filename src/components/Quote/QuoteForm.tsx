@@ -156,7 +156,7 @@ export const QuoteForm = ({ quote, onSave, onCancel }: QuoteFormProps) => {
       
       const quoteData = {
         ...data,
-        items,
+        items, // Items will be handled separately in useQuotes
         subtotal,
         discount_amount: discountAmount,
         total_amount: total,
