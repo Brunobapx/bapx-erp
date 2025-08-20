@@ -30,7 +30,35 @@ export const useNotaFiscalConfig = () => {
         .select('*')
         .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
+        // PGRST116 = No rows found (OK for maybeSingle)
+        if (error.code === 'PGRST116') {
+          // No config found, set default values
+          setConfig({
+            tipo_nota: 'nfe',
+            ambiente: 'homologacao',
+            token_focus: '',
+            cnpj_emissor: '',
+            regime_tributario: '1',
+            tipo_empresa: 'MEI',
+            cfop_padrao: '5101',
+            csosn_padrao: '101',
+            cst_padrao: '00',
+            icms_percentual: 18,
+            pis_percentual: 1.65,
+            cofins_percentual: 7.6,
+          });
+          return;
+        }
+        
+        // PGRST301 = RLS policy violation (insufficient permissions)
+        if (error.code === 'PGRST301' || error.message?.includes('RLS') || error.message?.includes('policy')) {
+          console.error('Acesso negado - apenas administradores podem acessar as configurações de nota fiscal');
+          toast.error('Acesso negado: apenas administradores podem gerenciar configurações de nota fiscal');
+          setConfig(null);
+          return;
+        }
+        
         throw error;
       }
 
@@ -51,6 +79,7 @@ export const useNotaFiscalConfig = () => {
     } catch (error) {
       console.error('Erro ao carregar configurações:', error);
       toast.error('Erro ao carregar configurações');
+      setConfig(null);
     } finally {
       setLoading(false);
     }
@@ -73,7 +102,14 @@ export const useNotaFiscalConfig = () => {
           .update(configData)
           .eq('id', config.id);
 
-        if (error) throw error;
+        if (error) {
+          // Check for RLS policy violation
+          if (error.code === 'PGRST301' || error.message?.includes('RLS') || error.message?.includes('policy')) {
+            toast.error('Acesso negado: apenas administradores podem gerenciar configurações de nota fiscal');
+            return;
+          }
+          throw error;
+        }
       } else {
         const { data, error } = await supabase
           .from('nota_configuracoes')
@@ -81,7 +117,14 @@ export const useNotaFiscalConfig = () => {
           .select()
           .single();
 
-        if (error) throw error;
+        if (error) {
+          // Check for RLS policy violation
+          if (error.code === 'PGRST301' || error.message?.includes('RLS') || error.message?.includes('policy')) {
+            toast.error('Acesso negado: apenas administradores podem gerenciar configurações de nota fiscal');
+            return;
+          }
+          throw error;
+        }
         setConfig({ ...newConfig, id: data.id });
       }
 
