@@ -64,7 +64,7 @@ async function fetchQuotes() {
 
   return (data || []).map(quote => ({
     ...quote,
-    items: quote.quote_items || []
+    items: (quote as any).quote_items || []
   })) as Quote[];
 }
 
@@ -113,27 +113,12 @@ export const useQuotes = () => {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error('Usuário não autenticado');
 
-      // Generate quote number
-      const { data: lastQuote } = await supabase
-        .from('quotes')
-        .select('quote_number')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      let nextNumber = 1;
-      if (lastQuote?.quote_number) {
-        const currentNumber = parseInt(lastQuote.quote_number.replace(/\D/g, ''));
-        nextNumber = currentNumber + 1;
-      }
-      
-      const quoteNumber = `ORC-${nextNumber.toString().padStart(6, '0')}`;
+      const { items, ...quoteWithoutItems } = quoteData;
 
       const { data: quote, error: quoteError } = await supabase
         .from('quotes')
         .insert([{
-          ...quoteData,
-          quote_number: quoteNumber,
+          ...quoteWithoutItems,
           user_id: user.id
         }])
         .select()
@@ -142,13 +127,18 @@ export const useQuotes = () => {
       if (quoteError) throw quoteError;
 
       // Insert quote items
-      if (quoteData.items && quoteData.items.length > 0) {
+      if (items && items.length > 0) {
         const { error: itemsError } = await supabase
           .from('quote_items')
           .insert(
-            quoteData.items.map(item => ({
-              ...item,
+            items.map(item => ({
               quote_id: quote.id,
+              product_id: item.product_id,
+              product_name: item.product_name,
+              description: item.description,
+              quantity: item.quantity,
+              unit_price: item.unit_price,
+              total_price: item.total_price,
               user_id: user.id
             }))
           );
