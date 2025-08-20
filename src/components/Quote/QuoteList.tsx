@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Edit, Eye, MoreHorizontal, Search, Trash2 } from "lucide-react";
+import { Edit, Eye, MoreHorizontal, Search, Trash2, CheckCircle } from "lucide-react";
 import { useQuotes, Quote } from "@/hooks/useQuotes";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -13,6 +13,7 @@ import { ptBR } from "date-fns/locale";
 interface QuoteListProps {
   onEditQuote: (quote: Quote) => void;
   onPreviewQuote: (quote: Quote) => void;
+  onApproveQuote?: (quote: Quote) => void;
 }
 
 const statusMap = {
@@ -23,7 +24,7 @@ const statusMap = {
   expired: { label: 'Expirado', variant: 'secondary' as const },
 };
 
-export const QuoteList = ({ onEditQuote, onPreviewQuote }: QuoteListProps) => {
+export const QuoteList = ({ onEditQuote, onPreviewQuote, onApproveQuote }: QuoteListProps) => {
   const { quotes, isLoading, searchQuery, setSearchQuery, deleteQuote } = useQuotes();
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -112,7 +113,7 @@ export const QuoteList = ({ onEditQuote, onPreviewQuote }: QuoteListProps) => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={statusInfo.variant}>
+                      <Badge variant={statusInfo.variant} className={quote.status === 'approved' ? 'bg-green-100 text-green-800 hover:bg-green-100' : ''}>
                         {statusInfo.label}
                       </Badge>
                     </TableCell>
@@ -143,6 +144,34 @@ export const QuoteList = ({ onEditQuote, onPreviewQuote }: QuoteListProps) => {
                             <Edit className="mr-2 h-4 w-4" />
                             Editar
                           </DropdownMenuItem>
+                          {onApproveQuote && quote.status === 'draft' && !isExpired(quote.valid_until) && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                  <CheckCircle className="mr-2 h-4 w-4" />
+                                  Aprovar
+                                </DropdownMenuItem>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Confirmar aprovação</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Tem certeza que deseja aprovar o orçamento {quote.quote_number}?
+                                    Esta ação irá alterar o status para "Aprovado" e criar um pedido automaticamente.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => onApproveQuote(quote)}
+                                    className="bg-green-600 text-white hover:bg-green-700"
+                                  >
+                                    Aprovar Orçamento
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <DropdownMenuItem onSelect={(e) => e.preventDefault()}>

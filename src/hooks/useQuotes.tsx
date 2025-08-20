@@ -270,6 +270,88 @@ export const useQuotes = () => {
     }
   };
 
+  const approveQuote = async (quote: Quote) => {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error('Usuário não autenticado');
+
+      // Get user profile for seller name
+      let sellerName = user.email; // fallback
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('first_name, last_name')
+          .eq('id', user.id)
+          .single();
+        
+        if (profile?.first_name || profile?.last_name) {
+          sellerName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+        }
+      } catch (profileError) {
+        console.log('Using email as seller name fallback');
+      }
+
+      // 1. Update quote status to approved
+      const { error: updateError } = await supabase
+        .from('quotes')
+        .update({ status: 'approved' })
+        .eq('id', quote.id);
+
+      if (updateError) throw updateError;
+
+      // 2. Create order from quote
+      const orderData = {
+        client_id: quote.client_id,
+        client_name: quote.client_name,
+        total_amount: quote.total_amount,
+        status: 'pending',
+        payment_method: quote.payment_method,
+        payment_term: quote.payment_term,
+        notes: quote.notes ? `Orçamento aprovado: ${quote.quote_number}\n${quote.notes}` : `Orçamento aprovado: ${quote.quote_number}`,
+        user_id: user.id,
+        company_id: quote.company_id,
+        seller_id: user.id,
+        seller_name: sellerName
+      };
+
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert([orderData])
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // 3. Create order items from quote items
+      if (quote.items && quote.items.length > 0) {
+        const orderItems = quote.items.map(item => ({
+          order_id: order.id,
+          product_id: item.product_id,
+          product_name: item.product_name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_price: item.total_price,
+          user_id: user.id,
+          company_id: quote.company_id
+        }));
+
+        const { error: itemsError } = await supabase
+          .from('order_items')
+          .insert(orderItems);
+
+        if (itemsError) throw itemsError;
+      }
+
+      await refreshQuotes();
+      toast.success(`Orçamento aprovado e pedido ${order.order_number} criado com sucesso!`);
+      return order;
+    } catch (err: any) {
+      console.error('Erro ao aprovar orçamento:', err);
+      toast.error('Erro ao aprovar orçamento: ' + (err.message || 'Erro desconhecido'));
+      throw err;
+    }
+  };
+
   return {
     quotes: filteredQuotes,
     allQuotes,
@@ -283,5 +365,6 @@ export const useQuotes = () => {
     createQuote,
     updateQuote,
     deleteQuote,
+    approveQuote,
   };
 };

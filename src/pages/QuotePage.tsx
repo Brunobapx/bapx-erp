@@ -6,12 +6,13 @@ import { QuoteForm } from "@/components/Quote/QuoteForm";
 import { QuotePreview } from "@/components/Quote/QuotePreview";
 import { QuoteList } from "@/components/Quote/QuoteList";
 import { FileText, Plus } from "lucide-react";
-import { Quote } from "@/hooks/useQuotes";
+import { Quote, useQuotes } from "@/hooks/useQuotes";
 
 export const QuotePage = () => {
   const [activeTab, setActiveTab] = useState("list");
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const { approveQuote } = useQuotes();
 
   const handleCreateNew = () => {
     setSelectedQuote(null);
@@ -29,6 +30,14 @@ export const QuotePage = () => {
     setActiveTab("list");
     setSelectedQuote(null);
     setIsCreating(false);
+  };
+
+  const handleApproveQuote = async (quote: Quote) => {
+    try {
+      await approveQuote(quote);
+    } catch (error) {
+      console.error('Erro ao aprovar orçamento:', error);
+    }
   };
 
   return (
@@ -72,6 +81,7 @@ export const QuotePage = () => {
                   setSelectedQuote(quote);
                   setActiveTab("preview");
                 }}
+                onApproveQuote={handleApproveQuote}
               />
             </CardContent>
           </Card>
