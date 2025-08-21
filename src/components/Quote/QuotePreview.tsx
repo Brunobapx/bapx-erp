@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { Download, Mail, MessageCircle, Printer, Loader2 } from "lucide-react";
 import { Quote } from "@/hooks/useQuotes";
 import { useCompanyInfo } from "@/hooks/useCompanyInfo";
+import { useCompanyBranding } from "@/hooks/useCompanyBranding";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -21,6 +22,7 @@ export const QuotePreview = ({ quote }: QuotePreviewProps) => {
   const [isGeneratingPDF, setIsGeneratingPDF] = React.useState(false);
   const [isSendingEmail, setIsSendingEmail] = React.useState(false);
   const { companyInfo, loading: companyLoading } = useCompanyInfo();
+  const { branding } = useCompanyBranding();
 
   const generatePDFBase64 = async (): Promise<string | null> => {
     if (!printRef.current) return null;
@@ -245,10 +247,19 @@ Para mais detalhes, entre em contato conosco.
                 </div>
                 <div className="text-right">
                   <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 flex items-center justify-center w-24 h-24">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold mb-1">BAPX</div>
-                      <div className="text-xs opacity-90">ERP</div>
-                    </div>
+                    {branding.logo_url ? (
+                      <img 
+                        src={branding.logo_url} 
+                        alt={branding.name || "Logo da Empresa"} 
+                        className="max-w-full max-h-full object-contain"
+                        style={{ filter: 'brightness(0) invert(1)' }} // Makes logo white for dark background
+                      />
+                    ) : (
+                      <div className="text-center">
+                        <div className="text-2xl font-bold mb-1">{branding.name || 'BAPX'}</div>
+                        <div className="text-xs opacity-90">ERP</div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
