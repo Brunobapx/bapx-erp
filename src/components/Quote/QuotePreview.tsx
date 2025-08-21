@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Download, Mail, MessageCircle, Printer, Loader2 } from "lucide-react";
 import { Quote } from "@/hooks/useQuotes";
+import { useCompanyInfo } from "@/hooks/useCompanyInfo";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -19,6 +20,7 @@ export const QuotePreview = ({ quote }: QuotePreviewProps) => {
   const printRef = useRef<HTMLDivElement>(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = React.useState(false);
   const [isSendingEmail, setIsSendingEmail] = React.useState(false);
+  const { companyInfo, loading: companyLoading } = useCompanyInfo();
 
   const generatePDFBase64 = async (): Promise<string | null> => {
     if (!printRef.current) return null;
@@ -259,12 +261,41 @@ Para mais detalhes, entre em contato conosco.
                   <h3 className="text-lg font-semibold text-gray-800 mb-3 border-b border-gray-200 pb-1">
                     DADOS DA EMPRESA
                   </h3>
-                  <div className="space-y-1 text-gray-600">
-                    <p className="font-semibold text-gray-800">BAPX ERP</p>
-                    <p>Sistema de Gestão Empresarial</p>
-                    <p>contato@bapxerp.com</p>
-                    <p>(11) 9999-9999</p>
-                  </div>
+                  {companyLoading ? (
+                    <div className="space-y-1 text-gray-600">
+                      <p>Carregando informações da empresa...</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1 text-gray-600">
+                      <p className="font-semibold text-gray-800">
+                        {companyInfo.company_name || 'Empresa'}
+                      </p>
+                      {companyInfo.company_cnpj && (
+                        <p>CNPJ: {companyInfo.company_cnpj}</p>
+                      )}
+                      {companyInfo.billing_email && (
+                        <p>E-mail: {companyInfo.billing_email}</p>
+                      )}
+                      {companyInfo.whatsapp && (
+                        <p>WhatsApp: {companyInfo.whatsapp}</p>
+                      )}
+                      {companyInfo.company_address && companyInfo.company_number && (
+                        <p>
+                          {companyInfo.company_address}, {companyInfo.company_number}
+                          {companyInfo.company_complement && `, ${companyInfo.company_complement}`}
+                        </p>
+                      )}
+                      {companyInfo.company_neighborhood && (
+                        <p>{companyInfo.company_neighborhood}</p>
+                      )}
+                      {companyInfo.company_city && companyInfo.company_state && (
+                        <p>{companyInfo.company_city} - {companyInfo.company_state}</p>
+                      )}
+                      {companyInfo.company_cep && (
+                        <p>CEP: {companyInfo.company_cep}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-800 mb-3 border-b border-gray-200 pb-1">
