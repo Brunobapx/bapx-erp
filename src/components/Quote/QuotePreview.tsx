@@ -246,13 +246,12 @@ Para mais detalhes, entre em contato conosco.
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 flex items-center justify-center w-24 h-24">
+                  <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4 flex items-center justify-center w-32 h-20">
                     {branding.logo_url ? (
                       <img 
                         src={branding.logo_url} 
                         alt={branding.name || "Logo da Empresa"} 
                         className="max-w-full max-h-full object-contain"
-                        style={{ filter: 'brightness(0) invert(1)' }} // Makes logo white for dark background
                       />
                     ) : (
                       <div className="text-center">
