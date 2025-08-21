@@ -7,6 +7,7 @@ import { UserManagement } from '@/components/Settings/UserManagement';
 import { CurrentUserProfile } from '@/components/Settings/CurrentUserProfile';
 import { DatabaseReset } from '@/components/Settings/DatabaseReset';
 import { SellerCommissionsSection } from '@/components/Settings/SellerCommissionsSection';
+import { WhiteLabelSettings } from '@/components/Settings/WhiteLabelSettings';
 
 interface TabContentProps {
   tabName: string;
@@ -61,15 +62,23 @@ export const SettingsPageContent: React.FC<SettingsPageContentProps> = ({ isAdmi
 </TabsContent>
 
       {isAdmin && (
-        <TabsContent value="users">
-          <TabContent tabName="Usuários">
-            <div className="space-y-6">
-              <UserManagement />
-              <SellerCommissionsSection />
-              <DatabaseReset />
-            </div>
-          </TabContent>
-        </TabsContent>
+        <>
+          <TabsContent value="whitelabel">
+            <TabContent tabName="White Label">
+              <WhiteLabelSettings />
+            </TabContent>
+          </TabsContent>
+          
+          <TabsContent value="users">
+            <TabContent tabName="Usuários">
+              <div className="space-y-6">
+                <UserManagement />
+                <SellerCommissionsSection />
+                <DatabaseReset />
+              </div>
+            </TabContent>
+          </TabsContent>
+        </>
       )}
     </>
   );
