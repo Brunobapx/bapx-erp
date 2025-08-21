@@ -75,18 +75,18 @@ export function useWhiteLabelSettings() {
       // Create unique filename
       const fileExtension = file.name.split('.').pop();
       const fileName = `${companySettings.id}-${Date.now()}.${fileExtension}`;
-      const filePath = `company-logos/${fileName}`;
+      const filePath = fileName;
 
       // Upload to storage
       const { error: uploadError } = await supabase.storage
-        .from('avatars')
+        .from('company-logos')
         .upload(filePath, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
+        .from('company-logos')
         .getPublicUrl(filePath);
 
       // Update company record
