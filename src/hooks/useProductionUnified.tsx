@@ -279,14 +279,17 @@ export const useProductionUnified = (options: UseProductionOptions = {}) => {
         : Number(production.quantity_produced ?? production.quantity_requested ?? 0);
 
       if (production.order_item_id) {
-        // Embalagem é criada pelo gatilho no banco (handle_production_flow). Evitar duplicar aqui.
-        // Atualizar apenas o tracking do item do pedido somando a quantidade aprovada
+        // A consolidação de embalagem é feita automaticamente pelo gatilho handle_production_flow
+        // Aqui apenas atualizamos o tracking do item do pedido
+        console.log('📦 Updating order item tracking - packaging consolidation handled by DB trigger');
+        
         const { data: existingTrack, error: tSelErr } = await supabase
           .from('order_item_tracking')
           .select('id, quantity_produced_approved')
           .eq('order_item_id', production.order_item_id)
           .maybeSingle();
         if (tSelErr) throw tSelErr;
+        
         const newProducedApproved = (existingTrack?.quantity_produced_approved || 0) + approvedQty;
         const { error: trackingError } = await supabase
           .from('order_item_tracking')
