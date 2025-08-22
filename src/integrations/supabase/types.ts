@@ -2820,6 +2820,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      fix_order_12_tracking: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       generate_sequence_number: {
         Args: { prefix: string; table_name: string; user_id: string }
         Returns: string
