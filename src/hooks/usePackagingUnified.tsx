@@ -258,7 +258,7 @@ export const usePackagingUnified = (options: UsePackagingOptions = {}) => {
     }
   }, [user, loadPackagings]);
 
-  // Atualizar status da embalagem
+  // Atualizar status da embalagem - simplificado, deixa o trigger do banco gerenciar a lógica
   const updatePackagingStatus = useCallback(async (
     packagingId: string,
     status: PackagingStatus,
@@ -311,11 +311,7 @@ export const usePackagingUnified = (options: UsePackagingOptions = {}) => {
 
       if (error) throw error;
 
-      // Se aprovado, liberar para venda
-      if (status === 'approved') {
-        await handleApprovedPackaging(packagingId);
-      }
-
+      // Database trigger now handles all business logic for approved packaging
       toast.success('Status da embalagem atualizado com sucesso!');
       await loadPackagings();
       return true;
@@ -328,206 +324,6 @@ export const usePackagingUnified = (options: UsePackagingOptions = {}) => {
       setSubmitting(false);
     }
   }, [user, loadPackagings]);
-
-  // Processar embalagem aprovada
-  const handleApprovedPackaging = async (packagingId: string) => {
-    try {
-      // Buscar dados da embalagem
-      const { data: packaging, error: packError } = await supabase
-        .from('packaging')
-        .select('*')
-        .eq('id', packagingId)
-        .single();
-
-      if (packError) throw packError;
-
-      // Resolver registro de tracking associado à embalagem
-      let tracking: any = null;
-
-      // 1) Tente pelo tracking_id da própria embalagem
-      if (packaging.tracking_id) {
-        const { data: byId } = await supabase
-          .from('order_item_tracking')
-          .select('*')
-          .eq('id', packaging.tracking_id)
-          .maybeSingle();
-        if (byId) tracking = byId;
-      }
-
-      // 2) Se não encontrou, tente via produção -> order_item_id
-      if (!tracking && packaging.production_id) {
-        const { data: production } = await supabase
-          .from('production')
-          .select('order_item_id, tracking_id')
-          .eq('id', packaging.production_id)
-          .maybeSingle();
-        if (production?.tracking_id) {
-          const { data: byProdTrack } = await supabase
-            .from('order_item_tracking')
-            .select('*')
-            .eq('id', production.tracking_id)
-            .maybeSingle();
-          if (byProdTrack) tracking = byProdTrack;
-        }
-        if (!tracking && production?.order_item_id) {
-          const { data: byOrderItem } = await supabase
-            .from('order_item_tracking')
-            .select('*')
-            .eq('order_item_id', production.order_item_id)
-            .maybeSingle();
-          if (byOrderItem) tracking = byOrderItem;
-        }
-      }
-
-      // 3) Fallback: tente localizar pelo pedido + produto
-      if (!tracking && packaging.order_id) {
-        const { data: item } = await supabase
-          .from('order_items')
-          .select('id')
-          .eq('order_id', packaging.order_id)
-          .eq('product_id', packaging.product_id)
-          .maybeSingle();
-        if (item) {
-          const { data: byItem } = await supabase
-            .from('order_item_tracking')
-            .select('*')
-            .eq('order_item_id', item.id)
-            .maybeSingle();
-          if (byItem) tracking = byItem;
-        }
-      }
-
-      if (tracking) {
-        // Atualizar tracking - somar quantidade embalada aprovada
-        const currentApproved = tracking.quantity_packaged_approved || 0;
-        const approvedFromPackaging = Math.max(0, Number(packaging.quantity_packaged) || 0);
-        const newApproved = currentApproved + approvedFromPackaging;
-        
-        const { error: trackingError } = await supabase
-          .from('order_item_tracking')
-          .update({
-            quantity_packaged_approved: newApproved,
-            status: newApproved >= tracking.quantity_target ? 'ready_for_sale' : 'partial_packaging',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', tracking.id);
-
-        if (trackingError) throw trackingError;
-
-        // Verificar se todos os itens do pedido estão prontos para liberar
-        if (packaging.order_id) {
-          const { data: allTrackings, error: allError } = await supabase
-            .from('order_item_tracking')
-            .select(`
-              quantity_target,
-              quantity_packaged_approved,
-              order_items!inner(id, order_id, unit_price, quantity)
-            `)
-            .eq('order_items.order_id', packaging.order_id);
-
-          if (!allError && allTrackings) {
-            const allReady = allTrackings.every(t => 
-              (t.quantity_packaged_approved || 0) >= t.quantity_target
-            );
-            
-            // Recalcular total com base na quantidade APROVADA até o momento (mesmo que parcial)
-            let newTotal = 0;
-            for (const t of allTrackings as any[]) {
-              const unitPrice = t.order_items?.unit_price || 0;
-              const qtyApproved = Math.max(0, t.quantity_packaged_approved || 0);
-              newTotal += unitPrice * qtyApproved;
-            }
-
-            // Garantir que a venda exista/atualize com o total parcial
-            try {
-              const { data: existingSale } = await supabase
-                .from('sales')
-                .select('id, user_id')
-                .eq('order_id', packaging.order_id)
-                .maybeSingle();
-
-              const { data: orderRow } = await supabase
-                .from('orders')
-                .select('client_id, client_name, user_id, seller_id')
-                .eq('id', packaging.order_id)
-                .maybeSingle();
-
-              const ownerUserId = orderRow?.user_id || user?.id || null;
-
-              if (!existingSale) {
-                await supabase
-                  .from('sales')
-                  .insert({
-                    user_id: ownerUserId!,
-                    salesperson_id: orderRow?.seller_id || null,
-                    order_id: packaging.order_id,
-                    client_id: orderRow?.client_id,
-                    client_name: orderRow?.client_name || '',
-                    total_amount: newTotal,
-                    status: 'pending'
-                  });
-              } else {
-                await supabase
-                  .from('sales')
-                  .update({
-                    user_id: ownerUserId!,
-                    salesperson_id: orderRow?.seller_id || null,
-                    client_id: orderRow?.client_id,
-                    client_name: orderRow?.client_name || '',
-                    total_amount: newTotal,
-                    updated_at: new Date().toISOString()
-                  })
-                  .eq('id', existingSale.id);
-              }
-            } catch (saleCreateErr) {
-              console.warn('[PACKAGING] Não foi possível criar/atualizar a venda automaticamente:', saleCreateErr);
-            }
-            
-            if (allReady) {
-              // Atualizar itens do pedido para refletir a quantidade aprovada (quando todos prontos)
-              try {
-                const updates = (allTrackings as any[]).map(async (t) => {
-                  const itemId = t.order_items?.id;
-                  if (!itemId) return;
-                  const unitPrice = t.order_items?.unit_price || 0;
-                  const qtyApproved = Math.max(0, t.quantity_packaged_approved || 0);
-                  await supabase
-                    .from('order_items')
-                    .update({
-                      quantity: qtyApproved,
-                      total_price: unitPrice * qtyApproved,
-                      updated_at: new Date().toISOString()
-                    })
-                    .eq('id', itemId);
-                });
-                await Promise.all(updates);
-              } catch (updateItemsErr) {
-                console.warn('[PACKAGING] Falha ao atualizar itens do pedido após aprovação de embalagem:', updateItemsErr);
-              }
-
-              // Liberar pedido para venda e salvar total recalculado
-              const { error: orderError } = await supabase
-                .from('orders')
-                .update({
-                  status: 'released_for_sale',
-                  total_amount: newTotal,
-                  updated_at: new Date().toISOString()
-                })
-                .eq('id', packaging.order_id);
-
-              if (orderError) throw orderError;
-
-              console.log(`[PACKAGING] Pedido ${packaging.order_id} liberado para venda com total recalculado:`, newTotal);
-            }
-          }
-        }
-      }
-
-    } catch (err: any) {
-      console.error('[usePackagingUnified] Erro ao processar embalagem aprovada:', err);
-      throw err;
-    }
-  };
 
   // Buscar embalagem por ID
   const getPackagingById = useCallback((packagingId: string): PackagingItem | undefined => {
