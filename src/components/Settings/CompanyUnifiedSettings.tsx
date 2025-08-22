@@ -11,6 +11,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Save, Building, FileText, MapPin, User, Percent, ExternalLink } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { FiscalValidation } from './FiscalValidation';
+import { FiscalOperationsSection } from './FiscalOperationsSection';
+import { TaxCalculationRulesSection } from './TaxCalculationRulesSection';
 
 interface UnifiedSettings {
   // Dados básicos da empresa
@@ -824,6 +826,12 @@ export const CompanyUnifiedSettings = () => {
 
       {/* Validação Fiscal */}
       <FiscalValidation settings={settings} />
+
+      {/* CFOPs por Operação */}
+      <FiscalOperationsSection />
+
+      {/* Regras de Cálculo de Impostos */}
+      <TaxCalculationRulesSection />
 
       {/* Botão Salvar */}
       <div className="flex justify-end">
