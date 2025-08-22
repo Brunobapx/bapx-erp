@@ -2812,6 +2812,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_order_ready_for_sale: {
+        Args: { p_order_id: string }
+        Returns: boolean
+      }
       current_user_company_id: {
         Args: Record<PropertyKey, never>
         Returns: string
