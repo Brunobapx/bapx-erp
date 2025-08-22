@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ClientSelector } from '@/components/Orders/ClientSelector';
 import { ProductSelector } from '@/components/Orders/ProductSelector';
 import { DateSelector } from '@/components/Orders/DateSelector';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export default function SimpleOrderFormPage() {
   const navigate = useNavigate();
@@ -27,6 +28,7 @@ export default function SimpleOrderFormPage() {
   const { items: paymentTerms } = usePaymentTerms();
   const { sellers } = useSellerUsers();
   const { user, isSeller, userPosition } = useAuth();
+  const isMobile = useIsMobile();
 
   // Estados para controlar popovers/calendários
   const [openClientCombobox, setOpenClientCombobox] = useState(false);
@@ -166,60 +168,129 @@ export default function SimpleOrderFormPage() {
           <CardContent>
             <div className="space-y-4">
               {formData.items.map((item, index) => (
-                <div key={index} className="grid grid-cols-12 gap-4 items-end p-4 border rounded">
-                  <div className="col-span-5">
-                    <Label>Produto *</Label>
-                    <ProductSelector 
-                      products={products}
-                      selectedProductId={item.product_id}
-                      selectedProductName={item.product_name}
-                      onProductSelect={(productId, productName) => handleProductSelect(index, productId, productName)}
-                      open={openProductCombobox[`item-${index}`] || false}
-                      setOpen={(open) => setOpenProductComboboxForItem(`item-${index}`, open)}
-                    />
-                  </div>
-                  
-                  <div className="col-span-2">
-                    <Label>Quantidade *</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={item.quantity}
-                      onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 1)}
-                    />
-                  </div>
-                  
-                  <div className="col-span-2">
-                    <Label>Preço Unit.</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={item.unit_price}
-                      onChange={(e) => updateItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
-                    />
-                  </div>
-                  
-                  <div className="col-span-2">
-                    <Label>Total</Label>
-                    <Input
-                      type="text"
-                      value={`R$ ${(item.quantity * item.unit_price).toFixed(2)}`}
-                      disabled
-                    />
-                  </div>
-                  
-                  <div className="col-span-1">
-                    {formData.items.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeItem(index)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
+                <div key={index}>
+                  {/* Layout Desktop */}
+                  {!isMobile && (
+                    <div className="grid grid-cols-12 gap-4 items-end p-4 border rounded">
+                      <div className="col-span-5">
+                        <Label>Produto *</Label>
+                        <ProductSelector 
+                          products={products}
+                          selectedProductId={item.product_id}
+                          selectedProductName={item.product_name}
+                          onProductSelect={(productId, productName) => handleProductSelect(index, productId, productName)}
+                          open={openProductCombobox[`item-${index}`] || false}
+                          setOpen={(open) => setOpenProductComboboxForItem(`item-${index}`, open)}
+                        />
+                      </div>
+                      
+                      <div className="col-span-2">
+                        <Label>Quantidade *</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={item.quantity}
+                          onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 1)}
+                        />
+                      </div>
+                      
+                      <div className="col-span-2">
+                        <Label>Preço Unit.</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={item.unit_price}
+                          onChange={(e) => updateItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                        />
+                      </div>
+                      
+                      <div className="col-span-2">
+                        <Label>Total</Label>
+                        <Input
+                          type="text"
+                          value={`R$ ${(item.quantity * item.unit_price).toFixed(2)}`}
+                          disabled
+                        />
+                      </div>
+                      
+                      <div className="col-span-1">
+                        {formData.items.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeItem(index)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Layout Mobile */}
+                  {isMobile && (
+                    <div className="border rounded-lg p-4 space-y-3">
+                      {/* Linha 1: Produto e ações */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex-1">
+                          <Label className="text-sm font-medium mb-1 block">Produto *</Label>
+                          <ProductSelector 
+                            products={products}
+                            selectedProductId={item.product_id}
+                            selectedProductName={item.product_name}
+                            onProductSelect={(productId, productName) => handleProductSelect(index, productId, productName)}
+                            open={openProductCombobox[`item-${index}`] || false}
+                            setOpen={(open) => setOpenProductComboboxForItem(`item-${index}`, open)}
+                          />
+                        </div>
+                        {formData.items.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeItem(index)}
+                            className="mt-5"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+
+                      {/* Linha 2: Quantidade, Preço Unit. e Total */}
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <Label className="text-sm font-medium mb-1 block">Quantidade *</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={item.quantity}
+                            onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 1)}
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label className="text-sm font-medium mb-1 block">Preço Unit.</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={item.unit_price}
+                            onChange={(e) => updateItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label className="text-sm font-medium mb-1 block">Total</Label>
+                          <Input
+                            type="text"
+                            value={`R$ ${(item.quantity * item.unit_price).toFixed(2)}`}
+                            disabled
+                            className="bg-green-50 font-medium text-green-700"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
