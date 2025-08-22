@@ -2,6 +2,7 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, DollarSign, CalendarDays } from "lucide-react";
+import { formatCurrency } from "@/utils/formatCurrency";
 
 interface CashFlowCardsProps {
   totalEntradas: number;
@@ -23,7 +24,7 @@ export const CashFlowCards: React.FC<CashFlowCardsProps> = ({
           <TrendingUp className="h-4 w-4 text-green-600" />
           <div>
             <p className="text-sm text-muted-foreground">Total Entradas</p>
-            <p className="text-lg font-bold text-green-600">R$ {totalEntradas.toLocaleString('pt-BR')}</p>
+            <p className="text-lg font-bold text-green-600">{formatCurrency(totalEntradas)}</p>
           </div>
         </div>
       </CardContent>
@@ -34,7 +35,7 @@ export const CashFlowCards: React.FC<CashFlowCardsProps> = ({
           <TrendingDown className="h-4 w-4 text-red-600" />
           <div>
             <p className="text-sm text-muted-foreground">Total Saídas</p>
-            <p className="text-lg font-bold text-red-600">R$ {totalSaidas.toLocaleString('pt-BR')}</p>
+            <p className="text-lg font-bold text-red-600">{formatCurrency(totalSaidas)}</p>
           </div>
         </div>
       </CardContent>
@@ -46,7 +47,7 @@ export const CashFlowCards: React.FC<CashFlowCardsProps> = ({
           <div>
             <p className="text-sm text-muted-foreground">Saldo Líquido</p>
             <p className={`text-lg font-bold ${saldoLiquido >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              R$ {saldoLiquido.toLocaleString('pt-BR')}
+              {formatCurrency(saldoLiquido)}
             </p>
           </div>
         </div>
@@ -58,7 +59,7 @@ export const CashFlowCards: React.FC<CashFlowCardsProps> = ({
           <CalendarDays className="h-4 w-4 text-purple-600" />
           <div>
             <p className="text-sm text-muted-foreground">Saldo Final</p>
-            <p className="text-lg font-bold text-purple-600">R$ {saldoFinal.toLocaleString('pt-BR')}</p>
+            <p className="text-lg font-bold text-purple-600">{formatCurrency(saldoFinal)}</p>
           </div>
         </div>
       </CardContent>

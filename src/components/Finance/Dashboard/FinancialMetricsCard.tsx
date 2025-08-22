@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LucideIcon } from 'lucide-react';
+import { formatCurrency } from '@/utils/formatCurrency';
 
 interface FinancialMetricsCardProps {
   title: string;
@@ -19,12 +20,7 @@ export const FinancialMetricsCard: React.FC<FinancialMetricsCardProps> = ({
   iconColor,
   bgColor
 }) => {
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(amount);
-  };
+  // Import formatCurrency from utils
 
   return (
     <Card className="hover:shadow-md transition-shadow">

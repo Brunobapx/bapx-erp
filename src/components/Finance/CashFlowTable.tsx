@@ -4,6 +4,7 @@ import {
   Table, TableBody, TableCell,
   TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
+import { formatCurrency } from "@/utils/formatCurrency";
 
 type Item = {
   id: string;
@@ -40,10 +41,10 @@ export const CashFlowTable: React.FC<CashFlowTableProps> = ({ data }) => (
             </span>
           </TableCell>
           <TableCell className={`text-right font-medium ${item.type === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
-            {item.type === 'entrada' ? '+' : '-'} R$ {item.amount.toLocaleString('pt-BR')}
+            {item.type === 'entrada' ? '+' : '-'} {formatCurrency(item.amount).replace('R$ ', '')}
           </TableCell>
           <TableCell className="text-right font-medium">
-            R$ {item.balance.toLocaleString('pt-BR')}
+            {formatCurrency(item.balance)}
           </TableCell>
         </TableRow>
       ))}

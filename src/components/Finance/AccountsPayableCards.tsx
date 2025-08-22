@@ -2,6 +2,7 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertTriangle, Clock } from "lucide-react";
+import { formatCurrency } from "@/utils/formatCurrency";
 
 interface AccountsPayableCardsProps {
   totalVencido: number;
@@ -21,7 +22,7 @@ export const AccountsPayableCards: React.FC<AccountsPayableCardsProps> = ({
           <AlertTriangle className="h-4 w-4 text-red-600" />
           <div>
             <p className="text-sm text-muted-foreground">Vencidas</p>
-            <p className="text-lg font-bold text-red-600">R$ {totalVencido.toLocaleString('pt-BR')}</p>
+            <p className="text-lg font-bold text-red-600">{formatCurrency(totalVencido)}</p>
           </div>
         </div>
       </CardContent>
@@ -32,7 +33,7 @@ export const AccountsPayableCards: React.FC<AccountsPayableCardsProps> = ({
           <Clock className="h-4 w-4 text-yellow-600" />
           <div>
             <p className="text-sm text-muted-foreground">Pendentes</p>
-            <p className="text-lg font-bold text-yellow-600">R$ {totalPendente.toLocaleString('pt-BR')}</p>
+            <p className="text-lg font-bold text-yellow-600">{formatCurrency(totalPendente)}</p>
           </div>
         </div>
       </CardContent>
@@ -43,7 +44,7 @@ export const AccountsPayableCards: React.FC<AccountsPayableCardsProps> = ({
           <Clock className="h-4 w-4 text-green-600" />
           <div>
             <p className="text-sm text-muted-foreground">Pagas</p>
-            <p className="text-lg font-bold text-green-600">R$ {totalPago.toLocaleString('pt-BR')}</p>
+            <p className="text-lg font-bold text-green-600">{formatCurrency(totalPago)}</p>
           </div>
         </div>
       </CardContent>

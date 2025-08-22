@@ -3,6 +3,7 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DollarSign, ArrowDown, ArrowUp, TrendingUp } from "lucide-react";
+import { formatCurrency } from "@/utils/formatCurrency";
 
 interface FinanceHeaderProps {
   saldo: number;
@@ -28,7 +29,7 @@ export const FinanceHeader: React.FC<FinanceHeaderProps> = ({
           <ArrowUp className="h-5 w-5 text-sales" />
           <div>
             <p className="text-xs text-muted-foreground">Receitas</p>
-            <p className="font-bold text-sales">R$ {totalReceitas.toLocaleString('pt-BR')}</p>
+            <p className="font-bold text-sales">{formatCurrency(totalReceitas)}</p>
           </div>
         </CardContent>
       </Card>
@@ -37,7 +38,7 @@ export const FinanceHeader: React.FC<FinanceHeaderProps> = ({
           <ArrowDown className="h-5 w-5 text-erp-alert" />
           <div>
             <p className="text-xs text-muted-foreground">Despesas</p>
-            <p className="font-bold text-erp-alert">R$ {totalDespesas.toLocaleString('pt-BR')}</p>
+            <p className="font-bold text-erp-alert">{formatCurrency(totalDespesas)}</p>
           </div>
         </CardContent>
       </Card>
@@ -47,7 +48,7 @@ export const FinanceHeader: React.FC<FinanceHeaderProps> = ({
           <div>
             <p className="text-xs text-muted-foreground">Saldo</p>
             <p className={`font-bold ${saldo >= 0 ? 'text-sales' : 'text-erp-alert'}`}>
-              R$ {saldo.toLocaleString('pt-BR')}
+              {formatCurrency(saldo)}
             </p>
           </div>
         </CardContent>

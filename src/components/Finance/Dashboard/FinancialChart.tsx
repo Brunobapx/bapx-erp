@@ -4,6 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, eachWeekOfInterval, startOfMonth, endOfMonth, eachMonthOfInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { UnifiedFinancialEntry } from '@/hooks/useUnifiedFinancialEntries';
+import { formatCurrency } from '@/utils/formatCurrency';
 
 interface FinancialChartProps {
   data: UnifiedFinancialEntry[];
@@ -97,14 +98,7 @@ export const FinancialChart: React.FC<FinancialChartProps> = ({
     });
   }, [data, period, totalEntradas, totalSaidas]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value);
-  };
+  // Using centralized formatCurrency function
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
