@@ -7,6 +7,7 @@ import { FileText, Loader2 } from 'lucide-react';
 import { useNotaFiscal } from '@/hooks/useNotaFiscal';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { formatCurrency } from '@/utils/formatCurrency';
 
 interface Pedido {
   id: string;
@@ -100,7 +101,7 @@ const EmitirNotaFiscal = () => {
             <SelectContent>
               {pedidos.map(pedido => (
                 <SelectItem key={pedido.id} value={pedido.id}>
-                  {pedido.order_number} - {pedido.client_name} - R$ {pedido.total_amount.toFixed(2)}
+                  {pedido.order_number} - {pedido.client_name} - {formatCurrency(pedido.total_amount)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -121,7 +122,7 @@ const EmitirNotaFiscal = () => {
                   <span className="font-medium">Cliente:</span> {selectedPedidoData.client_name}
                 </div>
                 <div>
-                  <span className="font-medium">Valor Total:</span> R$ {selectedPedidoData.total_amount.toFixed(2)}
+                  <span className="font-medium">Valor Total:</span> {formatCurrency(selectedPedidoData.total_amount)}
                 </div>
                 <div>
                   <span className="font-medium">Status:</span> {selectedPedidoData.status}
