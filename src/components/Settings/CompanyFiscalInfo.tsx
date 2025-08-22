@@ -6,11 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building, FileText, Percent, Save, ExternalLink } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Building, FileText, Percent, Save, ExternalLink, Calculator, Settings } from 'lucide-react';
 import { useCompanyFiscalSettings } from '@/hooks/useCompanyFiscalSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { FiscalValidation } from './FiscalValidation';
+import { FiscalOperationsSection } from './FiscalOperationsSection';
+import { TaxCalculationRulesSection } from './TaxCalculationRulesSection';
 
 export const CompanyFiscalInfo = () => {
   const { settings, setSettings, loading, saving, saveSettings, getTaxInfo } = useCompanyFiscalSettings();
