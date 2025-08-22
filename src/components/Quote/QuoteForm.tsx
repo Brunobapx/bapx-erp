@@ -23,6 +23,7 @@ import { useUserPositions } from "@/hooks/useUserPositions";
 import { useSellerUsers } from "@/hooks/useSellerUsers";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { formatCurrency } from '@/utils/formatCurrency';
 
 interface QuoteFormProps {
   quote?: Quote | null;
@@ -384,7 +385,7 @@ export const QuoteForm = ({ quote, onSave, onCancel }: QuoteFormProps) => {
                         <SelectContent>
                           {products.map((product) => (
                             <SelectItem key={product.id} value={product.id}>
-                              {product.name} - R$ {product.price?.toFixed(2)}
+                              {product.name} - {formatCurrency(product.price || 0)}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -413,7 +414,7 @@ export const QuoteForm = ({ quote, onSave, onCancel }: QuoteFormProps) => {
                       <Label>Total</Label>
                       <Input
                         type="text"
-                        value={`R$ ${item.total_price.toFixed(2)}`}
+                        value={formatCurrency(item.total_price)}
                         readOnly
                         className="bg-muted"
                       />
@@ -464,18 +465,18 @@ export const QuoteForm = ({ quote, onSave, onCancel }: QuoteFormProps) => {
             <div className="bg-muted/30 p-4 rounded-lg space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Subtotal:</span>
-                <span>R$ {subtotal.toFixed(2)}</span>
+                <span>{formatCurrency(subtotal)}</span>
               </div>
               {discountAmount > 0 && (
                 <div className="flex justify-between text-sm text-muted-foreground">
                   <span>Desconto:</span>
-                  <span>- R$ {discountAmount.toFixed(2)}</span>
+                  <span>- {formatCurrency(discountAmount)}</span>
                 </div>
               )}
               <Separator />
               <div className="flex justify-between font-medium text-lg">
                 <span>Total:</span>
-                <span>R$ {total.toFixed(2)}</span>
+                <span>{formatCurrency(total)}</span>
               </div>
             </div>
           </div>

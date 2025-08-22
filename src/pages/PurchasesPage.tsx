@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ShoppingCart, Upload, Package, FileX, Check, AlertTriangle, Link } from 'lucide-react';
+import { formatCurrency } from '@/utils/formatCurrency';
 
 interface Purchase {
   id: string;
@@ -523,7 +524,7 @@ const PurchasesPage = () => {
                       <TableCell className="font-medium">{purchase.invoice_number}</TableCell>
                       <TableCell>{purchase.vendor_name}</TableCell>
                       <TableCell>{new Date(purchase.invoice_date).toLocaleDateString('pt-BR')}</TableCell>
-                      <TableCell className="text-right">R$ {purchase.total_amount.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(purchase.total_amount)}</TableCell>
                       <TableCell>{getStatusBadge(purchase.status)}</TableCell>
                       <TableCell>
                         <div className="flex gap-2">
@@ -657,7 +658,7 @@ const PurchasesPage = () => {
                         </div>
                       </TableCell>
                       <TableCell>{item.quantity} {item.unit}</TableCell>
-                      <TableCell>R$ {item.unit_price.toFixed(2)}</TableCell>
+                      <TableCell>{formatCurrency(item.unit_price)}</TableCell>
                       <TableCell>
                         <Select
                           value={association?.createNew ? 'new' : association?.productId || 'new'}
@@ -737,8 +738,8 @@ const PurchasesPage = () => {
                       <TableCell>{item.product_code}</TableCell>
                       <TableCell>{item.product_name}</TableCell>
                       <TableCell>{item.quantity} {item.unit}</TableCell>
-                      <TableCell>R$ {item.unit_price.toFixed(2)}</TableCell>
-                      <TableCell>R$ {item.total_price.toFixed(2)}</TableCell>
+                      <TableCell>{formatCurrency(item.unit_price)}</TableCell>
+                      <TableCell>{formatCurrency(item.total_price)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { supabase } from "@/integrations/supabase/client";
+import { formatCurrency } from '@/utils/formatCurrency';
 
 interface QuotePreviewProps {
   quote: Quote;
@@ -179,11 +180,11 @@ Conforme solicitado, segue o orçamento para sua análise:
 ${quote.payment_method ? `• Pagamento: ${quote.payment_method}` : ''}
 ${quote.payment_term ? `• Prazo: ${quote.payment_term}` : ''}
 
-💰 *Valor Total: R$ ${quote.total_amount.toFixed(2)}*
+💰 *Valor Total: ${formatCurrency(quote.total_amount)}*
 
 📋 *Itens:*
 ${quote.items.map((item, index) => 
-  `${index + 1}. ${item.product_name} - Qtd: ${item.quantity} - R$ ${item.total_price.toFixed(2)}`
+  `${index + 1}. ${item.product_name} - Qtd: ${item.quantity} - ${formatCurrency(item.total_price)}`
 ).join('\n')}
 
 ${quote.notes ? `\n📝 *Observações:*\n${quote.notes}` : ''}
@@ -357,10 +358,10 @@ Para mais detalhes, entre em contato conosco.
                             {item.quantity}
                           </td>
                           <td className="px-4 py-4 text-right text-sm text-gray-900">
-                            R$ {item.unit_price.toFixed(2)}
+                            {formatCurrency(item.unit_price)}
                           </td>
                           <td className="px-4 py-4 text-right text-sm font-medium text-gray-900">
-                            R$ {item.total_price.toFixed(2)}
+                            {formatCurrency(item.total_price)}
                           </td>
                         </tr>
                       ))}
@@ -375,7 +376,7 @@ Para mais detalhes, entre em contato conosco.
                   <div className="bg-gray-50 p-6 rounded-lg space-y-3">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Subtotal:</span>
-                      <span className="font-medium">R$ {quote.subtotal.toFixed(2)}</span>
+                      <span className="font-medium">{formatCurrency(quote.subtotal)}</span>
                     </div>
                     {quote.discount_amount && quote.discount_amount > 0 && (
                       <div className="flex justify-between text-sm">
@@ -383,14 +384,14 @@ Para mais detalhes, entre em contato conosco.
                           Desconto ({quote.discount_percentage}%):
                         </span>
                         <span className="font-medium text-red-600">
-                          - R$ {quote.discount_amount.toFixed(2)}
+                          - {formatCurrency(quote.discount_amount)}
                         </span>
                       </div>
                     )}
                     <Separator />
                     <div className="flex justify-between text-lg font-bold">
                       <span>Total:</span>
-                      <span className="text-primary">R$ {quote.total_amount.toFixed(2)}</span>
+                      <span className="text-primary">{formatCurrency(quote.total_amount)}</span>
                     </div>
                   </div>
                 </div>

@@ -9,6 +9,7 @@ import { Edit, Eye, MoreHorizontal, Search, Trash2, CheckCircle } from "lucide-r
 import { useQuotes, Quote } from "@/hooks/useQuotes";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { formatCurrency } from '@/utils/formatCurrency';
 
 interface QuoteListProps {
   onEditQuote: (quote: Quote) => void;
@@ -118,7 +119,7 @@ export const QuoteList = ({ onEditQuote, onPreviewQuote, onApproveQuote }: Quote
                       </Badge>
                     </TableCell>
                     <TableCell className="font-medium">
-                      R$ {quote.total_amount.toFixed(2)}
+                      {formatCurrency(quote.total_amount)}
                     </TableCell>
                     <TableCell>
                       <span className={isExpired(quote.valid_until) ? 'text-destructive' : ''}>

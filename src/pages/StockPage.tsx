@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { StockMovementModal } from '@/components/Stock/StockMovementModal';
 import { StockReportsTab } from '@/components/Stock/StockReportsTab';
 import { Package, Plus, TrendingUp, AlertTriangle, BarChart3 } from 'lucide-react';
+import { formatCurrency } from '@/utils/formatCurrency';
 
 interface Product {
   id: string;
@@ -178,7 +179,7 @@ const StockPage = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              R$ {totalStockValue.toFixed(2)}
+              {formatCurrency(totalStockValue)}
             </div>
           </CardContent>
         </Card>
@@ -233,10 +234,10 @@ const StockPage = () => {
                         <TableCell className="text-right font-bold">
                           {stock} {product.unit}
                         </TableCell>
-                        <TableCell className="text-right">R$ {price.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">R$ {cost.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(price)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(cost)}</TableCell>
                         <TableCell className="text-right font-medium">
-                          R$ {(stock * price).toFixed(2)}
+                          {formatCurrency(stock * price)}
                         </TableCell>
                         <TableCell>
                           <Badge variant={status.variant}>{status.label}</Badge>
