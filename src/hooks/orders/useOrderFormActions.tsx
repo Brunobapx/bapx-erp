@@ -204,17 +204,13 @@ export const useOrderFormActions = ({
         toast.success("Pedido criado com sucesso");
         onClose(true);
         
-        // Processar estoque em background (não bloquear a UI)
-        checkStockAndSendToProduction(insertedOrder.id).catch(error => {
-          console.error('[ORDER] Erro no processamento background:', error);
-          // Tentar fallback se falhar
-          supabase.functions.invoke('process-pending-orders', {
-            body: { order_id: insertedOrder.id }
-          }).catch(fallbackError => {
-            console.error('[ORDER] Fallback também falhou:', fallbackError);
-            toast.warning("Pedido criado, processamento em andamento");
+        // Processar estoque em background usando setTimeout (não bloquear a UI)
+        setTimeout(() => {
+          checkStockAndSendToProduction(insertedOrder.id).catch(error => {
+            console.error('[ORDER] Erro no processamento background:', error);
+            toast.warning("Pedido criado com sucesso, mas houve problema no processamento automático");
           });
-        });
+        }, 100);
         
         return insertedOrder.id;
       } else {

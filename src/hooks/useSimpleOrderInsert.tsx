@@ -91,6 +91,16 @@ export const useSimpleOrderInsert = () => {
 
       console.log('[SIMPLE ORDER] Sucesso completo');
       toast.success('Pedido criado com sucesso!');
+      
+      // Processar estoque em background após retornar
+      setTimeout(() => {
+        import('./orders/stockProcessor').then(({ checkStockAndSendToProduction }) => {
+          checkStockAndSendToProduction(order.id).catch(error => {
+            console.error('[SIMPLE ORDER] Erro no processamento:', error);
+          });
+        });
+      }, 100);
+      
       return order.id;
       
     } catch (error: any) {
