@@ -1511,6 +1511,7 @@ export type Database = {
       products: {
         Row: {
           category: string | null
+          cest: string | null
           code: string | null
           cofins: string | null
           commission_type: string | null
@@ -1518,6 +1519,7 @@ export type Database = {
           company_id: string
           cost: number | null
           created_at: string
+          cst_csosn: string | null
           description: string | null
           icms: string | null
           id: string
@@ -1540,6 +1542,7 @@ export type Database = {
         }
         Insert: {
           category?: string | null
+          cest?: string | null
           code?: string | null
           cofins?: string | null
           commission_type?: string | null
@@ -1547,6 +1550,7 @@ export type Database = {
           company_id: string
           cost?: number | null
           created_at?: string
+          cst_csosn?: string | null
           description?: string | null
           icms?: string | null
           id?: string
@@ -1569,6 +1573,7 @@ export type Database = {
         }
         Update: {
           category?: string | null
+          cest?: string | null
           code?: string | null
           cofins?: string | null
           commission_type?: string | null
@@ -1576,6 +1581,7 @@ export type Database = {
           company_id?: string
           cost?: number | null
           created_at?: string
+          cst_csosn?: string | null
           description?: string | null
           icms?: string | null
           id?: string

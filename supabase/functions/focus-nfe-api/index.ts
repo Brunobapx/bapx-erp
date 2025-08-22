@@ -125,11 +125,11 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
 
   const pedido = { ...pedidoBase, order_items: itensPedido, clients: clienteRow } as any;
 
-  // Buscar dados dos produtos para obter os códigos e pesos
+  // Buscar dados dos produtos para obter os códigos, pesos e informações fiscais
   const productIds = pedido.order_items.map((item: any) => item.product_id);
   const { data: products } = await supabase
     .from('products')
-    .select('id, code, weight')
+    .select('id, code, weight, ncm, cest, cst_csosn, icms, pis, cofins')
     .in('id', productIds);
 
   const productCodeMap = products?.reduce((acc: any, product: any) => {
@@ -139,6 +139,11 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
 
   const productWeightMap = products?.reduce((acc: any, product: any) => {
     acc[product.id] = Number(product.weight) || 0;
+    return acc;
+  }, {}) || {};
+  
+  const productMap = products?.reduce((acc: any, product: any) => {
+    acc[product.id] = product;
     return acc;
   }, {}) || {};
 
@@ -328,66 +333,78 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     // Outras despesas
     valor_outras_despesas: 0,
     
-    // Itens com campos conforme XML autorizado
-    items: pedido.order_items.map((item: any, index: number) => ({
-      numero_item: index + 1,
-      codigo_produto: productCodeMap[item.product_id] || item.product_id,
-      descricao: item.product_name,
-      codigo_ncm: defaultNcm, // NCM das configurações
-      cest: "1706200", // CEST conforme XML autorizado
-      cfop: defaultCfop, // CFOP das configurações
-      unidade_comercial: "CX", // Conforme XML
-      quantidade_comercial: Number(item.quantity),
-      valor_unitario_comercial: Number(item.unit_price),
-      valor_total_bruto: Number(item.total_price),
-      unidade_tributavel: "CX", // Conforme XML
-      quantidade_tributavel: Number(item.quantity),
-      valor_unitario_tributacao: Number(item.unit_price),
-      codigo_ean: "SEM GTIN", // Conforme XML
-      codigo_ean_tributavel: "SEM GTIN", // Conforme XML
+    // Itens com campos conforme XML autorizado - usando dados fiscais específicos do produto
+    items: pedido.order_items.map((item: any, index: number) => {
+      const product = productMap[item.product_id];
       
-      // Peso líquido (quantidade × peso do produto)
-      peso_liquido: Number(item.quantity) * (productWeightMap[item.product_id] || 0),
-      
-      // ICMS conforme regime tributário
-      ...(isSimplesToNacional ? {
-        // Simples Nacional usa CSOSN
-        icms_csosn: icmsConfig.situacao_tributaria,
-        icms_origem: icmsConfig.origem
-      } : {
-        // Regime Normal usa CST
-        icms_situacao_tributaria: icmsConfig.situacao_tributaria,
-        icms_origem: icmsConfig.origem,
-        ...(icmsConfig.aliquota > 0 ? {
-          icms_modalidade_base_calculo: 3, // 3 = Valor da operação
-          icms_aliquota: icmsConfig.aliquota,
-          icms_base_calculo: Number(item.total_price),
-          icms_valor: Number(item.total_price) * (icmsConfig.aliquota / 100)
-        } : {})
-      }),
-      
-      // PIS - campos obrigatórios mas simplificados
-      pis_situacao_tributaria: pisCST,
-      ...(pisAliquota > 0 ? {
-        pis_base_calculo: Number(item.total_price),
-        pis_aliquota_porcentual: pisAliquota,
-        pis_valor: Number(item.total_price) * (pisAliquota / 100)
-      } : {}),
-      
-      // COFINS - campos obrigatórios mas simplificados  
-      cofins_situacao_tributaria: cofinsCST,
-      ...(cofinsAliquota > 0 ? {
-        cofins_base_calculo: Number(item.total_price),
-        cofins_aliquota_porcentual: cofinsAliquota,
-        cofins_valor: Number(item.total_price) * (cofinsAliquota / 100)
-      } : {}),
-      
-      // Valor total de tributos do item
-      valor_total_tributos: Number(item.total_price) * ((pisAliquota + cofinsAliquota) / 100),
-      
-      // Inclui no total da nota
-      inclui_no_total: 1
-    }))
+      // Usar dados fiscais específicos do produto ou fallback para configurações gerais
+      const productNcm = product?.ncm || defaultNcm;
+      const productCest = product?.cest || "1706200";
+      const productCstCsosn = product?.cst_csosn || (isSimplesToNacional ? icmsConfig.situacao_tributaria : icmsConfig.situacao_tributaria);
+      const productIcmsAliquota = product?.icms ? parseFloat(product.icms) : icmsConfig.aliquota;
+      const productPisAliquota = product?.pis ? parseFloat(product.pis) : pisAliquota;
+      const productCofinsAliquota = product?.cofins ? parseFloat(product.cofins) : cofinsAliquota;
+
+      return {
+        numero_item: index + 1,
+        codigo_produto: productCodeMap[item.product_id] || item.product_id,
+        descricao: item.product_name,
+        codigo_ncm: productNcm, // NCM específico do produto
+        cest: productCest, // CEST específico do produto
+        cfop: defaultCfop, // CFOP das configurações
+        unidade_comercial: "CX", // Conforme XML
+        quantidade_comercial: Number(item.quantity),
+        valor_unitario_comercial: Number(item.unit_price),
+        valor_total_bruto: Number(item.total_price),
+        unidade_tributavel: "CX", // Conforme XML
+        quantidade_tributavel: Number(item.quantity),
+        valor_unitario_tributacao: Number(item.unit_price),
+        codigo_ean: "SEM GTIN", // Conforme XML
+        codigo_ean_tributavel: "SEM GTIN", // Conforme XML
+        
+        // Peso líquido (quantidade × peso do produto)
+        peso_liquido: Number(item.quantity) * (productWeightMap[item.product_id] || 0),
+        
+        // ICMS conforme regime tributário - usando dados específicos do produto
+        ...(isSimplesToNacional ? {
+          // Simples Nacional usa CSOSN
+          icms_csosn: productCstCsosn,
+          icms_origem: icmsConfig.origem
+        } : {
+          // Regime Normal usa CST
+          icms_situacao_tributaria: productCstCsosn,
+          icms_origem: icmsConfig.origem,
+          ...(productIcmsAliquota > 0 ? {
+            icms_modalidade_base_calculo: 3, // 3 = Valor da operação
+            icms_aliquota: productIcmsAliquota,
+            icms_base_calculo: Number(item.total_price),
+            icms_valor: Number(item.total_price) * (productIcmsAliquota / 100)
+          } : {})
+        }),
+        
+        // PIS - usando alíquota específica do produto
+        pis_situacao_tributaria: pisCST,
+        ...(productPisAliquota > 0 ? {
+          pis_base_calculo: Number(item.total_price),
+          pis_aliquota_porcentual: productPisAliquota,
+          pis_valor: Number(item.total_price) * (productPisAliquota / 100)
+        } : {}),
+        
+        // COFINS - usando alíquota específica do produto
+        cofins_situacao_tributaria: cofinsCST,
+        ...(productCofinsAliquota > 0 ? {
+          cofins_base_calculo: Number(item.total_price),
+          cofins_aliquota_porcentual: productCofinsAliquota,
+          cofins_valor: Number(item.total_price) * (productCofinsAliquota / 100)
+        } : {}),
+        
+        // Valor total de tributos do item - calculado com alíquotas específicas do produto
+        valor_total_tributos: Number(item.total_price) * ((productPisAliquota + productCofinsAliquota) / 100),
+        
+        // Inclui no total da nota
+        inclui_no_total: 1
+      };
+    })
   };
 
   // Adicionar CPF ou CNPJ do destinatário e campos específicos conforme XML
