@@ -14,45 +14,6 @@ export const useSellerUsers = () => {
   const [sellers, setSellers] = useState<SellerUser[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const enrichUserData = async (users: { user_id: string; position: string; created_at: string }[]): Promise<SellerUser[]> => {
-    // Mapeamento dos usuários conhecidos do sistema
-    const knownUsers: Record<string, { firstName: string; lastName: string; email: string }> = {
-      '50813b14-8b0c-40cf-a55c-76bf2a4a19b1': {
-        firstName: 'Thor',
-        lastName: 'Albuquerque', 
-        email: 'thor@bapx.com.br'
-      },
-      '6c0bf94a-f544-4452-9aaf-9a702c028967': {
-        firstName: 'Nathalia',
-        lastName: 'Lopes',
-        email: 'nathalia@bapx.com.br'
-      },
-      '4d5d2bf8-8555-41b1-98be-4ed3f88b4fdf': {
-        firstName: 'Nathalia',
-        lastName: 'Lopes',
-        email: 'nathalia@bapx.com.br'
-      }
-    };
-    
-    return users.map(user => {
-      const knownUser = knownUsers[user.user_id];
-      if (knownUser) {
-        return {
-          ...user,
-          email: knownUser.email,
-          display_name: `${knownUser.firstName} ${knownUser.lastName}`
-        };
-      } else {
-        // Para usuários não conhecidos, usar uma abordagem de fallback
-        return {
-          ...user,
-          email: undefined,
-          display_name: `Vendedor ${user.user_id.substring(0, 8)}`
-        };
-      }
-    });
-  };
-
   const loadSellers = async () => {
     try {
       setLoading(true);
@@ -68,74 +29,63 @@ export const useSellerUsers = () => {
 
       console.log('👤 Usuário autenticado:', user.id);
 
-      // Buscar company_id do usuário atual como fallback
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('company_id')
-        .eq('id', user.id)
-        .single();
-
-      console.log('🏢 Company ID do usuário:', profileData?.company_id);
+      // Buscar usuários da empresa usando o edge function
+      const { data: usersResponse, error: usersError } = await supabase.functions.invoke('get-users');
       
-      // Buscar usuários com cargo de vendedor na tabela user_positions
-      // A política RLS garante que apenas vendedores da mesma empresa sejam retornados
-      let query = supabase
+      if (usersError) {
+        console.error('❌ Erro ao buscar usuários:', usersError);
+        throw usersError;
+      }
+
+      console.log('👥 Resposta do get-users:', usersResponse);
+
+      if (!usersResponse?.success) {
+        console.log('❌ Resposta sem sucesso do get-users:', usersResponse);
+        setSellers([]);
+        return;
+      }
+
+      // Buscar posições de vendedor para filtrar usuários
+      const { data: positionsData, error: positionsError } = await supabase
         .from('user_positions')
         .select('user_id, position, created_at, company_id')
-        .eq('position', 'vendedor');
-
-      // Fallback: aplicar filtro manual se RLS não estiver funcionando
-      if (profileData?.company_id) {
-        query = query.eq('company_id', profileData.company_id);
-      }
-
-      const { data: positionsData, error: positionsError } = await query
+        .eq('position', 'vendedor')
         .order('created_at', { ascending: false });
 
-      console.log('📊 Resultado da busca por posições:', { 
-        positionsData, 
-        positionsError,
-        count: positionsData?.length || 0,
-        userCompanies: positionsData?.map(p => p.company_id) || []
-      });
+      console.log('📊 Posições de vendedor encontradas:', { positionsData, positionsError });
 
       if (positionsError) {
-        console.log('❌ Erro ao buscar por posições, tentando buscar por roles:', positionsError);
-        
-        // Se não encontrar por posições, tentar buscar por roles com 'seller'
-        const { data: rolesData, error: rolesError } = await supabase
-          .from('user_roles')
-          .select('user_id, role, created_at')
-          .eq('role', 'seller')
-          .order('created_at', { ascending: false });
-
-        console.log('📊 Resultado da busca por roles:', { rolesData, rolesError });
-
-        if (rolesError) throw rolesError;
-        
-        // Mapear roles para o formato esperado
-        const mappedRolesData = (rolesData || []).map(item => ({
-          user_id: item.user_id,
-          position: item.role,
-          created_at: item.created_at
-        }));
-        
-        console.log('🔄 Dados mapeados de roles:', mappedRolesData);
-        
-        // Buscar informações adicionais dos usuários
-        const enrichedData = await enrichUserData(mappedRolesData);
-        console.log('✨ Dados enriquecidos de roles:', enrichedData);
-        setSellers(enrichedData);
-      } else {
-        console.log('✅ Posições encontradas, enriquecendo dados...');
-        // Buscar informações adicionais dos usuários
-        const enrichedData = await enrichUserData(positionsData || []);
-        console.log('✨ Dados enriquecidos de posições:', enrichedData);
-        setSellers(enrichedData);
+        console.error('❌ Erro ao buscar posições:', positionsError);
+        throw positionsError;
       }
+
+      // Filtrar usuários que são vendedores
+      const sellerUserIds = new Set(positionsData?.map(p => p.user_id) || []);
+      const allUsers = usersResponse.users || [];
+      
+      console.log('🎯 Filtrando usuários:', { sellerUserIds, allUsers: allUsers.length });
+
+      const sellerUsers: SellerUser[] = allUsers
+        .filter((u: any) => sellerUserIds.has(u.id))
+        .map((u: any) => {
+          const position = positionsData?.find(p => p.user_id === u.id);
+          return {
+            user_id: u.id,
+            position: 'vendedor',
+            created_at: position?.created_at || u.created_at,
+            email: u.email,
+            display_name: u.user_metadata?.first_name && u.user_metadata?.last_name 
+              ? `${u.user_metadata.first_name} ${u.user_metadata.last_name}`
+              : u.user_metadata?.first_name || `Vendedor ${u.id.substring(0, 8)}`
+          };
+        });
+
+      console.log('✨ Vendedores encontrados:', sellerUsers);
+      setSellers(sellerUsers);
     } catch (error: any) {
       console.error('❌ Erro ao carregar vendedores:', error);
       toast.error('Erro ao carregar vendedores');
+      setSellers([]);
     } finally {
       setLoading(false);
       console.log('🏁 Busca por vendedores finalizada');
