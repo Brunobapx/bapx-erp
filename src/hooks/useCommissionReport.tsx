@@ -6,9 +6,19 @@ import { CommissionFilters } from '@/components/Reports/CommissionFilters';
 import { CommissionData } from '@/components/Reports/CommissionTable';
 import { useSellerCommissions } from './useSellerCommissions';
 
+interface CompanyUser {
+  id: string;
+  email: string;
+  user_metadata?: {
+    first_name?: string;
+    last_name?: string;
+  };
+}
+
 export const useCommissionReport = () => {
   const [commissions, setCommissions] = useState<CommissionData[]>([]);
   const [loading, setLoading] = useState(false);
+  const [companyUsers, setCompanyUsers] = useState<CompanyUser[]>([]);
   const { user, isSeller } = useAuth();
   const { getCommissionByUserId } = useSellerCommissions();
   
@@ -36,6 +46,48 @@ export const useCommissionReport = () => {
     setFilters(prev => ({ ...prev, ...newFilters }));
   };
 
+  // Carregar usuários da empresa
+  const loadCompanyUsers = async () => {
+    try {
+      const { data: usersResponse, error } = await supabase.functions.invoke('get-users');
+      
+      if (error) {
+        console.error('Erro ao buscar usuários da empresa:', error);
+        return;
+      }
+
+      if (usersResponse?.success) {
+        setCompanyUsers(usersResponse.users || []);
+        console.log('[COMMISSION_REPORT] Usuários da empresa carregados:', usersResponse.users?.length || 0);
+      }
+    } catch (error: any) {
+      console.error('Erro ao carregar usuários da empresa:', error);
+    }
+  };
+
+  // Mapear user ID para nome
+  const getUserDisplayName = (userId: string): string => {
+    const companyUser = companyUsers.find(u => u.id === userId);
+    if (companyUser) {
+      const firstName = companyUser.user_metadata?.first_name || '';
+      const lastName = companyUser.user_metadata?.last_name || '';
+      return firstName && lastName ? `${firstName} ${lastName}` : 
+             firstName || `Vendedor ${userId.substring(0, 8)}...`;
+    }
+    return `Vendedor ${userId.substring(0, 8)}...`;
+  };
+
+  // Mapear nome para user ID (para busca reversa)
+  const getUserIdByName = (name: string): string | null => {
+    const companyUser = companyUsers.find(u => {
+      const firstName = u.user_metadata?.first_name || '';
+      const lastName = u.user_metadata?.last_name || '';
+      const fullName = firstName && lastName ? `${firstName} ${lastName}` : firstName;
+      return fullName.toLowerCase().includes(name.toLowerCase());
+    });
+    return companyUser?.id || null;
+  };
+
   const loadCommissions = async () => {
     try {
       setLoading(true);
@@ -51,8 +103,8 @@ export const useCommissionReport = () => {
           total_amount,
           status,
           created_at,
-          salesperson_id,
-          seller,
+          seller_id,
+          seller_name,
           order_items (
             product_id,
             product_name,
@@ -71,33 +123,25 @@ export const useCommissionReport = () => {
 
       // Se for vendedor, filtrar por seus pedidos
       if (isSeller) {
-        // Buscar nome do vendedor para filtrar por ambos os campos
-        const knownSellers = {
-          '50813b14-8b0c-40cf-a55c-76bf2a4a19b1': 'Thor Albuquerque',
-          '6c0bf94a-f544-4452-9aaf-9a702c028967': 'Nathalia Albuquerque'
-        };
-        const sellerName = knownSellers[user?.id || ''];
-        
-        if (sellerName) {
-          // Filtrar por salesperson_id OU por nome do vendedor
-          query = query.or(`salesperson_id.eq.${user?.id},seller.eq.${sellerName}`);
-          console.log('[COMMISSION_REPORT] Filtrando para vendedor:', user?.id, 'ou nome:', sellerName);
-        } else {
-          query = query.eq('salesperson_id', user?.id);
-          console.log('[COMMISSION_REPORT] Filtrando apenas por salesperson_id:', user?.id);
-        }
+        const currentUserName = getUserDisplayName(user?.id || '');
+        query = query.or(`seller_id.eq.${user?.id},seller_name.eq.${currentUserName}`);
+        console.log('[COMMISSION_REPORT] Filtrando para vendedor:', user?.id, 'ou nome:', currentUserName);
       }
       // Se filtro de vendedor especificado (para admins)
       else if (filters.sellerId) {
-        query = query.eq('salesperson_id', filters.sellerId);
+        query = query.eq('seller_id', filters.sellerId);
         console.log('[COMMISSION_REPORT] Filtrando por ID do vendedor:', filters.sellerId);
       }
       // Se busca por nome do vendedor (para admins)
       else if (filters.sellerName && !isSeller) {
-        // Filtrar por nome do vendedor (case-insensitive e flexível)
         if (filters.sellerName.trim()) {
           const sellerName = filters.sellerName.trim();
-          query = query.or(`seller.ilike.%${sellerName}%,salesperson_id.in.(50813b14-8b0c-40cf-a55c-76bf2a4a19b1,6c0bf94a-f544-4452-9aaf-9a702c028967)`);
+          const foundUserId = getUserIdByName(sellerName);
+          if (foundUserId) {
+            query = query.or(`seller_id.eq.${foundUserId},seller_name.ilike.%${sellerName}%`);
+          } else {
+            query = query.ilike('seller_name', `%${sellerName}%`);
+          }
           console.log('[COMMISSION_REPORT] Filtrando por nome do vendedor:', sellerName);
         }
       }
@@ -114,8 +158,8 @@ export const useCommissionReport = () => {
         console.log('[COMMISSION_REPORT] Processando pedido:', {
           id: order.id,
           order_number: order.order_number,
-          salesperson_id: order.salesperson_id,
-          seller: order.seller,
+          seller_id: order.seller_id,
+          seller_name: order.seller_name,
           total_amount: order.total_amount
         });
 
@@ -124,36 +168,25 @@ export const useCommissionReport = () => {
         let sellerName = 'N/A';
         let appliedCommissionConfig = null;
 
-        // Melhorar correlação vendedor-comissão: se não tem salesperson_id mas tem seller name, tentar encontrar
-        let actualSalespersonId = order?.salesperson_id;
-        if (!actualSalespersonId && order?.seller) {
-          const knownSellersByName = {
-            'Thor Albuquerque': '50813b14-8b0c-40cf-a55c-76bf2a4a19b1',
-            'Nathalia Albuquerque': '6c0bf94a-f544-4452-9aaf-9a702c028967'
-          };
-          actualSalespersonId = knownSellersByName[order.seller];
+        // Usar seller_id se disponível, senão tentar encontrar por nome
+        let actualSellerId = order?.seller_id;
+        if (!actualSellerId && order?.seller_name) {
+          actualSellerId = getUserIdByName(order.seller_name);
           console.log('[COMMISSION_REPORT] Correlacionando vendedor por nome:', {
-            seller: order.seller,
-            found_id: actualSalespersonId
+            seller_name: order.seller_name,
+            found_id: actualSellerId
           });
         }
 
-        // Definir nome do vendedor
-        const knownSellers = {
-          '50813b14-8b0c-40cf-a55c-76bf2a4a19b1': 'Thor Albuquerque',
-          '6c0bf94a-f544-4452-9aaf-9a702c028967': 'Nathalia Albuquerque'
-        };
-
-        if (order?.seller && order.seller !== 'N/A') {
-          sellerName = order.seller;
-        } else if (actualSalespersonId && knownSellers[actualSalespersonId]) {
-          sellerName = knownSellers[actualSalespersonId];
-        } else if (actualSalespersonId) {
-          sellerName = `Vendedor ${actualSalespersonId.substring(0, 8)}...`;
+        // Definir nome do vendedor usando dados da empresa
+        if (order?.seller_name && order.seller_name !== 'N/A') {
+          sellerName = order.seller_name;
+        } else if (actualSellerId) {
+          sellerName = getUserDisplayName(actualSellerId);
         }
 
-        // Buscar configuração de comissão do vendedor (usando ID real ou correlacionado)
-        const sellerCommission = actualSalespersonId ? await getCommissionByUserId(actualSalespersonId) : null;
+        // Buscar configuração de comissão do vendedor
+        const sellerCommission = actualSellerId ? await getCommissionByUserId(actualSellerId) : null;
         console.log('[COMMISSION_REPORT] Configuração de comissão encontrada:', sellerCommission);
 
         // Calcular comissão para cada item do pedido
@@ -245,11 +278,16 @@ export const useCommissionReport = () => {
     }
   };
 
+  // Carregar usuários da empresa quando o hook é inicializado
   useEffect(() => {
-    if (user) {
+    loadCompanyUsers();
+  }, []);
+
+  useEffect(() => {
+    if (user && companyUsers.length > 0) {
       loadCommissions();
     }
-  }, [filters, user, isSeller]);
+  }, [filters, user, isSeller, companyUsers]);
 
   const totalCommissions = useMemo(() => {
     return commissions.reduce((sum, commission) => sum + commission.commission_amount, 0);
