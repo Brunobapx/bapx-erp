@@ -739,6 +739,42 @@ export type Database = {
           },
         ]
       }
+      fiscal_operations: {
+        Row: {
+          cfop: string
+          company_id: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          operation_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cfop: string
+          company_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          operation_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cfop?: string
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          operation_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       markup_settings: {
         Row: {
           company_id: string | null
@@ -2466,6 +2502,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tax_calculation_rules: {
+        Row: {
+          cfop_default: string | null
+          cofins_rate: number | null
+          company_id: string
+          created_at: string
+          csosn: string | null
+          cst: string | null
+          icms_rate: number | null
+          id: string
+          ipi_rate: number | null
+          is_active: boolean
+          pis_rate: number | null
+          regime_tributario: string
+          rule_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cfop_default?: string | null
+          cofins_rate?: number | null
+          company_id: string
+          created_at?: string
+          csosn?: string | null
+          cst?: string | null
+          icms_rate?: number | null
+          id?: string
+          ipi_rate?: number | null
+          is_active?: boolean
+          pis_rate?: number | null
+          regime_tributario: string
+          rule_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cfop_default?: string | null
+          cofins_rate?: number | null
+          company_id?: string
+          created_at?: string
+          csosn?: string | null
+          cst?: string | null
+          icms_rate?: number | null
+          id?: string
+          ipi_rate?: number | null
+          is_active?: boolean
+          pis_rate?: number | null
+          regime_tributario?: string
+          rule_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       troca_itens: {
         Row: {

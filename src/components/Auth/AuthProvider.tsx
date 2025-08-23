@@ -51,7 +51,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.error('[AuthProvider] Erro ao buscar role:', roleError);
         setUserRole('user');
       } else {
-        console.log('[AuthProvider] Role encontrado:', roleData?.role || 'user');
         setUserRole(roleData?.role || 'user');
       }
 

@@ -13,14 +13,6 @@ export const ModuleAccessCheck = ({ routePath, children }: ModuleAccessCheckProp
   const { user, userRole } = useAuth();
   const { hasAccess, loading } = useModuleAccess();
 
-  console.log('[ModuleAccessCheck] Debug:', { 
-    routePath, 
-    userEmail: user?.email, 
-    userRole, 
-    loading,
-    hasAccessResult: hasAccess(routePath)
-  });
-
   // Verificar se está logado
   if (!user) {
     return (
