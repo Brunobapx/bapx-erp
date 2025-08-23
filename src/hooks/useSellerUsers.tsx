@@ -45,25 +45,46 @@ export const useSellerUsers = () => {
         return;
       }
 
-      // Buscar posições de vendedor para filtrar usuários
+      // Buscar company_id do usuário atual através do perfil
+      const { data: currentProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError || !currentProfile?.company_id) {
+        console.log('❌ Erro ao buscar company_id do usuário atual:', profileError);
+        setSellers([]);
+        return;
+      }
+
+      const userCompanyId = currentProfile.company_id;
+      console.log('🏢 Company ID do usuário atual:', userCompanyId);
+
+      // Buscar posições de vendedor para filtrar usuários, aplicando filtro de empresa
       const { data: positionsData, error: positionsError } = await supabase
         .from('user_positions')
         .select('user_id, position, created_at, company_id')
         .eq('position', 'vendedor')
+        .eq('company_id', userCompanyId) // Filtro explícito por empresa
         .order('created_at', { ascending: false });
 
-      console.log('📊 Posições de vendedor encontradas:', { positionsData, positionsError });
+      console.log('🏢 Posições de vendedor da empresa:', { positionsData, positionsError, userCompanyId });
 
       if (positionsError) {
         console.error('❌ Erro ao buscar posições:', positionsError);
         throw positionsError;
       }
 
-      // Filtrar usuários que são vendedores
+      // Filtrar usuários que são vendedores da mesma empresa
       const sellerUserIds = new Set(positionsData?.map(p => p.user_id) || []);
       const allUsers = usersResponse.users || [];
       
-      console.log('🎯 Filtrando usuários:', { sellerUserIds, allUsers: allUsers.length });
+      console.log('🎯 Dados para filtro:', { 
+        sellerUserIds: Array.from(sellerUserIds), 
+        allUsers: allUsers.length,
+        positionsData: positionsData?.map(p => ({ user_id: p.user_id, company_id: p.company_id }))
+      });
 
       const sellerUsers: SellerUser[] = allUsers
         .filter((u: any) => sellerUserIds.has(u.id))
