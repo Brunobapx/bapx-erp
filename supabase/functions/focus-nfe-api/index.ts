@@ -82,7 +82,7 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     return acc;
   }, {} as Record<string, any>) || {};
 
-  if (!configMap.focus_nfe_enabled && !configMap.focus_nfe_token) {
+  if (!configMap.focus_nfe_enabled || !configMap.focus_nfe_token) {
     throw new Error('Focus NFe não está configurado');
   }
 
