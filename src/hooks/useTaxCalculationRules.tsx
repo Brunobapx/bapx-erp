@@ -4,21 +4,20 @@ import { toast } from 'sonner';
 
 export interface TaxCalculationRule {
   id: string;
+  company_id: string;
+  user_id: string;
   rule_name: string;
-  tax_regime: string;
-  apply_to: string;
-  filter_value?: string;
-  icms_cst: string;
-  icms_aliquota: number;
-  icms_reducao_base: number;
-  pis_cst: string;
-  pis_aliquota: number;
-  cofins_cst: string;
-  cofins_aliquota: number;
-  ipi_cst: string;
-  ipi_aliquota: number;
+  regime_tributario: string;
+  icms_rate: number;
+  ipi_rate: number;
+  pis_rate: number;
+  cofins_rate: number;
+  csosn?: string;
+  cst?: string;
+  cfop_default?: string;
   is_active: boolean;
-  priority_order: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export const useTaxCalculationRules = () => {
@@ -32,7 +31,7 @@ export const useTaxCalculationRules = () => {
         .from('tax_calculation_rules')
         .select('*')
         .eq('is_active', true)
-        .order('priority_order', { ascending: true });
+        .order('created_at', { ascending: true });
 
       if (error) throw error;
       setRules(data || []);
@@ -94,23 +93,9 @@ export const useTaxCalculationRules = () => {
     }
   };
 
-  const getTaxRuleForProduct = (productCategory?: string, productNcm?: string) => {
-    // Buscar regra mais específica primeiro
-    let matchingRule = rules.find(rule => 
-      rule.apply_to === 'by_ncm' && rule.filter_value === productNcm
-    );
-
-    if (!matchingRule && productCategory) {
-      matchingRule = rules.find(rule => 
-        rule.apply_to === 'by_category' && rule.filter_value === productCategory
-      );
-    }
-
-    if (!matchingRule) {
-      matchingRule = rules.find(rule => rule.apply_to === 'all_products');
-    }
-
-    return matchingRule;
+  const getTaxRuleForProduct = (regime?: string) => {
+    // Buscar regra por regime tributário
+    return rules.find(rule => rule.regime_tributario === regime) || rules[0];
   };
 
   useEffect(() => {
