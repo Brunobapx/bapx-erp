@@ -4,101 +4,76 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Calculator } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Plus, Edit, Trash2 } from 'lucide-react';
 import { useTaxCalculationRules, TaxCalculationRule } from '@/hooks/useTaxCalculationRules';
+import { toast } from 'sonner';
 
-export const TaxCalculationRulesSection = () => {
+export function TaxCalculationRulesSection() {
   const { rules, loading, saving, saveRule, deleteRule } = useTaxCalculationRules();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<TaxCalculationRule | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Partial<TaxCalculationRule>>({
     rule_name: '',
-    tax_regime: 'lucro_presumido',
-    apply_to: 'all_products',
-    filter_value: '',
-    icms_cst: '60',
-    icms_aliquota: 18,
-    icms_reducao_base: 0,
-    pis_cst: '01',
-    pis_aliquota: 1.65,
-    cofins_cst: '01',
-    cofins_aliquota: 7.6,
-    ipi_cst: '50',
-    ipi_aliquota: 0,
-    priority_order: 1
+    regime_tributario: 'simples_nacional',
+    icms_rate: 0,
+    ipi_rate: 0,
+    pis_rate: 1.65,
+    cofins_rate: 7.6,
+    csosn: '101',
+    cst: '00',
+    cfop_default: '5101',
+    is_active: true
   });
-
-  const taxRegimes = [
-    { value: 'mei', label: 'MEI' },
-    { value: 'simples_nacional', label: 'Simples Nacional' },
-    { value: 'lucro_presumido', label: 'Lucro Presumido' },
-    { value: 'lucro_real', label: 'Lucro Real' }
-  ];
-
-  const applyToOptions = [
-    { value: 'all_products', label: 'Todos os produtos' },
-    { value: 'by_category', label: 'Por categoria' },
-    { value: 'by_ncm', label: 'Por NCM específico' }
-  ];
 
   const resetForm = () => {
     setFormData({
       rule_name: '',
-      tax_regime: 'lucro_presumido',
-      apply_to: 'all_products',
-      filter_value: '',
-      icms_cst: '60',
-      icms_aliquota: 18,
-      icms_reducao_base: 0,
-      pis_cst: '01',
-      pis_aliquota: 1.65,
-      cofins_cst: '01',
-      cofins_aliquota: 7.6,
-      ipi_cst: '50',
-      ipi_aliquota: 0,
-      priority_order: 1
+      regime_tributario: 'simples_nacional',
+      icms_rate: 0,
+      ipi_rate: 0,
+      pis_rate: 1.65,
+      cofins_rate: 7.6,
+      csosn: '101',
+      cst: '00',
+      cfop_default: '5101',
+      is_active: true
     });
     setEditingRule(null);
   };
 
   const handleEdit = (rule: TaxCalculationRule) => {
     setFormData({
+      id: rule.id,
       rule_name: rule.rule_name,
-      tax_regime: rule.tax_regime,
-      apply_to: rule.apply_to,
-      filter_value: rule.filter_value || '',
-      icms_cst: rule.icms_cst,
-      icms_aliquota: rule.icms_aliquota,
-      icms_reducao_base: rule.icms_reducao_base,
-      pis_cst: rule.pis_cst,
-      pis_aliquota: rule.pis_aliquota,
-      cofins_cst: rule.cofins_cst,
-      cofins_aliquota: rule.cofins_aliquota,
-      ipi_cst: rule.ipi_cst,
-      ipi_aliquota: rule.ipi_aliquota,
-      priority_order: rule.priority_order
+      regime_tributario: rule.regime_tributario,
+      icms_rate: rule.icms_rate,
+      ipi_rate: rule.ipi_rate,
+      pis_rate: rule.pis_rate,
+      cofins_rate: rule.cofins_rate,
+      csosn: rule.csosn || '101',
+      cst: rule.cst || '00',
+      cfop_default: rule.cfop_default || '5101',
+      is_active: rule.is_active
     });
     setEditingRule(rule);
     setIsDialogOpen(true);
   };
 
   const handleSave = async () => {
-    const ruleData = {
-      ...formData,
-      ...(editingRule && { id: editingRule.id }),
-      is_active: true
-    };
+    if (!formData.rule_name) {
+      toast.error('Nome da regra é obrigatório');
+      return;
+    }
 
-    await saveRule(ruleData);
+    await saveRule(formData);
     setIsDialogOpen(false);
     resetForm();
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Tem certeza que deseja remover esta regra de cálculo?')) {
+    if (window.confirm('Tem certeza que deseja remover esta regra?')) {
       await deleteRule(id);
     }
   };
@@ -106,12 +81,10 @@ export const TaxCalculationRulesSection = () => {
   if (loading) {
     return (
       <Card>
-        <CardContent className="p-6">
-          <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-muted rounded w-1/4"></div>
-            <div className="h-20 bg-muted rounded"></div>
-          </div>
-        </CardContent>
+        <CardHeader>
+          <CardTitle>Regras de Cálculo de Impostos</CardTitle>
+          <CardDescription>Carregando regras...</CardDescription>
+        </CardHeader>
       </Card>
     );
   }
@@ -119,19 +92,8 @@ export const TaxCalculationRulesSection = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Calculator className="h-5 w-5" />
+        <CardTitle className="flex items-center justify-between">
           Regras de Cálculo de Impostos
-        </CardTitle>
-        <CardDescription>
-          Configure regras automáticas para cálculo de impostos baseado no regime tributário
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex justify-between items-center">
-          <p className="text-sm text-muted-foreground">
-            As regras são aplicadas por ordem de prioridade e especificidade
-          </p>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={resetForm}>
@@ -139,272 +101,206 @@ export const TaxCalculationRulesSection = () => {
                 Nova Regra
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl">
+            <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>
-                  {editingRule ? 'Editar' : 'Nova'} Regra de Cálculo
+                  {editingRule ? 'Editar Regra' : 'Nova Regra de Cálculo'}
                 </DialogTitle>
               </DialogHeader>
-              <div className="space-y-6">
+              <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="rule_name">Nome da Regra</Label>
+                    <Label htmlFor="rule_name">Nome da Regra *</Label>
                     <Input
                       id="rule_name"
                       value={formData.rule_name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, rule_name: e.target.value }))}
+                      onChange={(e) => setFormData({ ...formData, rule_name: e.target.value })}
                       placeholder="Ex: Regra Simples Nacional"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="tax_regime">Regime Tributário</Label>
-                    <Select 
-                      value={formData.tax_regime} 
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, tax_regime: value }))}
+                    <Label htmlFor="regime_tributario">Regime Tributário</Label>
+                    <Select
+                      value={formData.regime_tributario}
+                      onValueChange={(value) => setFormData({ ...formData, regime_tributario: value })}
                     >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {taxRegimes.map(regime => (
-                          <SelectItem key={regime.value} value={regime.value}>
-                            {regime.label}
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="simples_nacional">Simples Nacional</SelectItem>
+                        <SelectItem value="lucro_presumido">Lucro Presumido</SelectItem>
+                        <SelectItem value="lucro_real">Lucro Real</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="csosn">CSOSN</Label>
+                    <Input
+                      id="csosn"
+                      value={formData.csosn}
+                      onChange={(e) => setFormData({ ...formData, csosn: e.target.value })}
+                      placeholder="101"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="cst">CST</Label>
+                    <Input
+                      id="cst"
+                      value={formData.cst}
+                      onChange={(e) => setFormData({ ...formData, cst: e.target.value })}
+                      placeholder="00"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="cfop_default">CFOP Padrão</Label>
+                    <Input
+                      id="cfop_default"
+                      value={formData.cfop_default}
+                      onChange={(e) => setFormData({ ...formData, cfop_default: e.target.value })}
+                      placeholder="5101"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="icms_rate">ICMS (%)</Label>
+                    <Input
+                      id="icms_rate"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      value={formData.icms_rate}
+                      onChange={(e) => setFormData({ ...formData, icms_rate: parseFloat(e.target.value) || 0 })}
+                    />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <Label htmlFor="apply_to">Aplicar Para</Label>
-                    <Select 
-                      value={formData.apply_to} 
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, apply_to: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {applyToOptions.map(option => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {(formData.apply_to === 'by_category' || formData.apply_to === 'by_ncm') && (
-                    <div>
-                      <Label htmlFor="filter_value">
-                        {formData.apply_to === 'by_category' ? 'Categoria' : 'NCM'}
-                      </Label>
-                      <Input
-                        id="filter_value"
-                        value={formData.filter_value}
-                        onChange={(e) => setFormData(prev => ({ ...prev, filter_value: e.target.value }))}
-                        placeholder={formData.apply_to === 'by_category' ? 'Nome da categoria' : '0000.00.00'}
-                      />
-                    </div>
-                  )}
-                  <div>
-                    <Label htmlFor="priority_order">Prioridade</Label>
+                    <Label htmlFor="pis_rate">PIS (%)</Label>
                     <Input
-                      id="priority_order"
+                      id="pis_rate"
                       type="number"
-                      value={formData.priority_order}
-                      onChange={(e) => setFormData(prev => ({ ...prev, priority_order: parseInt(e.target.value) }))}
-                      min="1"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      value={formData.pis_rate}
+                      onChange={(e) => setFormData({ ...formData, pis_rate: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="cofins_rate">COFINS (%)</Label>
+                    <Input
+                      id="cofins_rate"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      value={formData.cofins_rate}
+                      onChange={(e) => setFormData({ ...formData, cofins_rate: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="ipi_rate">IPI (%)</Label>
+                    <Input
+                      id="ipi_rate"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      value={formData.ipi_rate}
+                      onChange={(e) => setFormData({ ...formData, ipi_rate: parseFloat(e.target.value) || 0 })}
                     />
                   </div>
                 </div>
 
-                <div className="border rounded-lg p-4">
-                  <h4 className="font-medium mb-4">Configurações de Impostos</h4>
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <h5 className="text-sm font-medium mb-3">ICMS</h5>
-                      <div className="space-y-3">
-                        <div>
-                          <Label htmlFor="icms_cst">CST/CSOSN</Label>
-                          <Input
-                            id="icms_cst"
-                            value={formData.icms_cst}
-                            onChange={(e) => setFormData(prev => ({ ...prev, icms_cst: e.target.value }))}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="icms_aliquota">Alíquota (%)</Label>
-                          <Input
-                            id="icms_aliquota"
-                            type="number"
-                            step="0.01"
-                            value={formData.icms_aliquota}
-                            onChange={(e) => setFormData(prev => ({ ...prev, icms_aliquota: parseFloat(e.target.value) }))}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h5 className="text-sm font-medium mb-3">PIS</h5>
-                      <div className="space-y-3">
-                        <div>
-                          <Label htmlFor="pis_cst">CST</Label>
-                          <Input
-                            id="pis_cst"
-                            value={formData.pis_cst}
-                            onChange={(e) => setFormData(prev => ({ ...prev, pis_cst: e.target.value }))}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="pis_aliquota">Alíquota (%)</Label>
-                          <Input
-                            id="pis_aliquota"
-                            type="number"
-                            step="0.01"
-                            value={formData.pis_aliquota}
-                            onChange={(e) => setFormData(prev => ({ ...prev, pis_aliquota: parseFloat(e.target.value) }))}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h5 className="text-sm font-medium mb-3">COFINS</h5>
-                      <div className="space-y-3">
-                        <div>
-                          <Label htmlFor="cofins_cst">CST</Label>
-                          <Input
-                            id="cofins_cst"
-                            value={formData.cofins_cst}
-                            onChange={(e) => setFormData(prev => ({ ...prev, cofins_cst: e.target.value }))}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="cofins_aliquota">Alíquota (%)</Label>
-                          <Input
-                            id="cofins_aliquota"
-                            type="number"
-                            step="0.01"
-                            value={formData.cofins_aliquota}
-                            onChange={(e) => setFormData(prev => ({ ...prev, cofins_aliquota: parseFloat(e.target.value) }))}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h5 className="text-sm font-medium mb-3">IPI</h5>
-                      <div className="space-y-3">
-                        <div>
-                          <Label htmlFor="ipi_cst">CST</Label>
-                          <Input
-                            id="ipi_cst"
-                            value={formData.ipi_cst}
-                            onChange={(e) => setFormData(prev => ({ ...prev, ipi_cst: e.target.value }))}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="ipi_aliquota">Alíquota (%)</Label>
-                          <Input
-                            id="ipi_aliquota"
-                            type="number"
-                            step="0.01"
-                            value={formData.ipi_aliquota}
-                            onChange={(e) => setFormData(prev => ({ ...prev, ipi_aliquota: parseFloat(e.target.value) }))}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsDialogOpen(false)}
+                  >
                     Cancelar
                   </Button>
-                  <Button onClick={handleSave} disabled={saving}>
+                  <Button
+                    onClick={handleSave}
+                    disabled={saving}
+                  >
                     {saving ? 'Salvando...' : 'Salvar'}
                   </Button>
                 </div>
               </div>
             </DialogContent>
           </Dialog>
-        </div>
-
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Regra</TableHead>
-              <TableHead>Regime</TableHead>
-              <TableHead>Aplicação</TableHead>
-              <TableHead>ICMS</TableHead>
-              <TableHead>PIS/COFINS</TableHead>
-              <TableHead>Prioridade</TableHead>
-              <TableHead>Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rules.map((rule) => (
-              <TableRow key={rule.id}>
-                <TableCell>
-                  <div className="font-medium">{rule.rule_name}</div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="secondary">
-                    {taxRegimes.find(r => r.value === rule.tax_regime)?.label}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="text-sm">
-                    {applyToOptions.find(a => a.value === rule.apply_to)?.label}
-                    {rule.filter_value && (
-                      <div className="text-muted-foreground">
-                        {rule.filter_value}
-                      </div>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="text-sm">
-                    <div>CST: {rule.icms_cst}</div>
-                    <div>{rule.icms_aliquota}%</div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="text-sm">
-                    <div>PIS: {rule.pis_aliquota}%</div>
-                    <div>COFINS: {rule.cofins_aliquota}%</div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline">{rule.priority_order}</Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEdit(rule)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(rule.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
+        </CardTitle>
+        <CardDescription>
+          Configure as regras de cálculo de impostos por regime tributário
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {rules.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8">
+            Nenhuma regra de cálculo cadastrada
+          </p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome da Regra</TableHead>
+                <TableHead>Regime</TableHead>
+                <TableHead>CSOSN/CST</TableHead>
+                <TableHead>CFOP</TableHead>
+                <TableHead>ICMS %</TableHead>
+                <TableHead>PIS %</TableHead>
+                <TableHead>COFINS %</TableHead>
+                <TableHead>IPI %</TableHead>
+                <TableHead>Ações</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {rules.map((rule) => (
+                <TableRow key={rule.id}>
+                  <TableCell className="font-medium">{rule.rule_name}</TableCell>
+                  <TableCell>
+                    {rule.regime_tributario === 'simples_nacional' && 'Simples Nacional'}
+                    {rule.regime_tributario === 'lucro_presumido' && 'Lucro Presumido'}
+                    {rule.regime_tributario === 'lucro_real' && 'Lucro Real'}
+                  </TableCell>
+                  <TableCell>{rule.csosn || rule.cst}</TableCell>
+                  <TableCell>{rule.cfop_default}</TableCell>
+                  <TableCell>{rule.icms_rate}%</TableCell>
+                  <TableCell>{rule.pis_rate}%</TableCell>
+                  <TableCell>{rule.cofins_rate}%</TableCell>
+                  <TableCell>{rule.ipi_rate}%</TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(rule)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(rule.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </CardContent>
     </Card>
   );
-};
+}
