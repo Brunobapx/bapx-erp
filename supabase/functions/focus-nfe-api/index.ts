@@ -73,6 +73,8 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
       'icms_percentual', 'pis_percentual', 'cofins_percentual', 'cnpj_emissor'
     ]);
 
+  console.log('Settings encontradas:', allSettings);
+  
   const configMap = allSettings?.reduce((acc, setting) => {
     try {
       acc[setting.key] = JSON.parse(setting.value as string);
@@ -82,7 +84,12 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     return acc;
   }, {} as Record<string, any>) || {};
 
+  console.log('ConfigMap processado:', configMap);
+  console.log('focus_nfe_enabled:', configMap.focus_nfe_enabled);
+  console.log('focus_nfe_token:', configMap.focus_nfe_token);
+
   if (!configMap.focus_nfe_enabled || !configMap.focus_nfe_token) {
+    console.error('Configurações faltando - enabled:', configMap.focus_nfe_enabled, 'token:', configMap.focus_nfe_token);
     throw new Error('Focus NFe não está configurado');
   }
 
