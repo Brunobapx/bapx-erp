@@ -8,19 +8,23 @@ import { Clock } from 'lucide-react';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from '@/components/Auth/AuthProvider';
-
 const Index = () => {
-  const { stats, sellerStats, recentOrders, loading } = useDashboardStats();
-  const { isSeller, userRole } = useAuth();
-  
+  const {
+    stats,
+    sellerStats,
+    recentOrders,
+    loading
+  } = useDashboardStats();
+  const {
+    isSeller,
+    userRole
+  } = useAuth();
   const [showApprovalModal, setShowApprovalModal] = React.useState(false);
   const [currentStage, setCurrentStage] = React.useState<'order' | 'production' | 'packaging' | 'sales' | 'finance' | 'route'>('order');
-
   const openModal = (stage: 'order' | 'production' | 'packaging' | 'sales' | 'finance' | 'route') => {
     setCurrentStage(stage);
     setShowApprovalModal(true);
   };
-
   const translateStatus = (status: string): string => {
     const statusTranslations: Record<string, string> = {
       'pending': 'Pendente',
@@ -35,34 +39,28 @@ const Index = () => {
     };
     return statusTranslations[status] || status;
   };
-
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
     }).format(value);
   };
-
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
     const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
     if (diffInHours < 1) return 'Agora';
     if (diffInHours < 24) return `${diffInHours}h atrás`;
-    
     const diffInDays = Math.floor(diffInHours / 24);
     return `${diffInDays}d atrás`;
   };
-
-  return (
-    <div className="p-4 sm:p-6 space-y-6">
+  return <div className="p-4 sm:p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">
           {isSeller ? 'Painel do Vendedor' : 'Dashboard'}
         </h1>
         <div>
-          <Button onClick={() => openModal('order')}>Novo Pedido</Button>
+          
         </div>
       </div>
 
@@ -77,10 +75,10 @@ const Index = () => {
             <CardTitle>{isSeller ? 'Meus Pedidos Recentes' : 'Pedidos Recentes'}</CardTitle>
           </CardHeader>
           <CardContent>
-            {loading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 5 }).map((_, index) => (
-                  <div key={index} className="p-3 border rounded-md">
+            {loading ? <div className="space-y-3">
+                {Array.from({
+              length: 5
+            }).map((_, index) => <div key={index} className="p-3 border rounded-md">
                     <div className="flex justify-between items-start">
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
@@ -91,17 +89,9 @@ const Index = () => {
                       </div>
                       <Skeleton className="h-3 w-12" />
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : recentOrders.length > 0 ? (
-              <div className="space-y-3">
-                {recentOrders.map((order) => (
-                  <div 
-                    key={order.id}
-                    className="p-3 border rounded-md hover:bg-accent/5 cursor-pointer transition-colors"
-                    onClick={() => openModal('order')}
-                  >
+                  </div>)}
+              </div> : recentOrders.length > 0 ? <div className="space-y-3">
+                {recentOrders.map(order => <div key={order.id} className="p-3 border rounded-md hover:bg-accent/5 cursor-pointer transition-colors" onClick={() => openModal('order')}>
                     <div className="flex justify-between items-start">
                       <div>
                         <div className="flex items-center gap-2">
@@ -119,31 +109,23 @@ const Index = () => {
                         {formatTimeAgo(order.created_at)}
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center p-4 text-muted-foreground">
+                  </div>)}
+              </div> : <div className="text-center p-4 text-muted-foreground">
                 Nenhum pedido recente encontrado
-              </div>
-            )}
+              </div>}
           </CardContent>
         </Card>
         
-        {isSeller && (
-          <Card className="col-span-1 lg:col-span-3">
+        {isSeller && <Card className="col-span-1 lg:col-span-3">
             <CardHeader>
               <CardTitle>Minhas Comissões</CardTitle>
             </CardHeader>
             <CardContent>
-              {loading ? (
-                <div className="space-y-2">
+              {loading ? <div className="space-y-2">
                   <Skeleton className="h-6 w-full" />
                   <Skeleton className="h-6 w-full" />
                   <Skeleton className="h-6 w-full" />
-                </div>
-              ) : (
-                <div className="space-y-2">
+                </div> : <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Comissão do Mês</span>
                     <span className="font-medium">{formatCurrency(sellerStats.monthlyCommission)}</span>
@@ -156,28 +138,22 @@ const Index = () => {
                     <span>Total de Vendas</span>
                     <span className="font-medium">{formatCurrency(sellerStats.totalSales)}</span>
                   </div>
-                </div>
-              )}
+                </div>}
             </CardContent>
-          </Card>
-        )}
+          </Card>}
       </div>
       
-      {isSeller ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {isSeller ? <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <Card>
             <CardHeader>
               <CardTitle>Meus Pedidos</CardTitle>
             </CardHeader>
             <CardContent>
-              {loading ? (
-                <div className="space-y-2">
+              {loading ? <div className="space-y-2">
                   <Skeleton className="h-6 w-full" />
                   <Skeleton className="h-6 w-full" />
                   <Skeleton className="h-6 w-full" />
-                </div>
-              ) : (
-                <div className="space-y-2">
+                </div> : <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Total de Pedidos</span>
                     <span className="font-medium">{sellerStats.myOrders}</span>
@@ -190,8 +166,7 @@ const Index = () => {
                     <span>Meta do Mês</span>
                     <span className="font-medium">R$ 50.000</span>
                   </div>
-                </div>
-              )}
+                </div>}
             </CardContent>
           </Card>
           
@@ -200,14 +175,11 @@ const Index = () => {
               <CardTitle>Performance</CardTitle>
             </CardHeader>
             <CardContent>
-              {loading ? (
-                <div className="space-y-2">
+              {loading ? <div className="space-y-2">
                   <Skeleton className="h-6 w-full" />
                   <Skeleton className="h-6 w-full" />
                   <Skeleton className="h-6 w-full" />
-                </div>
-              ) : (
-                <div className="space-y-2">
+                </div> : <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Taxa de Conversão</span>
                     <span className="font-medium">85%</span>
@@ -220,8 +192,7 @@ const Index = () => {
                     <span>Ranking</span>
                     <span className="font-medium">#2</span>
                   </div>
-                </div>
-              )}
+                </div>}
             </CardContent>
           </Card>
           
@@ -246,22 +217,17 @@ const Index = () => {
               </div>
             </CardContent>
           </Card>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        </div> : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card>
           <CardHeader>
             <CardTitle>Entregas Programadas</CardTitle>
           </CardHeader>
           <CardContent>
-            {loading ? (
-              <div className="space-y-2">
+            {loading ? <div className="space-y-2">
                 <Skeleton className="h-6 w-full" />
                 <Skeleton className="h-6 w-full" />
                 <Skeleton className="h-6 w-full" />
-              </div>
-            ) : (
-              <div className="space-y-2">
+              </div> : <div className="space-y-2">
                 <div className="flex justify-between">
                   <span>Hoje</span>
                   <span className="font-medium">{stats.routes || 0}</span>
@@ -274,8 +240,7 @@ const Index = () => {
                   <span>Esta semana</span>
                   <span className="font-medium">{stats.routes || 0}</span>
                 </div>
-              </div>
-            )}
+              </div>}
           </CardContent>
         </Card>
         
@@ -284,14 +249,11 @@ const Index = () => {
             <CardTitle>Status Financeiro</CardTitle>
           </CardHeader>
           <CardContent>
-            {loading ? (
-              <div className="space-y-2">
+            {loading ? <div className="space-y-2">
                 <Skeleton className="h-6 w-full" />
                 <Skeleton className="h-6 w-full" />
                 <Skeleton className="h-6 w-full" />
-              </div>
-            ) : (
-              <div className="space-y-2">
+              </div> : <div className="space-y-2">
                 <div className="flex justify-between">
                   <span>A receber</span>
                   <span className="font-medium">{formatCurrency(stats.total_receivables_amount)}</span>
@@ -304,8 +266,7 @@ const Index = () => {
                   <span>Pendentes</span>
                   <span className="font-medium">{stats.pending_receivables}</span>
                 </div>
-              </div>
-            )}
+              </div>}
           </CardContent>
         </Card>
         
@@ -314,14 +275,11 @@ const Index = () => {
             <CardTitle>Resumo Geral</CardTitle>
           </CardHeader>
           <CardContent>
-            {loading ? (
-              <div className="space-y-2">
+            {loading ? <div className="space-y-2">
                 <Skeleton className="h-6 w-full" />
                 <Skeleton className="h-6 w-full" />
                 <Skeleton className="h-6 w-full" />
-              </div>
-            ) : (
-              <div className="space-y-2">
+              </div> : <div className="space-y-2">
                 <div className="flex justify-between">
                   <span>Total Clientes</span>
                   <span className="font-medium">{stats.clients}</span>
@@ -334,20 +292,12 @@ const Index = () => {
                   <span>Total Vendas</span>
                   <span className="font-medium">{stats.sales}</span>
                 </div>
-              </div>
-            )}
+              </div>}
           </CardContent>
         </Card>
-        </div>
-      )}
+        </div>}
       
-      <ApprovalModal 
-        isOpen={showApprovalModal}
-        onClose={() => setShowApprovalModal(false)}
-        stage={currentStage}
-      />
-    </div>
-  );
+      <ApprovalModal isOpen={showApprovalModal} onClose={() => setShowApprovalModal(false)} stage={currentStage} />
+    </div>;
 };
-
 export default Index;
