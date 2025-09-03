@@ -77,6 +77,9 @@ const Sidebar = () => {
             src={branding?.logo_url || "/lovable-uploads/a627e39d-287e-4e8b-96f3-d8c8f7b7d997.png"}
             alt={branding?.name || "BAPX ERP"}
             className="w-10 h-10 rounded-lg object-contain"
+            width="40"
+            height="40"
+            loading="lazy"
           />
           <div>
             <h1 className="text-xl font-bold menu-text">{branding?.name || "BAPX ERP"}</h1>

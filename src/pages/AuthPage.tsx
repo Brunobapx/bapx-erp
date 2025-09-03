@@ -25,6 +25,8 @@ const AuthPage = () => {
             alt="BAPX ERP logo"
             className="mx-auto w-28 h-28 object-contain rounded-2xl shadow-lg bg-white"
             style={{ background: '#eaf7fb', padding: '0.75rem' }}
+            width="112"
+            height="112"
           />
           <div>
             <h1 className="text-3xl font-bold text-gray-900">BAPX ERP</h1>
