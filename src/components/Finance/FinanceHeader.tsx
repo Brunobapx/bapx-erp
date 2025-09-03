@@ -1,24 +1,20 @@
-
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DollarSign, ArrowDown, ArrowUp, TrendingUp } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
-
 interface FinanceHeaderProps {
   saldo: number;
   totalReceitas: number;
   totalDespesas: number;
   onNewEntry: () => void;
 }
-
 export const FinanceHeader: React.FC<FinanceHeaderProps> = ({
   saldo,
   totalReceitas,
   totalDespesas,
-  onNewEntry,
-}) => (
-  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+  onNewEntry
+}) => <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
     <div>
       <h1 className="text-2xl font-bold">Financeiro</h1>
       <p className="text-muted-foreground">Gerencie todos os aspectos financeiros da empresa.</p>
@@ -53,9 +49,6 @@ export const FinanceHeader: React.FC<FinanceHeaderProps> = ({
           </div>
         </CardContent>
       </Card>
-      <Button onClick={onNewEntry}>
-        <DollarSign className="mr-2 h-4 w-4" /> Novo Lançamento
-      </Button>
+      
     </div>
-  </div>
-);
+  </div>;
