@@ -27,6 +27,7 @@ const AuthPage = () => {
             style={{ background: '#eaf7fb', padding: '0.75rem' }}
             width="112"
             height="112"
+            fetchPriority="high"
           />
           <div>
             <h1 className="text-3xl font-bold text-gray-900">BAPX ERP</h1>
