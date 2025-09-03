@@ -11,6 +11,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="dns-prefetch" href="https://cdn.gpteng.co">
+    
+    <!-- Preload critical CSS to eliminate render-blocking -->
+    <link rel="preload" href="/src/index.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="/src/index.css"></noscript>
 
     <meta property="og:title" content="smooth-production-erp" />
     <meta property="og:description" content="Lovable Generated Project" />
