@@ -73,6 +73,8 @@ export function ProductCatalog() {
       setProducts(data?.products || []);
       setCategories(data?.categories || []);
       console.log("ProductCatalog: Set products:", data?.products?.length || 0);
+      console.log("ProductCatalog: Products data:", data?.products);
+      console.log("ProductCatalog: Categories:", data?.categories);
     } catch (error) {
       console.error("Error loading products:", error);
     } finally {
@@ -176,8 +178,8 @@ export function ProductCatalog() {
                   <span className="text-lg font-bold text-primary">
                     {formatCurrency(product.price)}
                   </span>
-                  <Badge variant={product.stock > 0 ? "secondary" : "destructive"}>
-                    {product.stock > 0 ? `${product.stock} em estoque` : "Sem estoque"}
+                  <Badge variant={product.stock > 0 ? "secondary" : "outline"}>
+                    {product.stock > 0 ? `${product.stock} em estoque` : "Sob consulta"}
                   </Badge>
                 </div>
               </CardContent>
@@ -186,11 +188,12 @@ export function ProductCatalog() {
                 <Button
                   onClick={() => handleAddToCart(product)}
                   disabled={product.stock === 0}
+                  variant={product.stock === 0 ? "outline" : "default"}
                   className="w-full"
                   size="sm"
                 >
                   <ShoppingCart className="h-4 w-4 mr-2" />
-                  Adicionar ao Carrinho
+                  {product.stock === 0 ? "Consultar Disponibilidade" : "Adicionar ao Carrinho"}
                 </Button>
               </CardFooter>
             </Card>

@@ -32,10 +32,10 @@ serve(async (req) => {
       }
     }
 
-    const productId = searchParams.get('id');
-    const category = searchParams.get('category');
-    const search = searchParams.get('search');
-    const companyId = searchParams.get('company_id');
+    const productId = body.id || searchParams.get('id');
+    const category = body.category || searchParams.get('category');
+    const search = body.search || searchParams.get('search');
+    const companyId = body.company_id || searchParams.get('company_id');
     const limit = parseInt(searchParams.get('limit') || '20');
     const offset = parseInt(searchParams.get('offset') || '0');
     
@@ -101,8 +101,7 @@ serve(async (req) => {
         .from('products')
         .select('id, name, description, price, stock, category, is_active, is_direct_sale')
         .eq('id', productId)
-        .eq('is_active', true)
-        .eq('is_direct_sale', true);
+        .eq('is_active', true);
 
       if (companyId) {
         query = query.eq('company_id', companyId);
@@ -127,9 +126,7 @@ serve(async (req) => {
     let query = supabase
       .from('products')
       .select('id, name, description, price, stock, category, is_active')
-      .eq('is_active', true)
-      .eq('is_direct_sale', true)
-      .gt('stock', 0);
+      .eq('is_active', true);
 
     if (companyId) {
       query = query.eq('company_id', companyId);
@@ -160,7 +157,6 @@ serve(async (req) => {
       .from('products')
       .select('category')
       .eq('is_active', true)
-      .eq('is_direct_sale', true)
       .not('category', 'is', null);
 
     if (companyId) {

@@ -38,17 +38,17 @@ export function ProductDetails() {
       setLoading(true);
       
       const { data, error } = await supabase.functions.invoke("public-catalog", {
-        body: {},
+        body: { id },
       });
 
       if (error) {
         console.error("Error loading product:", error);
+        navigate("/loja");
         return;
       }
 
-      const foundProduct = data.products?.find((p: Product) => p.id === id);
-      if (foundProduct) {
-        setProduct(foundProduct);
+      if (data?.product) {
+        setProduct(data.product);
       } else {
         navigate("/loja");
       }
@@ -164,8 +164,8 @@ export function ProductDetails() {
 
           {/* Stock Info */}
           <div className="flex items-center gap-2">
-            <Badge variant={product.stock > 0 ? "secondary" : "destructive"}>
-              {product.stock > 0 ? `${product.stock} em estoque` : "Sem estoque"}
+            <Badge variant={product.stock > 0 ? "secondary" : "outline"}>
+              {product.stock > 0 ? `${product.stock} em estoque` : "Sob consulta"}
             </Badge>
             {currentCartQuantity > 0 && (
               <Badge variant="outline">
@@ -223,12 +223,13 @@ export function ProductDetails() {
           <Button
             onClick={handleAddToCart}
             disabled={product.stock === 0 || maxQuantity === 0}
+            variant={product.stock === 0 ? "outline" : "default"}
             size="lg"
             className="w-full"
           >
             <ShoppingCart className="h-5 w-5 mr-2" />
             {product.stock === 0 
-              ? "Produto Indisponível" 
+              ? "Consultar Disponibilidade" 
               : maxQuantity === 0 
                 ? "Quantidade Máxima no Carrinho"
                 : "Adicionar ao Carrinho"
