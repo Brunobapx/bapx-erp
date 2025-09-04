@@ -127,6 +127,33 @@ export type Database = {
         }
         Relationships: []
       }
+      cart_sessions: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          items: Json
+          session_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          items?: Json
+          session_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          items?: Json
+          session_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           address: string | null
@@ -422,6 +449,84 @@ export type Database = {
             columns: ["sale_id"]
             isOneToOne: false
             referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ecommerce_orders: {
+        Row: {
+          company_id: string
+          created_at: string
+          customer_email: string
+          customer_phone: string | null
+          id: string
+          notes: string | null
+          order_id: string | null
+          paid_at: string | null
+          payment_id: string | null
+          payment_method: string
+          payment_status: string
+          preference_id: string | null
+          session_id: string | null
+          shipping_address_id: string | null
+          shipping_cost: number | null
+          shipping_method: string
+          shipping_tracking_code: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id?: string
+          created_at?: string
+          customer_email: string
+          customer_phone?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+          paid_at?: string | null
+          payment_id?: string | null
+          payment_method: string
+          payment_status?: string
+          preference_id?: string | null
+          session_id?: string | null
+          shipping_address_id?: string | null
+          shipping_cost?: number | null
+          shipping_method?: string
+          shipping_tracking_code?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          customer_email?: string
+          customer_phone?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+          paid_at?: string | null
+          payment_id?: string | null
+          payment_method?: string
+          payment_status?: string
+          preference_id?: string | null
+          session_id?: string | null
+          shipping_address_id?: string | null
+          shipping_cost?: number | null
+          shipping_method?: string
+          shipping_tracking_code?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ecommerce_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ecommerce_orders_shipping_address_id_fkey"
+            columns: ["shipping_address_id"]
+            isOneToOne: false
+            referencedRelation: "shipping_addresses"
             referencedColumns: ["id"]
           },
         ]
@@ -2329,6 +2434,65 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "service_orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shipping_addresses: {
+        Row: {
+          city: string
+          client_id: string | null
+          company_id: string
+          complement: string | null
+          created_at: string
+          id: string
+          is_default: boolean | null
+          neighborhood: string
+          number: string
+          recipient_name: string
+          state: string
+          street_address: string
+          updated_at: string
+          zip_code: string
+        }
+        Insert: {
+          city: string
+          client_id?: string | null
+          company_id?: string
+          complement?: string | null
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          neighborhood: string
+          number: string
+          recipient_name: string
+          state: string
+          street_address: string
+          updated_at?: string
+          zip_code: string
+        }
+        Update: {
+          city?: string
+          client_id?: string | null
+          company_id?: string
+          complement?: string | null
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          neighborhood?: string
+          number?: string
+          recipient_name?: string
+          state?: string
+          street_address?: string
+          updated_at?: string
+          zip_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shipping_addresses_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
