@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ShoppingCart, Filter } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { useCart } from "./hooks/useCart";
+import { useCompanyStore } from "@/contexts/CompanyProvider";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Product {
@@ -25,26 +26,32 @@ export function ProductCatalog() {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const { addItem } = useCart();
+  const { company } = useCompanyStore();
 
   const searchQuery = searchParams.get("search") || "";
   const categoryParam = searchParams.get("category") || "";
 
   useEffect(() => {
-    loadProducts();
-  }, [searchQuery, categoryParam, selectedCategory]);
+    if (company) {
+      loadProducts();
+    }
+  }, [company, searchQuery, categoryParam, selectedCategory]);
 
   const loadProducts = async () => {
     try {
       setLoading(true);
       
+      if (!company) return;
+
       const params = new URLSearchParams();
+      params.append("company_id", company.id);
       if (searchQuery) params.append("search", searchQuery);
       if (categoryParam || selectedCategory) {
         params.append("category", categoryParam || selectedCategory);
       }
 
       const { data, error } = await supabase.functions.invoke("public-catalog", {
-        body: {},
+        body: Object.fromEntries(params),
       });
 
       if (error) {

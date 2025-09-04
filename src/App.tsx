@@ -324,7 +324,7 @@ const App = () => (
                 </ProtectedRoute>
               } />
               
-              <Route path="/loja/*" element={<EcommercePage />} />
+              <Route path="/loja/:companyCode/*" element={<EcommercePage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </FinancialProvider>

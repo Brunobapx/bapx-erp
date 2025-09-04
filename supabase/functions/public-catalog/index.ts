@@ -24,18 +24,24 @@ serve(async (req) => {
     const productId = searchParams.get('id');
     const category = searchParams.get('category');
     const search = searchParams.get('search');
+    const companyId = searchParams.get('company_id');
     const limit = parseInt(searchParams.get('limit') || '20');
     const offset = parseInt(searchParams.get('offset') || '0');
 
     // Get single product
     if (productId) {
-      const { data: product, error } = await supabase
+      let query = supabase
         .from('products')
         .select('id, name, description, price, stock, category, is_active, is_direct_sale')
         .eq('id', productId)
         .eq('is_active', true)
-        .eq('is_direct_sale', true)
-        .single();
+        .eq('is_direct_sale', true);
+
+      if (companyId) {
+        query = query.eq('company_id', companyId);
+      }
+
+      const { data: product, error } = await query.single();
 
       if (error) {
         console.error('Error fetching product:', error);
@@ -58,6 +64,10 @@ serve(async (req) => {
       .eq('is_direct_sale', true)
       .gt('stock', 0);
 
+    if (companyId) {
+      query = query.eq('company_id', companyId);
+    }
+
     if (category) {
       query = query.eq('category', category);
     }
@@ -79,12 +89,18 @@ serve(async (req) => {
     }
 
     // Get categories for filtering
-    const { data: categories } = await supabase
+    let categoriesQuery = supabase
       .from('products')
       .select('category')
       .eq('is_active', true)
       .eq('is_direct_sale', true)
       .not('category', 'is', null);
+
+    if (companyId) {
+      categoriesQuery = categoriesQuery.eq('company_id', companyId);
+    }
+
+    const { data: categories } = await categoriesQuery;
 
     const uniqueCategories = [...new Set(categories?.map(c => c.category))];
 

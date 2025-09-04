@@ -11,9 +11,11 @@ import { Badge } from "@/components/ui/badge";
 import { Building2, Store, CreditCard, ArrowRightLeft, Save, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { CompanyStoreLink } from "./CompanyStoreLink";
 
 interface CompanyData {
   id: string;
+  code: string;
   name: string;
   cnpj?: string;
   razao_social?: string;
@@ -442,9 +444,19 @@ export function CompanyManagement() {
                 <Save className="h-4 w-4 mr-2" />
                 {saving ? 'Salvando...' : 'Salvar Dados da Empresa'}
               </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
+              </CardContent>
+            </Card>
+            
+            {/* Link da Loja */}
+            {companyData && ecommerceSettings && (
+              <CompanyStoreLink
+                companyCode={companyData.code}
+                storeName={ecommerceSettings.store_name}
+                isActive={ecommerceSettings.is_active}
+                customDomain={ecommerceSettings.custom_domain}
+              />
+            )}
+          </TabsContent>
 
         {/* E-commerce Tab */}
         <TabsContent value="ecommerce" className="space-y-6">

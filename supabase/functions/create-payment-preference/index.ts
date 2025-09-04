@@ -33,6 +33,7 @@ interface PaymentRequest {
   };
   shipping_cost: number;
   payment_method: string;
+  company_id: string;
 }
 
 serve(async (req) => {
@@ -47,14 +48,15 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { items, customer, shipping_address, shipping_cost, payment_method }: PaymentRequest = await req.json();
+    const { items, customer, shipping_address, shipping_cost, payment_method, company_id }: PaymentRequest = await req.json();
 
     // Validate stock availability
     for (const item of items) {
       const { data: product } = await supabase
         .from('products')
-        .select('stock, is_active, is_direct_sale')
+        .select('stock, is_active, is_direct_sale, company_id')
         .eq('id', item.product_id)
+        .eq('company_id', company_id)
         .single();
 
       if (!product || !product.is_active || !product.is_direct_sale) {
@@ -77,6 +79,7 @@ serve(async (req) => {
       .from('clients')
       .select('id')
       .eq('email', customer.email)
+      .eq('company_id', company_id)
       .single();
 
     if (!client) {
@@ -87,7 +90,8 @@ serve(async (req) => {
           email: customer.email,
           phone: customer.phone,
           type: 'PF',
-          company_id: '00000000-0000-0000-0000-000000000001' // Default company for public orders
+          company_id: company_id,
+          user_id: company_id // Use company_id as user_id for e-commerce clients
         })
         .select('id')
         .single();
@@ -109,7 +113,7 @@ serve(async (req) => {
       .insert({
         client_id: client.id,
         ...shipping_address,
-        company_id: '00000000-0000-0000-0000-000000000001'
+        company_id: company_id
       })
       .select('id')
       .single();
@@ -135,8 +139,8 @@ serve(async (req) => {
         total_amount: totalAmount,
         status: 'pending',
         payment_method: payment_method,
-        user_id: '00000000-0000-0000-0000-000000000001', // System user for e-commerce
-        company_id: '00000000-0000-0000-0000-000000000001'
+        user_id: company_id, // Use company_id as user_id for e-commerce orders
+        company_id: company_id
       })
       .select('id, order_number')
       .single();
@@ -157,8 +161,8 @@ serve(async (req) => {
       quantity: item.quantity,
       unit_price: item.unit_price,
       total_price: item.quantity * item.unit_price,
-      user_id: '00000000-0000-0000-0000-000000000001',
-      company_id: '00000000-0000-0000-0000-000000000001'
+      user_id: company_id,
+      company_id: company_id
     }));
 
     const { error: itemsError } = await supabase
@@ -187,7 +191,7 @@ serve(async (req) => {
         customer_email: customer.email,
         customer_phone: customer.phone,
         preference_id: preferenceId,
-        company_id: '00000000-0000-0000-0000-000000000001'
+        company_id: company_id
       });
 
     if (ecomOrderError) {
