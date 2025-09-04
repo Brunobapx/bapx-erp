@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import { toast } from "sonner";
 
 export function Checkout() {
   const navigate = useNavigate();
+  const { companyCode } = useParams<{ companyCode: string }>();
   const { items, getTotalPrice, clearCart } = useCart();
   
   const [loading, setLoading] = useState(false);
@@ -125,7 +126,7 @@ export function Checkout() {
 
       toast.success("Pedido criado com sucesso!");
       clearCart();
-      navigate(`/loja/pedido/${data.order_id}`);
+      navigate(`/loja/${companyCode}/pedido/${data.order_id}`);
       
       // In a real implementation, redirect to payment gateway
       // window.location.href = data.checkout_url;
@@ -145,7 +146,7 @@ export function Checkout() {
         <h3 className="text-xl font-semibold text-foreground mb-2">
           Seu carrinho está vazio
         </h3>
-        <Button onClick={() => navigate("/loja")}>
+        <Button onClick={() => navigate(`/loja/${companyCode}`)}>
           Voltar às compras
         </Button>
       </div>
@@ -157,7 +158,7 @@ export function Checkout() {
   return (
     <div className="space-y-8">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => navigate("/loja/carrinho")}>
+        <Button variant="ghost" onClick={() => navigate(`/loja/${companyCode}/carrinho`)}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Voltar ao carrinho
         </Button>

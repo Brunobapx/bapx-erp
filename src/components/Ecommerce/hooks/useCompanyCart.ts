@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
 import { toast } from "sonner";
 
 export interface CartItem {
@@ -10,34 +9,29 @@ export interface CartItem {
   stock: number;
 }
 
-export function useCart() {
-  const { companyCode } = useParams<{ companyCode: string }>();
+export function useCompanyCart(companyCode?: string) {
   const [items, setItems] = useState<CartItem[]>([]);
   
   // Company-specific cart storage key
-  const CART_STORAGE_KEY = `ecommerce-cart-${companyCode}`;
+  const CART_STORAGE_KEY = companyCode ? `ecommerce-cart-${companyCode}` : 'ecommerce-cart';
 
   // Load cart from localStorage on mount
   useEffect(() => {
-    if (companyCode) {
-      const savedCart = localStorage.getItem(CART_STORAGE_KEY);
-      if (savedCart) {
-        try {
-          const parsedCart = JSON.parse(savedCart);
-          setItems(parsedCart);
-        } catch (error) {
-          console.error("Error parsing cart from localStorage:", error);
-        }
+    const savedCart = localStorage.getItem(CART_STORAGE_KEY);
+    if (savedCart) {
+      try {
+        const parsedCart = JSON.parse(savedCart);
+        setItems(parsedCart);
+      } catch (error) {
+        console.error("Error parsing cart from localStorage:", error);
       }
     }
-  }, [companyCode, CART_STORAGE_KEY]);
+  }, [CART_STORAGE_KEY]);
 
   // Save cart to localStorage whenever items change
   useEffect(() => {
-    if (companyCode) {
-      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-    }
-  }, [items, companyCode, CART_STORAGE_KEY]);
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+  }, [items, CART_STORAGE_KEY]);
 
   const addItem = (product: Omit<CartItem, "quantity">, quantity: number = 1) => {
     setItems(currentItems => {

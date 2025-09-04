@@ -26,7 +26,7 @@ interface OrderItem {
 }
 
 export function OrderSuccess() {
-  const { id } = useParams<{ id: string }>();
+  const { id, companyCode } = useParams<{ id: string; companyCode: string }>();
   const [order, setOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,7 +107,7 @@ export function OrderSuccess() {
         <h3 className="text-xl font-semibold text-foreground mb-2">
           Pedido não encontrado
         </h3>
-        <Link to="/loja">
+        <Link to={`/loja/${companyCode}`}>
           <Button>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Voltar à loja
@@ -259,7 +259,7 @@ export function OrderSuccess() {
 
       {/* Actions */}
       <div className="flex flex-col sm:flex-row gap-4 justify-center">
-        <Link to="/loja">
+        <Link to={`/loja/${companyCode}`}>
           <Button variant="outline" className="w-full sm:w-auto">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Continuar Comprando

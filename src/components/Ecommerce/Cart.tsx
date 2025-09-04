@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { useCart } from "./hooks/useCart";
 
 export function Cart() {
   const navigate = useNavigate();
+  const { companyCode } = useParams<{ companyCode: string }>();
   const { 
     items, 
     updateQuantity, 
@@ -27,7 +28,7 @@ export function Cart() {
   };
 
   const handleCheckout = () => {
-    navigate("/loja/checkout");
+    navigate(`/loja/${companyCode}/checkout`);
   };
 
   if (items.length === 0) {
@@ -40,7 +41,7 @@ export function Cart() {
         <p className="text-muted-foreground mb-6">
           Adicione alguns produtos ao seu carrinho para continuar
         </p>
-        <Link to="/loja">
+        <Link to={`/loja/${companyCode}`}>
           <Button>
             <ShoppingBag className="h-4 w-4 mr-2" />
             Ver Produtos
@@ -176,7 +177,7 @@ export function Cart() {
                 Finalizar Compra
               </Button>
 
-              <Link to="/loja">
+              <Link to={`/loja/${companyCode}`}>
                 <Button variant="outline" className="w-full">
                   Continuar Comprando
                 </Button>
