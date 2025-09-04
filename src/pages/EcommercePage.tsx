@@ -10,7 +10,7 @@ import { CompanyProvider, useCompanyStore } from "@/contexts/CompanyProvider";
 
 function EcommerceContent() {
   const { companyCode } = useParams<{ companyCode: string }>();
-  const { loadCompanyByCode, loading, error } = useCompanyStore();
+  const { loadCompanyByCode, loadCompanyByDomain, loading, error } = useCompanyStore();
 
   useEffect(() => {
     if (companyCode) {
@@ -20,14 +20,13 @@ function EcommerceContent() {
       
       if (isCustomDomain) {
         // Se for domínio personalizado, buscar pela URL
-        const { loadCompanyByDomain } = useCompanyStore();
         loadCompanyByDomain(window.location.hostname);
       } else {
         // Se for código da empresa, buscar pelo código
         loadCompanyByCode(companyCode);
       }
     }
-  }, [companyCode, loadCompanyByCode]);
+  }, [companyCode, loadCompanyByCode, loadCompanyByDomain]);
 
   if (loading) {
     return (
