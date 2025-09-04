@@ -99,10 +99,30 @@ serve(async (req) => {
       }
 
       console.log('✅ Returning successful response');
+      
+      // Safely parse JSON strings to objects
+      const parseJsonField = (field: any) => {
+        if (typeof field === 'string') {
+          try {
+            return JSON.parse(field);
+          } catch (error) {
+            console.error('Error parsing JSON field:', error, 'Field value:', field);
+            return field; // Return as-is if parsing fails
+          }
+        }
+        return field;
+      };
+
       return new Response(
         JSON.stringify({
           company: companyData,
-          ecommerce_settings: ecommerceData
+          ecommerce_settings: {
+            ...ecommerceData,
+            // Parse JSON strings to objects to avoid .join() errors on arrays
+            theme_settings: parseJsonField(ecommerceData.theme_settings),
+            payment_methods: parseJsonField(ecommerceData.payment_methods),
+            shipping_settings: parseJsonField(ecommerceData.shipping_settings),
+          }
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }

@@ -92,7 +92,11 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
       // Aplicar tema da empresa
       if (settingsData.theme_settings) {
         console.log('CompanyProvider: Applying theme:', settingsData.theme_settings);
-        applyCompanyTheme(settingsData.theme_settings);
+        // Parse theme_settings if it's a string
+        const themeSettings = typeof settingsData.theme_settings === 'string' 
+          ? JSON.parse(settingsData.theme_settings) 
+          : settingsData.theme_settings;
+        applyCompanyTheme(themeSettings);
       }
 
       console.log('CompanyProvider: loadCompanyByCode completed successfully');
@@ -131,7 +135,13 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
       setEcommerceSettings(settingsData);
 
       // Aplicar tema da empresa
-      applyCompanyTheme(settingsData.theme_settings);
+      if (settingsData.theme_settings) {
+        // Parse theme_settings if it's a string
+        const themeSettings = typeof settingsData.theme_settings === 'string' 
+          ? JSON.parse(settingsData.theme_settings) 
+          : settingsData.theme_settings;
+        applyCompanyTheme(themeSettings);
+      }
 
     } catch (err) {
       console.error('Error loading company by domain:', err);
