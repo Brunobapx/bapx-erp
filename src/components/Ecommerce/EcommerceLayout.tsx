@@ -192,7 +192,20 @@ export function EcommerceLayout({ children }: EcommerceLayoutProps) {
             <div>
               <h4 className="font-medium text-foreground mb-3">Formas de Pagamento</h4>
               <p className="text-sm text-muted-foreground">
-                {ecommerceSettings?.payment_methods?.join(', ') || 'PIX, Cartão de Crédito, Boleto'}
+                {(() => {
+                  const paymentMethods = ecommerceSettings?.payment_methods;
+                  if (Array.isArray(paymentMethods)) {
+                    return paymentMethods.join(', ');
+                  } else if (typeof paymentMethods === 'string') {
+                    try {
+                      const parsed = JSON.parse(paymentMethods);
+                      return Array.isArray(parsed) ? parsed.join(', ') : 'PIX, Cartão de Crédito, Boleto';
+                    } catch {
+                      return 'PIX, Cartão de Crédito, Boleto';
+                    }
+                  }
+                  return 'PIX, Cartão de Crédito, Boleto';
+                })()}
               </p>
             </div>
           </div>

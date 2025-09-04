@@ -12,7 +12,6 @@ export interface CartItem {
 
 export function useCart() {
   const { companyCode } = useParams<{ companyCode: string }>();
-  console.log('useCart: Initializing with companyCode:', companyCode);
   const [items, setItems] = useState<CartItem[]>([]);
   
   // Company-specific cart storage key

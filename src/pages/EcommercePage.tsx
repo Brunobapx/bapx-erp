@@ -9,19 +9,15 @@ import { EcommerceLayout } from "@/components/Ecommerce/EcommerceLayout";
 import { CompanyProvider, useCompanyStore } from "@/contexts/CompanyProvider";
 
 function EcommerceContent() {
-  console.log('EcommerceContent: Component initializing');
   const { companyCode } = useParams<{ companyCode: string }>();
   const { loadCompanyByCode, loadCompanyByDomain, loading, error, company, ecommerceSettings } = useCompanyStore();
 
   useEffect(() => {
-    console.log('EcommerceContent - useEffect', { companyCode, currentURL: window.location.href });
     if (companyCode) {
       // Verificar se é um domínio personalizado ou código da empresa
       const isCustomDomain = window.location.hostname !== 'localhost' && 
                             !window.location.hostname.includes('lovable.app') &&
                             !window.location.hostname.includes('sandbox.lovable.dev');
-      
-      console.log('Loading company...', { companyCode, isCustomDomain, hostname: window.location.hostname });
       
       if (isCustomDomain) {
         // Se for domínio personalizado, buscar pela URL
@@ -33,27 +29,12 @@ function EcommerceContent() {
     }
   }, [companyCode, loadCompanyByCode, loadCompanyByDomain]);
 
-  // Debug logs
-  console.log('EcommerceContent render', { loading, error, company, ecommerceSettings, companyCode });
-  console.log('EcommerceContent render conditions:', {
-    isLoading: loading,
-    hasError: !!error,
-    hasCompany: !!company,
-    hasEcommerceSettings: !!ecommerceSettings,
-    willShowLoading: loading,
-    willShowError: !!error,
-    willShowIncomplete: !company || !ecommerceSettings,
-    willShowContent: !loading && !error && company && ecommerceSettings
-  });
-
   if (loading) {
-    console.log('EcommerceContent: Showing loading state');
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto"></div>
           <p className="text-muted-foreground">Carregando loja...</p>
-          <p className="text-xs text-muted-foreground">Código: {companyCode}</p>
         </div>
       </div>
     );
