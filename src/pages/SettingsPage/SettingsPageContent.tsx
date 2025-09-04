@@ -9,6 +9,7 @@ import { CurrentUserProfile } from '@/components/Settings/CurrentUserProfile';
 import { DatabaseReset } from '@/components/Settings/DatabaseReset';
 import { SellerCommissionsSection } from '@/components/Settings/SellerCommissionsSection';
 import { WhiteLabelSettings } from '@/components/Settings/WhiteLabelSettings';
+import { StoreLinksTestPanel } from '@/components/Settings/StoreLinksTestPanel';
 
 interface TabContentProps {
   tabName: string;
@@ -60,6 +61,12 @@ export const SettingsPageContent: React.FC<SettingsPageContentProps> = ({ isAdmi
       <CompanyUnifiedSettings />
     </TabContent>
   )}
+</TabsContent>
+
+<TabsContent value="ecommerce">
+  <TabContent tabName="E-commerce">
+    <StoreLinksTestPanel />
+  </TabContent>
 </TabsContent>
 
       {isAdmin && (
