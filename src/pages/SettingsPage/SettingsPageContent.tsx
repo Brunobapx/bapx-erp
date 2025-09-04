@@ -3,6 +3,7 @@ import React from 'react';
 import { TabsContent } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CompanyUnifiedSettings } from '@/components/Settings/CompanyUnifiedSettings';
+import { CompanyManagement } from '@/components/Settings/CompanyManagement';
 import { UserManagement } from '@/components/Settings/UserManagement';
 import { CurrentUserProfile } from '@/components/Settings/CurrentUserProfile';
 import { DatabaseReset } from '@/components/Settings/DatabaseReset';
@@ -63,6 +64,12 @@ export const SettingsPageContent: React.FC<SettingsPageContentProps> = ({ isAdmi
 
       {isAdmin && (
         <>
+          <TabsContent value="management">
+            <TabContent tabName="Gerenciamento da Empresa">
+              <CompanyManagement />
+            </TabContent>
+          </TabsContent>
+
           <TabsContent value="whitelabel">
             <TabContent tabName="White Label">
               <WhiteLabelSettings />

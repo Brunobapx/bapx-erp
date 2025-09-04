@@ -1,6 +1,6 @@
 import React from 'react';
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building, Users, User, Palette } from 'lucide-react';
+import { Building, Users, User, Palette, Settings } from 'lucide-react';
 
 interface SettingsPageTabsProps {
   isAdmin: boolean;
@@ -8,7 +8,7 @@ interface SettingsPageTabsProps {
 
 export const SettingsPageTabs: React.FC<SettingsPageTabsProps> = ({ isAdmin }) => {
   return (
-    <TabsList className={isAdmin ? "grid w-full grid-cols-4" : "grid w-full grid-cols-2"}>
+    <TabsList className={isAdmin ? "grid w-full grid-cols-5" : "grid w-full grid-cols-2"}>
       <TabsTrigger value="profile" className="flex items-center gap-2">
         <User className="h-4 w-4" />
         Meu Perfil
@@ -19,6 +19,10 @@ export const SettingsPageTabs: React.FC<SettingsPageTabsProps> = ({ isAdmin }) =
       </TabsTrigger>
       {isAdmin && (
         <>
+          <TabsTrigger value="management" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Gerenciamento
+          </TabsTrigger>
           <TabsTrigger value="whitelabel" className="flex items-center gap-2">
             <Palette className="h-4 w-4" />
             White Label

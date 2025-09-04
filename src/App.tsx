@@ -31,6 +31,7 @@ import SimpleOrderFormPage from "./pages/SimpleOrderFormPage";
 import QuotePage from "./pages/QuotePage";
 import { FinancialProvider } from "./contexts/FinancialContext";
 import SaaSPage from "./pages/SaaSPage";
+import { EcommercePage } from "@/pages/EcommercePage";
 
 const queryClient = new QueryClient();
 
@@ -323,6 +324,7 @@ const App = () => (
                 </ProtectedRoute>
               } />
               
+              <Route path="/loja/*" element={<EcommercePage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </FinancialProvider>

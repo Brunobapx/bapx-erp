@@ -277,47 +277,136 @@ export type Database = {
       companies: {
         Row: {
           billing_email: string | null
+          cep: string | null
+          cidade: string | null
+          cnpj: string | null
           code: string
+          email: string | null
+          endereco: string | null
+          estado: string | null
           id: string
+          inscricao_estadual: string | null
           logo_url: string | null
           name: string
           onboarded_at: string | null
           plan: string | null
           primary_color: string | null
+          razao_social: string | null
           secondary_color: string | null
           subdomain: string | null
+          telefone: string | null
           trial_expires_at: string | null
+          website: string | null
           whatsapp: string | null
         }
         Insert: {
           billing_email?: string | null
+          cep?: string | null
+          cidade?: string | null
+          cnpj?: string | null
           code: string
+          email?: string | null
+          endereco?: string | null
+          estado?: string | null
           id?: string
+          inscricao_estadual?: string | null
           logo_url?: string | null
           name: string
           onboarded_at?: string | null
           plan?: string | null
           primary_color?: string | null
+          razao_social?: string | null
           secondary_color?: string | null
           subdomain?: string | null
+          telefone?: string | null
           trial_expires_at?: string | null
+          website?: string | null
           whatsapp?: string | null
         }
         Update: {
           billing_email?: string | null
+          cep?: string | null
+          cidade?: string | null
+          cnpj?: string | null
           code?: string
+          email?: string | null
+          endereco?: string | null
+          estado?: string | null
           id?: string
+          inscricao_estadual?: string | null
           logo_url?: string | null
           name?: string
           onboarded_at?: string | null
           plan?: string | null
           primary_color?: string | null
+          razao_social?: string | null
           secondary_color?: string | null
           subdomain?: string | null
+          telefone?: string | null
           trial_expires_at?: string | null
+          website?: string | null
           whatsapp?: string | null
         }
         Relationships: []
+      }
+      company_ecommerce_settings: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          custom_domain: string | null
+          id: string
+          is_active: boolean | null
+          mercado_pago_access_token: string | null
+          mercado_pago_public_key: string | null
+          payment_methods: Json | null
+          shipping_settings: Json | null
+          store_description: string | null
+          store_logo_url: string | null
+          store_name: string
+          theme_settings: Json | null
+          updated_at: string
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          custom_domain?: string | null
+          id?: string
+          is_active?: boolean | null
+          mercado_pago_access_token?: string | null
+          mercado_pago_public_key?: string | null
+          payment_methods?: Json | null
+          shipping_settings?: Json | null
+          store_description?: string | null
+          store_logo_url?: string | null
+          store_name?: string
+          theme_settings?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          custom_domain?: string | null
+          id?: string
+          is_active?: boolean | null
+          mercado_pago_access_token?: string | null
+          mercado_pago_public_key?: string | null
+          payment_methods?: Json | null
+          shipping_settings?: Json | null
+          store_description?: string | null
+          store_logo_url?: string | null
+          store_name?: string
+          theme_settings?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_ecommerce_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       company_sequences: {
         Row: {
@@ -336,6 +425,60 @@ export type Database = {
           sequence_key?: string
         }
         Relationships: []
+      }
+      company_transfers: {
+        Row: {
+          completed_at: string | null
+          from_company_id: string | null
+          id: string
+          notes: string | null
+          requested_at: string
+          status: string | null
+          to_company_id: string | null
+          transfer_type: string
+          transferred_data: Json | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          from_company_id?: string | null
+          id?: string
+          notes?: string | null
+          requested_at?: string
+          status?: string | null
+          to_company_id?: string | null
+          transfer_type: string
+          transferred_data?: Json | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          from_company_id?: string | null
+          id?: string
+          notes?: string | null
+          requested_at?: string
+          status?: string | null
+          to_company_id?: string | null
+          transfer_type?: string
+          transferred_data?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_transfers_from_company_id_fkey"
+            columns: ["from_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_transfers_to_company_id_fkey"
+            columns: ["to_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       conciliacoes: {
         Row: {

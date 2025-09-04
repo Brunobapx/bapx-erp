@@ -18,6 +18,15 @@ verify_jwt = false
 [functions.cancel-order]
 verify_jwt = true
 
+[functions.public-catalog]
+verify_jwt = false
+
+[functions.create-payment-preference]
+verify_jwt = false
+
+[functions.payment-webhook]
+verify_jwt = false
+
 [api]
 enabled = true
 port = 54321
