@@ -8,12 +8,20 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log('🔍 public-catalog function called', {
+    method: req.method,
+    url: req.url,
+    timestamp: new Date().toISOString()
+  });
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('📞 Handling CORS preflight request');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    console.log('🚀 Initializing Supabase client');
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -45,17 +53,20 @@ serve(async (req) => {
 
     // Handle company info request
     if (getCompanyInfo && companyCode) {
-      console.log('Fetching company info for code:', companyCode);
+      console.log('🏢 Fetching company info for code:', companyCode);
       
       // Get company by code
+      console.log('📋 Querying companies table...');
       const { data: companyData, error: companyError } = await supabase
         .from('companies')
         .select('*')
         .eq('code', companyCode)
         .single();
 
+      console.log('📋 Company query result:', { companyData, companyError });
+
       if (companyError || !companyData) {
-        console.error('Company not found:', companyError);
+        console.error('❌ Company not found:', companyError);
         return new Response(
           JSON.stringify({ error: 'Empresa não encontrada' }),
           {
@@ -66,6 +77,7 @@ serve(async (req) => {
       }
 
       // Get ecommerce settings
+      console.log('🛒 Querying ecommerce settings for company_id:', companyData.id);
       const { data: ecommerceData, error: ecommerceError } = await supabase
         .from('company_ecommerce_settings')
         .select('*')
@@ -73,8 +85,10 @@ serve(async (req) => {
         .eq('is_active', true)
         .single();
 
+      console.log('🛒 Ecommerce query result:', { ecommerceData, ecommerceError });
+
       if (ecommerceError || !ecommerceData) {
-        console.error('E-commerce settings not found:', ecommerceError);
+        console.error('❌ E-commerce settings not found:', ecommerceError);
         return new Response(
           JSON.stringify({ error: 'Loja não encontrada ou inativa' }),
           {
@@ -84,6 +98,7 @@ serve(async (req) => {
         );
       }
 
+      console.log('✅ Returning successful response');
       return new Response(
         JSON.stringify({
           company: companyData,

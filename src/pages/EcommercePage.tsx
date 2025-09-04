@@ -9,11 +9,12 @@ import { EcommerceLayout } from "@/components/Ecommerce/EcommerceLayout";
 import { CompanyProvider, useCompanyStore } from "@/contexts/CompanyProvider";
 
 function EcommerceContent() {
+  console.log('EcommerceContent: Component initializing');
   const { companyCode } = useParams<{ companyCode: string }>();
   const { loadCompanyByCode, loadCompanyByDomain, loading, error, company, ecommerceSettings } = useCompanyStore();
 
   useEffect(() => {
-    console.log('EcommerceContent - useEffect', { companyCode });
+    console.log('EcommerceContent - useEffect', { companyCode, currentURL: window.location.href });
     if (companyCode) {
       // Verificar se é um domínio personalizado ou código da empresa
       const isCustomDomain = window.location.hostname !== 'localhost' && 
