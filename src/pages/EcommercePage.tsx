@@ -35,8 +35,19 @@ function EcommerceContent() {
 
   // Debug logs
   console.log('EcommerceContent render', { loading, error, company, ecommerceSettings, companyCode });
+  console.log('EcommerceContent render conditions:', {
+    isLoading: loading,
+    hasError: !!error,
+    hasCompany: !!company,
+    hasEcommerceSettings: !!ecommerceSettings,
+    willShowLoading: loading,
+    willShowError: !!error,
+    willShowIncomplete: !company || !ecommerceSettings,
+    willShowContent: !loading && !error && company && ecommerceSettings
+  });
 
   if (loading) {
+    console.log('EcommerceContent: Showing loading state');
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
