@@ -41,26 +41,38 @@ export function ProductCatalog() {
     try {
       setLoading(true);
       
-      if (!company) return;
-
-      const params = new URLSearchParams();
-      params.append("company_id", company.id);
-      if (searchQuery) params.append("search", searchQuery);
-      if (categoryParam || selectedCategory) {
-        params.append("category", categoryParam || selectedCategory);
+      if (!company) {
+        console.log("ProductCatalog: No company found");
+        return;
       }
 
+      console.log("ProductCatalog: Loading products for company:", company);
+
+      const requestBody: Record<string, string> = {
+        company_id: company.id
+      };
+
+      if (searchQuery) requestBody.search = searchQuery;
+      if (categoryParam || selectedCategory) {
+        requestBody.category = categoryParam || selectedCategory;
+      }
+
+      console.log("ProductCatalog: Request body:", requestBody);
+
       const { data, error } = await supabase.functions.invoke("public-catalog", {
-        body: Object.fromEntries(params),
+        body: requestBody,
       });
+
+      console.log("ProductCatalog: Response:", { data, error });
 
       if (error) {
         console.error("Error loading products:", error);
         return;
       }
 
-      setProducts(data.products || []);
-      setCategories(data.categories || []);
+      setProducts(data?.products || []);
+      setCategories(data?.categories || []);
+      console.log("ProductCatalog: Set products:", data?.products?.length || 0);
     } catch (error) {
       console.error("Error loading products:", error);
     } finally {
