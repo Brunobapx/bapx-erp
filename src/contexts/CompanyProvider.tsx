@@ -50,48 +50,59 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
 
   const loadCompanyByCode = async (code: string) => {
     try {
+      console.log('CompanyProvider: Starting loadCompanyByCode with code:', code);
       setLoading(true);
       setError(null);
 
-      console.log('Loading company by code:', code);
+      console.log('CompanyProvider: Loading company by code:', code);
 
       // Usar edge function para buscar dados públicos da empresa
+      console.log('CompanyProvider: Calling public-catalog function...');
       const { data: response, error: functionError } = await supabase.functions.invoke('public-catalog', {
         body: { company_code: code, get_company_info: true }
       });
 
+      console.log('CompanyProvider: Function response:', { response, functionError });
+
       if (functionError) {
-        console.error('Function error:', functionError);
+        console.error('CompanyProvider: Function error:', functionError);
         throw new Error('Erro ao conectar com a loja');
       }
 
       if (!response || !response.company) {
+        console.error('CompanyProvider: No company in response:', response);
         throw new Error('Empresa não encontrada');
       }
 
       const companyData = response.company;
       const settingsData = response.ecommerce_settings;
 
+      console.log('CompanyProvider: Extracted data:', { companyData, settingsData });
+
       if (!settingsData || !settingsData.is_active) {
+        console.error('CompanyProvider: Invalid ecommerce settings:', settingsData);
         throw new Error('Loja não encontrada ou inativa');
       }
 
-      console.log('Company data loaded:', { companyData, settingsData });
+      console.log('CompanyProvider: Company data loaded successfully:', { companyData, settingsData });
 
       setCompany(companyData);
       setEcommerceSettings(settingsData);
 
       // Aplicar tema da empresa
       if (settingsData.theme_settings) {
+        console.log('CompanyProvider: Applying theme:', settingsData.theme_settings);
         applyCompanyTheme(settingsData.theme_settings);
       }
 
+      console.log('CompanyProvider: loadCompanyByCode completed successfully');
     } catch (err) {
-      console.error('Error loading company:', err);
+      console.error('CompanyProvider: Error loading company:', err);
       setError(err instanceof Error ? err.message : 'Erro ao carregar loja');
       setCompany(null);
       setEcommerceSettings(null);
     } finally {
+      console.log('CompanyProvider: Setting loading to false');
       setLoading(false);
     }
   };
