@@ -53,34 +53,38 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       setError(null);
 
-      // Buscar empresa pelo código
-      const { data: companyData, error: companyError } = await supabase
-        .from('companies')
-        .select('*')
-        .eq('code', code)
-        .single();
+      console.log('Loading company by code:', code);
 
-      if (companyError || !companyData) {
+      // Usar edge function para buscar dados públicos da empresa
+      const { data: response, error: functionError } = await supabase.functions.invoke('public-catalog', {
+        body: { company_code: code, get_company_info: true }
+      });
+
+      if (functionError) {
+        console.error('Function error:', functionError);
+        throw new Error('Erro ao conectar com a loja');
+      }
+
+      if (!response || !response.company) {
         throw new Error('Empresa não encontrada');
       }
 
-      // Buscar configurações de e-commerce
-      const { data: settingsData, error: settingsError } = await supabase
-        .from('company_ecommerce_settings')
-        .select('*')
-        .eq('company_id', companyData.id)
-        .eq('is_active', true)
-        .single();
+      const companyData = response.company;
+      const settingsData = response.ecommerce_settings;
 
-      if (settingsError || !settingsData) {
+      if (!settingsData || !settingsData.is_active) {
         throw new Error('Loja não encontrada ou inativa');
       }
+
+      console.log('Company data loaded:', { companyData, settingsData });
 
       setCompany(companyData);
       setEcommerceSettings(settingsData);
 
       // Aplicar tema da empresa
-      applyCompanyTheme(settingsData.theme_settings);
+      if (settingsData.theme_settings) {
+        applyCompanyTheme(settingsData.theme_settings);
+      }
 
     } catch (err) {
       console.error('Error loading company:', err);
