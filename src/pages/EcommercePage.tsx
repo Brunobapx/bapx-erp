@@ -1,5 +1,5 @@
 import { Routes, Route, useParams } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { ProductCatalog } from "@/components/Ecommerce/ProductCatalog";
 import { ProductDetails } from "@/components/Ecommerce/ProductDetails";
 import { Cart } from "@/components/Ecommerce/Cart";
@@ -11,23 +11,28 @@ import { CompanyProvider, useCompanyStore } from "@/contexts/CompanyProvider";
 function EcommerceContent() {
   const { companyCode } = useParams<{ companyCode: string }>();
   const { loadCompanyByCode, loadCompanyByDomain, loading, error, company, ecommerceSettings } = useCompanyStore();
+  const loadedRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (companyCode) {
-      // Verificar se é um domínio personalizado ou código da empresa
-      const isCustomDomain = window.location.hostname !== 'localhost' && 
-                            !window.location.hostname.includes('lovable.app') &&
-                            !window.location.hostname.includes('sandbox.lovable.dev');
-      
-      if (isCustomDomain) {
-        // Se for domínio personalizado, buscar pela URL
-        loadCompanyByDomain(window.location.hostname);
-      } else {
-        // Se for código da empresa, buscar pelo código
-        loadCompanyByCode(companyCode);
-      }
+    if (!companyCode || loading || loadedRef.current === companyCode) {
+      return;
     }
-  }, [companyCode, loadCompanyByCode, loadCompanyByDomain]);
+
+    loadedRef.current = companyCode;
+
+    // Verificar se é um domínio personalizado ou código da empresa
+    const isCustomDomain = window.location.hostname !== 'localhost' && 
+                          !window.location.hostname.includes('lovable.app') &&
+                          !window.location.hostname.includes('sandbox.lovable.dev');
+    
+    if (isCustomDomain) {
+      // Se for domínio personalizado, buscar pela URL
+      loadCompanyByDomain(window.location.hostname);
+    } else {
+      // Se for código da empresa, buscar pelo código
+      loadCompanyByCode(companyCode);
+    }
+  }, [companyCode, loading, loadCompanyByCode, loadCompanyByDomain]);
 
   if (loading) {
     return (

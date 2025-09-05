@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Company {
@@ -48,7 +48,53 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadCompanyByCode = async (code: string) => {
+  // Helper functions first
+  const convertToHSL = useCallback((hex: string) => {
+    // Convert hex to HSL - simple conversion for demo
+    // In a real app, you'd use a proper color conversion library
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    
+    const max = Math.max(r, g, b) / 255;
+    const min = Math.min(r, g, b) / 255;
+    const diff = max - min;
+    const add = max + min;
+    const l = add * 0.5;
+    
+    let s = 0;
+    let h = 0;
+    
+    if (diff !== 0) {
+      s = l < 0.5 ? diff / add : diff / (2 - add);
+      
+      switch (max) {
+        case r / 255:
+          h = ((g - b) / 255 - diff) / diff + (g < b ? 6 : 0);
+          break;
+        case g / 255:
+          h = ((b - r) / 255 - diff) / diff + 2;
+          break;
+        case b / 255:
+          h = ((r - g) / 255 - diff) / diff + 4;
+          break;
+      }
+      h /= 6;
+    }
+    
+    return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+  }, []);
+
+  const applyCompanyTheme = useCallback((themeSettings: any) => {
+    if (themeSettings?.primary_color) {
+      document.documentElement.style.setProperty('--primary', convertToHSL(themeSettings.primary_color));
+    }
+    if (themeSettings?.secondary_color) {
+      document.documentElement.style.setProperty('--secondary', convertToHSL(themeSettings.secondary_color));
+    }
+  }, [convertToHSL]);
+
+  const loadCompanyByCode = useCallback(async (code: string) => {
     try {
       setLoading(true);
       setError(null);
@@ -92,9 +138,9 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [applyCompanyTheme]);
 
-  const loadCompanyByDomain = async (domain: string) => {
+  const loadCompanyByDomain = useCallback(async (domain: string) => {
     try {
       setLoading(true);
       setError(null);
@@ -134,52 +180,7 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
-
-  const applyCompanyTheme = (themeSettings: any) => {
-    if (themeSettings?.primary_color) {
-      document.documentElement.style.setProperty('--primary', convertToHSL(themeSettings.primary_color));
-    }
-    if (themeSettings?.secondary_color) {
-      document.documentElement.style.setProperty('--secondary', convertToHSL(themeSettings.secondary_color));
-    }
-  };
-
-  const convertToHSL = (hex: string) => {
-    // Convert hex to HSL - simple conversion for demo
-    // In a real app, you'd use a proper color conversion library
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    
-    const max = Math.max(r, g, b) / 255;
-    const min = Math.min(r, g, b) / 255;
-    const diff = max - min;
-    const add = max + min;
-    const l = add * 0.5;
-    
-    let s = 0;
-    let h = 0;
-    
-    if (diff !== 0) {
-      s = l < 0.5 ? diff / add : diff / (2 - add);
-      
-      switch (max) {
-        case r / 255:
-          h = ((g - b) / 255 - diff) / diff + (g < b ? 6 : 0);
-          break;
-        case g / 255:
-          h = ((b - r) / 255 - diff) / diff + 2;
-          break;
-        case b / 255:
-          h = ((r - g) / 255 - diff) / diff + 4;
-          break;
-      }
-      h /= 6;
-    }
-    
-    return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
-  };
+  }, [applyCompanyTheme]);
 
   return (
     <CompanyContext.Provider
