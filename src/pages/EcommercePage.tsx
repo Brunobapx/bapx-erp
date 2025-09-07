@@ -5,6 +5,7 @@ import { ProductDetails } from "@/components/Ecommerce/ProductDetails";
 import { Cart } from "@/components/Ecommerce/Cart";
 import { Checkout } from "@/components/Ecommerce/Checkout";
 import { OrderSuccess } from "@/components/Ecommerce/OrderSuccess";
+import { OrderSuccessPage } from "./OrderSuccessPage";
 import { EcommerceLayout } from "@/components/Ecommerce/EcommerceLayout";
 import { CompanyProvider, useCompanyStore } from "@/contexts/CompanyProvider";
 
@@ -87,7 +88,7 @@ function EcommerceContent() {
         <Route path="/produto/:id" element={<ProductDetails />} />
         <Route path="/carrinho" element={<Cart />} />
         <Route path="/checkout" element={<Checkout />} />
-        <Route path="/pedido/:id" element={<OrderSuccess />} />
+        <Route path="/pedido/:orderId" element={<OrderSuccessPage />} />
       </Routes>
     </EcommerceLayout>
   );

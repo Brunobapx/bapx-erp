@@ -114,7 +114,8 @@ export function Checkout() {
             zip_code: formData.zip_code
           },
           shipping_cost: shippingCost,
-          payment_method: formData.payment_method
+          payment_method: formData.payment_method,
+          company_id: companyCode // Add company code from URL
         }
       });
 

@@ -50,13 +50,34 @@ serve(async (req) => {
 
     const { items, customer, shipping_address, shipping_cost, payment_method, company_id }: PaymentRequest = await req.json();
 
+    console.log('Received request:', { items: items?.length, customer: customer?.email, company_id });
+
+    // Get actual company_id from company code if it's a code instead of UUID
+    let actualCompanyId = company_id;
+    if (company_id && company_id.length < 32) { // It's likely a company code, not UUID
+      const { data: company, error: companyError } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('code', company_id)
+        .single();
+      
+      if (companyError || !company) {
+        console.error('Company not found for code:', company_id);
+        return new Response(JSON.stringify({ error: 'Company not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      actualCompanyId = company.id;
+    }
+
     // Validate stock availability
     for (const item of items) {
       const { data: product } = await supabase
         .from('products')
         .select('stock, is_active, is_direct_sale, company_id')
         .eq('id', item.product_id)
-        .eq('company_id', company_id)
+        .eq('company_id', actualCompanyId)
         .single();
 
       if (!product || !product.is_active || !product.is_direct_sale) {
@@ -79,7 +100,7 @@ serve(async (req) => {
       .from('clients')
       .select('id')
       .eq('email', customer.email)
-      .eq('company_id', company_id)
+      .eq('company_id', actualCompanyId)
       .single();
 
     if (!client) {
@@ -90,8 +111,8 @@ serve(async (req) => {
           email: customer.email,
           phone: customer.phone,
           type: 'PF',
-          company_id: company_id,
-          user_id: company_id // Use company_id as user_id for e-commerce clients
+          company_id: actualCompanyId,
+          user_id: actualCompanyId // Use company_id as user_id for e-commerce clients
         })
         .select('id')
         .single();
@@ -113,7 +134,7 @@ serve(async (req) => {
       .insert({
         client_id: client.id,
         ...shipping_address,
-        company_id: company_id
+        company_id: actualCompanyId
       })
       .select('id')
       .single();
@@ -139,8 +160,8 @@ serve(async (req) => {
         total_amount: totalAmount,
         status: 'pending',
         payment_method: payment_method,
-        user_id: company_id, // Use company_id as user_id for e-commerce orders
-        company_id: company_id
+        user_id: actualCompanyId, // Use company_id as user_id for e-commerce orders
+        company_id: actualCompanyId
       })
       .select('id, order_number')
       .single();
@@ -161,8 +182,8 @@ serve(async (req) => {
       quantity: item.quantity,
       unit_price: item.unit_price,
       total_price: item.quantity * item.unit_price,
-      user_id: company_id,
-      company_id: company_id
+      user_id: actualCompanyId,
+      company_id: actualCompanyId
     }));
 
     const { error: itemsError } = await supabase
@@ -191,7 +212,7 @@ serve(async (req) => {
         customer_email: customer.email,
         customer_phone: customer.phone,
         preference_id: preferenceId,
-        company_id: company_id
+        company_id: actualCompanyId
       });
 
     if (ecomOrderError) {
