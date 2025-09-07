@@ -38,15 +38,10 @@ export function ProductCatalog() {
   }, [company, searchQuery, categoryParam, selectedCategory]);
 
   const loadProducts = async () => {
+    if (!company) return;
+    
     try {
       setLoading(true);
-      
-      if (!company) {
-        console.log("ProductCatalog: No company found");
-        return;
-      }
-
-      console.log("ProductCatalog: Loading products for company:", company);
 
       const requestBody: Record<string, string> = {
         company_id: company.id
@@ -57,26 +52,23 @@ export function ProductCatalog() {
         requestBody.category = categoryParam || selectedCategory;
       }
 
-      console.log("ProductCatalog: Request body:", requestBody);
-
       const { data, error } = await supabase.functions.invoke("public-catalog", {
         body: requestBody,
       });
 
-      console.log("ProductCatalog: Response:", { data, error });
-
       if (error) {
         console.error("Error loading products:", error);
+        setProducts([]);
+        setCategories([]);
         return;
       }
 
       setProducts(data?.products || []);
       setCategories(data?.categories || []);
-      console.log("ProductCatalog: Set products:", data?.products?.length || 0);
-      console.log("ProductCatalog: Products data:", data?.products);
-      console.log("ProductCatalog: Categories:", data?.categories);
     } catch (error) {
       console.error("Error loading products:", error);
+      setProducts([]);
+      setCategories([]);
     } finally {
       setLoading(false);
     }

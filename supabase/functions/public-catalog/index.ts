@@ -147,12 +147,12 @@ serve(async (req) => {
       query = query.eq('company_id', companyId);
     }
 
-    if (category) {
-      query = query.eq('category', category);
+    if (category && category.trim()) {
+      query = query.eq('category', category.trim());
     }
 
-    if (search) {
-      query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
+    if (search && search.trim()) {
+      query = query.or(`name.ilike.%${search.trim()}%,description.ilike.%${search.trim()}%`);
     }
 
     const { data: products, error } = await query
@@ -161,8 +161,13 @@ serve(async (req) => {
 
     if (error) {
       console.error('Error fetching products:', error);
-      return new Response(JSON.stringify({ error: 'Failed to fetch products' }), {
-        status: 500,
+      return new Response(JSON.stringify({ 
+        error: 'Failed to fetch products',
+        products: [],
+        categories: [],
+        total: 0 
+      }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -180,11 +185,13 @@ serve(async (req) => {
 
     const { data: categories } = await categoriesQuery;
 
-    const uniqueCategories = [...new Set(categories?.map(c => c.category))];
+    const uniqueCategories = [...new Set(
+      categories?.map(c => c.category).filter(Boolean) || []
+    )];
 
     return new Response(JSON.stringify({ 
       products: products || [], 
-      categories: uniqueCategories,
+      categories: uniqueCategories || [],
       total: products?.length || 0 
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
