@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,13 +31,7 @@ export function ProductCatalog() {
   const searchQuery = searchParams.get("search") || "";
   const categoryParam = searchParams.get("category") || "";
 
-  useEffect(() => {
-    if (company) {
-      loadProducts();
-    }
-  }, [company, searchQuery, categoryParam, selectedCategory]);
-
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     if (!company) return;
     
     try {
@@ -72,7 +66,13 @@ export function ProductCatalog() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [company, searchQuery, categoryParam, selectedCategory]);
+
+  useEffect(() => {
+    if (company) {
+      loadProducts();
+    }
+  }, [company, loadProducts]);
 
   const handleAddToCart = (product: Product) => {
     addItem({
@@ -86,6 +86,11 @@ export function ProductCatalog() {
   if (loading) {
     return (
       <div className="space-y-8">
+        <div className="text-center py-8">
+          <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
+          <h2 className="text-lg font-semibold text-foreground">Carregando produtos...</h2>
+          <p className="text-muted-foreground">Aguarde enquanto buscamos os produtos da loja</p>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {Array.from({ length: 8 }).map((_, i) => (
             <Card key={i} className="animate-pulse">

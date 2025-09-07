@@ -39,8 +39,9 @@ function EcommerceContent() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
-          <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto"></div>
-          <p className="text-muted-foreground">Carregando loja...</p>
+          <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto"></div>
+          <h2 className="text-xl font-bold text-foreground">Carregando loja...</h2>
+          <p className="text-muted-foreground">Aguarde enquanto preparamos tudo para você</p>
         </div>
       </div>
     );
