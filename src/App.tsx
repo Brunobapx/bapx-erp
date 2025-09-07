@@ -46,6 +46,9 @@ const App = () => (
             <Routes>
               <Route path="/auth" element={<AuthPage />} />
               
+              {/* Public E-commerce Routes - Must come BEFORE protected routes */}
+              <Route path="/loja/:companyCode/*" element={<EcommercePage />} />
+              
               <Route path="/" element={
                 <ProtectedRoute>
                   <div className="flex h-screen bg-gray-50">
@@ -324,7 +327,6 @@ const App = () => (
                 </ProtectedRoute>
               } />
               
-              <Route path="/loja/:companyCode/*" element={<EcommercePage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </FinancialProvider>

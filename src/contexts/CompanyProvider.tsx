@@ -95,6 +95,7 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
   }, [convertToHSL]);
 
   const loadCompanyByCode = useCallback(async (code: string) => {
+    console.log("CompanyProvider: Loading company by code:", code);
     try {
       setLoading(true);
       setError(null);
@@ -103,6 +104,8 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
       const { data: response, error: functionError } = await supabase.functions.invoke('public-catalog', {
         body: { company_code: code, get_company_info: true }
       });
+
+      console.log("CompanyProvider: Response:", { response, functionError });
 
       if (functionError) {
         throw new Error('Erro ao conectar com a loja');
@@ -115,12 +118,16 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
       const companyData = response.company;
       const settingsData = response.ecommerce_settings;
 
+      console.log("CompanyProvider: Data received:", { companyData, settingsData });
+
       if (!settingsData || !settingsData.is_active) {
         throw new Error('Loja não encontrada ou inativa');
       }
 
       setCompany(companyData);
       setEcommerceSettings(settingsData);
+
+      console.log("CompanyProvider: Company and settings loaded successfully");
 
       // Aplicar tema da empresa
       if (settingsData.theme_settings) {
@@ -132,6 +139,7 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
       }
 
     } catch (err) {
+      console.error("CompanyProvider: Error loading company:", err);
       setError(err instanceof Error ? err.message : 'Erro ao carregar loja');
       setCompany(null);
       setEcommerceSettings(null);

@@ -83,26 +83,37 @@ export function ProductCatalog() {
     }, 1);
   };
 
+  // Debug logs para verificar estado
+  console.log("ProductCatalog Debug:", { 
+    company: !!company, 
+    companyId: company?.id,
+    loading,
+    products: products.length,
+    categories: categories.length 
+  });
+
   if (loading) {
     return (
       <div className="space-y-8">
-        <div className="text-center py-8">
-          <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
-          <h2 className="text-lg font-semibold text-foreground">Carregando produtos...</h2>
-          <p className="text-muted-foreground">Aguarde enquanto buscamos os produtos da loja</p>
+        <div className="text-center py-16">
+          <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
+          <h2 className="text-xl font-bold text-foreground">Carregando produtos...</h2>
+          <p className="text-muted-foreground">Preparando catálogo para você</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <div className="aspect-square bg-muted rounded-t-lg" />
-              <CardContent className="p-4">
-                <div className="h-4 bg-muted rounded mb-2" />
-                <div className="h-3 bg-muted rounded mb-3" />
-                <div className="h-5 bg-muted rounded w-20" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      </div>
+    );
+  }
+
+  if (!company) {
+    return (
+      <div className="text-center py-16">
+        <div className="text-6xl mb-4">🏪</div>
+        <h3 className="text-xl font-semibold text-foreground mb-2">
+          Preparando loja...
+        </h3>
+        <p className="text-muted-foreground">
+          Carregando informações da empresa
+        </p>
       </div>
     );
   }
