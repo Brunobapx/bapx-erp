@@ -14,12 +14,24 @@ function EcommerceContent() {
   const { loadCompanyByCode, loadCompanyByDomain, loading, error, company, ecommerceSettings } = useCompanyStore();
   const loadedRef = useRef<string | null>(null);
 
+  console.log("=== ECOMMERCE PAGE DEBUG ===", {
+    companyCode,
+    loading,
+    error,
+    hasCompany: !!company,
+    hasEcommerceSettings: !!ecommerceSettings,
+    loadedRef: loadedRef.current
+  });
+
   useEffect(() => {
+    console.log("EcommercePage useEffect:", { companyCode, loading, loadedRefCurrent: loadedRef.current });
+    
     if (!companyCode || loading || loadedRef.current === companyCode) {
       return;
     }
 
     loadedRef.current = companyCode;
+    console.log("Loading company with code:", companyCode);
 
     // Verificar se é um domínio personalizado ou código da empresa
     const isCustomDomain = window.location.hostname !== 'localhost' && 
@@ -28,12 +40,23 @@ function EcommerceContent() {
     
     if (isCustomDomain) {
       // Se for domínio personalizado, buscar pela URL
+      console.log("Loading by domain:", window.location.hostname);
       loadCompanyByDomain(window.location.hostname);
     } else {
       // Se for código da empresa, buscar pelo código
+      console.log("Loading by code:", companyCode);
       loadCompanyByCode(companyCode);
     }
   }, [companyCode, loading, loadCompanyByCode, loadCompanyByDomain]);
+
+  console.log("=== RENDER STATE ===", {
+    loading,
+    error,
+    hasCompany: !!company,
+    hasEcommerceSettings: !!ecommerceSettings,
+    companyName: company?.name,
+    isActive: ecommerceSettings?.is_active
+  });
 
   if (loading) {
     return (
