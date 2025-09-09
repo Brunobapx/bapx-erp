@@ -32,41 +32,46 @@ export function ProductCatalog() {
   const categoryParam = searchParams.get("category") || "";
 
   const loadProducts = useCallback(async () => {
-    if (!company) return;
+    if (!company?.id) {
+      console.log("ProductCatalog: No company ID, skipping product load");
+      return;
+    }
     
+    console.log("ProductCatalog: Loading products for company:", company.id, {
+      searchQuery,
+      selectedCategory: selectedCategory !== 'all' ? selectedCategory : null
+    });
+    
+    setLoading(true);
     try {
-      setLoading(true);
+      const { data, error } = await supabase.functions.invoke('public-catalog', {
+        body: {
+          company_id: company.id,
+          search: searchQuery,
+          category: selectedCategory !== 'all' ? selectedCategory : null
+        }
+      });
 
-      const requestBody: Record<string, string> = {
-        company_id: company.id
-      };
-
-      if (searchQuery) requestBody.search = searchQuery;
-      if (categoryParam || selectedCategory) {
-        requestBody.category = categoryParam || selectedCategory;
-      }
-
-      const { data, error } = await supabase.functions.invoke("public-catalog", {
-        body: requestBody,
+      console.log("ProductCatalog: Products response:", { 
+        data, 
+        error,
+        productsCount: data?.products?.length,
+        categoriesCount: data?.categories?.length
       });
 
       if (error) {
-        console.error("Error loading products:", error);
-        setProducts([]);
-        setCategories([]);
+        console.error("ProductCatalog: Error loading products:", error);
         return;
       }
 
       setProducts(data?.products || []);
       setCategories(data?.categories || []);
     } catch (error) {
-      console.error("Error loading products:", error);
-      setProducts([]);
-      setCategories([]);
+      console.error("ProductCatalog: Failed to load products:", error);
     } finally {
       setLoading(false);
     }
-  }, [company, searchQuery, categoryParam, selectedCategory]);
+  }, [company?.id, searchQuery, selectedCategory]);
 
   useEffect(() => {
     if (company) {
@@ -113,6 +118,23 @@ export function ProductCatalog() {
         </h3>
         <p className="text-muted-foreground">
           Carregando informações da empresa
+        </p>
+      </div>
+    );
+  }
+
+  if (products.length === 0 && !loading) {
+    return (
+      <div className="text-center py-16">
+        <div className="text-6xl mb-4">📦</div>
+        <h3 className="text-xl font-semibold text-foreground mb-2">
+          Nenhum produto encontrado
+        </h3>
+        <p className="text-muted-foreground">
+          Esta loja ainda não possui produtos cadastrados ou disponíveis.
+        </p>
+        <p className="text-sm text-muted-foreground mt-2">
+          Empresa: {company.name} (ID: {company.id})
         </p>
       </div>
     );

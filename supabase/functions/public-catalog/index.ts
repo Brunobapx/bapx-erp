@@ -39,6 +39,17 @@ serve(async (req) => {
     const limit = parseInt(searchParams.get('limit') || '20');
     const offset = parseInt(searchParams.get('offset') || '0');
     
+    // Debug logging
+    console.log('public-catalog: Request params:', { 
+      method: req.method,
+      productId, 
+      category, 
+      search, 
+      companyId, 
+      limit, 
+      offset 
+    });
+    
     // New parameters for company info
     const companyCode = body.company_code || searchParams.get('company_code');
     const getCompanyInfo = body.get_company_info || searchParams.get('get_company_info');
@@ -138,20 +149,25 @@ serve(async (req) => {
     }
 
     // Get products list
+    console.log('public-catalog: Fetching products with companyId:', companyId);
+    
     let query = supabase
       .from('products')
       .select('id, name, description, price, stock, category, is_active')
       .eq('is_active', true);
 
     if (companyId) {
+      console.log('public-catalog: Adding company_id filter:', companyId);
       query = query.eq('company_id', companyId);
     }
 
     if (category && category.trim()) {
+      console.log('public-catalog: Adding category filter:', category.trim());
       query = query.eq('category', category.trim());
     }
 
     if (search && search.trim()) {
+      console.log('public-catalog: Adding search filter:', search.trim());
       query = query.or(`name.ilike.%${search.trim()}%,description.ilike.%${search.trim()}%`);
     }
 
@@ -159,10 +175,17 @@ serve(async (req) => {
       .range(offset, offset + limit - 1)
       .order('name');
 
+    console.log('public-catalog: Products query result:', { 
+      productsCount: products?.length || 0, 
+      error: error?.message,
+      products: products?.map(p => ({ id: p.id, name: p.name, company_id: companyId }))
+    });
+
     if (error) {
-      console.error('Error fetching products:', error);
+      console.error('public-catalog: Error fetching products:', error);
       return new Response(JSON.stringify({ 
         error: 'Failed to fetch products',
+        errorDetails: error.message,
         products: [],
         categories: [],
         total: 0 
@@ -188,6 +211,12 @@ serve(async (req) => {
     const uniqueCategories = [...new Set(
       categories?.map(c => c.category).filter(Boolean) || []
     )];
+
+    console.log('public-catalog: Final response:', { 
+      productsCount: products?.length || 0,
+      categoriesCount: uniqueCategories.length,
+      companyId 
+    });
 
     return new Response(JSON.stringify({ 
       products: products || [], 
