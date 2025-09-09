@@ -117,7 +117,7 @@ serve(async (req) => {
     // Create financial entry for the sale
     const { data: order } = await supabase
       .from('orders')
-      .select('total_amount, client_id')
+      .select('total_amount, client_id, user_id, company_id')
       .eq('id', ecomOrder.order_id)
       .single();
 
@@ -125,7 +125,7 @@ serve(async (req) => {
       const { error: financialError } = await supabase
         .from('financial_entries')
         .insert({
-          user_id: '00000000-0000-0000-0000-000000000001',
+          user_id: order.user_id, // Use dynamic user_id from the order
           type: 'receivable',
           description: `E-commerce sale - Order #${external_reference || ecomOrder.order_id}`,
           amount: order.total_amount,
@@ -134,7 +134,7 @@ serve(async (req) => {
           payment_date: new Date().toISOString().split('T')[0],
           client_id: order.client_id,
           order_id: ecomOrder.order_id,
-          company_id: '00000000-0000-0000-0000-000000000001'
+          company_id: order.company_id // Use dynamic company_id from the order
         });
 
       if (financialError) {
