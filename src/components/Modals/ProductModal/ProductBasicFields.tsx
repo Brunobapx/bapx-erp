@@ -100,51 +100,15 @@ export const ProductBasicFields: React.FC<ProductBasicFieldsProps> = ({
       </div>
     </div>
 
-    <div className="grid grid-cols-4 gap-4">
-      <div className="grid gap-2">
-        <Label htmlFor="price">Preço (R$)</Label>
-        <Input
-          id="price"
-          name="price"
-          type="number"
-          step="0.01"
-          value={formData.price}
-          onChange={handleChange}
-        />
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="cost">Custo (R$)</Label>
-        <Input
-          id="cost"
-          name="cost"
-          type="number"
-          step="0.01"
-          value={formData.cost}
-          onChange={handleChange}
-        />
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="stock">Estoque</Label>
-        <Input
-          id="stock"
-          name="stock"
-          type="number"
-          step="0.01"
-          value={formData.stock}
-          onChange={handleChange}
-        />
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="weight">Peso (kg)</Label>
-        <Input
-          id="weight"
-          name="weight"
-          type="number"
-          step="0.001"
-          value={formData.weight}
-          onChange={handleChange}
-        />
-      </div>
+    <div className="grid gap-2">
+      <Label htmlFor="description">Descrição</Label>
+      <Input
+        id="description"
+        name="description"
+        value={formData.description}
+        onChange={handleChange}
+        placeholder="Descrição detalhada do produto"
+      />
     </div>
   </React.Fragment>
 );

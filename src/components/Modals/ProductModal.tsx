@@ -3,10 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { ProductBasicFields } from "./ProductModal/ProductBasicFields";
-import { ProductTypeSwitches } from "./ProductModal/ProductTypeSwitches";
-import { ProductRecipeSection } from "./ProductModal/ProductRecipeSection";
-import { ProductFiscalFields } from "./ProductModal/ProductFiscalFields";
+import { ProductModalTabs } from "./ProductModal/ProductModalTabs";
 import { useCompanyFiscalSettings } from "@/hooks/useCompanyFiscalSettings";
 
 interface ProductModalProps {
@@ -376,27 +373,16 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
           <DialogTitle>{isNewProduct ? 'Novo Produto' : 'Editar Produto'}</DialogTitle>
         </DialogHeader>
         
-        <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto">
-          {/* Campos principais */}
-          <ProductBasicFields
+        <div className="py-4 max-h-[70vh] overflow-y-auto">
+          <ProductModalTabs
             formData={formData}
             handleChange={handleChange}
             handleSelectChange={handleSelectChange}
             handleSwitchChange={handleSwitchChange}
             unitOptions={unitOptions}
             categories={categories}
-          />
-
-          {/* Tipo de Produto (Switches) */}
-          <ProductTypeSwitches
-            is_direct_sale={formData.is_direct_sale}
-            is_manufactured={formData.is_manufactured}
-            handleSwitchChange={handleSwitchChange}
-          />
-
-          {/* Receita de Fabricação */}
-          <ProductRecipeSection
-            isVisible={formData.is_manufactured && !formData.is_direct_sale}
+            taxTypeOptions={taxTypeOptions}
+            fiscalSettings={fiscalSettings}
             isRecipeOpen={isRecipeOpen}
             setIsRecipeOpen={setIsRecipeOpen}
             recipeItems={recipeItems}
@@ -404,15 +390,6 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
             handleRecipeItemChange={handleRecipeItemChange}
             addRecipeItem={addRecipeItem}
             removeRecipeItem={removeRecipeItem}
-          />
-
-          {/* Campos fiscais */}
-          <ProductFiscalFields
-            formData={formData}
-            handleChange={handleChange}
-            handleSelectChange={handleSelectChange}
-            taxTypeOptions={taxTypeOptions}
-            fiscalSettings={fiscalSettings}
           />
         </div>
         
