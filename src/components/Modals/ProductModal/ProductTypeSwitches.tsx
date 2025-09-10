@@ -20,7 +20,6 @@ export const ProductTypeSwitches: React.FC<ProductTypeSwitchesProps> = ({
         id="directSale"
         checked={is_direct_sale}
         onCheckedChange={(checked) => handleSwitchChange('is_direct_sale', checked)}
-        disabled={is_manufactured}
       />
       <Label htmlFor="directSale" className="font-medium">Venda Direta</Label>
     </div>
@@ -29,7 +28,6 @@ export const ProductTypeSwitches: React.FC<ProductTypeSwitchesProps> = ({
         id="manufacturing"
         checked={is_manufactured}
         onCheckedChange={(checked) => handleSwitchChange('is_manufactured', checked)}
-        disabled={is_direct_sale}
       />
       <Label htmlFor="manufacturing" className="font-medium">Produto Fabricado</Label>
     </div>
