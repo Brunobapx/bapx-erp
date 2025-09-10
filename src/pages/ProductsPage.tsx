@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,15 +19,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ProductModal } from '@/components/Modals/ProductModal';
 import { CategoriesTab } from '@/components/Products/CategoriesTab';
 import { MarkupTab } from '@/components/Products/MarkupTab';
 import { useProducts } from '@/hooks/useProducts';
 import { supabase } from "@/integrations/supabase/client";
 
 const ProductsPage = () => {
-  const [showModal, setShowModal] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  const navigate = useNavigate();
   const [categories, setCategories] = useState<any[]>([]);
   const { 
     products: filteredProducts, 
@@ -64,8 +63,7 @@ const ProductsPage = () => {
   };
 
   const handleProductClick = (product: any) => {
-    setSelectedProduct(product);
-    setShowModal(true);
+    navigate(`/produtos/edit/${product.id}`);
   };
 
   const formatCurrency = (value: number) => {
@@ -73,15 +71,6 @@ const ProductsPage = () => {
       style: 'currency',
       currency: 'BRL'
     }).format(value);
-  };
-
-  const handleModalClose = (refresh = false) => {
-    setShowModal(false);
-    setSelectedProduct(null);
-    
-    if (refresh) {
-      refreshProducts();
-    }
   };
 
   const toggleProductStatus = async (product: any, e: React.MouseEvent) => {
@@ -129,7 +118,7 @@ const ProductsPage = () => {
         <TabsContent value="products" className="space-y-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <Button onClick={() => { setSelectedProduct(null); setShowModal(true); }} className="bg-erp-packaging hover:bg-erp-packaging/90">
+              <Button onClick={() => navigate('/produtos/new')} className="bg-erp-packaging hover:bg-erp-packaging/90">
                 <Plus className="mr-2 h-4 w-4" /> Novo Produto
               </Button>
               <Button variant="outline">
@@ -277,12 +266,6 @@ const ProductsPage = () => {
           <MarkupTab />
         </TabsContent>
       </Tabs>
-      
-      <ProductModal
-        isOpen={showModal}
-        onClose={handleModalClose}
-        productData={selectedProduct || null}
-      />
     </div>
   );
 };
