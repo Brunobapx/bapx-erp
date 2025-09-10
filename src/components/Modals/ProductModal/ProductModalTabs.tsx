@@ -44,10 +44,13 @@ export const ProductModalTabs: React.FC<ProductModalTabsProps> = ({
 }) => {
   return (
     <Tabs defaultValue="basic" className="w-full">
-      <TabsList className="grid w-full grid-cols-3">
+      <TabsList className={`grid w-full ${formData.is_manufactured ? 'grid-cols-4' : 'grid-cols-3'}`}>
         <TabsTrigger value="basic">Dados Básicos</TabsTrigger>
         <TabsTrigger value="pricing">Preços & Estoque</TabsTrigger>
         <TabsTrigger value="fiscal">Dados Fiscais</TabsTrigger>
+        {formData.is_manufactured && (
+          <TabsTrigger value="recipe">Receita</TabsTrigger>
+        )}
       </TabsList>
       
       <TabsContent value="basic" className="space-y-4 mt-4">
@@ -64,17 +67,6 @@ export const ProductModalTabs: React.FC<ProductModalTabsProps> = ({
           is_direct_sale={formData.is_direct_sale}
           is_manufactured={formData.is_manufactured}
           handleSwitchChange={handleSwitchChange}
-        />
-
-        <ProductRecipeSection
-          isVisible={formData.is_manufactured && !formData.is_direct_sale}
-          isRecipeOpen={isRecipeOpen}
-          setIsRecipeOpen={setIsRecipeOpen}
-          recipeItems={recipeItems}
-          availableIngredients={availableIngredients}
-          handleRecipeItemChange={handleRecipeItemChange}
-          addRecipeItem={addRecipeItem}
-          removeRecipeItem={removeRecipeItem}
         />
       </TabsContent>
       
@@ -94,6 +86,21 @@ export const ProductModalTabs: React.FC<ProductModalTabsProps> = ({
           fiscalSettings={fiscalSettings}
         />
       </TabsContent>
+      
+      {formData.is_manufactured && (
+        <TabsContent value="recipe" className="space-y-4 mt-4">
+          <ProductRecipeSection
+            isVisible={true}
+            isRecipeOpen={isRecipeOpen}
+            setIsRecipeOpen={setIsRecipeOpen}
+            recipeItems={recipeItems}
+            availableIngredients={availableIngredients}
+            handleRecipeItemChange={handleRecipeItemChange}
+            addRecipeItem={addRecipeItem}
+            removeRecipeItem={removeRecipeItem}
+          />
+        </TabsContent>
+      )}
     </Tabs>
   );
 };
