@@ -9,7 +9,6 @@ export interface FiscalOperation {
   cfop_dentro_estado: string;
   cfop_fora_estado: string;
   cfop_exterior?: string;
-  description?: string;
   is_active: boolean;
 }
 
