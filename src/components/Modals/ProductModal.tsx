@@ -38,7 +38,12 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
     is_active: true
   });
 
-  const [recipeItems, setRecipeItems] = useState<Array<{id: string, productId: string, quantity: string}>>([]);
+  const [recipeItems, setRecipeItems] = useState<Array<{
+    id: string;
+    productId: string;
+    quantity: string;
+    unitCost: string;
+  }>>([]);
   const [isRecipeOpen, setIsRecipeOpen] = useState(false);
   const [availableIngredients, setAvailableIngredients] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -99,7 +104,8 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
         const recipeData = data.map(item => ({
           id: item.id,
           productId: item.ingredient_id,
-          quantity: item.quantity.toString()
+          quantity: item.quantity.toString(),
+          unitCost: item.unit_cost ? item.unit_cost.toString() : '0'
         }));
         setRecipeItems(recipeData);
       }
@@ -220,7 +226,12 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
   };
 
   const addRecipeItem = () => {
-    setRecipeItems([...recipeItems, { id: Date.now().toString(), productId: '', quantity: '1' }]);
+    setRecipeItems([...recipeItems, { 
+      id: Date.now().toString(), 
+      productId: '', 
+      quantity: '1',
+      unitCost: '0'
+    }]);
   };
 
   const removeRecipeItem = (index: number) => {

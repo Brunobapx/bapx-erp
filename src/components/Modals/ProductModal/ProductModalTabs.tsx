@@ -18,7 +18,7 @@ interface ProductModalTabsProps {
   // Recipe props
   isRecipeOpen: boolean;
   setIsRecipeOpen: (open: boolean) => void;
-  recipeItems: Array<{id: string, productId: string, quantity: string}>;
+  recipeItems: Array<{id: string, productId: string, quantity: string, unitCost: string}>;
   availableIngredients: any[];
   handleRecipeItemChange: (index: number, field: string, value: string) => void;
   addRecipeItem: () => void;
