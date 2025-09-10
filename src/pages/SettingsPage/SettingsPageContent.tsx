@@ -3,13 +3,11 @@ import React from 'react';
 import { TabsContent } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CompanyUnifiedSettings } from '@/components/Settings/CompanyUnifiedSettings';
-import { CompanyManagement } from '@/components/Settings/CompanyManagement';
 import { UserManagement } from '@/components/Settings/UserManagement';
 import { CurrentUserProfile } from '@/components/Settings/CurrentUserProfile';
 import { DatabaseReset } from '@/components/Settings/DatabaseReset';
 import { SellerCommissionsSection } from '@/components/Settings/SellerCommissionsSection';
 import { WhiteLabelSettings } from '@/components/Settings/WhiteLabelSettings';
-import { StoreLinksTestPanel } from '@/components/Settings/StoreLinksTestPanel';
 
 interface TabContentProps {
   tabName: string;
@@ -63,20 +61,8 @@ export const SettingsPageContent: React.FC<SettingsPageContentProps> = ({ isAdmi
   )}
 </TabsContent>
 
-<TabsContent value="ecommerce">
-  <TabContent tabName="E-commerce">
-    <StoreLinksTestPanel />
-  </TabContent>
-</TabsContent>
-
       {isAdmin && (
         <>
-          <TabsContent value="management">
-            <TabContent tabName="Gerenciamento da Empresa">
-              <CompanyManagement />
-            </TabContent>
-          </TabsContent>
-
           <TabsContent value="whitelabel">
             <TabContent tabName="White Label">
               <WhiteLabelSettings />

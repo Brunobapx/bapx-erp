@@ -127,33 +127,6 @@ export type Database = {
         }
         Relationships: []
       }
-      cart_sessions: {
-        Row: {
-          created_at: string
-          expires_at: string
-          id: string
-          items: Json
-          session_id: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          expires_at?: string
-          id?: string
-          items?: Json
-          session_id: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          expires_at?: string
-          id?: string
-          items?: Json
-          session_id?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       clients: {
         Row: {
           address: string | null
@@ -277,136 +250,47 @@ export type Database = {
       companies: {
         Row: {
           billing_email: string | null
-          cep: string | null
-          cidade: string | null
-          cnpj: string | null
           code: string
-          email: string | null
-          endereco: string | null
-          estado: string | null
           id: string
-          inscricao_estadual: string | null
           logo_url: string | null
           name: string
           onboarded_at: string | null
           plan: string | null
           primary_color: string | null
-          razao_social: string | null
           secondary_color: string | null
           subdomain: string | null
-          telefone: string | null
           trial_expires_at: string | null
-          website: string | null
           whatsapp: string | null
         }
         Insert: {
           billing_email?: string | null
-          cep?: string | null
-          cidade?: string | null
-          cnpj?: string | null
           code: string
-          email?: string | null
-          endereco?: string | null
-          estado?: string | null
           id?: string
-          inscricao_estadual?: string | null
           logo_url?: string | null
           name: string
           onboarded_at?: string | null
           plan?: string | null
           primary_color?: string | null
-          razao_social?: string | null
           secondary_color?: string | null
           subdomain?: string | null
-          telefone?: string | null
           trial_expires_at?: string | null
-          website?: string | null
           whatsapp?: string | null
         }
         Update: {
           billing_email?: string | null
-          cep?: string | null
-          cidade?: string | null
-          cnpj?: string | null
           code?: string
-          email?: string | null
-          endereco?: string | null
-          estado?: string | null
           id?: string
-          inscricao_estadual?: string | null
           logo_url?: string | null
           name?: string
           onboarded_at?: string | null
           plan?: string | null
           primary_color?: string | null
-          razao_social?: string | null
           secondary_color?: string | null
           subdomain?: string | null
-          telefone?: string | null
           trial_expires_at?: string | null
-          website?: string | null
           whatsapp?: string | null
         }
         Relationships: []
-      }
-      company_ecommerce_settings: {
-        Row: {
-          company_id: string | null
-          created_at: string
-          custom_domain: string | null
-          id: string
-          is_active: boolean | null
-          mercado_pago_access_token: string | null
-          mercado_pago_public_key: string | null
-          payment_methods: Json | null
-          shipping_settings: Json | null
-          store_description: string | null
-          store_logo_url: string | null
-          store_name: string
-          theme_settings: Json | null
-          updated_at: string
-        }
-        Insert: {
-          company_id?: string | null
-          created_at?: string
-          custom_domain?: string | null
-          id?: string
-          is_active?: boolean | null
-          mercado_pago_access_token?: string | null
-          mercado_pago_public_key?: string | null
-          payment_methods?: Json | null
-          shipping_settings?: Json | null
-          store_description?: string | null
-          store_logo_url?: string | null
-          store_name?: string
-          theme_settings?: Json | null
-          updated_at?: string
-        }
-        Update: {
-          company_id?: string | null
-          created_at?: string
-          custom_domain?: string | null
-          id?: string
-          is_active?: boolean | null
-          mercado_pago_access_token?: string | null
-          mercado_pago_public_key?: string | null
-          payment_methods?: Json | null
-          shipping_settings?: Json | null
-          store_description?: string | null
-          store_logo_url?: string | null
-          store_name?: string
-          theme_settings?: Json | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "company_ecommerce_settings_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: true
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       company_sequences: {
         Row: {
@@ -425,60 +309,6 @@ export type Database = {
           sequence_key?: string
         }
         Relationships: []
-      }
-      company_transfers: {
-        Row: {
-          completed_at: string | null
-          from_company_id: string | null
-          id: string
-          notes: string | null
-          requested_at: string
-          status: string | null
-          to_company_id: string | null
-          transfer_type: string
-          transferred_data: Json | null
-          user_id: string
-        }
-        Insert: {
-          completed_at?: string | null
-          from_company_id?: string | null
-          id?: string
-          notes?: string | null
-          requested_at?: string
-          status?: string | null
-          to_company_id?: string | null
-          transfer_type: string
-          transferred_data?: Json | null
-          user_id: string
-        }
-        Update: {
-          completed_at?: string | null
-          from_company_id?: string | null
-          id?: string
-          notes?: string | null
-          requested_at?: string
-          status?: string | null
-          to_company_id?: string | null
-          transfer_type?: string
-          transferred_data?: Json | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "company_transfers_from_company_id_fkey"
-            columns: ["from_company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "company_transfers_to_company_id_fkey"
-            columns: ["to_company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       conciliacoes: {
         Row: {
@@ -592,84 +422,6 @@ export type Database = {
             columns: ["sale_id"]
             isOneToOne: false
             referencedRelation: "sales"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      ecommerce_orders: {
-        Row: {
-          company_id: string
-          created_at: string
-          customer_email: string
-          customer_phone: string | null
-          id: string
-          notes: string | null
-          order_id: string | null
-          paid_at: string | null
-          payment_id: string | null
-          payment_method: string
-          payment_status: string
-          preference_id: string | null
-          session_id: string | null
-          shipping_address_id: string | null
-          shipping_cost: number | null
-          shipping_method: string
-          shipping_tracking_code: string | null
-          updated_at: string
-        }
-        Insert: {
-          company_id?: string
-          created_at?: string
-          customer_email: string
-          customer_phone?: string | null
-          id?: string
-          notes?: string | null
-          order_id?: string | null
-          paid_at?: string | null
-          payment_id?: string | null
-          payment_method: string
-          payment_status?: string
-          preference_id?: string | null
-          session_id?: string | null
-          shipping_address_id?: string | null
-          shipping_cost?: number | null
-          shipping_method?: string
-          shipping_tracking_code?: string | null
-          updated_at?: string
-        }
-        Update: {
-          company_id?: string
-          created_at?: string
-          customer_email?: string
-          customer_phone?: string | null
-          id?: string
-          notes?: string | null
-          order_id?: string | null
-          paid_at?: string | null
-          payment_id?: string | null
-          payment_method?: string
-          payment_status?: string
-          preference_id?: string | null
-          session_id?: string | null
-          shipping_address_id?: string | null
-          shipping_cost?: number | null
-          shipping_method?: string
-          shipping_tracking_code?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ecommerce_orders_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ecommerce_orders_shipping_address_id_fkey"
-            columns: ["shipping_address_id"]
-            isOneToOne: false
-            referencedRelation: "shipping_addresses"
             referencedColumns: ["id"]
           },
         ]
@@ -2577,65 +2329,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "service_orders_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      shipping_addresses: {
-        Row: {
-          city: string
-          client_id: string | null
-          company_id: string
-          complement: string | null
-          created_at: string
-          id: string
-          is_default: boolean | null
-          neighborhood: string
-          number: string
-          recipient_name: string
-          state: string
-          street_address: string
-          updated_at: string
-          zip_code: string
-        }
-        Insert: {
-          city: string
-          client_id?: string | null
-          company_id?: string
-          complement?: string | null
-          created_at?: string
-          id?: string
-          is_default?: boolean | null
-          neighborhood: string
-          number: string
-          recipient_name: string
-          state: string
-          street_address: string
-          updated_at?: string
-          zip_code: string
-        }
-        Update: {
-          city?: string
-          client_id?: string | null
-          company_id?: string
-          complement?: string | null
-          created_at?: string
-          id?: string
-          is_default?: boolean | null
-          neighborhood?: string
-          number?: string
-          recipient_name?: string
-          state?: string
-          street_address?: string
-          updated_at?: string
-          zip_code?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "shipping_addresses_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
