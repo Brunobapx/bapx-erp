@@ -98,15 +98,17 @@ export const ProductBasicFields: React.FC<ProductBasicFieldsProps> = ({
       <div className="space-y-4">
         <h3 className="text-lg font-medium text-foreground border-b pb-2">Especificações Físicas</h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="weight">Peso Líquido (kg)</Label>
-            <Input id="weight" name="weight" type="number" step="0.001" value={formData.weight} onChange={handleChange} placeholder="0.000" />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="gross_weight">Peso Bruto (kg)</Label>
-            <Input id="gross_weight" name="gross_weight" type="number" step="0.001" value={formData.gross_weight || ''} onChange={handleChange} placeholder="0.000" />
-          </div>
+        <div className="grid gap-2">
+          <Label htmlFor="weight">Peso (kg)</Label>
+          <Input
+            id="weight"
+            name="weight"
+            type="number"
+            step="0.001"
+            value={formData.weight}
+            onChange={handleChange}
+            placeholder="0.000"
+          />
         </div>
       </div>
 

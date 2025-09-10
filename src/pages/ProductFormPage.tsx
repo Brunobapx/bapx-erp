@@ -25,7 +25,6 @@ export const ProductFormPage = () => {
     cost: '',
     stock: '',
     weight: '',
-    gross_weight: '',
     unit: 'UN',
     category: '',
     description: '',
@@ -87,7 +86,6 @@ export const ProductFormPage = () => {
           cost: data.cost ? data.cost.toString() : '',
           stock: data.stock ? data.stock.toString() : '',
           weight: data.weight ? data.weight.toString() : '',
-          gross_weight: data.gross_weight ? data.gross_weight.toString() : '',
           unit: data.unit || 'UN',
           category: data.category || '',
           description: data.description || '',
@@ -128,7 +126,7 @@ export const ProductFormPage = () => {
           id: item.id,
           productId: item.ingredient_id,
           quantity: item.quantity.toString(),
-          unitCost: item.unit_cost ? item.unit_cost.toString() : '0'
+          unitCost: '0' // Default value since this field doesn't exist in DB
         }));
         setRecipeItems(recipeData);
         setIsRecipeOpen(true);
@@ -201,7 +199,6 @@ export const ProductFormPage = () => {
       cost: '',
       stock: '',
       weight: '',
-      gross_weight: '',
       unit: 'UN',
       category: '',
       description: '',
@@ -298,7 +295,6 @@ export const ProductFormPage = () => {
         cost: formData.cost ? parseFloat(formData.cost) : null,
         stock: formData.stock ? parseFloat(formData.stock) : 0,
         weight: formData.weight ? parseFloat(formData.weight) : null,
-        gross_weight: formData.gross_weight ? parseFloat(formData.gross_weight) : null,
         unit: formData.unit,
         category: formData.category,
         description: formData.description,
