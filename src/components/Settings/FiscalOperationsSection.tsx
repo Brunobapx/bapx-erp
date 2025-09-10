@@ -19,7 +19,9 @@ export const FiscalOperationsSection = () => {
     operation_name: '',
     cfop_dentro_estado: '',
     cfop_fora_estado: '',
-    cfop_exterior: ''
+    cfop_exterior: '',
+    cfop: '',
+    description: ''
   });
 
   const operationTypes = [
@@ -39,7 +41,9 @@ export const FiscalOperationsSection = () => {
       operation_name: '',
       cfop_dentro_estado: '',
       cfop_fora_estado: '',
-      cfop_exterior: ''
+      cfop_exterior: '',
+      cfop: '',
+      description: ''
     });
     setEditingOperation(null);
   };
@@ -50,7 +54,9 @@ export const FiscalOperationsSection = () => {
       operation_name: operation.operation_name,
       cfop_dentro_estado: operation.cfop_dentro_estado,
       cfop_fora_estado: operation.cfop_fora_estado,
-      cfop_exterior: operation.cfop_exterior || ''
+      cfop_exterior: operation.cfop_exterior || '',
+      cfop: operation.cfop || '',
+      description: operation.description || ''
     });
     setEditingOperation(operation);
     setIsDialogOpen(true);
@@ -177,6 +183,25 @@ export const FiscalOperationsSection = () => {
                       maxLength={4}
                     />
                   </div>
+                </div>
+                <div>
+                  <Label htmlFor="cfop">CFOP Principal</Label>
+                  <Input
+                    id="cfop"
+                    value={formData.cfop}
+                    onChange={(e) => setFormData(prev => ({ ...prev, cfop: e.target.value }))}
+                    placeholder="Ex: 5102"
+                    maxLength={4}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="description">Descrição</Label>
+                  <Input
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Descrição da operação fiscal"
+                  />
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
