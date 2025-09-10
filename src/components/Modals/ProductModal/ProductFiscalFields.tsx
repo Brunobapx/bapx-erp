@@ -21,7 +21,6 @@ export const ProductFiscalFields: React.FC<ProductFiscalFieldsProps> = ({
 }) => <div className="border-t pt-4 mt-2">
     <div className="flex items-center justify-between mb-2">
       <h4 className="text-sm font-medium">Informações Fiscais</h4>
-      {fiscalSettings}
     </div>
     <div className="grid grid-cols-3 gap-4">
       <div className="grid gap-2">
