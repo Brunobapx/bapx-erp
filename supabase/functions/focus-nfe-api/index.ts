@@ -152,20 +152,42 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     );
   }
 
-  // Validar CNPJ emissor
-  const cnpjEmissor = configMap.cnpj_emissor || configMap.company_cnpj;
+  // Seleção inteligente do CNPJ: priorizar company_cnpj válido, fallback para cnpj_emissor
+  let cnpjEmissor = '';
+  let cnpjSource = '';
+  
+  // Priorizar company_cnpj se estiver disponível e válido (14 dígitos)
+  if (configMap.company_cnpj) {
+    const cleanCompanyCnpj = configMap.company_cnpj.replace(/[^\d]/g, '');
+    if (cleanCompanyCnpj.length === 14 && validateCNPJ(cleanCompanyCnpj)) {
+      cnpjEmissor = configMap.company_cnpj;
+      cnpjSource = 'company_cnpj';
+    }
+  }
+  
+  // Fallback para cnpj_emissor apenas se company_cnpj não for válido
+  if (!cnpjEmissor && configMap.cnpj_emissor) {
+    const cleanEmissorCnpj = configMap.cnpj_emissor.replace(/[^\d]/g, '');
+    if (cleanEmissorCnpj.length === 14 && validateCNPJ(cleanEmissorCnpj)) {
+      cnpjEmissor = configMap.cnpj_emissor;
+      cnpjSource = 'cnpj_emissor';
+    }
+  }
+  
+  console.log(`CNPJ selecionado da fonte: ${cnpjSource}, CNPJ: ****...${cnpjEmissor.toString().slice(-4)}`);
+  
   if (!cnpjEmissor) {
     return new Response(
-      JSON.stringify({ success: false, error: 'CNPJ da empresa emissora não configurado' }),
+      JSON.stringify({ success: false, error: 'CNPJ da empresa emissora não configurado ou inválido. Verifique as configurações fiscais da empresa.' }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 
-  // Validar e sanitizar CNPJ (deve ter 14 dígitos)
+  // Validar e sanitizar CNPJ selecionado (deve ter 14 dígitos)
   const cleanCnpj = cnpjEmissor.replace(/[^\d]/g, '');
   if (cleanCnpj.length !== 14) {
     return new Response(
-      JSON.stringify({ success: false, error: `CNPJ do emitente inválido (precisa ter 14 dígitos). CNPJ atual: ${cnpjEmissor}` }),
+      JSON.stringify({ success: false, error: `CNPJ do emitente inválido (precisa ter 14 dígitos). CNPJ atual: ${cnpjEmissor.replace(/\d(?=\d{4})/g, '*')}` }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
