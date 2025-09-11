@@ -88,35 +88,25 @@ export const CompanySettings = () => {
   const saveCompanySettings = async () => {
     setLoading(true);
     try {
-      // Primeiro, buscar todas as configurações existentes
-      const { data: existingSettings } = await supabase
-        .from('system_settings')
-        .select('key')
-        .eq('category', 'company');
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error('Usuário não autenticado');
+      }
 
-      const existingKeys = existingSettings?.map(s => s.key) || [];
-
+      // Use upsert para lidar com multi-empresa
       for (const [key, value] of Object.entries(companyData)) {
-        if (existingKeys.includes(key)) {
-          // Atualizar configuração existente
-          const { error } = await supabase
-            .from('system_settings')
-            .update({ value: JSON.stringify(value) })
-            .eq('key', key);
+        const { error } = await supabase
+          .from('system_settings')
+          .upsert({
+            key,
+            value: JSON.stringify(value),
+            category: 'company',
+            user_id: user.id
+          }, {
+            onConflict: 'company_id,key'
+          });
 
-          if (error) throw error;
-        } else {
-          // Criar nova configuração
-          const { error } = await supabase
-            .from('system_settings')
-            .insert({
-              key,
-              value: JSON.stringify(value),
-              category: 'company'
-            });
-
-          if (error) throw error;
-        }
+        if (error) throw error;
       }
 
       toast({

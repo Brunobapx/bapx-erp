@@ -152,34 +152,25 @@ export const CompanyUnifiedSettings = () => {
   const saveSettings = async () => {
     setLoading(true);
     try {
-      const { data: existingSettings } = await supabase
-        .from('system_settings')
-        .select('key');
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error('Usuário não autenticado');
+      }
 
-      const existingKeys = existingSettings?.map(s => s.key) || [];
-
+      // Use upsert para lidar com multi-empresa
       for (const [key, value] of Object.entries(settings)) {
-        if (existingKeys.includes(key)) {
-          const { error } = await supabase
-            .from('system_settings')
-            .update({ 
-              value: JSON.stringify(value),
-              category: getCategoryForKey(key)
-            })
-            .eq('key', key);
+        const { error } = await supabase
+          .from('system_settings')
+          .upsert({
+            key,
+            value: JSON.stringify(value),
+            category: getCategoryForKey(key),
+            user_id: user.id
+          }, {
+            onConflict: 'company_id,key'
+          });
 
-          if (error) throw error;
-        } else {
-          const { error } = await supabase
-            .from('system_settings')
-            .insert({
-              key,
-              value: JSON.stringify(value),
-              category: getCategoryForKey(key)
-            });
-
-          if (error) throw error;
-        }
+        if (error) throw error;
       }
 
       toast({
