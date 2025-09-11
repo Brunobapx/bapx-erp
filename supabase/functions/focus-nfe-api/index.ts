@@ -563,9 +563,37 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     }
     
     responseData = JSON.parse(responseText);
+    
+    // Verificar se houve erros de validação mesmo com status 200
+    if (responseData.erros && responseData.erros.length > 0) {
+      console.error('Erros de validação Focus NFe:', responseData.erros);
+      
+      // Compilar erros detalhados
+      const errosDetalhados = responseData.erros.map((erro: any) => {
+        if (typeof erro === 'string') return erro;
+        return erro.mensagem || erro.codigo || JSON.stringify(erro);
+      }).join(' | ');
+      
+      throw new Error(`Erro na validação do Schema XML: ${errosDetalhados}`);
+    }
+    
+    // Verificar outros campos de erro possíveis
+    if (responseData.status === 'erro' || responseData.erro) {
+      const mensagemErro = responseData.mensagem || responseData.erro || 'Erro não especificado';
+      console.error('Erro Focus NFe:', responseData);
+      throw new Error(`Focus NFe: ${mensagemErro}`);
+    }
+    
+    // Verificar se o status indica processamento com erro
+    if (responseData.status_sefaz && responseData.status_sefaz !== 'autorizado') {
+      console.error('Status SEFAZ não autorizado:', responseData);
+      const motivoRejeicao = responseData.motivo_status || responseData.mensagem_sefaz || 'Motivo não informado';
+      throw new Error(`NFe rejeitada pela SEFAZ: ${motivoRejeicao}`);
+    }
+    
   } catch (error) {
     console.error('Erro ao emitir NFe na Focus NFe:', error);
-    throw new Error(`Erro na comunicação com Focus NFe: ${error.message}`);
+    throw new Error(error.message || `Erro na comunicação com Focus NFe: ${error.message}`);
   }
 
   // Salvar nota emitida no banco com company_id
