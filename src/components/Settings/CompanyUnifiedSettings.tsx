@@ -12,7 +12,7 @@ import { Save, Building, FileText, MapPin, User, Percent, ExternalLink } from 'l
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { FiscalValidation } from './FiscalValidation';
 import { FiscalOperationsSection } from './FiscalOperationsSection';
-import { TaxCalculationRulesSection } from './TaxCalculationRulesSection';
+import { validateCNPJ as isValidCNPJ } from '@/lib/dataValidation';
 
 interface UnifiedSettings {
   // Dados básicos da empresa
@@ -157,13 +157,41 @@ export const CompanyUnifiedSettings = () => {
         throw new Error('Usuário não autenticado');
       }
 
+      // Validar CNPJ antes de salvar
+      if (settings.company_cnpj) {
+        const cleanCnpj = settings.company_cnpj.replace(/[^\d]/g, '');
+        if (cleanCnpj.length !== 14) {
+          toast({
+            title: "Erro",
+            description: "CNPJ deve ter 14 dígitos",
+            variant: "destructive",
+          });
+          return;
+        }
+        if (!isValidCNPJ(cleanCnpj)) {
+          toast({
+            title: "Erro", 
+            description: "CNPJ inválido",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
       // Use upsert para lidar com multi-empresa
       for (const [key, value] of Object.entries(settings)) {
+        let processedValue = value;
+        
+        // Para CNPJ, salvar apenas dígitos
+        if ((key === 'company_cnpj' || key === 'cnpj_emissor') && typeof value === 'string') {
+          processedValue = value.replace(/[^\d]/g, '');
+        }
+        
         const { error } = await supabase
           .from('system_settings')
           .upsert({
             key,
-            value: JSON.stringify(value),
+            value: JSON.stringify(processedValue),
             category: getCategoryForKey(key),
             user_id: user.id
           }, {
@@ -293,6 +321,32 @@ export const CompanyUnifiedSettings = () => {
   };
 
   const handleInputChange = (key: string, value: string | boolean) => {
+    // Validação especial para CNPJ
+    if (key === 'company_cnpj' && typeof value === 'string') {
+      const cleanCnpj = value.replace(/[^\d]/g, '');
+      if (cleanCnpj.length > 0 && cleanCnpj.length < 14) {
+        // CNPJ incompleto - apenas formatar
+        setSettings(prev => ({
+          ...prev,
+          [key]: formatCNPJ(value as string)
+        }));
+        return;
+      }
+      if (cleanCnpj.length === 14) {
+        // CNPJ completo - validar
+        if (!isValidCNPJ(cleanCnpj)) {
+          toast({
+            title: "CNPJ Inválido",
+            description: "CNPJ informado não é válido",
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+      // Aplicar formatação
+      value = formatCNPJ(value as string);
+    }
+
     setSettings(prev => ({
       ...prev,
       [key]: value
@@ -819,9 +873,6 @@ export const CompanyUnifiedSettings = () => {
 
       {/* CFOPs por Operação */}
       <FiscalOperationsSection />
-
-      {/* Regras de Cálculo de Impostos */}
-      <TaxCalculationRulesSection />
 
       {/* Botão Salvar */}
       <div className="flex justify-end">

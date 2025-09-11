@@ -55,6 +55,38 @@ serve(async (req) => {
   }
 });
 
+// Função para validar CNPJ (14 dígitos sem máscara)
+function validateCNPJ(cnpj: string): boolean {
+  const cleanCnpj = cnpj.replace(/[^\d]/g, '');
+  if (cleanCnpj.length !== 14) return false;
+  if (/^(\d)\1+$/.test(cleanCnpj)) return false;
+
+  let tamanho = cleanCnpj.length - 2;
+  let numeros = cleanCnpj.substring(0, tamanho);
+  let digitos = cleanCnpj.substring(tamanho);
+  let soma = 0;
+  let pos = tamanho - 7;
+  for (let i = tamanho; i >= 1; i--) {
+    soma += parseInt(numeros.charAt(tamanho - i)) * pos--;
+    if (pos < 2) pos = 9;
+  }
+  let resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+  if (resultado !== parseInt(digitos.charAt(0))) return false;
+
+  tamanho += 1;
+  numeros = cnpj.substring(0, tamanho);
+  soma = 0;
+  pos = tamanho - 7;
+  for (let i = tamanho; i >= 1; i--) {
+    soma += parseInt(numeros.charAt(tamanho - i)) * pos--;
+    if (pos < 2) pos = 9;
+  }
+  resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+  if (resultado !== parseInt(digitos.charAt(1))) return false;
+
+  return true;
+}
+
 async function emitirNFe(supabase: any, userId: string, payload: any) {
   const { pedidoId } = payload;
 
@@ -103,7 +135,7 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
 
   console.log('ConfigMap processado:', configMap);
   console.log('focus_nfe_enabled:', configMap.focus_nfe_enabled);
-  console.log('focus_nfe_token:', configMap.focus_nfe_token ? `${configMap.focus_nfe_token.toString().substring(0, 10)}...` : 'não configurado');
+  console.log('focus_nfe_token:', configMap.focus_nfe_token ? `****...${configMap.focus_nfe_token.toString().slice(-4)}` : 'não configurado');
 
   // Validar configurações essenciais
   if (!configMap.focus_nfe_enabled) {
@@ -125,6 +157,22 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
   if (!cnpjEmissor) {
     return new Response(
       JSON.stringify({ success: false, error: 'CNPJ da empresa emissora não configurado' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Validar e sanitizar CNPJ (deve ter 14 dígitos)
+  const cleanCnpj = cnpjEmissor.replace(/[^\d]/g, '');
+  if (cleanCnpj.length !== 14) {
+    return new Response(
+      JSON.stringify({ success: false, error: `CNPJ do emitente inválido (precisa ter 14 dígitos). CNPJ atual: ${cnpjEmissor}` }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  if (!validateCNPJ(cleanCnpj)) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'CNPJ do emitente inválido (falha na validação dos dígitos verificadores)' }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
@@ -274,8 +322,8 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
   const defaultCfop = configMap.default_cfop || "5405";
   const defaultNcm = configMap.default_ncm || "19059090";
   
-  // Dados da empresa do emissor (usar cnpj_emissor se configurado, senão company_cnpj)
-  const companyCnpj = (configMap.cnpj_emissor || configMap.company_cnpj || "39524018000128").replace(/[^\d]/g, '');
+  // Dados da empresa do emissor (usar CNPJ limpo e validado)
+  const companyCnpj = cleanCnpj; // Já validado acima
   const companyName = configMap.company_name || "ARTISAN BREAD PAES ARTESANAIS LTDA";
   const companyFantasyName = configMap.company_fantasy_name || "ARTISAN";
   const companyAddress = configMap.company_address || "V PASTOR MARTIN LUTHER KING JR.";
@@ -563,12 +611,72 @@ async function consultarStatus(supabase: any, userId: string, payload: any) {
   }
 
   // Buscar configurações Focus NFe filtrando por company_id
-  const { data: focusSettings } = await supabase
+  const { data: allSettings } = await supabase
     .from('system_settings')
     .select('key, value, updated_at')
     .in('key', ['focus_nfe_token', 'focus_nfe_environment', 'nota_fiscal_ambiente'])
     .eq('company_id', companyId)
     .order('updated_at', { ascending: false });
+
+  // Criar mapa com valores mais recentes
+  const configMap = {} as Record<string, any>;
+  const processedKeys = new Set<string>();
+  
+  allSettings?.forEach(setting => {
+    if (!processedKeys.has(setting.key)) {
+      try {
+        configMap[setting.key] = JSON.parse(setting.value as string);
+      } catch {
+        configMap[setting.key] = setting.value;
+      }
+      processedKeys.add(setting.key);
+    }
+  });
+
+  const token = configMap.focus_nfe_token;
+  if (!token) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Token Focus NFe não configurado' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const environment = configMap.nota_fiscal_ambiente || 'homologacao';
+  const baseUrl = environment === 'producao' 
+    ? 'https://api.focusnfe.com.br/v2/nfe' 
+    : 'https://homologacao.focusnfe.com.br/v2/nfe';
+
+  try {
+    const response = await fetch(`${baseUrl}/${nota.focus_id}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    console.log('Focus Status Response:', response.status);
+    const responseText = await response.text();
+    console.log('Focus Status Response Text:', responseText.substring(0, 500) + '...');
+
+    if (!response.ok) {
+      // Para erros 4xx, retornar erro amigável
+      if (response.status >= 400 && response.status < 500) {
+        let errorMessage = 'Erro ao consultar status da nota';
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.mensagem || errorData.error || errorMessage;
+        } catch (parseError) {
+          console.error('Erro ao fazer parse da resposta de erro:', parseError);
+        }
+        
+        return new Response(
+          JSON.stringify({ success: false, error: errorMessage }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      throw new Error(`Focus NFe API Error (${response.status}): ${responseText}`);
+    }
 
   // Criar mapa com valores mais recentes
   const configMap = {} as Record<string, any>;
@@ -727,6 +835,22 @@ async function cancelarNFe(supabase: any, userId: string, payload: any) {
     console.log('Focus NFe Cancelamento Response:', responseText);
     
     if (!response.ok) {
+      // Para erros 4xx, retornar erro amigável
+      if (response.status >= 400 && response.status < 500) {
+        let errorMessage = 'Erro ao cancelar nota fiscal';
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.mensagem || errorData.error || errorMessage;
+        } catch (parseError) {
+          console.error('Erro ao fazer parse da resposta de erro:', parseError);
+        }
+        
+        return new Response(
+          JSON.stringify({ success: false, error: errorMessage }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       throw new Error(`Focus NFe API Error (${response.status}): ${responseText}`);
     }
     

@@ -58,12 +58,15 @@ export const useNotaFiscal = () => {
 
       if (error) throw error;
 
-      if (data.success) {
+      if (data?.success) {
         toast.success('Nota fiscal enviada com sucesso!');
         await loadNotas();
         return data.nota;
       } else {
-        throw new Error(data.error || 'Erro ao emitir nota');
+        // Exibir erro amigável retornado pela edge function
+        const errorMessage = data?.error || 'Erro ao emitir nota';
+        toast.error(errorMessage);
+        throw new Error(errorMessage);
       }
     } catch (error) {
       console.error('Erro ao emitir nota:', error);
@@ -150,16 +153,13 @@ export const useNotaFiscal = () => {
 
       console.log('Baixando PDF para nota:', nota.id);
 
-      // Para PDF, precisamos usar fetch direto para binary data
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://gtqmwlxzszttzriswoxj.supabase.co';
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0cW13bHh6c3p0dHpyaXN3b3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc3NzUwMjUsImV4cCI6MjA2MzM1MTAyNX0.03XyZCOF5UnUUaNpn44-MlQW0J6Vfo3_rb7mhE7D-Bk';
-      
-      const response = await fetch(`${supabaseUrl}/functions/v1/focus-nfe-api`, {
+      // Para PDF, usar fetch direto com URL e anon key fixos
+      const response = await fetch(`https://gtqmwlxzszttzriswoxj.supabase.co/functions/v1/focus-nfe-api`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
-          'apikey': supabaseKey
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0cW13bHh6c3p0dHpyaXN3b3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc3NzUwMjUsImV4cCI6MjA2MzM1MTAyNX0.03XyZCOF5UnUUaNpn44-MlQW0J6Vfo3_rb7mhE7D-Bk'
         },
         body: JSON.stringify({
           action: 'obter_pdf',
