@@ -410,14 +410,22 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     // Informações adicionais com número do pedido e forma de pagamento
     informacoes_adicionais: `Pedido: ${pedido.order_number || pedido.id}${pedido.payment_method ? ` | Forma de Pagamento: ${pedido.payment_method}` : ''}${pedido.payment_term ? ` | Prazo: ${pedido.payment_term}` : ''} | Data: ${new Date().toLocaleDateString('pt-BR')}`,
     
-    // Dados do destinatário (cliente)
+    // Dados do destinatário (cliente) - com validações obrigatórias
     nome_destinatario: pedido.clients?.name || pedido.client_name || "CONSUMIDOR FINAL",
-    logradouro_destinatario: pedido.clients?.address || "Não informado",
-    numero_destinatario: pedido.clients?.number || "S/N",
-    bairro_destinatario: pedido.clients?.bairro || "Não informado",
+    
+    // Adicionar CNPJ/CPF do destinatário se disponível
+    ...(pedido.clients?.cnpj ? {
+      cnpj_destinatario: pedido.clients.cnpj.replace(/[^\d]/g, '')
+    } : pedido.clients?.cpf ? {
+      cpf_destinatario: pedido.clients.cpf.replace(/[^\d]/g, '')  
+    } : {}),
+    
+    logradouro_destinatario: pedido.clients?.address || "RUA NAO INFORMADA",
+    numero_destinatario: pedido.clients?.number || "SN",
+    bairro_destinatario: pedido.clients?.bairro || "NAO INFORMADO", 
     municipio_destinatario: pedido.clients?.city || "Rio de Janeiro",
     uf_destinatario: pedido.clients?.state || "RJ",
-    cep_destinatario: (pedido.clients?.zip || "20000000").replace(/[^\d]/g, ''),
+    cep_destinatario: (pedido.clients?.zip || "20000000").replace(/[^\d]/g, '').padStart(8, '0'),
     codigo_municipio_destinatario: "3304557", // Rio de Janeiro
     pais_destinatario: "Brasil",
     
@@ -535,7 +543,7 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
   try {
     const responseText = await response.text();
     console.log('Focus NFe Status:', response.status);
-    console.log('Focus NFe Response:', responseText);
+    console.log('Focus NFe Response completa:', responseText);
     
     if (!response.ok) {
       // Para erros 4xx da Focus NFe, retornar erro amigável
@@ -544,13 +552,23 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
         
         try {
           const errorData = JSON.parse(responseText);
+          console.log('Dados de erro parseados:', errorData);
+          
           if (errorData.codigo === 'permissao_negada' || errorData.mensagem?.includes('permissao_negada')) {
             errorMessage = `CNPJ ${companyCnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')} não autorizado no Focus NFe. Verifique se: (1) CNPJ está correto, (2) emissor foi cadastrado no painel Focus NFe, (3) certificado A1 foi instalado, (4) token pertence a esta conta, (5) ambiente é o correto`;
+          } else if (errorData.erros && Array.isArray(errorData.erros) && errorData.erros.length > 0) {
+            // Capturar erros detalhados de validação
+            const errosDetalhados = errorData.erros.map((erro: any) => {
+              if (typeof erro === 'string') return erro;
+              return erro.mensagem || erro.codigo || erro.campo || JSON.stringify(erro);
+            }).join(' | ');
+            errorMessage = `Erro de validação XML: ${errosDetalhados}`;
           } else {
             errorMessage = errorData.mensagem || errorData.error || errorMessage;
           }
         } catch (parseError) {
           console.error('Erro ao fazer parse da resposta de erro:', parseError);
+          errorMessage = `Erro HTTP ${response.status}: ${responseText.substring(0, 500)}`;
         }
         
         return new Response(
@@ -563,6 +581,7 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     }
     
     responseData = JSON.parse(responseText);
+    console.log('Response data parseada:', responseData);
     
     // Verificar se houve erros de validação mesmo com status 200
     if (responseData.erros && responseData.erros.length > 0) {
@@ -571,7 +590,7 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
       // Compilar erros detalhados
       const errosDetalhados = responseData.erros.map((erro: any) => {
         if (typeof erro === 'string') return erro;
-        return erro.mensagem || erro.codigo || JSON.stringify(erro);
+        return erro.mensagem || erro.codigo || erro.campo || JSON.stringify(erro);
       }).join(' | ');
       
       throw new Error(`Erro na validação do Schema XML: ${errosDetalhados}`);
@@ -592,8 +611,12 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     }
     
   } catch (error) {
-    console.error('Erro ao emitir NFe na Focus NFe:', error);
-    throw new Error(error.message || `Erro na comunicação com Focus NFe: ${error.message}`);
+    console.error('Erro ao processar resposta da Focus NFe:', error);
+    // Se for erro de parsing JSON e não foi tratado acima, relançar com mais detalhes
+    if (error.message.includes('Unexpected token') || error.message.includes('JSON')) {
+      throw new Error(`Erro ao processar resposta da Focus NFe: resposta inválida recebida`);
+    }
+    throw error;
   }
 
   // Salvar nota emitida no banco com company_id
