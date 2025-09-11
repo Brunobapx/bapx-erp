@@ -455,6 +455,279 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
         
         // Peso líquido (quantidade × peso do produto)
         peso_liquido: Number(item.quantity) * (productWeightMap[item.product_id] || 0),
+        peso_bruto: Number(item.quantity) * (productWeightMap[item.product_id] || 0),
+        
+        // Impostos específicos do produto
+        icms: {
+          situacao_tributaria: productCstCsosn,
+          origem: icmsConfig.origem,
+          aliquota: productIcmsAliquota,
+          valor_base_calculo: !isSimplesToNacional && productIcmsAliquota > 0 ? Number(item.total_price) : 0,
+          valor: !isSimplesToNacional && productIcmsAliquota > 0 ? Number(item.total_price) * (productIcmsAliquota / 100) : 0
+        },
+        
+        pis: {
+          situacao_tributaria: pisCST,
+          aliquota: productPisAliquota,
+          valor_base_calculo: !isSimplesToNacional ? Number(item.total_price) : 0,
+          valor: !isSimplesToNacional ? Number(item.total_price) * (productPisAliquota / 100) : 0
+        },
+        
+        cofins: {
+          situacao_tributaria: cofinsCST,
+          aliquota: productCofinsAliquota,
+          valor_base_calculo: !isSimplesToNacional ? Number(item.total_price) : 0,
+          valor: !isSimplesToNacional ? Number(item.total_price) * (productCofinsAliquota / 100) : 0
+        }
+      };
+    })
+  };
+
+  console.log('JSON NFe montado:', JSON.stringify(nfeData, null, 2));
+
+  // Dados do ambiente Focus NFe
+  const ambiente = configMap.nota_fiscal_ambiente || configMap.focus_nfe_environment || 'homologacao';
+  const baseUrl = ambiente === 'producao' 
+    ? 'https://api.focusnfe.com.br'
+    : 'https://homologacao.focusnfe.com.br';
+
+  // Fazer requisição para Focus NFe
+  const focusId = `NFE${Date.now()}${Math.random().toString(36).substr(2, 9)}`;
+  
+  console.log('Enviando para Focus NFe:', {
+    url: `${baseUrl}/v2/nfe?ref=${focusId}`,
+    ambiente,
+    token: `****...${token.slice(-4)}`
+  });
+
+  const response = await fetch(`${baseUrl}/v2/nfe?ref=${focusId}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${btoa(token + ':')}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(nfeData)
+  });
+
+  let responseData;
+  try {
+    const responseText = await response.text();
+    console.log('Focus NFe Status:', response.status);
+    console.log('Focus NFe Response:', responseText);
+    
+    if (!response.ok) {
+      // Para erros 4xx da Focus NFe, retornar erro amigável
+      if (response.status >= 400 && response.status < 500) {
+        let errorMessage = 'CNPJ do emitente não autorizado no Focus NFe. Verifique: (1) CNPJ 14 dígitos, (2) emissor cadastrado e certificado A1 no painel da Focus, (3) token corresponde à conta do CNPJ, (4) ambiente correto (produção/homologação)';
+        
+        try {
+          const errorData = JSON.parse(responseText);
+          if (errorData.codigo === 'permissao_negada' || errorData.mensagem?.includes('permissao_negada')) {
+            errorMessage = `CNPJ ${companyCnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')} não autorizado no Focus NFe. Verifique se: (1) CNPJ está correto, (2) emissor foi cadastrado no painel Focus NFe, (3) certificado A1 foi instalado, (4) token pertence a esta conta, (5) ambiente é o correto`;
+          } else {
+            errorMessage = errorData.mensagem || errorData.error || errorMessage;
+          }
+        } catch (parseError) {
+          console.error('Erro ao fazer parse da resposta de erro:', parseError);
+        }
+        
+        return new Response(
+          JSON.stringify({ success: false, error: errorMessage }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      throw new Error(`Focus NFe API Error (${response.status}): ${responseText}`);
+    }
+    
+    responseData = JSON.parse(responseText);
+  } catch (error) {
+    console.error('Erro ao emitir NFe na Focus NFe:', error);
+    throw new Error(`Erro na comunicação com Focus NFe: ${error.message}`);
+  }
+
+  // Salvar nota emitida no banco com company_id
+  const { data: notaSalva } = await supabase
+    .from('notas_emitidas')
+    .insert({
+      user_id: userId,
+      order_id: pedidoId,
+      focus_id: focusId,
+      numero_nota: responseData.numero,
+      serie_nota: responseData.serie,
+      chave_acesso: responseData.chave_nfe,
+      status: responseData.status,
+      json_resposta: responseData,
+      company_id: companyId
+    })
+    .select()
+    .single();
+
+  console.log('Nota salva no banco:', notaSalva);
+
+  // Registrar log com company_id
+  await supabase
+    .from('nota_logs')
+    .insert({
+      nota_id: notaSalva.id,
+      acao: 'emissao',
+      status_code: response.status,
+      mensagem: 'NFe emitida com sucesso',
+      resposta: responseData,
+      company_id: companyId
+    });
+
+  return new Response(
+    JSON.stringify({ success: true, nota: notaSalva, focus_response: responseData }),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
+
+async function consultarStatus(supabase: any, userId: string, payload: any) {
+  const { notaId } = payload;
+
+  console.log('Consultando status para nota:', { notaId, userId });
+
+  // Buscar company_id do usuário
+  const { data: userProfile } = await supabase
+    .from('profiles')
+    .select('company_id')
+    .eq('id', userId)
+    .single();
+
+  const companyId = userProfile?.company_id;
+
+  // Buscar nota
+  const { data: nota, error: notaError } = await supabase
+    .from('notas_emitidas')
+    .select('*')
+    .eq('id', notaId)
+    .single();
+
+  if (notaError) {
+    console.error('Erro ao buscar nota:', notaError);
+    return new Response(
+      JSON.stringify({ success: false, error: 'Erro ao buscar nota' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  if (!nota) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Nota não encontrada' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Buscar configurações Focus NFe filtrando por company_id
+  const { data: focusSettings } = await supabase
+    .from('system_settings')
+    .select('key, value, updated_at')
+    .in('key', ['focus_nfe_token', 'focus_nfe_environment', 'nota_fiscal_ambiente'])
+    .eq('company_id', companyId)
+    .order('updated_at', { ascending: false });
+
+  // Criar mapa com valores mais recentes
+  const configMap = {} as Record<string, any>;
+  const processedKeys = new Set<string>();
+  
+  focusSettings?.forEach(setting => {
+    if (!processedKeys.has(setting.key)) {
+      try {
+        configMap[setting.key] = JSON.parse(setting.value as string);
+      } catch {
+        configMap[setting.key] = setting.value;
+      }
+      processedKeys.add(setting.key);
+    }
+  });
+
+  if (!configMap.focus_nfe_token) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Token Focus NFe não configurado' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const ambiente = configMap.nota_fiscal_ambiente || configMap.focus_nfe_environment || 'homologacao';
+  const baseUrl = ambiente === 'producao' 
+    ? 'https://api.focusnfe.com.br'
+    : 'https://homologacao.focusnfe.com.br';
+
+  console.log('Consultando Focus NFe:', {
+    focusId: nota.focus_id,
+    ambiente,
+    token: `****...${configMap.focus_nfe_token.toString().slice(-4)}`
+  });
+
+  const response = await fetch(`${baseUrl}/v2/nfe/${nota.focus_id}`, {
+    headers: {
+      'Authorization': `Basic ${btoa(configMap.focus_nfe_token + ':')}`
+    }
+  });
+
+  let responseData;
+  try {
+    const responseText = await response.text();
+    console.log('Focus NFe Consulta Status:', response.status);
+    console.log('Focus NFe Consulta Response:', responseText);
+    
+    if (!response.ok) {
+      // Para erros 4xx, retornar erro amigável
+      if (response.status >= 400 && response.status < 500) {
+        let errorMessage = 'Erro ao consultar status da nota fiscal';
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.mensagem || errorData.error || errorMessage;
+        } catch (parseError) {
+          console.error('Erro ao fazer parse da resposta de erro:', parseError);
+        }
+        
+        return new Response(
+          JSON.stringify({ success: false, error: errorMessage }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      throw new Error(`Focus NFe API Error (${response.status}): ${responseText}`);
+    }
+    
+    responseData = JSON.parse(responseText);
+  } catch (error) {
+    console.error('Erro ao consultar status na Focus NFe:', error);
+    throw new Error(`Erro na comunicação com Focus NFe: ${error.message}`);
+  }
+
+  // Atualizar dados da nota se houver alteração
+  if (responseData && (responseData.status !== nota.status || responseData.numero !== nota.numero_nota)) {
+    await supabase
+      .from('notas_emitidas')
+      .update({
+        numero_nota: responseData.numero,
+        serie_nota: responseData.serie,
+        chave_acesso: responseData.chave_nfe,
+        status: responseData.status,
+        json_resposta: responseData
+      })
+      .eq('id', notaId);
+  }
+
+  // Registrar log com company_id
+  await supabase
+    .from('nota_logs')
+    .insert({
+      nota_id: notaId,
+      acao: 'consulta_status',
+      status_code: response.status,
+      mensagem: `Status consultado: ${responseData?.status}`,
+      resposta: responseData,
+      company_id: companyId
+    });
+
+  return new Response(
+    JSON.stringify({ success: true, status: responseData }),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
         
         // ICMS conforme regime tributário - usando dados específicos do produto
         ...(isSimplesToNacional ? {
