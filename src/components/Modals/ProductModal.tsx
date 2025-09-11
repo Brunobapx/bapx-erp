@@ -221,7 +221,19 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
 
   const handleRecipeItemChange = (index: number, field: string, value: string) => {
     const updatedItems = [...recipeItems];
-    updatedItems[index] = { ...updatedItems[index], [field]: value };
+    
+    if (field === 'productId') {
+      // Quando selecionar um produto, buscar automaticamente o preço de custo
+      const selectedProduct = availableIngredients.find(product => product.id === value);
+      updatedItems[index] = { 
+        ...updatedItems[index], 
+        [field]: value,
+        unitCost: selectedProduct?.cost?.toString() || '0'
+      };
+    } else {
+      updatedItems[index] = { ...updatedItems[index], [field]: value };
+    }
+    
     setRecipeItems(updatedItems);
   };
 
