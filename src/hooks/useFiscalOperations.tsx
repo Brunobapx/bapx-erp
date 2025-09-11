@@ -92,9 +92,9 @@ export const useFiscalOperations = () => {
     if (!operation) return '5102'; // CFOP padrão
 
     if (clientState === companyState) {
-      return operation.cfop_dentro_estado;
+      return operation.cfop_dentro_estado || operation.cfop || '5102';
     } else {
-      return operation.cfop_fora_estado;
+      return operation.cfop_fora_estado || operation.cfop || '6102';
     }
   };
 

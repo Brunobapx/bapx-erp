@@ -990,33 +990,45 @@ export type Database = {
       fiscal_operations: {
         Row: {
           cfop: string
+          cfop_dentro_estado: string | null
+          cfop_exterior: string | null
+          cfop_fora_estado: string | null
           company_id: string
           created_at: string
           description: string | null
           id: string
           is_active: boolean
+          operation_name: string | null
           operation_type: string
           updated_at: string
           user_id: string
         }
         Insert: {
           cfop: string
+          cfop_dentro_estado?: string | null
+          cfop_exterior?: string | null
+          cfop_fora_estado?: string | null
           company_id: string
           created_at?: string
           description?: string | null
           id?: string
           is_active?: boolean
+          operation_name?: string | null
           operation_type: string
           updated_at?: string
           user_id: string
         }
         Update: {
           cfop?: string
+          cfop_dentro_estado?: string | null
+          cfop_exterior?: string | null
+          cfop_fora_estado?: string | null
           company_id?: string
           created_at?: string
           description?: string | null
           id?: string
           is_active?: boolean
+          operation_name?: string | null
           operation_type?: string
           updated_at?: string
           user_id?: string
