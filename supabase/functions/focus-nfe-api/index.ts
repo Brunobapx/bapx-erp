@@ -480,9 +480,37 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
       const productNcm = product?.ncm || defaultNcm;
       const productCest = product?.cest || "1706200";
       const productCstCsosn = product?.cst_csosn || (isSimplesToNacional ? icmsConfig.situacao_tributaria : icmsConfig.situacao_tributaria);
-      const productIcmsAliquota = product?.icms ? parseFloat(product.icms) : icmsConfig.aliquota;
-      const productPisAliquota = product?.pis ? parseFloat(product.pis) : pisAliquota;
-      const productCofinsAliquota = product?.cofins ? parseFloat(product.cofins) : cofinsAliquota;
+      const productIcmsAliquota = product?.icms ? parseFloat(String(product.icms).replace(',', '.')) : icmsConfig.aliquota;
+      
+      // Sanitizar e validar valores de PIS/COFINS do produto
+      let productPisAliquota = pisAliquota;
+      let productCofinsAliquota = cofinsAliquota;
+      let productPisCST = pisCST;
+      let productCofinsCST = cofinsCST;
+      
+      if (product?.pis) {
+        const pisValue = parseFloat(String(product.pis).replace(',', '.'));
+        if (!isNaN(pisValue)) {
+          productPisAliquota = pisValue;
+        }
+      }
+      
+      if (product?.cofins) {
+        const cofinsValue = parseFloat(String(product.cofins).replace(',', '.'));
+        if (!isNaN(cofinsValue)) {
+          productCofinsAliquota = cofinsValue;
+        }
+      }
+      
+      // Para regime normal, garantir que PIS/COFINS não sejam 0
+      if (!isSimplesToNacional) {
+        if (productPisAliquota === 0) {
+          productPisAliquota = pisAliquota; // Usar alíquota da empresa
+        }
+        if (productCofinsAliquota === 0) {
+          productCofinsAliquota = cofinsAliquota; // Usar alíquota da empresa
+        }
+      }
 
       return {
         numero_item: index + 1,
@@ -514,20 +542,35 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
           valor: !isSimplesToNacional && productIcmsAliquota > 0 ? Number(item.total_price) * (productIcmsAliquota / 100) : 0
         },
         
-        pis: {
-          situacao_tributaria: pisCST,
+        // PIS com formatação correta dos campos
+        pis: isSimplesToNacional ? {
+          cst: "49" // Simples Nacional - outras operações de saída
+        } : {
+          cst: productPisCST,
+          base_calculo: Number(item.total_price),
           aliquota: productPisAliquota,
-          valor_base_calculo: !isSimplesToNacional ? Number(item.total_price) : 0,
-          valor: !isSimplesToNacional ? Number(item.total_price) * (productPisAliquota / 100) : 0
+          valor: Number(item.total_price) * (productPisAliquota / 100)
         },
         
-        cofins: {
-          situacao_tributaria: cofinsCST,
+        // COFINS com formatação correta dos campos
+        cofins: isSimplesToNacional ? {
+          cst: "49" // Simples Nacional - outras operações de saída
+        } : {
+          cst: productCofinsCST,
+          base_calculo: Number(item.total_price),
           aliquota: productCofinsAliquota,
-          valor_base_calculo: !isSimplesToNacional ? Number(item.total_price) : 0,
-          valor: !isSimplesToNacional ? Number(item.total_price) * (productCofinsAliquota / 100) : 0
+          valor: Number(item.total_price) * (productCofinsAliquota / 100)
         }
       };
+    }).map((item, index) => {
+      // Log dos valores fiscais finais para debugging
+      console.log(`Item ${index + 1} - Valores fiscais finais:`, {
+        produto: item.descricao,
+        pis: item.pis,
+        cofins: item.cofins,
+        regime: isSimplesToNacional ? 'Simples Nacional' : 'Regime Normal'
+      });
+      return item;
     })
   };
 
