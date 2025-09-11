@@ -58,10 +58,19 @@ serve(async (req) => {
 async function emitirNFe(supabase: any, userId: string, payload: any) {
   const { pedidoId } = payload;
 
-  // Buscar configurações Focus NFe, fiscais e dados da empresa do sistema
+  // Buscar company_id do usuário
+  const { data: userProfile } = await supabase
+    .from('profiles')
+    .select('company_id')
+    .eq('id', userId)
+    .single();
+
+  const companyId = userProfile?.company_id;
+
+  // Buscar configurações Focus NFe, fiscais e dados da empresa filtrando por company_id
   const { data: allSettings } = await supabase
     .from('system_settings')
-    .select('key, value')
+    .select('key, value, updated_at')
     .in('key', [
       'focus_nfe_token', 'focus_nfe_environment', 'focus_nfe_enabled',
       'tax_regime', 'default_cfop', 'default_ncm', 'icms_cst', 'icms_origem',
@@ -71,26 +80,53 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
       'company_cep', 'company_fantasy_name',
       'nota_fiscal_tipo', 'nota_fiscal_ambiente', 'empresa_tipo', 'csosn_padrao', 'cst_padrao',
       'icms_percentual', 'pis_percentual', 'cofins_percentual', 'cnpj_emissor'
-    ]);
+    ])
+    .eq('company_id', companyId)
+    .order('updated_at', { ascending: false });
 
   console.log('Settings encontradas:', allSettings);
   
-  const configMap = allSettings?.reduce((acc, setting) => {
-    try {
-      acc[setting.key] = JSON.parse(setting.value as string);
-    } catch {
-      acc[setting.key] = setting.value;
+  // Criar mapa com valores mais recentes para cada chave
+  const configMap = {} as Record<string, any>;
+  const processedKeys = new Set<string>();
+  
+  allSettings?.forEach(setting => {
+    if (!processedKeys.has(setting.key)) {
+      try {
+        configMap[setting.key] = JSON.parse(setting.value as string);
+      } catch {
+        configMap[setting.key] = setting.value;
+      }
+      processedKeys.add(setting.key);
     }
-    return acc;
-  }, {} as Record<string, any>) || {};
+  });
 
   console.log('ConfigMap processado:', configMap);
   console.log('focus_nfe_enabled:', configMap.focus_nfe_enabled);
-  console.log('focus_nfe_token:', configMap.focus_nfe_token);
+  console.log('focus_nfe_token:', configMap.focus_nfe_token ? `${configMap.focus_nfe_token.toString().substring(0, 10)}...` : 'não configurado');
 
-  if (!configMap.focus_nfe_enabled || !configMap.focus_nfe_token) {
-    console.error('Configurações faltando - enabled:', configMap.focus_nfe_enabled, 'token:', configMap.focus_nfe_token);
-    throw new Error('Focus NFe não está configurado');
+  // Validar configurações essenciais
+  if (!configMap.focus_nfe_enabled) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Focus NFe não está habilitado nas configurações da empresa' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  if (!configMap.focus_nfe_token) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Token Focus NFe não configurado' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Validar CNPJ emissor
+  const cnpjEmissor = configMap.cnpj_emissor || configMap.company_cnpj;
+  if (!cnpjEmissor) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'CNPJ da empresa emissora não configurado' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 
   const token = configMap.focus_nfe_token || "";
@@ -463,11 +499,12 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     throw new Error(`Resposta inválida da Focus NFe: ${responseText}`);
   }
 
-  // Salvar nota emitida
+  // Salvar nota emitida com company_id
   const { data: notaEmitida } = await supabase
     .from('notas_emitidas')
     .insert({
       user_id: userId,
+      company_id: companyId,
       tipo_nota: configMap.nota_fiscal_tipo || 'nfe',
       pedido_id: pedidoId,
       focus_id: responseData.ref || null,
@@ -480,7 +517,7 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
     .select()
     .single();
 
-  // Registrar log
+  // Registrar log com company_id
   await supabase
     .from('nota_logs')
     .insert({
@@ -488,7 +525,8 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
       acao: 'envio',
       status_code: response.status,
       mensagem: 'NFe enviada para Focus',
-      resposta: responseData
+      resposta: responseData,
+      company_id: companyId
     });
 
   return new Response(
@@ -500,6 +538,15 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
 async function consultarStatus(supabase: any, userId: string, payload: any) {
   const { notaId } = payload;
 
+  // Buscar company_id do usuário
+  const { data: userProfile } = await supabase
+    .from('profiles')
+    .select('company_id')
+    .eq('id', userId)
+    .single();
+
+  const companyId = userProfile?.company_id;
+
   // Buscar nota
   const { data: nota } = await supabase
     .from('notas_emitidas')
@@ -509,23 +556,41 @@ async function consultarStatus(supabase: any, userId: string, payload: any) {
     .single();
 
   if (!nota) {
-    throw new Error('Nota não encontrada');
+    return new Response(
+      JSON.stringify({ success: false, error: 'Nota não encontrada' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 
-  // Buscar configurações Focus NFe
+  // Buscar configurações Focus NFe filtrando por company_id
   const { data: focusSettings } = await supabase
     .from('system_settings')
-    .select('key, value')
-    .in('key', ['focus_nfe_token', 'focus_nfe_environment', 'nota_fiscal_ambiente']);
+    .select('key, value, updated_at')
+    .in('key', ['focus_nfe_token', 'focus_nfe_environment', 'nota_fiscal_ambiente'])
+    .eq('company_id', companyId)
+    .order('updated_at', { ascending: false });
 
-  const configMap = focusSettings?.reduce((acc, setting) => {
-    try {
-      acc[setting.key] = JSON.parse(setting.value as string);
-    } catch {
-      acc[setting.key] = setting.value;
+  // Criar mapa com valores mais recentes
+  const configMap = {} as Record<string, any>;
+  const processedKeys = new Set<string>();
+  
+  focusSettings?.forEach(setting => {
+    if (!processedKeys.has(setting.key)) {
+      try {
+        configMap[setting.key] = JSON.parse(setting.value as string);
+      } catch {
+        configMap[setting.key] = setting.value;
+      }
+      processedKeys.add(setting.key);
     }
-    return acc;
-  }, {} as Record<string, any>) || {};
+  });
+
+  if (!configMap.focus_nfe_token) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Token Focus NFe não configurado' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
 
   const ambiente = configMap.nota_fiscal_ambiente || configMap.focus_nfe_environment || 'homologacao';
   const baseUrl = ambiente === 'producao' 
@@ -566,7 +631,7 @@ async function consultarStatus(supabase: any, userId: string, payload: any) {
     })
     .eq('id', notaId);
 
-  // Registrar log
+  // Registrar log com company_id
   await supabase
     .from('nota_logs')
     .insert({
@@ -574,7 +639,8 @@ async function consultarStatus(supabase: any, userId: string, payload: any) {
       acao: 'consulta',
       status_code: response.status,
       mensagem: 'Status consultado',
-      resposta: responseData
+      resposta: responseData,
+      company_id: companyId
     });
 
   return new Response(
@@ -586,6 +652,15 @@ async function consultarStatus(supabase: any, userId: string, payload: any) {
 async function cancelarNFe(supabase: any, userId: string, payload: any) {
   const { notaId, motivo } = payload;
 
+  // Buscar company_id do usuário
+  const { data: userProfile } = await supabase
+    .from('profiles')
+    .select('company_id')
+    .eq('id', userId)
+    .single();
+
+  const companyId = userProfile?.company_id;
+
   // Buscar nota
   const { data: nota } = await supabase
     .from('notas_emitidas')
@@ -595,23 +670,41 @@ async function cancelarNFe(supabase: any, userId: string, payload: any) {
     .single();
 
   if (!nota) {
-    throw new Error('Nota não encontrada');
+    return new Response(
+      JSON.stringify({ success: false, error: 'Nota não encontrada' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 
-  // Buscar configurações Focus NFe
+  // Buscar configurações Focus NFe filtrando por company_id
   const { data: focusSettings } = await supabase
     .from('system_settings')
-    .select('key, value')
-    .in('key', ['focus_nfe_token', 'focus_nfe_environment', 'nota_fiscal_ambiente']);
+    .select('key, value, updated_at')
+    .in('key', ['focus_nfe_token', 'focus_nfe_environment', 'nota_fiscal_ambiente'])
+    .eq('company_id', companyId)
+    .order('updated_at', { ascending: false });
 
-  const configMap = focusSettings?.reduce((acc, setting) => {
-    try {
-      acc[setting.key] = JSON.parse(setting.value as string);
-    } catch {
-      acc[setting.key] = setting.value;
+  // Criar mapa com valores mais recentes
+  const configMap = {} as Record<string, any>;
+  const processedKeys = new Set<string>();
+  
+  focusSettings?.forEach(setting => {
+    if (!processedKeys.has(setting.key)) {
+      try {
+        configMap[setting.key] = JSON.parse(setting.value as string);
+      } catch {
+        configMap[setting.key] = setting.value;
+      }
+      processedKeys.add(setting.key);
     }
-    return acc;
-  }, {} as Record<string, any>) || {};
+  });
+
+  if (!configMap.focus_nfe_token) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Token Focus NFe não configurado' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
 
   const ambiente = configMap.nota_fiscal_ambiente || configMap.focus_nfe_environment || 'homologacao';
   const baseUrl = ambiente === 'producao' 
@@ -652,7 +745,7 @@ async function cancelarNFe(supabase: any, userId: string, payload: any) {
     })
     .eq('id', notaId);
 
-  // Registrar log
+  // Registrar log com company_id
   await supabase
     .from('nota_logs')
     .insert({
@@ -660,7 +753,8 @@ async function cancelarNFe(supabase: any, userId: string, payload: any) {
       acao: 'cancelamento',
       status_code: response.status,
       mensagem: `NFe cancelada: ${motivo}`,
-      resposta: responseData
+      resposta: responseData,
+      company_id: companyId
     });
 
   return new Response(
@@ -674,7 +768,16 @@ async function obterPDF(supabase: any, userId: string, payload: any) {
 
   console.log('Obtendo PDF para nota:', { notaId, userId });
 
-  // Buscar nota (sem filtro por user_id pois estamos usando service role)
+  // Buscar company_id do usuário
+  const { data: userProfile } = await supabase
+    .from('profiles')
+    .select('company_id')
+    .eq('id', userId)
+    .single();
+
+  const companyId = userProfile?.company_id;
+
+  // Buscar nota
   const { data: nota, error: notaError } = await supabase
     .from('notas_emitidas')
     .select('*')
@@ -683,31 +786,55 @@ async function obterPDF(supabase: any, userId: string, payload: any) {
 
   if (notaError) {
     console.error('Erro ao buscar nota:', notaError);
-    throw new Error('Erro ao buscar nota');
+    return new Response(
+      JSON.stringify({ success: false, error: 'Erro ao buscar nota' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 
   if (!nota) {
-    throw new Error('Nota não encontrada');
+    return new Response(
+      JSON.stringify({ success: false, error: 'Nota não encontrada' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 
   if (!nota.json_resposta?.caminho_danfe) {
-    throw new Error('DANFE não disponível para esta nota');
+    return new Response(
+      JSON.stringify({ success: false, error: 'DANFE não disponível para esta nota' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 
-  // Buscar configurações Focus NFe
+  // Buscar configurações Focus NFe filtrando por company_id
   const { data: focusSettings } = await supabase
     .from('system_settings')
-    .select('key, value')
-    .in('key', ['focus_nfe_token', 'focus_nfe_environment', 'nota_fiscal_ambiente']);
+    .select('key, value, updated_at')
+    .in('key', ['focus_nfe_token', 'focus_nfe_environment', 'nota_fiscal_ambiente'])
+    .eq('company_id', companyId)
+    .order('updated_at', { ascending: false });
 
-  const configMap = focusSettings?.reduce((acc, setting) => {
-    try {
-      acc[setting.key] = JSON.parse(setting.value as string);
-    } catch {
-      acc[setting.key] = setting.value;
+  // Criar mapa com valores mais recentes
+  const configMap = {} as Record<string, any>;
+  const processedKeys = new Set<string>();
+  
+  focusSettings?.forEach(setting => {
+    if (!processedKeys.has(setting.key)) {
+      try {
+        configMap[setting.key] = JSON.parse(setting.value as string);
+      } catch {
+        configMap[setting.key] = setting.value;
+      }
+      processedKeys.add(setting.key);
     }
-    return acc;
-  }, {} as Record<string, any>) || {};
+  });
+
+  if (!configMap.focus_nfe_token) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Token Focus NFe não configurado' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
 
   const ambiente = configMap.nota_fiscal_ambiente || configMap.focus_nfe_environment || 'homologacao';
   const baseUrl = ambiente === 'producao' 
@@ -757,7 +884,16 @@ async function obterXML(supabase: any, userId: string, payload: any) {
 
   console.log('Obtendo XML para nota:', { notaId, userId });
 
-  // Buscar nota (sem filtro por user_id pois estamos usando service role)
+  // Buscar company_id do usuário
+  const { data: userProfile } = await supabase
+    .from('profiles')
+    .select('company_id')
+    .eq('id', userId)
+    .single();
+
+  const companyId = userProfile?.company_id;
+
+  // Buscar nota
   const { data: nota, error: notaError } = await supabase
     .from('notas_emitidas')
     .select('*')
@@ -766,31 +902,55 @@ async function obterXML(supabase: any, userId: string, payload: any) {
 
   if (notaError) {
     console.error('Erro ao buscar nota:', notaError);
-    throw new Error('Erro ao buscar nota');
+    return new Response(
+      JSON.stringify({ success: false, error: 'Erro ao buscar nota' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 
   if (!nota) {
-    throw new Error('Nota não encontrada');
+    return new Response(
+      JSON.stringify({ success: false, error: 'Nota não encontrada' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 
   if (!nota.json_resposta?.caminho_xml_nota_fiscal) {
-    throw new Error('XML não disponível para esta nota');
+    return new Response(
+      JSON.stringify({ success: false, error: 'XML não disponível para esta nota' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 
-  // Buscar configurações Focus NFe
+  // Buscar configurações Focus NFe filtrando por company_id
   const { data: focusSettings } = await supabase
     .from('system_settings')
-    .select('key, value')
-    .in('key', ['focus_nfe_token', 'focus_nfe_environment', 'nota_fiscal_ambiente']);
+    .select('key, value, updated_at')
+    .in('key', ['focus_nfe_token', 'focus_nfe_environment', 'nota_fiscal_ambiente'])
+    .eq('company_id', companyId)
+    .order('updated_at', { ascending: false });
 
-  const configMap = focusSettings?.reduce((acc, setting) => {
-    try {
-      acc[setting.key] = JSON.parse(setting.value as string);
-    } catch {
-      acc[setting.key] = setting.value;
+  // Criar mapa com valores mais recentes
+  const configMap = {} as Record<string, any>;
+  const processedKeys = new Set<string>();
+  
+  focusSettings?.forEach(setting => {
+    if (!processedKeys.has(setting.key)) {
+      try {
+        configMap[setting.key] = JSON.parse(setting.value as string);
+      } catch {
+        configMap[setting.key] = setting.value;
+      }
+      processedKeys.add(setting.key);
     }
-    return acc;
-  }, {} as Record<string, any>) || {};
+  });
+
+  if (!configMap.focus_nfe_token) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Token Focus NFe não configurado' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
 
   const ambiente = configMap.nota_fiscal_ambiente || configMap.focus_nfe_environment || 'homologacao';
   const baseUrl = ambiente === 'producao' 
