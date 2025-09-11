@@ -325,20 +325,38 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
       tipo_tributacao: "CSOSN"
     };
   } else {
-    // Regime Normal - usar configurações manuais de impostos
-    pisAliquota = Number(configMap.pis_percentual || configMap.pis_aliquota || 1.65);
-    cofinsAliquota = Number(configMap.cofins_percentual || configMap.cofins_aliquota || 7.6);
-    pisCST = configMap.pis_cst || "01";
-    cofinsCST = configMap.cofins_cst || "01";
+    // Regime Normal (Lucro Real/Presumido) - PIS/COFINS OBRIGATÓRIOS
+    pisAliquota = Number(configMap.pis_aliquota || configMap.pis_percentual || 1.65);
+    cofinsAliquota = Number(configMap.cofins_aliquota || configMap.cofins_percentual || 7.6);
+    pisCST = configMap.pis_cst || "01"; // CST válido para regime normal
+    cofinsCST = configMap.cofins_cst || "01"; // CST válido para regime normal
+    
+    // Validar se as alíquotas são válidas para regime normal
+    if (pisAliquota === 0) {
+      throw new Error(`Regime tributário ${taxRegime} (Lucro Real/Presumido) requer alíquota de PIS configurada. Configure 'pis_aliquota' nas configurações do sistema.`);
+    }
+    if (cofinsAliquota === 0) {
+      throw new Error(`Regime tributário ${taxRegime} (Lucro Real/Presumido) requer alíquota de COFINS configurada. Configure 'cofins_aliquota' nas configurações do sistema.`);
+    }
     
     const icmsAliquota = Number(configMap.icms_percentual || 18);
     icmsConfig = {
-      situacao_tributaria: configMap.cst_padrao || configMap.icms_cst || "60",
+      situacao_tributaria: configMap.cst_padrao || "00", // CST padrão para regime normal
       origem: Number(configMap.icms_origem || 0),
       aliquota: icmsAliquota,
       tipo_tributacao: "CST"
     };
   }
+  
+  console.log('Configurações fiscais aplicadas:', {
+    taxRegime,
+    isSimplesToNacional,
+    pisAliquota,
+    cofinsAliquota,
+    pisCST,
+    cofinsCST,
+    icmsConfig
+  });
   
   // Outras configurações fiscais
   const defaultCfop = configMap.default_cfop || "5405";
