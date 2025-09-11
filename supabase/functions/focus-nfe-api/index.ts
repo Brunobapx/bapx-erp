@@ -542,22 +542,22 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
           valor: !isSimplesToNacional && productIcmsAliquota > 0 ? Number(item.total_price) * (productIcmsAliquota / 100) : 0
         },
         
-        // PIS com formatação correta dos campos
+        // PIS - usando nomes de campos que o Focus NFe espera
         pis: isSimplesToNacional ? {
-          cst: "49" // Simples Nacional - outras operações de saída
+          situacao_tributaria: "49" // Simples Nacional - outras operações de saída
         } : {
-          cst: productPisCST,
-          base_calculo: Number(item.total_price),
+          situacao_tributaria: productPisCST,
+          valor_base_calculo: Number(item.total_price),
           aliquota: productPisAliquota,
           valor: Number(item.total_price) * (productPisAliquota / 100)
         },
         
-        // COFINS com formatação correta dos campos
+        // COFINS - usando nomes de campos que o Focus NFe espera
         cofins: isSimplesToNacional ? {
-          cst: "49" // Simples Nacional - outras operações de saída
+          situacao_tributaria: "49" // Simples Nacional - outras operações de saída
         } : {
-          cst: productCofinsCST,
-          base_calculo: Number(item.total_price),
+          situacao_tributaria: productCofinsCST,
+          valor_base_calculo: Number(item.total_price),
           aliquota: productCofinsAliquota,
           valor: Number(item.total_price) * (productCofinsAliquota / 100)
         }
