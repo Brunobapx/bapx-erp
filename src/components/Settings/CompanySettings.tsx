@@ -112,7 +112,6 @@ export const CompanySettings = () => {
             .insert({
               key,
               value: JSON.stringify(value),
-              description: getFieldDescription(key),
               category: 'company'
             });
 

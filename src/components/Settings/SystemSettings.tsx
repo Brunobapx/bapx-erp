@@ -121,7 +121,6 @@ export const SystemSettings = () => {
       const settingsToInsert = defaultSettings.map(setting => ({
         key: setting.key,
         value: JSON.stringify(setting.value),
-        description: setting.description,
         category: setting.category,
         user_id: user.id
       }));

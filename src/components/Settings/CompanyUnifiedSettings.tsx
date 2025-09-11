@@ -175,7 +175,6 @@ export const CompanyUnifiedSettings = () => {
             .insert({
               key,
               value: JSON.stringify(value),
-              description: getFieldDescription(key),
               category: getCategoryForKey(key)
             });
 

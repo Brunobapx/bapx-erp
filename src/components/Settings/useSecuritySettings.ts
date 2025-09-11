@@ -125,7 +125,6 @@ export const useSecuritySettings = () => {
       const settingsToInsert = defaultSecuritySettings.map(setting => ({
         key: setting.key,
         value: JSON.stringify(setting.value),
-        description: setting.description,
         category: 'security',
         user_id: user.id
       }));
