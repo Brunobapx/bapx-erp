@@ -345,7 +345,8 @@ export const ProductModal = ({ isOpen, onClose, productData }: ProductModalProps
               user_id: user.id,
               product_id: productId,
               ingredient_id: item.productId,
-              quantity: parseFloat(item.quantity)
+              quantity: parseFloat(item.quantity),
+              unit_cost: parseFloat(item.unitCost || '0')
             }));
             
             const { error: insertError } = await supabase

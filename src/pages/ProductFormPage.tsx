@@ -126,7 +126,7 @@ export const ProductFormPage = () => {
           id: item.id,
           productId: item.ingredient_id,
           quantity: item.quantity.toString(),
-          unitCost: '0' // Default value since this field doesn't exist in DB
+          unitCost: (item.unit_cost ?? 0).toString()
         }));
         setRecipeItems(recipeData);
         setIsRecipeOpen(true);
@@ -367,7 +367,8 @@ export const ProductFormPage = () => {
               user_id: user.id,
               product_id: productId,
               ingredient_id: item.productId,
-              quantity: parseFloat(item.quantity)
+              quantity: parseFloat(item.quantity),
+              unit_cost: parseFloat(item.unitCost || '0')
             }));
             
             const { error: insertError } = await supabase
