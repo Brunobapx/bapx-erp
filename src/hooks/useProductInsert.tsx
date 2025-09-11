@@ -9,14 +9,15 @@ export type ProductFormData = {
   description?: string;
   sku?: string;
   category?: string;
-  unit?: string;
+  unit: string; // Obrigatório para NFe
   price?: number;
   cost?: number;
   stock?: number;
-  weight?: number;
+  weight: number; // Obrigatório para NFe
   is_manufactured?: boolean;
   is_direct_sale?: boolean;
-  ncm?: string;
+  ncm: string; // Obrigatório para NFe
+  cest?: string;
   tax_type?: string;
   icms?: string;
   ipi?: string;

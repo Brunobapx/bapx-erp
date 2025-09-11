@@ -279,6 +279,22 @@ export const ProductFormPage = () => {
       toast.error('Nome do produto é obrigatório');
       return false;
     }
+    
+    if (!formData.ncm.trim()) {
+      toast.error('NCM é obrigatório para emissão de NFe');
+      return false;
+    }
+    
+    if (!formData.unit.trim()) {
+      toast.error('Unidade de medida é obrigatória');
+      return false;
+    }
+    
+    if (!formData.weight || parseFloat(formData.weight) <= 0) {
+      toast.error('Peso é obrigatório e deve ser maior que zero');
+      return false;
+    }
+    
     return true;
   };
 

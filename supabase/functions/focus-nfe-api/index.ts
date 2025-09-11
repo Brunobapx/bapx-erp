@@ -132,11 +132,11 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
 
   const pedido = { ...pedidoBase, order_items: itensPedido, clients: clienteRow } as any;
 
-  // Buscar dados dos produtos para obter os códigos, pesos e informações fiscais
+  // Buscar dados dos produtos para obter os códigos, pesos, unidades e informações fiscais
   const productIds = pedido.order_items.map((item: any) => item.product_id);
   const { data: products } = await supabase
     .from('products')
-    .select('id, code, weight, ncm, cest, cst_csosn, icms, pis, cofins')
+    .select('id, code, sku, unit, weight, ncm, cest, cst_csosn, icms, pis, cofins')
     .in('id', productIds);
 
   const productCodeMap = products?.reduce((acc: any, product: any) => {
@@ -359,15 +359,15 @@ async function emitirNFe(supabase: any, userId: string, payload: any) {
         codigo_ncm: productNcm, // NCM específico do produto
         cest: productCest, // CEST específico do produto
         cfop: defaultCfop, // CFOP das configurações
-        unidade_comercial: "CX", // Conforme XML
+        unidade_comercial: product?.unit || "UN", // Usar unidade do produto
         quantidade_comercial: Number(item.quantity),
         valor_unitario_comercial: Number(item.unit_price),
         valor_total_bruto: Number(item.total_price),
-        unidade_tributavel: "CX", // Conforme XML
+        unidade_tributavel: product?.unit || "UN", // Usar unidade do produto
         quantidade_tributavel: Number(item.quantity),
         valor_unitario_tributacao: Number(item.unit_price),
-        codigo_ean: "SEM GTIN", // Conforme XML
-        codigo_ean_tributavel: "SEM GTIN", // Conforme XML
+        codigo_ean: product?.sku || "SEM GTIN", // Usar SKU do produto ou SEM GTIN
+        codigo_ean_tributavel: product?.sku || "SEM GTIN", // Usar SKU do produto ou SEM GTIN
         
         // Peso líquido (quantidade × peso do produto)
         peso_liquido: Number(item.quantity) * (productWeightMap[item.product_id] || 0),
