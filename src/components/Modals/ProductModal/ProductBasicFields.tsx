@@ -35,19 +35,10 @@ export const ProductBasicFields: React.FC<ProductBasicFieldsProps> = ({
         <h3 className="text-lg font-medium text-foreground border-b pb-2">Informações de Identificação</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-          <div className="md:col-span-3 grid gap-2">
+          <div className="md:col-span-2 grid gap-2">
             <Label htmlFor="name">Nome do Produto *</Label>
             <Input id="name" name="name" value={formData.name} onChange={handleChange} placeholder="Digite o nome do produto" required />
           </div>
-          <div className="flex items-center justify-start md:justify-center space-x-2">
-            <Switch id="is_active" checked={formData.is_active} onCheckedChange={checked => handleSwitchChange('is_active', checked)} />
-            <Label htmlFor="is_active" className="text-sm font-medium">
-              {formData.is_active ? 'Ativo' : 'Inativo'}
-            </Label>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="grid gap-2">
             <Label htmlFor="code">Código Interno</Label>
             <Input id="code" name="code" value={formData.code} onChange={handleChange} placeholder="Ex: PROD001" />
@@ -56,7 +47,13 @@ export const ProductBasicFields: React.FC<ProductBasicFieldsProps> = ({
             <Label htmlFor="sku">Código de Barras (SKU/EAN)</Label>
             <Input id="sku" name="sku" value={formData.sku} onChange={handleChange} placeholder="Ex: 7891234567890" />
           </div>
-          
+        </div>
+
+        <div className="flex items-center justify-start space-x-2">
+          <Switch id="is_active" checked={formData.is_active} onCheckedChange={checked => handleSwitchChange('is_active', checked)} />
+          <Label htmlFor="is_active" className="text-sm font-medium">
+            {formData.is_active ? 'Ativo' : 'Inativo'}
+          </Label>
         </div>
       </div>
 
