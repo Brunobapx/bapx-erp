@@ -728,7 +728,7 @@ async function consultarStatus(supabase: any, userId: string, payload: any) {
     JSON.stringify({ success: true, status: responseData }),
     { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );
-        
+}
 
 async function cancelarNFe(supabase: any, userId: string, payload: any) {
   const { notaId, motivo } = payload;
